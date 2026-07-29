@@ -1290,6 +1290,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
         gameId: 'note_highway_cello',
         title: AppLocalizations.of(ctx)!.gameNoteHighwayCello,
       ),
+      tutorial: noteHighwayPrimer,
     ),
     // Live-mic tuner.
     GameInfo(
@@ -1371,6 +1372,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
         gameId: 'note_highway_guitar',
         title: AppLocalizations.of(ctx)!.gameNoteHighwayGuitar,
       ),
+      tutorial: noteHighwayPrimer,
     ),
     // Play-along riff with a moving score.
     GameInfo(
@@ -1534,6 +1536,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
         gameId: 'note_highway_piano',
         title: AppLocalizations.of(ctx)!.gameNoteHighway,
       ),
+      tutorial: noteHighwayPrimer,
     ),
     // Play-along scale with a moving score.
     GameInfo(
@@ -1662,6 +1665,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
         gameId: 'beat_highway',
         title: AppLocalizations.of(ctx)!.gameBeatHighway,
       ),
+      tutorial: beatHighwayPrimer,
     ),
     GameInfo(
       id: 'drum_read',

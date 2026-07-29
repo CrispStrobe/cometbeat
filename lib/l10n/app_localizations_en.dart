@@ -8991,4 +8991,42 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get workshopPartFxHint =>
       'Effects for this part only — a muted trumpet next to a clean piano. Saved with the part, so they travel with the score.';
+
+  @override
+  String get primerHighwayTitle => 'How the Note Highway works';
+
+  @override
+  String get primerHighwayFall =>
+      'The blocks fall onto the instrument at the bottom. A block lands on exactly the key, string or pad you have to play — that is the whole instruction.';
+
+  @override
+  String get primerHighwayHit =>
+      'Play it when it reaches the bright line. A little early or late still counts; the higher difficulties just ask you to be closer.';
+
+  @override
+  String get primerHighwayWait =>
+      'On the easiest setting the music WAITS for you. Take as long as you like to find the note — the piece only moves when you play it.';
+
+  @override
+  String get primerHighwayHands =>
+      'In a two-hand piece each hand has its own colour. You can take on one hand and let the other play itself.';
+
+  @override
+  String get primerHighwayStrip =>
+      'The strip above shows the same music as notation or tab. Watch the blocks; glance at the strip; one day you will read the strip instead.';
+
+  @override
+  String get primerBeatHighwayTitle => 'How the Beat Highway works';
+
+  @override
+  String get primerBeatHighwayLanes =>
+      'One lane per drum: kick, snare, tom, hat, crash — left to right. The pad at the bottom lights up in the same colour as the hits falling toward it.';
+
+  @override
+  String get primerBeatHighwayKeys =>
+      'You can tap the pads, or use the number keys 1 to 5 — the number is written on each pad.';
+
+  @override
+  String get primerBeatHighwayLadder =>
+      'Start at the top of the list: kick and snare only, slowly. Hats do not appear until you have those two, and you can slow any groove down further.';
 }

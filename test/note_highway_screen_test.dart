@@ -12,6 +12,7 @@ import 'package:comet_beat/core/games/highway/highway_lanes.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/features/games/highway/highway_strip.dart';
 import 'package:comet_beat/features/games/highway/highway_theme.dart';
 import 'package:comet_beat/features/games/highway/highway_view.dart';
@@ -36,11 +37,16 @@ const _chart = HighwayChart(
   ],
 );
 
+SriService? _sri;
+
 Widget _app(Widget home) => MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsService()),
         Provider<AudioService>(create: (_) => AudioService()),
         ChangeNotifierProvider(create: (_) => ProgressService()),
+        ChangeNotifierProvider<SriService>.value(
+          value: _sri ??= SriService(getNow: () => DateTime(2026, 7, 29)),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: const [
@@ -67,7 +73,10 @@ Future<void> _tapStart(WidgetTester tester) async {
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    _sri = null;
+  });
 
   testWidgets('the setup screen offers every instrument and starts a run',
       (tester) async {
@@ -324,6 +333,36 @@ void main() {
     // A key with no lane behind it is ignored rather than crashing.
     await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
     await tester.pump(const Duration(milliseconds: 30));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a finished run feeds spaced repetition, like every other game',
+      (tester) async {
+    // Two notes, fast, so the run finishes inside the test.
+    const short = HighwayChart(
+      name: 'two',
+      bpm: 240,
+      events: [
+        HighwayEvent(startBeat: 0, beats: 1, midi: 60),
+        HighwayEvent(startBeat: 1, beats: 1, midi: 62),
+      ],
+    );
+    await tester.pumpWidget(
+      _app(
+        const NoteHighwayScreen(gameId: 'note_highway_piano', chart: short),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _tapStart(tester);
+    await tester.pump();
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // Both notes went unplayed, so both are recorded as missed — which is
+    // exactly what Review needs to know.
+    final breakdown = _sri!.getDetailedBreakdown();
+    expect(breakdown.keys, contains('highway'));
     expect(tester.takeException(), isNull);
   });
 

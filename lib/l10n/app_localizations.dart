@@ -16339,6 +16339,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Effects for this part only — a muted trumpet next to a clean piano. Saved with the part, so they travel with the score.'**
   String get workshopPartFxHint;
+
+  /// No description provided for @primerHighwayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How the Note Highway works'**
+  String get primerHighwayTitle;
+
+  /// No description provided for @primerHighwayFall.
+  ///
+  /// In en, this message translates to:
+  /// **'The blocks fall onto the instrument at the bottom. A block lands on exactly the key, string or pad you have to play — that is the whole instruction.'**
+  String get primerHighwayFall;
+
+  /// No description provided for @primerHighwayHit.
+  ///
+  /// In en, this message translates to:
+  /// **'Play it when it reaches the bright line. A little early or late still counts; the higher difficulties just ask you to be closer.'**
+  String get primerHighwayHit;
+
+  /// No description provided for @primerHighwayWait.
+  ///
+  /// In en, this message translates to:
+  /// **'On the easiest setting the music WAITS for you. Take as long as you like to find the note — the piece only moves when you play it.'**
+  String get primerHighwayWait;
+
+  /// No description provided for @primerHighwayHands.
+  ///
+  /// In en, this message translates to:
+  /// **'In a two-hand piece each hand has its own colour. You can take on one hand and let the other play itself.'**
+  String get primerHighwayHands;
+
+  /// No description provided for @primerHighwayStrip.
+  ///
+  /// In en, this message translates to:
+  /// **'The strip above shows the same music as notation or tab. Watch the blocks; glance at the strip; one day you will read the strip instead.'**
+  String get primerHighwayStrip;
+
+  /// No description provided for @primerBeatHighwayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How the Beat Highway works'**
+  String get primerBeatHighwayTitle;
+
+  /// No description provided for @primerBeatHighwayLanes.
+  ///
+  /// In en, this message translates to:
+  /// **'One lane per drum: kick, snare, tom, hat, crash — left to right. The pad at the bottom lights up in the same colour as the hits falling toward it.'**
+  String get primerBeatHighwayLanes;
+
+  /// No description provided for @primerBeatHighwayKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'You can tap the pads, or use the number keys 1 to 5 — the number is written on each pad.'**
+  String get primerBeatHighwayKeys;
+
+  /// No description provided for @primerBeatHighwayLadder.
+  ///
+  /// In en, this message translates to:
+  /// **'Start at the top of the list: kick and snare only, slowly. Hats do not appear until you have those two, and you can slow any groove down further.'**
+  String get primerBeatHighwayLadder;
 }
 
 class _AppLocalizationsDelegate

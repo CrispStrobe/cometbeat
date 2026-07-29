@@ -149,6 +149,20 @@ is recorded in [HISTORY.md](HISTORY.md).
     Reverted (`git rm --cached`); the file is back to untracked, unchanged, still
     on disk. **Stage named files** — the board is right about this.
 
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — the tiles are first-class app
+  citizens now: PRIMERS + SPACED REPETITION.** Every other game in the registry
+  has a zero-knowledge primer and feeds `SriService`; my four tiles had neither,
+  which is the same class of omission as the curriculum-orphan bug — the tile
+  works, but it sits outside the systems that make the app a curriculum.
+  `noteHighwayPrimer` (5 steps) + `beatHighwayPrimer` (3: lanes, number keys,
+  where to start on the ladder) in `shared/tutorial/primers.dart`; SRI records
+  every graded note — pitched notes reuse **play-along's id scheme on purpose**,
+  so a G3 missed on the highway and a G3 missed in play-along are the same fact
+  and Review sees one signal, not two. Drums key by kit piece, since the lane is
+  what you got wrong. Loops and watch mode record nothing (they are not runs).
+  ⚠️ **Worth a checklist for the next tile: registry · thresholds · curriculum
+  placement · primer · SRI.** I have now missed two of those five separately.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — the drum lesson applied to
   EVERY instrument.** The maintainer's Beat Highway report ("too fast at 100%,
   extremely boring") was never really about drums: the pitched library had the

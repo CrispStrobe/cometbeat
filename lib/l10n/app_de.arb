@@ -3038,5 +3038,15 @@
   "highwayInputMic": "Dein Instrument",
   "highwayInputMicHint": "Spiel dein echtes Instrument \u2014 die App h\u00f6rt zu. Sie h\u00f6rt einen Ton auf einmal, ein Akkord z\u00e4hlt also f\u00fcr den Ton, den sie erwischt.",
   "workshopPartFx": "Effekte",
-  "workshopPartFxHint": "Effekte nur für diese Stimme — eine gedämpfte Trompete neben einem klaren Klavier. Wird mit der Stimme gespeichert und reist mit der Partitur mit."
+  "workshopPartFxHint": "Effekte nur für diese Stimme — eine gedämpfte Trompete neben einem klaren Klavier. Wird mit der Stimme gespeichert und reist mit der Partitur mit.",
+  "primerHighwayTitle": "So funktioniert die Notenbahn",
+  "primerHighwayFall": "Die Bl\u00f6cke fallen auf das Instrument unten. Ein Block landet genau auf der Taste, Saite oder dem Pad, das du spielen musst \u2014 das ist die ganze Anweisung.",
+  "primerHighwayHit": "Spiel ihn, wenn er die helle Linie erreicht. Ein bisschen zu fr\u00fch oder zu sp\u00e4t z\u00e4hlt auch; die h\u00f6heren Stufen verlangen nur mehr Genauigkeit.",
+  "primerHighwayWait": "Auf der leichtesten Stufe WARTET die Musik auf dich. Lass dir Zeit, den Ton zu finden \u2014 das St\u00fcck geht erst weiter, wenn du spielst.",
+  "primerHighwayHands": "In einem zweih\u00e4ndigen St\u00fcck hat jede Hand ihre eigene Farbe. Du kannst eine Hand \u00fcbernehmen und die andere sich selbst spielen lassen.",
+  "primerHighwayStrip": "Der Streifen oben zeigt dieselbe Musik als Noten oder Tabulatur. Schau auf die Bl\u00f6cke, blick auf den Streifen \u2014 irgendwann liest du den Streifen.",
+  "primerBeatHighwayTitle": "So funktioniert die Beat-Bahn",
+  "primerBeatHighwayLanes": "Eine Spur pro Trommel: Bass, Snare, Tom, Hi-Hat, Becken \u2014 von links nach rechts. Das Pad unten leuchtet in derselben Farbe wie die Schl\u00e4ge, die darauf zufallen.",
+  "primerBeatHighwayKeys": "Du kannst die Pads antippen oder die Zahlentasten 1 bis 5 benutzen \u2014 die Zahl steht auf jedem Pad.",
+  "primerBeatHighwayLadder": "Fang oben in der Liste an: nur Bass und Snare, langsam. Hi-Hats kommen erst, wenn die beiden sitzen, und jeden Groove kannst du noch langsamer stellen."
 }

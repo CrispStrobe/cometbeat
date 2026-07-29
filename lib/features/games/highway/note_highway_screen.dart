@@ -45,11 +45,14 @@ import 'package:comet_beat/core/games/highway/highway_library.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/core/tuning.dart';
 import 'package:comet_beat/features/games/highway/highway_strip.dart';
 import 'package:comet_beat/features/games/highway/highway_theme.dart';
 import 'package:comet_beat/features/games/highway/highway_view.dart';
 import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/features/games/playalong/play_along_screen.dart'
+    show playAlongSriId;
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -432,6 +435,35 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
           score: grader.hits,
           stars: scoreToStars(widget.gameId, _starScore, grader.hits > 0),
         );
+    _recordForReview(grader);
+  }
+
+  /// Feeds each note's outcome to spaced repetition, so the ones a learner
+  /// keeps missing come back in Review — the same contract every other game
+  /// here honours, and the reason the app knows what to drill next.
+  ///
+  /// The id is the THING PLAYED, not the block: a pitch for the pitched
+  /// instruments (shared with play-along, so a G3 missed here and a G3 missed
+  /// there are the same fact), and the kit piece for drums, where the lane is
+  /// what you got wrong.
+  void _recordForReview(HighwayGrader grader) {
+    final sri = context.read<SriService>();
+    final drums = _instrument == HighwayInstrument.drums;
+    final prefix = 'highway.${_instrument.name}';
+    for (final note in grader.notes) {
+      if (!grader.isGraded(note.event)) continue; // not the player's to answer
+      final String id;
+      if (drums) {
+        final lane = note.event.lane;
+        if (lane == null || lane >= kHighwayDrumLanes.length) continue;
+        id = '$prefix.${kHighwayDrumLanes[lane].name}';
+      } else {
+        final midi = note.event.midi;
+        if (midi == null) continue;
+        id = playAlongSriId(prefix, midi);
+      }
+      sri.recordResponse(id, note.state == HighwayNoteState.hit);
+    }
   }
 
   int get _starScore {

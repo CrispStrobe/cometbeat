@@ -9043,4 +9043,42 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get workshopPartFxHint =>
       'Effekte nur für diese Stimme — eine gedämpfte Trompete neben einem klaren Klavier. Wird mit der Stimme gespeichert und reist mit der Partitur mit.';
+
+  @override
+  String get primerHighwayTitle => 'So funktioniert die Notenbahn';
+
+  @override
+  String get primerHighwayFall =>
+      'Die Blöcke fallen auf das Instrument unten. Ein Block landet genau auf der Taste, Saite oder dem Pad, das du spielen musst — das ist die ganze Anweisung.';
+
+  @override
+  String get primerHighwayHit =>
+      'Spiel ihn, wenn er die helle Linie erreicht. Ein bisschen zu früh oder zu spät zählt auch; die höheren Stufen verlangen nur mehr Genauigkeit.';
+
+  @override
+  String get primerHighwayWait =>
+      'Auf der leichtesten Stufe WARTET die Musik auf dich. Lass dir Zeit, den Ton zu finden — das Stück geht erst weiter, wenn du spielst.';
+
+  @override
+  String get primerHighwayHands =>
+      'In einem zweihändigen Stück hat jede Hand ihre eigene Farbe. Du kannst eine Hand übernehmen und die andere sich selbst spielen lassen.';
+
+  @override
+  String get primerHighwayStrip =>
+      'Der Streifen oben zeigt dieselbe Musik als Noten oder Tabulatur. Schau auf die Blöcke, blick auf den Streifen — irgendwann liest du den Streifen.';
+
+  @override
+  String get primerBeatHighwayTitle => 'So funktioniert die Beat-Bahn';
+
+  @override
+  String get primerBeatHighwayLanes =>
+      'Eine Spur pro Trommel: Bass, Snare, Tom, Hi-Hat, Becken — von links nach rechts. Das Pad unten leuchtet in derselben Farbe wie die Schläge, die darauf zufallen.';
+
+  @override
+  String get primerBeatHighwayKeys =>
+      'Du kannst die Pads antippen oder die Zahlentasten 1 bis 5 benutzen — die Zahl steht auf jedem Pad.';
+
+  @override
+  String get primerBeatHighwayLadder =>
+      'Fang oben in der Liste an: nur Bass und Snare, langsam. Hi-Hats kommen erst, wenn die beiden sitzen, und jeden Groove kannst du noch langsamer stellen.';
 }

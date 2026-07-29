@@ -322,6 +322,13 @@ Three tiles — **Note Highway** (keyboard), **String Runway** (guitar),
   separates voices by lightness for colour-blind and high-contrast use).
 * `highway_strip.dart` — the optional reading strip: scrolling **tab** (string
   lines + fret digits) for fretted/bowed, **note names** for keys/pads.
+* Wired into the app's learning systems like any other game: a **primer** on
+  each tile (shown the first time it opens, reopenable from "?"), star scoring
+  through `kStarThresholds`/`ProgressService`, a curriculum placement, and
+  **spaced repetition** — every graded note's outcome goes to `SriService`, so
+  what a learner keeps missing comes back in Review. Pitched notes share
+  play-along's id scheme deliberately: a G3 missed here and a G3 missed there
+  are the same fact about the learner.
 * `note_highway_screen.dart` — setup (instrument · piece · watch/play ·
   difficulty · skin · flat/arcade · hands · tempo 50–125% · strip · backing),
   count-in, run, star-scored result via the existing progress/threshold path.

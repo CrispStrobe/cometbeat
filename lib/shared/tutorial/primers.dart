@@ -270,6 +270,30 @@ Tutorial noteValuesPrimer(AppLocalizations l10n) => Tutorial(
       ],
     );
 
+/// The Note Highway: what the falling blocks mean and what the scaffolds do.
+/// Deliberately short — the view teaches itself once you know that a block
+/// lands on the key you play.
+Tutorial noteHighwayPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerHighwayTitle,
+      steps: [
+        TutorialStep(text: l10n.primerHighwayFall),
+        TutorialStep(text: l10n.primerHighwayHit),
+        TutorialStep(text: l10n.primerHighwayWait),
+        TutorialStep(text: l10n.primerHighwayHands),
+        TutorialStep(text: l10n.primerHighwayStrip),
+      ],
+    );
+
+/// The Beat Highway: lanes, the number keys, and where to start on the ladder.
+Tutorial beatHighwayPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerBeatHighwayTitle,
+      steps: [
+        TutorialStep(text: l10n.primerBeatHighwayLanes),
+        TutorialStep(text: l10n.primerBeatHighwayKeys),
+        TutorialStep(text: l10n.primerBeatHighwayLadder),
+      ],
+    );
+
 /// The Loop Mixer: how the band works + what each control does (LM-UX6).
 Tutorial loopMixerPrimer(AppLocalizations l10n) => Tutorial(
       title: l10n.primerLoopMixerTitle,
