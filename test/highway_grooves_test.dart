@@ -84,6 +84,8 @@ void main() {
     }
   });
 
+  _ladderChecks();
+
   test('every groove becomes a playable chart', () {
     for (final piece in HighwayLibrary.forInstrument(HighwayInstrument.drums)) {
       expect(piece.chart.events, isNotEmpty, reason: piece.id);
@@ -94,4 +96,37 @@ void main() {
       );
     }
   });
+}
+
+/// The pitched library is held to the same bar as the groove ladder: the
+/// maintainer's report about the Beat Highway ("too fast, extremely boring")
+/// applied to every instrument, not just the drums.
+void _ladderChecks() {
+  for (final instrument in HighwayInstrument.values) {
+    final pieces = HighwayLibrary.forInstrument(instrument);
+    test('$instrument has a first rung anyone can play', () {
+      expect(pieces, isNotEmpty);
+      final first = pieces.first;
+      expect(first.level, 1, reason: '${first.id} is the entry point');
+      expect(
+        first.chart.bpm,
+        lessThanOrEqualTo(70),
+        reason: '${first.id}: a first piece is slow or it is not a first piece',
+      );
+    });
+
+    test('$instrument is offered easiest first', () {
+      for (var i = 1; i < pieces.length; i++) {
+        expect(pieces[i].level, greaterThanOrEqualTo(pieces[i - 1].level));
+      }
+    });
+
+    test('$instrument has more than a handful to play', () {
+      expect(
+        pieces.length,
+        greaterThanOrEqualTo(3),
+        reason: 'three pieces is a demo, not a repertoire',
+      );
+    });
+  }
 }

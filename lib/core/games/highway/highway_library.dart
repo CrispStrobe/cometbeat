@@ -91,6 +91,62 @@ List<HighwayEvent> _strum(
           ),
     ];
 
+// --- Level 1: the first rung -----------------------------------------------
+//
+// The library had nothing below "a C major scale in both hands at 92". The drum
+// ladder taught the lesson: a first piece is three notes, slowly, one hand. All
+// of these are traditional melodies or exercises written here, never anyone's
+// arrangement.
+
+/// Three notes, one hand, one per beat. The oldest first lesson there is.
+final _threeNotes = _line([
+  (60, 0, 1), (62, 1, 1), (64, 2, 1), (62, 3, 1), //
+  (60, 4, 1), (60, 5, 1), (60, 6, 2),
+  (62, 8, 1), (62, 9, 1), (62, 10, 2),
+  (64, 12, 1), (62, 13, 1), (60, 14, 2),
+]);
+
+/// "Hot cross buns" (traditional) — three notes, and a tune a child knows.
+final _hotCrossBuns = _line([
+  (64, 0, 1), (62, 1, 1), (60, 2, 2), //
+  (64, 4, 1), (62, 5, 1), (60, 6, 2),
+  (60, 8, 0.5), (60, 8.5, 0.5), (60, 9, 0.5), (60, 9.5, 0.5),
+  (62, 10, 0.5), (62, 10.5, 0.5), (62, 11, 0.5), (62, 11.5, 0.5),
+  (64, 12, 1), (62, 13, 1), (60, 14, 2),
+]);
+
+/// "Merrily we roll along" (traditional) — five notes, still one hand.
+final _merrily = _line([
+  (64, 0, 1), (62, 1, 1), (60, 2, 1), (62, 3, 1), //
+  (64, 4, 1), (64, 5, 1), (64, 6, 2),
+  (62, 8, 1), (62, 9, 1), (62, 10, 2),
+  (64, 12, 1), (67, 13, 1), (67, 14, 2),
+]);
+
+/// Open strings, in order, one per beat — the first thing a string player does,
+/// and the only piece that needs no left hand at all.
+List<HighwayEvent> _openStrings(List<int> pitches) => _line([
+      for (var i = 0; i < pitches.length; i++) (pitches[i], i * 2.0, 2.0),
+      for (var i = 0; i < pitches.length; i++)
+        (pitches[pitches.length - 1 - i], (pitches.length + i) * 2.0, 2.0),
+    ]);
+
+/// One string, three frets — a melody a beginner can play without moving.
+final _oneStringTune = _line([
+  (64, 0, 1), (66, 1, 1), (67, 2, 2), //
+  (64, 4, 1), (66, 5, 1), (67, 6, 2),
+  (67, 8, 1), (66, 9, 1), (64, 10, 2),
+  (66, 12, 1), (64, 13, 1), (64, 14, 2),
+]);
+
+/// Two chords, one bar each — the first change anyone learns.
+final _twoChords = [
+  ..._strum(_emShape, 0, 4),
+  ..._strum(_gShape, 4, 4),
+  ..._strum(_emShape, 8, 4),
+  ..._strum(_gShape, 12, 4),
+];
+
 // --- Piano ------------------------------------------------------------------
 
 // "Ode to Joy" (Beethoven, public domain), melody in C with a left hand of
@@ -196,6 +252,37 @@ final _ukeSong = _merged([
   _strum(_ukeG, 12, 4),
 ]);
 
+/// A root-fifth bass line — two notes, four bars, the shape under most songs.
+final _bassRootFifth = _line([
+  (40, 0, 1), (47, 1, 1), (40, 2, 1), (47, 3, 1), //
+  (45, 4, 1), (52, 5, 1), (45, 6, 1), (52, 7, 1),
+  (43, 8, 1), (50, 9, 1), (43, 10, 1), (50, 11, 1),
+  (40, 12, 2), (40, 14, 2),
+]);
+
+/// A bass scale walk, one octave up and back.
+final _bassScale = _line([
+  (40, 0, 1), (42, 1, 1), (44, 2, 1), (45, 3, 1), //
+  (47, 4, 1), (49, 5, 1), (51, 6, 1), (52, 7, 2),
+  (51, 9, 1), (49, 10, 1), (47, 11, 1), (45, 12, 1),
+  (44, 13, 1), (42, 14, 1), (40, 15, 2),
+]);
+
+/// Ukulele: two chords, then the melody most beginners try first.
+final _ukeTwoChords = [
+  ..._strum(_ukeC, 0, 4),
+  ..._strum(_ukeF, 4, 4),
+  ..._strum(_ukeC, 8, 4),
+  ..._strum(_ukeG, 12, 4),
+];
+
+final _ukeMelody = _line([
+  (60, 0, 1), (62, 1, 1), (64, 2, 1), (60, 3, 1), //
+  (64, 4, 1), (60, 5, 1), (64, 6, 2),
+  (62, 8, 1), (64, 9, 1), (65, 10, 2),
+  (64, 12, 1), (62, 13, 1), (60, 14, 2),
+]);
+
 // --- Cello ------------------------------------------------------------------
 
 final _firstPositionWalk = _line([
@@ -241,83 +328,212 @@ class HighwayLibrary {
   static final List<HighwayPiece> pieces = [
     ..._drumPieces(),
     HighwayPiece(
+      id: 'highway_three_notes',
+      instruments: const {HighwayInstrument.piano, HighwayInstrument.pads},
+      chart: HighwayChart(
+        name: 'Three notes',
+        bpm: 56,
+        events: _threeNotes,
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_hot_cross_buns',
+      instruments: const {HighwayInstrument.piano, HighwayInstrument.pads},
+      chart: HighwayChart(
+        name: 'Hot cross buns',
+        bpm: 60,
+        events: _hotCrossBuns,
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_merrily',
+      level: 2,
+      instruments: const {HighwayInstrument.piano, HighwayInstrument.pads},
+      chart: HighwayChart(
+        name: 'Merrily we roll along',
+        bpm: 64,
+        events: _merrily,
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_open_strings_guitar',
+      instruments: const {HighwayInstrument.guitar},
+      chart: HighwayChart(
+        name: 'Open strings',
+        bpm: 56,
+        events: _openStrings(const [40, 45, 50, 55, 59, 64]),
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_one_string_tune',
+      level: 2,
+      instruments: const {HighwayInstrument.guitar},
+      chart: HighwayChart(
+        name: 'One string, three frets',
+        bpm: 60,
+        events: _oneStringTune,
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_two_chords',
+      level: 3,
+      instruments: const {HighwayInstrument.guitar},
+      chart: HighwayChart(
+        name: 'Two chords: Em G',
+        bpm: 60,
+        events: _twoChords,
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_open_strings_cello',
+      instruments: const {HighwayInstrument.cello},
+      chart: HighwayChart(
+        name: 'Open strings',
+        bpm: 56,
+        events: _openStrings(const [36, 43, 50, 57]),
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_open_strings_bass',
+      instruments: const {HighwayInstrument.bass},
+      chart: HighwayChart(
+        name: 'Open strings',
+        bpm: 56,
+        events: _openStrings(const [28, 33, 38, 43]),
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_uke_open',
+      instruments: const {HighwayInstrument.ukulele},
+      chart: HighwayChart(
+        name: 'Open strings',
+        bpm: 56,
+        events: _openStrings(const [67, 60, 64, 69]),
+      ),
+    ),
+    HighwayPiece(
       id: 'highway_parallel_scale',
+      level: 3,
       instruments: const {HighwayInstrument.piano, HighwayInstrument.pads},
       chart: HighwayChart(
         name: 'Two hands: C major',
-        bpm: 92,
+        bpm: 66,
         events: _parallelScale,
       ),
     ),
     HighwayPiece(
       id: 'highway_ode',
-      level: 2,
+      level: 4,
       instruments: const {HighwayInstrument.piano, HighwayInstrument.pads},
       chart: HighwayChart(
         name: 'Ode to Joy',
-        bpm: 100,
+        bpm: 76,
         events: _merged([_odeMelody, _odeLeft]),
       ),
     ),
     HighwayPiece(
       id: 'highway_twinkle',
-      level: 2,
+      level: 3,
       instruments: const {HighwayInstrument.piano, HighwayInstrument.pads},
       chart: HighwayChart(
         name: 'Twinkle, Twinkle',
-        bpm: 96,
+        bpm: 72,
         events: _merged([_twinkleMelody, _twinkleLeft]),
       ),
     ),
     HighwayPiece(
       id: 'highway_strum',
+      level: 4,
       instruments: const {HighwayInstrument.guitar, HighwayInstrument.pads},
       chart: HighwayChart(
         name: 'Four chords: Em G D C',
-        bpm: 84,
+        bpm: 68,
         events: _strumSong,
       ),
     ),
     HighwayPiece(
       id: 'highway_uke_chords',
+      level: 4,
       instruments: const {HighwayInstrument.ukulele, HighwayInstrument.pads},
       chart: HighwayChart(
         name: 'Ukulele: C Am F G',
-        bpm: 88,
+        bpm: 68,
         events: _ukeSong,
       ),
     ),
     HighwayPiece(
       id: 'highway_arpeggio',
-      level: 3,
+      level: 5,
       instruments: const {HighwayInstrument.guitar},
       chart: HighwayChart(
         name: 'Arpeggio study',
-        bpm: 76,
+        bpm: 64,
         events: _arpeggioStudy,
       ),
     ),
     HighwayPiece(
       id: 'highway_pentatonic',
-      level: 2,
+      level: 3,
       instruments: const {HighwayInstrument.guitar, HighwayInstrument.pads},
       chart: HighwayChart(
         name: 'Pentatonic riff',
-        bpm: 80,
+        bpm: 66,
         events: _pentatonicRiff,
       ),
     ),
     HighwayPiece(
+      id: 'highway_bass_root_fifth',
+      level: 2,
+      instruments: const {HighwayInstrument.bass},
+      chart: HighwayChart(
+        name: 'Root and fifth',
+        bpm: 62,
+        events: _bassRootFifth,
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_bass_scale',
+      level: 4,
+      instruments: const {HighwayInstrument.bass},
+      chart: HighwayChart(
+        name: 'Bass scale walk',
+        bpm: 66,
+        events: _bassScale,
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_uke_two_chords',
+      level: 3,
+      instruments: const {HighwayInstrument.ukulele},
+      chart: HighwayChart(
+        name: 'Two chords: C F',
+        bpm: 62,
+        events: _ukeTwoChords,
+      ),
+    ),
+    HighwayPiece(
+      id: 'highway_uke_melody',
+      level: 2,
+      instruments: const {HighwayInstrument.ukulele},
+      chart: HighwayChart(
+        name: 'First melody',
+        bpm: 62,
+        events: _ukeMelody,
+      ),
+    ),
+    HighwayPiece(
       id: 'highway_bassline',
+      level: 3,
       instruments: const {HighwayInstrument.bass, HighwayInstrument.pads},
       chart: HighwayChart(
         name: 'Walking bass',
-        bpm: 88,
+        bpm: 68,
         events: _bassLine,
       ),
     ),
     HighwayPiece(
       id: 'highway_first_position',
+      level: 2,
       instruments: const {HighwayInstrument.cello},
       chart: HighwayChart(
         name: 'First position walk',
@@ -327,11 +543,11 @@ class HighwayLibrary {
     ),
     HighwayPiece(
       id: 'highway_d_arpeggio',
-      level: 2,
+      level: 3,
       instruments: const {HighwayInstrument.cello, HighwayInstrument.piano},
       chart: HighwayChart(
         name: 'D major arpeggios',
-        bpm: 72,
+        bpm: 64,
         events: _dArpeggio,
       ),
     ),

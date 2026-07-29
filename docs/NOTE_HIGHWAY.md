@@ -302,8 +302,14 @@ Three tiles — **Note Highway** (keyboard), **String Runway** (guitar),
 * `highway_instrument.dart` — per-instrument profile: lane map, caption style,
   timbre, and the **preparation** step that runs `arrangeTab` (guitar/bass/uke →
   string + fret) or `arrangeBowed` (cello → string + finger) over the chart.
-* `highway_library.dart` — built-in pieces per instrument (public-domain
-  melodies + exercises written for the app), two-handed where it matters.
+* `highway_library.dart` — built-in pieces per instrument, as a LADDER with a
+  playable first rung (public-domain melodies + exercises written for the app).
+  Level 1 is three notes in one hand at 56 bpm, or open strings with no left
+  hand at all; the two-handed and chord pieces are levels 3–5. Tempos are the
+  speed a piece can be LEARNT at, not the speed it is usually heard at — the
+  tempo control goes up from there. Held to this by
+  `test/highway_grooves_test.dart`, which checks every instrument has a level-1
+  piece at ≤70 bpm and more than a handful to play.
 
 **View** (`lib/features/games/highway/`):
 

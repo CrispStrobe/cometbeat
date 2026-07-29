@@ -131,6 +131,18 @@ is recorded in [HISTORY.md](HISTORY.md).
     `"scxt"` — **one word, backed up, `ast.parse`-checked**; the builder's owner
     may want to glance at it.
 
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — the drum lesson applied to
+  EVERY instrument.** The maintainer's Beat Highway report ("too fast at 100%,
+  extremely boring") was never really about drums: the pitched library had the
+  same shape — 3–4 pieces each, starting at 92–100 bpm, with no rung a beginner
+  could reach. Now every instrument has a level-1 piece (three notes in one hand
+  at 56 bpm; open strings, no left hand at all), the existing pieces are
+  re-levelled 3–5 and slowed to a tempo they can be LEARNT at, and bass/ukulele
+  gained real content. `highway_grooves_test` now holds ALL instruments to it:
+  a level-1 piece at ≤70 bpm, easiest-first ordering, more than a handful each.
+  **Worth generalising: when a maintainer reports one surface is unplayable,
+  check whether the same mistake is in the surfaces they have not opened yet.**
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — a VISUAL pass that found three
   defects no test could see.** I said I had not looked at the highway; I looked.
   (1) the rail was dark-on-dark for every non-keyboard instrument — you could
