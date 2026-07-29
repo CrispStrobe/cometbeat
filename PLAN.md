@@ -1755,9 +1755,28 @@ prefix.
   * `ManualMidiInput` is what the card's "on-screen keyboard/pad widget" would
     push into, so that half needs no new contract either.
   Tests: `midi_input_test` (21).
-  ⬜ **Remaining:** the platform binding (dependency call), the on-screen
-  keyboard widget, and wiring a surface's record path — which is **WS-T7**, now
-  unblocked on the contract side.
+  * ✅ **Step 2 — the on-screen keyboard** (`core/midi/on_screen_midi.dart`).
+    The half of this card that needs **no dependency**, and the half that makes
+    the seam useful today: a keyboard on the glass is a real input, it is the
+    ONLY input on web, and it is what anyone testing a record path will use.
+    Feeds the same `MidiInput`, so a consumer cannot tell it from hardware.
+  * ⚠️ **the note-off is the whole problem here, and it bit me.** A tap has no
+    release, so bridging `onKeyTap` straight to a note-on rings forever — the
+    stuck-note bug the seam prevents, reintroduced one layer up. `tap()`
+    auto-releases; `press()`/`release()` handle real holds. **And my first cut
+    tracked only the TAPPED notes**, so a pressed key was sounding and
+    untracked and `releaseAll` could not release what it did not know about —
+    caught by its own test, for exactly the gesture most likely to be
+    interrupted.
+  * `releaseAll()` exists for the same reason `HeldNotes.clear()` does: when a
+    screen is backgrounded the pointer-up never arrives. `dispose()` releases
+    BEFORE closing the stream, or the note-offs strand in a closed controller.
+  * velocity is **clamped, not trusted** — a gesture-derived velocity of 0
+    would mean note-OFF and silently swallow the note.
+  Tests: `midi_input_test` (21) + `on_screen_midi_test` (14).
+  ⬜ **Remaining:** the platform binding only (a dependency across five targets,
+  permissions on two — a maintainer decision), and wiring a surface's record
+  path, which is **WS-T7**.
 
 
 ### The decision that gates part of this ladder
