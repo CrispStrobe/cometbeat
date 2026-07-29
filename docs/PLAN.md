@@ -292,15 +292,28 @@ is recorded in [HISTORY.md](HISTORY.md).
     lyricist. ⚠️ CC BY-ND is excluded because we CONVERT FORMATS and a format
     conversion is a derivative — easy to wave through as attribution-only.
     Tools: `tool/music_db_cpdl_*`. Held set in `cpdl-probation.json`.
-  - 🤝 **FIVE `crisp_notation` reader gaps found by the CPDL parse sweep**
-    (98.0% parse; the 78 failures cluster in early music, CPDL's richest
-    repertoire) — unclaimed, needs a `crisp_notation` worktree: 35 × `<time>`
-    without `<beats>`/`<beat-type>` (mensural/unmetered) · 21 × note type
-    `long` · 3 × `256th`/`128th` (the MusicXML twin of a known `mscx` gap) ·
-    2 × plain MusicXML carrying a `.mxl` extension (wants a raw-XML fallback in
-    `readMusicXmlFromMxl`, same shape as `de528da`) · 17 × `.ly` yielding zero
-    notes. Full triage incl. what I ruled out is in the gitignored notes;
-    `tool/music_db_ly_probe.dart` is the harness.
+  - ✅ **TWO `crisp_notation` reader gaps FIXED + SHIPPED** (`362a2b4` on
+    crisp_notation main, worktree `../crisp_notation-earlymusic`, full core
+    suite green 1843 + 6 new tests): **`<senza-misura/>`** unmetered scores —
+    the standard encoding for barline-free Renaissance polyphony, which was
+    rejecting Byrd/Gibbons/Palestrina wholesale — and **plain MusicXML shipped
+    under a `.mxl` extension** (sniff the "PK" magic, don't trust the
+    extension). CPDL parse went **98.0% → 98.8%**, +34 files, and `db.json`
+    2,224 → 2,257 CPDL rows.
+    ⚠️ **`../crisp_notation` (the shared path-dep clone) has NOT pulled this
+    yet** — it is on `main` but behind origin, and it carries another agent's
+    uncommitted WIP (`pubspec.yaml`, an untracked zip), so I deliberately did
+    not touch it. Whoever owns that WIP should pull when convenient.
+  - 🤝 **THREE gaps REMAIN and they are MODEL changes, not reader fixes** —
+    unclaimed: note types **`long`** (21 files), **`256th`/`128th`** (3), and
+    **17 × `.ly` yielding zero notes**. ⚠️ The duration ones are NOT a matter of
+    extending a map: `DurationBase` runs `whole → sixtyFourth` plus `breve`, and
+    **`denominator => 1 << index` is keyed to the enum's index ORDER** with
+    `breve` special-cased — inserting values silently renumbers `denominator`
+    for every existing duration. For the `.ly` gap, the gitignored notes list
+    the NINE hypotheses I tested and ruled out (BOM, `\paper`, `\header`,
+    Scheme, comments, …) plus the localisation; `tool/music_db_ly_probe.dart`
+    is the harness. Don't retrace those.
   — opus (jukebox-ingest)
 
 - **opus (workstation-parity)** · 🔴 **COLLISION FLAG (not mine to settle, but

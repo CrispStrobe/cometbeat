@@ -393,7 +393,7 @@ Every line here is a *licence/coverage* statement; detail per source follows.
   — least of all for the engine that produced it, which would measure
   self-consistency rather than accuracy. Registry: `jukebox-omr-eval.json`.
 
-- **CPDL / ChoralWiki — 2,224 scores INGESTED, 1,502 held (2026-07-29).** The
+- **CPDL / ChoralWiki — 2,257 scores INGESTED, 1,502 held (2026-07-29).** The
   largest single addition since PDMX, and now our second-largest MusicXML source.
   Choral repertoire: early-American singing-school (William Billings 212, Oliver
   Holden 194, Daniel Read 132, Samuel Holyoke 120) plus Renaissance polyphony
@@ -421,11 +421,15 @@ Every line here is a *licence/coverage* statement; detail per source follows.
     cleared (2,279 via Wikidata life+70, 10 anonymous pre-1900), 1,502 held
     (1,333 unresolvable names, 148 died after 1955, 21 anonymous without a
     pre-1900 date).
-  - **Parse-validated before ingest: 3,713/3,791 (98.0%)** through
-    `crisp_notation`; the manifest additionally drops the 65 that fail or read
-    empty, so every shipped row is known-readable. `.mxl`/`.mscz` are unwrapped
+  - **Parse-validated before ingest: 3,747/3,791 (98.8%)** through
+    `crisp_notation`; the manifest additionally drops the 32 that fail or read
+    empty, so every shipped row is known-readable. The sweep found real reader
+    gaps and **two were fixed** (crisp_notation `362a2b4`): `<senza-misura/>`
+    unmetered scores — the standard encoding for barline-free Renaissance
+    polyphony, which had been rejecting Byrd/Gibbons/Palestrina wholesale — and
+    plain MusicXML shipped under a `.mxl` extension. That recovered 34 files. `.mxl`/`.mscz` are unwrapped
     with the pure-Dart zip readers — no MuseScore or LilyPond binary anywhere.
-  - **Tiering is mixed, unlike previous sources:** 2,208 Tier A (Public Domain /
+  - **Tiering is mixed, unlike previous sources:** 2,241 Tier A (Public Domain /
     CC0, no attribution owed) + 16 Tier B (CC BY, attribution = the *editor*,
     who made the engraving the licence covers — not the long-dead composer). All
     16 carry attribution, so none are silently dropped by the ship gate.
