@@ -416,6 +416,25 @@ shapes claiming the ukulele, whose lowest string is C4).
   every tick by the screen. Still unmeasured: an actual low-end phone with the
   audio engine running — these numbers are a headless VM.
 
+### A note on looking at it
+
+Three defects in this feature were invisible to every test and obvious in a
+screenshot, so: **render it and look before calling a visual slice done.**
+
+* the instrument rail was dark-grey-on-dark for every non-keyboard instrument,
+  so a player could not see which pad or string a block belonged to;
+* the chord "grip" was drawn as a translucent panel BEHIND blocks that fill
+  their lanes — completely invisible, so the thing it was meant to communicate
+  was not communicated at all;
+* falling blocks were coloured by voice while the rail was coloured by lane, so
+  a guitar fell as one wall of blue over a six-colour fretboard.
+
+The harness: a `RepaintBoundary` + `toImage()` widget test writing a PNG to the
+scratchpad. ⚠ It writes the file and then hangs rather than completing, so run
+it under `timeout` and take the file — the image is there. Also note the test
+font renders every glyph as a filled box, so captions look like squares; that
+is Ahem, not a bug in the painter.
+
 ## 8. Risks / open questions
 
 * **Performance — measured, and the algorithmic half is closed** (see §7).

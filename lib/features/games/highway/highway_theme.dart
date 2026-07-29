@@ -58,7 +58,10 @@ class HighwayPalette {
   /// keyboard highway readable without drawing a single note name.
   final Color raisedLaneTint;
 
-  /// Block fills, indexed by voice (wraps).
+  /// Block fills, indexed by voice — or by LANE on the instruments where the
+  /// lane is the note's identity (see the painter). Six of them, because a
+  /// guitar has six strings: with four, strings 5 and 6 wore the colours of 1
+  /// and 2 and the rail lied about which string to play.
   final List<Color> voices;
 
   final Color hitLine;
@@ -94,6 +97,8 @@ class HighwayPalette {
               Color(0xFF3E7FB0),
               Color(0xFF8E7BE8),
               Color(0xFF4FCBA4),
+              Color(0xFFE9A85C),
+              Color(0xFFE0708F),
             ],
             hitLine: Color(0xCCFFFFFF),
             glow: Color(0xFFAEE8FF),
@@ -117,6 +122,8 @@ class HighwayPalette {
               Color(0xFFFF2E96),
               Color(0xFFC6FF3D),
               Color(0xFFFFB43D),
+              Color(0xFF7A5BFF),
+              Color(0xFFFF6B3D),
             ],
             hitLine: Color(0xFFFFFFFF),
             glow: Color(0xFF2BF5D0),
@@ -141,6 +148,8 @@ class HighwayPalette {
               Color(0xFF6C4BC9),
               Color(0xFF1E93A8),
               Color(0xFFB88A17),
+              Color(0xFF2E8B57),
+              Color(0xFFB5306B),
             ],
             hitLine: Color(0xCC3A2416),
             glow: Color(0xFFFFB067),
@@ -167,6 +176,8 @@ class HighwayPalette {
               Color(0xFF5B6B7C),
               Color(0xFF95A3B1),
               Color(0xFF3D4C5C),
+              Color(0xFF77879A),
+              Color(0xFF232E3C),
             ],
             hitLine: Color(0xFF17202B),
             glow: Color(0xFF17202B),

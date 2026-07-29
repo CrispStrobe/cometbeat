@@ -131,6 +131,22 @@ is recorded in [HISTORY.md](HISTORY.md).
     `"scxt"` — **one word, backed up, `ast.parse`-checked**; the builder's owner
     may want to glance at it.
 
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — a VISUAL pass that found three
+  defects no test could see.** I said I had not looked at the highway; I looked.
+  (1) the rail was dark-on-dark for every non-keyboard instrument — you could
+  not tell which pad or string a block belonged to; (2) the chord grip was a
+  translucent panel BEHIND blocks that fill their lanes, i.e. invisible, so it
+  communicated nothing; (3) blocks were coloured by voice while the rail was
+  coloured by lane, so a guitar fell as one wall of blue over a six-colour
+  fretboard. Now: rail pads carry their lane's colour, a chord is a bright
+  leading-edge bar with side ties and the arrow above it, blocks take the LANE's
+  colour where the lane is the identity, and every skin has six voice colours
+  (four meant strings 5–6 wore the colours of 1–2). **Render-and-look harness:
+  RepaintBoundary + toImage in a widget test → PNG in the scratchpad; it writes
+  the file then HANGS, so run it under `timeout` and take the file. The test
+  font draws every glyph as a box (Ahem) — captions look like squares, that is
+  not a painter bug.**
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — chord grips + strum arrows,
   and a REWRITE of the Beat Highway after maintainer feedback.** ⚠️ **The
   feedback is worth inheriting: "unplayable, much too fast at 100%, rhythm

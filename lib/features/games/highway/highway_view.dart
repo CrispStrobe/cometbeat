@@ -455,29 +455,46 @@ class _HighwayPainter extends CustomPainter {
       final uBottom = ((event.startBeat - beat) / lead).clamp(-0.35, 1.0);
       final yTop = g.yFor(uTop);
       final yBottom = g.yFor(uBottom);
-      final colour = palette.voiceColor(event.voice);
 
-      final path = Path()
-        ..moveTo(g.xFor(left, uTop), yTop)
-        ..lineTo(g.xFor(right, uTop), yTop)
-        ..lineTo(g.xFor(right, uBottom), yBottom)
-        ..lineTo(g.xFor(left, uBottom), yBottom)
-        ..close();
-      canvas.drawPath(path, Paint()..color = colour.withValues(alpha: 0.16));
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
-          ..color = colour.withValues(alpha: 0.5),
+      // A panel BEHIND the blocks is invisible — they fill their lanes. What
+      // reads is a bar across the chord's leading edge: one line, one moment,
+      // one thing to play. (The first cut drew the panel and you could not see
+      // it at all.)
+      final edge = Paint()
+        ..color = palette.dark ? Colors.white : palette.blockText
+        ..strokeWidth = 3.5
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        Offset(g.xFor(left, uBottom), yBottom),
+        Offset(g.xFor(right, uBottom), yBottom),
+        edge,
       );
+      // Thin ties down the sides, so the group reads as one shape rather than
+      // a line that happens to lie across some blocks.
+      final tie = Paint()
+        ..color = edge.color.withValues(alpha: 0.55)
+        ..strokeWidth = 2;
+      for (final x in [left, right]) {
+        canvas.drawLine(
+          Offset(g.xFor(x, uBottom), yBottom),
+          Offset(g.xFor(x, uTop), yTop),
+          tie,
+        );
+      }
 
+      // ABOVE the leading edge and centred, which is where a strum direction
+      // is written in real music. Beside the chord it fell off the canvas
+      // whenever the chord used the outer strings — which for a strum is
+      // always.
       _paintStrumArrow(
         canvas,
         event.strum,
-        Offset(g.xFor((left + right) / 2, uBottom), yBottom),
+        Offset(
+          g.xFor((left + right) / 2, uBottom),
+          yBottom - 18,
+        ),
         g.widthFor(right - left, uBottom),
-        colour,
+        edge.color,
       );
     }
   }
@@ -490,7 +507,7 @@ class _HighwayPainter extends CustomPainter {
     double width,
     Color colour,
   ) {
-    final size = math.min(width * 0.18, 14.0);
+    final size = math.min(width * 0.16, 13.0);
     if (size < 5) return; // no room — better nothing than a smudge
     final down = strum == HighwayStrum.down;
     final paint = Paint()
@@ -542,7 +559,12 @@ class _HighwayPainter extends CustomPainter {
 
       final base = switch (note.state) {
         HighwayNoteState.missed => palette.missed,
-        _ => palette.voiceColor(event.voice),
+        // When the instrument has LANES, the lane is the note's identity and
+        // must pick its colour — otherwise a guitar's six strings fall as one
+        // wall of the same blue while the rail underneath shows six different
+        // colours, and the block tells you nothing about where to play it.
+        // Pitch instruments have no lane, so they keep the hand's colour.
+        _ => palette.voiceColor(event.lane ?? event.voice),
       };
       final hit = note.state == HighwayNoteState.hit;
       final paint = Paint()
@@ -744,10 +766,20 @@ class _HighwayPainter extends CustomPainter {
       final keyHeight =
           key.slot.raised ? h * KeyboardLaneMap.blackKeyHeightFraction : h;
       final rect = Rect.fromLTWH(left, top, width, keyHeight);
+      // A keyboard's rail is a keyboard: white and black. Everything else —
+      // strings, pads, drums — must carry ITS OWN LANE'S COLOUR, or the player
+      // has no way to tell which pad the falling block belongs to. Dark grey
+      // pads on a dark highway is what the first cut shipped, and it made the
+      // Beat Highway unreadable.
+      final laneColour = palette.voiceColor(key.lane);
       final base = key.slot.raised
           ? palette.railBlack
-          : (isKeyboard ? palette.railWhite : palette.railBlack);
-      final fill = lit ? Color.lerp(base, palette.glow, 0.65)! : base;
+          : (isKeyboard
+              ? palette.railWhite
+              : Color.lerp(palette.railBlack, laneColour, 0.38)!);
+      final fill = lit
+          ? Color.lerp(base, isKeyboard ? palette.glow : laneColour, 0.75)!
+          : base;
       final rrect = RRect.fromRectAndCorners(
         rect.deflate(isKeyboard ? 0.5 : 3),
         bottomLeft: const Radius.circular(4),
@@ -758,17 +790,21 @@ class _HighwayPainter extends CustomPainter {
         rrect,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = palette.railEdge,
+          ..strokeWidth = isKeyboard ? 1 : 2
+          ..color = isKeyboard
+              ? palette.railEdge
+              : laneColour.withValues(alpha: lit ? 1.0 : 0.7),
       );
 
       final label = key.label;
       if (label != null && !key.slot.raised && width > 14) {
         final tp = _text(
           label,
-          math.min(width * 0.42, 12),
-          isKeyboard ? palette.railEdge : palette.label,
-          bold: false,
+          math.min(width * 0.34, isKeyboard ? 12 : 15),
+          isKeyboard
+              ? palette.railEdge
+              : (palette.dark ? Colors.white : palette.blockText),
+          bold: !isKeyboard,
         );
         tp.paint(
           canvas,
