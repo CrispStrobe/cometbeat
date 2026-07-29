@@ -80,6 +80,8 @@ const List<String> tabColumnFieldKeys = [
   'pickStroke',
   'leftFingers',
   'rightFinger',
+  'barreFret',
+  'barreString',
   'dynamic',
   'hairpin',
 ];
@@ -138,6 +140,11 @@ Map<String, dynamic> _columnToJson(TabColumn c) => {
       if (c.pickStroke case final p?) 'pickStroke': p,
       if (c.leftFingers case final f?) 'leftFingers': f,
       if (c.rightFinger case final f?) 'rightFinger': f.name,
+      // A barre is a DISTINCT fact from the fingering, not a summary of it —
+      // the digits of a barre chord already read 1,1,1 — so it has to be
+      // written separately or a saved barre is simply gone.
+      if (c.barreFret case final f?) 'barreFret': f,
+      if (c.barreString case final b?) 'barreString': b,
       if (c.dynamic case final d?) 'dynamic': d.name,
       if (c.hairpin case final h?) 'hairpin': h.name,
     };
@@ -269,6 +276,8 @@ TabColumn _columnFromJson(Object? raw) {
     pickStroke: raw['pickStroke'] is bool ? raw['pickStroke'] as bool : null,
     leftFingers: _intList(raw['leftFingers']),
     rightFinger: _enumByName(RightHandFinger.values, raw['rightFinger']),
+    barreFret: _int(raw['barreFret']),
+    barreString: _int(raw['barreString']),
     dynamic: _enumByName(DynamicLevel.values, raw['dynamic']),
     hairpin: _enumByName(HairpinType.values, raw['hairpin']),
   );
