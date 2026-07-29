@@ -105,6 +105,12 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-highway)** · 🚧 **CLAIMING — loop-a-section on the highway** (doc
+  §7: the practice control a learn-an-instrument tool lives or dies on — drill
+  bars 9–16 until they are right). Only my own files:
+  `core/games/highway/*` + `features/games/highway/note_highway_screen.dart`,
+  plus append-only ARB keys. No hot shared file.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — the highway's PERFORMANCE risk
   is measured and the algorithmic half fixed.** New
   `test/highway_performance_test.dart` (relative assertions — an absolute ms bar
