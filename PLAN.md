@@ -3438,6 +3438,26 @@ references agreeing at 1.00, and the exemptions are deleted. ⚠️ **This does 
 un-conflate the field** — one name still carries two meanings. A1 remains the
 right model and belongs with a format version bump, not on its own.
 
+**Fixture independence — the cheap half is DONE, and it found nothing.** That is
+the result, stated as a result: the MOD note table is correct. But nothing had
+been checking it, and it is the most consequential thing in the fixture set — an
+effect byte writes the wrong command, a wrong PERIOD writes the wrong music, in
+every module we export, at every pitch.
+
+It is invisible to everything else the audit does. A round trip cannot see it
+(our reader maps the same wrong period back to the same note). **An A/B against
+libopenmpt cannot see it either** — the reference plays the file we wrote, so it
+plays the same wrong pitch we do, and the spectral comparison reads a perfect
+1.000. Two engines agreeing is not evidence the file says what we meant. Only an
+outside constant settles it, and ProTracker's table is published.
+
+`mod_note_table_test.dart` quotes that table as a SECOND copy on purpose — a
+test that imports the table it checks proves only that the table equals itself.
+It also checks the octave relation across the whole range rather than only at
+the anchor, because a table can be right where it is checked and drift at the
+extremes, which is exactly where a held slide ends up. Verified to have teeth:
+changing one period by a single unit fails it.
+
 **Still open, in the order I would take them:**
 
   * ⬜ **Fixture independence.** `fx/musical.mod` and `fx/effects.mod` are
