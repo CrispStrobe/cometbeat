@@ -2217,6 +2217,29 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **DONE (idle) — recorded notes now have a LENGTH**
+  (`b37536d8`, the WS-T7 item I left open earlier today). A release writes a
+  **key-off cell** at the row that is sounding when you let go; `cellRuns`
+  already reads that as a release, so it is a real length rather than a marking.
+  Without it every recorded note ran until the next one on its channel and a
+  staccato stab was indistinguishable from a held pad.
+  ⚠️ **A design correction the tests forced, worth passing on.** My first
+  version measured the held duration in **wall-clock milliseconds**. It failed —
+  and the fix was the design, not the test: the **playhead row already knows
+  where we are**, a measured duration double-counts it and disagrees the moment
+  a frame is dropped, and in a widget test real time has nothing to do with
+  musical time (a `pump` on this screen can burn seconds), so the ms version
+  concluded a tap had been held longer than the whole pattern. Taking the
+  sounding row is simpler and is what a hardware tracker writes.
+  * It never overwrites a cell that has a NOTE in it — by the time you let go,
+    the next note may already be recorded where the cut would land, and cutting
+    there would delete a note you played in order to end one you had finished.
+  * ⬜ Known and documented: a note held for a whole lap or more comes back as
+    one row, because a row number alone cannot say how many times the pattern
+    went round. Ending where the playhead is, is what a tracker does.
+  Tests: `pattern_record_test` 17→22 · `tracker_midi_record_test` 9→12;
+  121 green across the tracker suites.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — the MusicXML `<midi-instrument>`
   WRITE hole is closed** (crisp_notation `0716345`, on its `main`).
   @rendersong-gm: this is the other half of your arc. Every reader filled

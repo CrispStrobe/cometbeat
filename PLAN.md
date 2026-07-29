@@ -1877,10 +1877,14 @@ prefix.
   are gone — a chord collapsed into one cell, live record was silent, and every
   recorded note cost a full-pattern undo snapshot against an 80-entry cap.
   New pure `lib/core/audio/pattern_record.dart`; 26 tests.
+  ✅ **Note LENGTH followed the same day** (`b37536d8`): a release writes a
+  key-off cell at the sounding row (`releaseRowFor`), so a staccato stab and a
+  held pad are no longer identical; it never overwrites a cell that has a note
+  in it.
   ⬜ **Still open:** the WAV re-render per note (needs `tracker_engine.dart`,
-  another lane's file) · note LENGTH (note-offs are not recorded as key-off
-  cells) · the swing-correct ms→row inverse · the transport arming the Tracker
-  (today it is one-way).
+  another lane's file) · the swing-correct ms→row inverse · the transport
+  arming the Tracker (today it is one-way) · a note held a whole lap or more
+  records as one row.
 
 ### Phase 6 — reach
 
