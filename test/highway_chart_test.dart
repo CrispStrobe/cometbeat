@@ -179,6 +179,58 @@ void main() {
     });
   });
 
+  group('sections (drilling a few bars)', () {
+    const piece = HighwayChart(
+      name: 'four bars',
+      bpm: 100,
+      events: [
+        HighwayEvent(startBeat: 0, beats: 1, midi: 60), // bar 1
+        HighwayEvent(startBeat: 4, beats: 1, midi: 62), // bar 2
+        HighwayEvent(startBeat: 8, beats: 1, midi: 64), // bar 3
+        HighwayEvent(startBeat: 12, beats: 1, midi: 65), // bar 4
+      ],
+    );
+
+    test('counts its bars', () {
+      expect(piece.barCount, 4);
+      expect(piece.beatOfBar(1), 0);
+      expect(piece.beatOfBar(3), 8);
+    });
+
+    test('takes exactly the bars asked for, inclusive', () {
+      final middle = piece.section(2, 3);
+      expect(middle.events.map((e) => e.midi), [62, 64]);
+    });
+
+    test('does NOT re-zero the timing — a section stays in the piece’s own '
+        'coordinates so it still lines up with the whole', () {
+      final middle = piece.section(2, 3);
+      expect(middle.events.first.startBeat, 4);
+      expect(middle.beatsPerBar, piece.beatsPerBar);
+      expect(middle.bpm, piece.bpm);
+    });
+
+    test('a one-bar section is legal, and an empty one is not a crash', () {
+      expect(piece.section(4, 4).events.map((e) => e.midi), [65]);
+      expect(piece.section(9, 12).isEmpty, isTrue);
+    });
+
+    test('a pickup counts as part of bar 1', () {
+      const withPickup = HighwayChart(
+        name: 'anacrusis',
+        bpm: 100,
+        pickupBeats: 1,
+        events: [
+          HighwayEvent(startBeat: 0, beats: 1, midi: 67), // the pickup
+          HighwayEvent(startBeat: 1, beats: 1, midi: 60), // bar 1 downbeat
+          HighwayEvent(startBeat: 5, beats: 1, midi: 62), // bar 2
+        ],
+      );
+      expect(withPickup.beatOfBar(1), 1);
+      expect(withPickup.section(1, 1).events.map((e) => e.midi), [60]);
+    });
+  });
+
   group('highwayChartFromParts', () {
     test('gives each part its own voice, so the colours separate', () {
       const part = Score(

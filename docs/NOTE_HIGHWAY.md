@@ -352,7 +352,14 @@ shapes claiming the ukulele, whose lowest string is C4).
   through (the strip is chart-driven today).
 * **No microphone grading.** Touch only. The mic path is the play-along
   engine's, and joining them is S5.
-* **No drum-kit map, no loop-a-section, no chord-grip blocks or strum arrows,
+* ~~No loop-a-section.~~ **DONE 2026-07-29.** A range slider picks the bars to
+  drill; the clock returns to the start of the section and re-arms it, so every
+  pass is graded like the first. `HighwayChart.section` does NOT re-zero the
+  timing — a section keeps the piece's own beats, so its bar grid and any
+  backing still line up with the whole. **A loop is practice and records no
+  score**: eight bars twenty times is not the piece, and counting it would make
+  stars measure patience.
+* **No drum-kit map, no chord-grip blocks or strum arrows,
   no engraved-notation strip** (the strip is chart-driven; an engraved staff
   needs the Song Book path above).
 * ~~Not profiled.~~ **MEASURED 2026-07-29** (`test/highway_performance_test.dart`,

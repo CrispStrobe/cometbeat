@@ -16237,6 +16237,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Added to the project'**
   String get projectAdded;
+
+  /// No description provided for @highwayLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Practise a section'**
+  String get highwayLoop;
+
+  /// No description provided for @highwayLoopWhole.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole piece'**
+  String get highwayLoopWhole;
+
+  /// No description provided for @highwayLoopBars.
+  ///
+  /// In en, this message translates to:
+  /// **'Bars {from}–{to}'**
+  String highwayLoopBars(int from, int to);
+
+  /// No description provided for @highwayLoopHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The section repeats until you stop it. Practice isn’t scored — eight bars twenty times isn’t the piece.'**
+  String get highwayLoopHint;
 }
 
 class _AppLocalizationsDelegate

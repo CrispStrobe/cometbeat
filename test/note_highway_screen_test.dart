@@ -124,6 +124,68 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+      'a looped section repeats instead of finishing, and is not scored',
+      (tester) async {
+    // Eight bars so the section picker appears, with the run set to bars 1–2.
+    final piece = HighwayChart(
+      name: 'eight bars',
+      bpm: 240, // fast, so a pass is short in wall-clock terms
+      events: [
+        for (var b = 0; b < 8; b++)
+          HighwayEvent(startBeat: b * 4.0, beats: 1, midi: 60 + b),
+      ],
+    );
+    final progress = ProgressService();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => SettingsService()),
+          Provider<AudioService>(create: (_) => AudioService()),
+          ChangeNotifierProvider<ProgressService>.value(value: progress),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('en'), Locale('de')],
+          home: NoteHighwayScreen(gameId: 'note_highway_piano', chart: piece),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Drag the range slider's right thumb down to make a short section.
+    expect(find.text('Practise a section'), findsOneWidget);
+    await tester.ensureVisible(find.byType(RangeSlider));
+    await tester.pumpAndSettle();
+    final slider = tester.getRect(find.byType(RangeSlider));
+    await tester.dragFrom(
+      Offset(slider.right - 8, slider.center.dy),
+      Offset(-slider.width * 0.7, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Bars 1'), findsOneWidget);
+
+    await _tapStart(tester);
+    await tester.pump();
+    // Run well past the end of a two-bar section: it must still be playing.
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(
+      find.byType(HighwayView),
+      findsOneWidget,
+      reason: 'a loop comes round again; it never reaches the result screen',
+    );
+    // …and drilling is practice, so nothing is recorded.
+    expect(progress.starsFor('note_highway_piano'), 0);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('every instrument × skin × projection paints', (tester) async {
     for (final instrument in HighwayInstrument.values) {
       final profile = HighwayInstrumentProfile.of(instrument);

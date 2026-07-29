@@ -8986,4 +8986,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get projectAdded => 'Zum Projekt hinzugefügt';
+
+  @override
+  String get highwayLoop => 'Einen Abschnitt üben';
+
+  @override
+  String get highwayLoopWhole => 'Ganzes Stück';
+
+  @override
+  String highwayLoopBars(int from, int to) {
+    return 'Takte $from–$to';
+  }
+
+  @override
+  String get highwayLoopHint =>
+      'Der Abschnitt wiederholt sich, bis du stoppst. Üben zählt nicht für Sterne — acht Takte zwanzigmal sind nicht das Stück.';
 }

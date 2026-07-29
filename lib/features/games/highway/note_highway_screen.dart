@@ -92,6 +92,14 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   /// Voices the player takes on. Empty = decided at start (all of them).
   Set<int> _hands = {};
 
+  /// The bars being drilled, 1-based and inclusive. Null = the whole piece.
+  ///
+  /// A loop is PRACTICE, not a run: it repeats until you stop it and records no
+  /// score. Anything else would be dishonest — eight bars played twenty times
+  /// is not the same achievement as the piece, and letting it count would make
+  /// stars measure patience.
+  (int, int)? _loopBars;
+
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
   bool _running = false;
@@ -100,6 +108,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   int _lastClick = -99;
 
   HighwayChart? _chart;
+
   /// The chart's length, resolved ONCE per run — `totalBeats` walks every event
   /// and this is read on every tick.
   double _totalBeats = 0;
@@ -139,8 +148,11 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   // --- running ---------------------------------------------------------------
 
   void _start() {
-    final source = _sourceChart;
-    if (source == null) return;
+    final full = _sourceChart;
+    if (full == null) return;
+    final loop = _loopBars;
+    final source = loop == null ? full : full.section(loop.$1, loop.$2);
+    if (source.isEmpty) return;
     final prepared = _profile.prepare(source.atTempo(source.bpm * _tempoScale));
     final laneMap = _profile.laneMapFor(prepared);
     final voices = prepared.voices;
@@ -161,7 +173,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
         gradedVoices: graded,
       );
       _flashes.clear();
-      _beat = -_countInBeats;
+      _beat = _loopStartBeat - _countInBeats;
       _lastClick = -99;
       _finished = false;
       _running = true;
@@ -170,6 +182,42 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     _ticker
       ..stop()
       ..start();
+  }
+
+  /// The beat the clock starts (and, when looping, returns) to.
+  double get _loopStartBeat {
+    final loop = _loopBars;
+    final chart = _sourceChart;
+    if (loop == null || chart == null) return 0;
+    return chart.beatOfBar(loop.$1);
+  }
+
+  /// One past the last beat of the loop.
+  double get _loopEndBeat {
+    final loop = _loopBars;
+    final chart = _sourceChart;
+    if (loop == null || chart == null) return double.infinity;
+    return chart.beatOfBar(loop.$2 + 1);
+  }
+
+  /// Re-arms the section for another pass. A fresh grader is the whole trick:
+  /// the notes go back to pending, so the second time through is graded like
+  /// the first instead of showing last pass's verdicts.
+  void _restartLoop() {
+    final chart = _chart;
+    final laneMap = _laneMap;
+    final previous = _grader;
+    if (chart == null || laneMap == null || previous == null) return;
+    setState(() {
+      _grader = HighwayGrader(
+        chart: chart,
+        rules: _rules,
+        laneMap: laneMap,
+        gradedVoices: previous.gradedVoices,
+      );
+      _flashes.clear();
+      _beat = _loopStartBeat;
+    });
   }
 
   void _stop() {
@@ -205,8 +253,17 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     grader.advanceTo(_beat);
     _flashes.removeWhere((f) => _beat - f.beat > 1.0);
 
-    if (_beat > _totalBeats + 1.2 ||
-        (grader.total > 0 && grader.finished)) {
+    // A loop never finishes: it comes round again until the player stops it.
+    if (_loopBars != null) {
+      if (_beat > _loopEndBeat) {
+        _restartLoop();
+        return;
+      }
+      setState(() {});
+      return;
+    }
+
+    if (_beat > _totalBeats + 1.2 || (grader.total > 0 && grader.finished)) {
       _finish();
       return;
     }
@@ -225,8 +282,11 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
       _running = false;
       _finished = true;
     });
-    if (grader == null || _mode == HighwayMode.watch || grader.total == 0) {
-      return; // watching is not a score
+    if (grader == null ||
+        _mode == HighwayMode.watch ||
+        _loopBars != null ||
+        grader.total == 0) {
+      return; // watching and drilling a section are not scored runs
     }
     context.read<ProgressService>().recordResult(
           widget.gameId,
@@ -330,7 +390,10 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   }
 
   Widget _body(BuildContext context, AppLocalizations l) {
-    if (_finished && _mode == HighwayMode.play && (_grader?.total ?? 0) > 0) {
+    if (_finished &&
+        _mode == HighwayMode.play &&
+        _loopBars == null &&
+        (_grader?.total ?? 0) > 0) {
       return GameResultView(
         gameType: widget.gameId,
         score: _grader!.hits,
@@ -427,6 +490,10 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
             }),
           ),
         ],
+        if (_barCount > 2) ...[
+          _sectionLabel(l.highwayLoop),
+          _loopControl(context, l),
+        ],
         _sectionLabel('${l.highwayTempo} ${(_tempoScale * 100).round()}%'),
         Slider(
           value: _tempoScale,
@@ -469,6 +536,61 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   }
 
   List<int> get _handsAvailable => _sourceChart?.voices ?? const [];
+
+  int get _barCount => _sourceChart?.barCount ?? 1;
+
+  /// Pick the bars to drill. A range slider rather than two steppers because
+  /// the useful gesture is "that bit there", grabbed with a thumb, not two
+  /// numbers typed in.
+  Widget _loopControl(BuildContext context, AppLocalizations l) {
+    final bars = _barCount;
+    final loop = _loopBars;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                loop == null
+                    ? l.highwayLoopWhole
+                    : l.highwayLoopBars(loop.$1, loop.$2),
+              ),
+            ),
+            if (loop != null)
+              TextButton(
+                onPressed: () => setState(() => _loopBars = null),
+                child: Text(l.highwayLoopWhole),
+              ),
+          ],
+        ),
+        RangeSlider(
+          values: RangeValues(
+            (loop?.$1 ?? 1).toDouble(),
+            (loop?.$2 ?? bars).toDouble(),
+          ),
+          min: 1,
+          max: bars.toDouble(),
+          divisions: bars > 1 ? bars - 1 : null,
+          labels: RangeLabels(
+            '${loop?.$1 ?? 1}',
+            '${loop?.$2 ?? bars}',
+          ),
+          onChanged: (v) => setState(() {
+            final from = v.start.round();
+            final to = v.end.round();
+            // The whole range is not a loop — it is just the piece.
+            _loopBars = (from <= 1 && to >= bars) ? null : (from, to);
+          }),
+        ),
+        if (loop != null)
+          Text(
+            l.highwayLoopHint,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
+    );
+  }
 
   Widget _sectionLabel(String text) => Padding(
         padding: const EdgeInsets.only(top: 14, bottom: 6),

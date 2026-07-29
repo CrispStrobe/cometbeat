@@ -3020,5 +3020,10 @@
   "highwayHits": "Treffer",
   "highwayStreak": "Serie",
   "projectAddTrack": "Zum Projekt hinzuf\u00fcgen",
-  "projectAdded": "Zum Projekt hinzugef\u00fcgt"
+  "projectAdded": "Zum Projekt hinzugef\u00fcgt",
+  "highwayLoop": "Einen Abschnitt \u00fcben",
+  "highwayLoopWhole": "Ganzes St\u00fcck",
+  "highwayLoopBars": "Takte {from}\u2013{to}",
+  "@highwayLoopBars": {"placeholders": {"from": {"type": "int"}, "to": {"type": "int"}}},
+  "highwayLoopHint": "Der Abschnitt wiederholt sich, bis du stoppst. \u00dcben z\u00e4hlt nicht f\u00fcr Sterne \u2014 acht Takte zwanzigmal sind nicht das St\u00fcck."
 }

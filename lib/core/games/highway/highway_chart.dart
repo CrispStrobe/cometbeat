@@ -183,6 +183,40 @@ class HighwayChart {
         pickupBeats: pickupBeats,
       );
 
+  /// How many bars the piece occupies, counting a pickup as part of bar 1.
+  int get barCount {
+    final perBar = beatsPerBar <= 0 ? 4.0 : beatsPerBar;
+    final beats = totalBeats - pickupBeats;
+    if (beats <= 0) return 1;
+    return (beats / perBar).ceil();
+  }
+
+  /// The first beat of 1-based [bar].
+  double beatOfBar(int bar) =>
+      pickupBeats + (bar - 1) * (beatsPerBar <= 0 ? 4.0 : beatsPerBar);
+
+  /// Bars [fromBar]…[toBar] (1-based, inclusive) as a chart of their own —
+  /// "drill these eight bars until they are right", which is how anyone
+  /// actually practises.
+  ///
+  /// Timing is NOT re-zeroed: the notes keep their beats, so the bar grid, the
+  /// backing track and the loop clock all stay in the piece's own coordinates
+  /// and a section still lines up with the recording of the whole.
+  HighwayChart section(int fromBar, int toBar) {
+    final from = beatOfBar(fromBar);
+    final to = beatOfBar(toBar + 1);
+    return HighwayChart(
+      name: name,
+      bpm: bpm,
+      events: [
+        for (final e in events)
+          if (e.startBeat >= from - 1e-9 && e.startBeat < to - 1e-9) e,
+      ],
+      beatsPerBar: beatsPerBar,
+      pickupBeats: pickupBeats,
+    );
+  }
+
   /// The events sounding at [beat] (used for key-lighting).
   ///
   /// ⚠ Also O(n). Measured at ~1–2% of a 60 fps frame budget for a 4,000-note

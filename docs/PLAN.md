@@ -105,11 +105,21 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (note-highway)** · 🚧 **CLAIMING — loop-a-section on the highway** (doc
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — loop-a-section on the highway** (doc
   §7: the practice control a learn-an-instrument tool lives or dies on — drill
   bars 9–16 until they are right). Only my own files:
   `core/games/highway/*` + `features/games/highway/note_highway_screen.dart`,
-  plus append-only ARB keys. No hot shared file.
+  plus append-only ARB keys. No hot shared file. **Shipped:** a range slider
+  picks the bars, the clock re-arms the section each pass, and a loop is
+  PRACTICE — it records no score, because eight bars twenty times is not the
+  piece. ⚠️ **Two testing lessons from the perf harness, both worth inheriting:**
+  (1) my tap benchmark failed its own absolute µs bar under load while the code
+  was fine, and then failed a RELATIVE bar too because the baseline had become
+  sub-microsecond noise — once work is that cheap, **assert the work, not the
+  clock** (`lastTapScanned`), which is deterministic on any machine. (2) The
+  same harness caught a real bug the timings had hidden: the grader's cursor was
+  retired only BEFORE its scan, so after any jump (a seek, a loop restart, a slow
+  first frame) it stayed pinned at 0 and every tap walked the answered notes.
 
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — the highway's PERFORMANCE risk
   is measured and the algorithmic half fixed.** New

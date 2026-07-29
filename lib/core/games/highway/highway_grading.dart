@@ -259,9 +259,7 @@ class HighwayGrader {
     // Retire answered notes at the head, then look only as far ahead as the
     // hit window reaches — the list is sorted, so the first note beyond it
     // ends the scan.
-    while (_cursor < _graded.length && !_graded[_cursor].isPending) {
-      _cursor++;
-    }
+    _retire();
     for (var i = _cursor; i < _graded.length; i++) {
       final n = _graded[i];
       if (n.event.startBeat + rules.hitWindowBeats >= beat) break;
@@ -269,6 +267,31 @@ class HighwayGrader {
       n.state = HighwayNoteState.missed;
       _misses++;
       _streak = 0;
+    }
+    // …and again AFTER, because that scan is what resolved them. Retiring only
+    // beforehand leaves the cursor pinned at 0 for the whole run whenever the
+    // clock arrives in one jump (a seek, a loop restart, a slow first frame),
+    // and then every tap walks the notes already answered. Measured: 1.4 µs vs
+    // 81.5 µs per tap late in a four-minute piece.
+    _retire();
+  }
+
+  /// How many notes the last [tap] looked at. The cursor's whole purpose is to
+  /// keep this bounded by the hit window instead of by the length of the piece,
+  /// and once the work is this cheap a stopwatch cannot tell the difference —
+  /// sub-microsecond timings are noise on a loaded machine. Counting is the
+  /// deterministic form of the same question.
+  ///
+  /// Test-only, and deliberately NOT annotated `@visibleForTesting`: that
+  /// annotation lives in `package:flutter/foundation.dart`, and this file is
+  /// pure Dart on purpose (it has to run headless). A doc line costs nothing
+  /// and does not drag Flutter into the core.
+  int lastTapScanned = 0;
+
+  /// Drops the head of the graded list past everything already answered.
+  void _retire() {
+    while (_cursor < _graded.length && !_graded[_cursor].isPending) {
+      _cursor++;
     }
   }
 
@@ -291,9 +314,11 @@ class HighwayGrader {
   HighwayTapResult tap(HighwayRailKey key, double beat) {
     HighwayNote? best;
     var bestDelta = double.infinity;
+    var scanned = 0;
     // Same window as the clock: start where the unanswered notes begin and
     // stop at the first note too far in the future to be claimed.
     for (var i = _cursor; i < _graded.length; i++) {
+      scanned++;
       final n = _graded[i];
       final delta = beat - n.event.startBeat;
       if (-delta > rules.hitWindowBeats) break;
@@ -305,10 +330,12 @@ class HighwayGrader {
         best = n;
       }
     }
+    lastTapScanned = scanned;
     if (best == null) {
       _streak = 0; // a wrong key breaks the run, but never costs a note
       return const HighwayTapResult(note: null, quality: null);
     }
+    if (identical(best, _graded[_cursor])) _retire();
 
     final delta = beat - best.event.startBeat;
     final quality = delta.abs() <= rules.perfectWindowBeats

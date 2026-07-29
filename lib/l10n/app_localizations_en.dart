@@ -8934,4 +8934,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get projectAdded => 'Added to the project';
+
+  @override
+  String get highwayLoop => 'Practise a section';
+
+  @override
+  String get highwayLoopWhole => 'Whole piece';
+
+  @override
+  String highwayLoopBars(int from, int to) {
+    return 'Bars $from–$to';
+  }
+
+  @override
+  String get highwayLoopHint =>
+      'The section repeats until you stop it. Practice isn’t scored — eight bars twenty times isn’t the piece.';
 }

@@ -157,30 +157,43 @@ void main() {
     expect(
       large,
       lessThan(small * 6),
-      reason: 'a per-frame scan of every note in the piece is what makes a long '
+      reason:
+          'a per-frame scan of every note in the piece is what makes a long '
           'song stutter; the grader must only look at notes that are live',
     );
   });
 
-  test('a tap is answered without walking the whole piece', () {
-    final chart = _piece(500);
-    final laneMap = KeyboardLaneMap.forRange(48, 84);
-    final grader = HighwayGrader(
-      chart: chart,
-      rules: HighwayRules.of(HighwayDifficulty.medium),
-      laneMap: laneMap,
-    );
-    final key = laneMap.railKeys().firstWhere((k) => k.midi == 60);
-    // Late in the piece: a naive implementation rescans thousands of resolved
-    // notes for every tap.
-    grader.advanceTo(1800);
-    final watch = Stopwatch()..start();
-    for (var i = 0; i < 200; i++) {
-      grader.tap(key, 1800 + i * 0.001);
+  test('a tap looks at the live window, not at the whole piece', () {
+    // Counted, not timed. Once the cursor is doing its job a tap costs under a
+    // microsecond, and at that scale a stopwatch measures the machine's mood:
+    // the same assertion read 0.9 µs quiet and 2.8 µs under load and failed on
+    // its own ratio while the algorithm was fine. The invariant is about WORK,
+    // so count the work.
+    int scannedAt(int bars) {
+      final chart = _piece(bars);
+      final laneMap = KeyboardLaneMap.forRange(48, 84);
+      final grader = HighwayGrader(
+        chart: chart,
+        rules: HighwayRules.of(HighwayDifficulty.medium),
+        laneMap: laneMap,
+      );
+      final key = laneMap.railKeys().firstWhere((k) => k.midi == 60);
+      final at = chart.totalBeats * 0.9; // deep into the piece
+      grader.advanceTo(at);
+      grader.tap(key, at);
+      return grader.lastTapScanned;
     }
-    watch.stop();
+
+    final small = scannedAt(16);
+    final large = scannedAt(500);
     // ignore: avoid_print
-    print('tap: ${(watch.elapsedMicroseconds / 200).toStringAsFixed(1)} µs');
-    expect(watch.elapsedMicroseconds / 200, lessThan(400));
+    print('tap scanned: 128 notes $small · 4000 notes $large notes');
+    expect(
+      large,
+      lessThan(24),
+      reason: 'a tap 3,600 notes into a piece must still look only at what is '
+          'live — this is the assertion that notices the cursor going',
+    );
+    expect(large, lessThanOrEqualTo(small + 4));
   });
 }
