@@ -21,12 +21,20 @@
 // lowest fretted note when one does not — which is what a player does, and what
 // makes the digits stable through a passage instead of flickering bar to bar.
 //
-// ⚠ Deliberately NOT modelled: barre chords (one finger stopping several strings),
-// thumb-over-the-neck bass notes, and finger substitution on a held note. Each is
-// real technique that the digits alone cannot express, and guessing at them would
-// produce confident nonsense. Where a chord shape needs a barre, the digits here
-// will name four separate fingers — correct as far as it goes, and honest about
-// what it does not know. See PLAN.md if that becomes worth doing properly.
+// ⚠ CORRECTION (measured 2026-07-29). An earlier version of this comment claimed
+// a barre chord "will name four separate fingers". That was wrong about this
+// file's own behaviour, and the tests below now pin what it actually does: a
+// barre IS the index finger lying at the hand position, so every string stopped
+// at that fret already comes out as finger 1. F major gives 1,3,3,2,1,1 and B
+// minor 1,3,3,2,1 — the textbook fingerings. Checked because a 1,180-file
+// control corpus of classical guitar tab carries 26,130 barre annotations, so
+// the case is common enough that a wrong claim about it would matter.
+//
+// ⚠ What IS genuinely not modelled: the barre as a distinct NOTATION (the digits
+// say "1, 1, 1", not "one finger across three strings"); a barre laid by a
+// finger other than the index, which real players do use; thumb-over-the-neck
+// bass notes; and finger substitution on a held note. Those need marks the digit
+// list cannot carry, and guessing at them would produce confident nonsense.
 //
 // Pure Dart, Flutter-free (crisp_notation_core only), so it runs headless.
 

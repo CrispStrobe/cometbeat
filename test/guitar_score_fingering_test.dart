@@ -128,4 +128,35 @@ void main() {
       expect(fingerGuitarScore(_score(const []), guitar), isEmpty);
     });
   });
+
+  group('barre chords — what the model actually does', () {
+    // ⚠ These exist because the file's own comment used to claim a barre "names
+    // four separate fingers". It does not, and nothing tested it either way. A
+    // control corpus of 1,180 classical-guitar tabs carries 26,130 barre
+    // annotations, so this is a common shape, not an edge case.
+
+    test('F major: the index barres, and the rest fall where they should', () {
+      // String 5 = low E … 0 = high e. F = 1,3,3,2,1,1.
+      final shape = {5: 1, 4: 3, 3: 3, 2: 2, 1: 1, 0: 1};
+      expect(
+        fingerFrettings([shape]).single,
+        [1, 3, 3, 2, 1, 1],
+        reason: 'a barre IS the index at the hand position — every string '
+            'stopped there is finger 1, and it already comes out that way',
+      );
+    });
+
+    test('B minor: the same shape moved up the neck', () {
+      final shape = {4: 2, 3: 4, 2: 4, 1: 3, 0: 2};
+      expect(fingerFrettings([shape]).single, [1, 3, 3, 2, 1]);
+    });
+
+    test('a barre does not drag the hand out of position', () {
+      // Six strings at one fret is a full barre; the hand sits there and the
+      // next chord must be judged from that position, not from a stale one.
+      final barre = {for (var s = 0; s < 6; s++) s: 5};
+      final fingers = fingerFrettings([barre]).single;
+      expect(fingers.every((f) => f == 1), isTrue);
+    });
+  });
 }

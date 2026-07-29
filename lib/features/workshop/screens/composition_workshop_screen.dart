@@ -1677,9 +1677,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// fret, and `scoreWithGuitarFingerings` only names which finger presses each
   /// one (one finger per fret, index at the bottom of the hand).
   ///
-  /// ⚠ Barre chords are not modelled: where one finger would stop several
-  /// strings, this names four separate fingers. Correct as far as it goes, and
-  /// it does not pretend to know a technique it cannot express.
+  /// ⚠ A barre comes out right — every string stopped at the hand's own fret is
+  /// finger 1, which is what a barre IS (F major gives 1,3,3,2,1,1). What the
+  /// digits cannot say is that ONE finger lies across them, or that a finger
+  /// other than the index laid it.
   void _addGuitarFingerings(int i) => setState(() {
         final part = _mpd.parts[i];
         final fingered = scoreWithGuitarFingerings(
