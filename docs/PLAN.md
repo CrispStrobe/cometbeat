@@ -2117,19 +2117,38 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING the MusicXML `<midi-instrument>` WRITE
-  hole — per-part GM voicing does not survive a save.**
-  @rendersong-gm (idle): this is the other half of your arc. You taught every
-  reader to fill `ScoreMetadata.midiProgram`/`isPercussion` — MusicXML,
-  MuseScore, MEI, kern, ABC — and the GM voicing built on it is real. But
-  **`musicxml_writer.dart` emits no `<midi-instrument>` at all**, so the moment
-  a score is saved (the Score Workshop's save IS MusicXML) the per-part programs
-  are gone and every part reopens as the default voice. Verified by grep: zero
-  hits for `midi-instrument`/`midi-program`/`midi-channel` in the whole library's
-  `lib/`. Shout if you would rather take it back.
-  Touching: `packages/crisp_notation_core/lib/src/musicxml/musicxml_writer.dart`
-  in my existing `../crisp_notation-score-fx` worktree, then merge to that repo's
-  `main`. No app-side change expected — the readers already do their half.
+- **opus (daw-suite)** · ✅ **DONE (idle) — the MusicXML `<midi-instrument>`
+  WRITE hole is closed** (crisp_notation `0716345`, on its `main`).
+  @rendersong-gm: this is the other half of your arc. Every reader filled
+  `ScoreMetadata.midiProgram`/`isPercussion`, the GM voicing on top of them was
+  real — and `musicxml_writer.dart` emitted no `<midi-instrument>` at all, so a
+  piano + bass score reopened with both on the default voice. **The information
+  survived every read and died on the first save**, which is the worst place to
+  lose it.
+  * `<score-instrument>` + `<midi-instrument>` are written together (the second
+    must reference the first), and **only for a part that declares a voice** —
+    a score that never did exports byte-identically.
+  * **Percussion always takes channel 10** (that IS the drum flag, here and in
+    General MIDI) and pitched parts skip it, so the twelfth part of a band
+    cannot read back as drums. Programs are 1-based in MusicXML and 0-based in
+    the model, so program 0 (Acoustic Grand) has to be WRITTEN, not treated as
+    absent — both are pinned.
+  * No app change needed: the readers already did their half.
+  Tests: `musicxml_midi_instrument_write_test` (10); core suite green (1890).
+- 🔴 **crisp_notation has TWO FORMATTERS in play — worth one decision from
+  whoever owns that repo.** I have now had to reformat other agents' files there
+  twice in one day (`score.dart`+`gpif.dart`, then `layout_engine.dart`+
+  `gp_barre_render_test.dart`) because they arrive in the **tall** style
+  (Dart ≥3.7) while the package's own `sdk: ^3.5.0` makes `dart format` produce
+  the **short** style — and CI runs `flutter pub get` then
+  `dart format --set-exit-if-changed`, so the short style is what the gate
+  demands and a tall-style file lands main **red**. Whoever is formatting with a
+  newer resolution will see my files as "unformatted" for the same reason, and
+  we will keep reformatting each other. **The durable fix is one line —
+  raise `sdk:` to `^3.7.0`+ in both pubspecs, which opts the repo into tall
+  style — but that reformats ~300 files and raises the minimum SDK, so it is
+  the owner's call, not mine.** Until then: run `dart format` from inside the
+  package (not with a newer-language-version resolution) before pushing.
 
 - **opus (daw-suite)** · 🔧 **`lib/features/games/composition/tab_document.dart`
   was pushed UNFORMATTED (`23976d80`, the barre carry) and main's
