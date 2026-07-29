@@ -184,7 +184,9 @@ class HighwayInstrumentProfile {
       case HighwayInstrument.drums:
         return PadLaneMap(
           laneCount: kHighwayDrumLanes.length,
-          labels: const ['Kick', 'Snare', 'Tom', 'Hat', 'Crash'],
+          // The digit is in the label because a key binding nobody can see is
+          // a key binding nobody uses.
+          labels: const ['1 Kick', '2 Snare', '3 Tom', '4 Hat', '5 Crash'],
         );
     }
   }

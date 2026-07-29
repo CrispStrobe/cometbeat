@@ -12,8 +12,8 @@
 // hands — so a piano piece really does fall in two colours like a two-hand
 // score, instead of being a melody with a label on it.
 
-import 'package:comet_beat/core/audio/drum_presets.dart' show kDrumPresets;
 import 'package:comet_beat/core/games/highway/highway_chart.dart';
+import 'package:comet_beat/core/games/highway/highway_grooves.dart';
 import 'package:comet_beat/core/games/highway/highway_instrument.dart';
 
 /// Concatenated voices, put back into time order — the charts below are
@@ -210,21 +210,26 @@ final _dArpeggio = _line([
   (62, 12, 1), (59, 13, 1), (55, 14, 2),
 ]);
 
-/// The Drum Kit's own starter grooves, on the highway. Reusing `kDrumPresets`
-/// rather than authoring beats again means the groove a child builds in the
-/// Drum Kit and the one falling here are the same music, and a new preset shows
-/// up in both places at once.
+/// The groove ladder as playable pieces, easiest first.
+///
+/// It does NOT reuse the Drum Kit's starter presets any more: those are four
+/// patterns for BUILDING a beat, all of them hats-on-every-eighth, which as an
+/// exercise means three hat taps a second before you have played a bar. A
+/// highway needs a ladder — see `highway_grooves.dart`.
 List<HighwayPiece> _drumPieces() => [
-      for (var i = 0; i < kDrumPresets.length && i < 4; i++)
+      for (final groove in kHighwayGrooves)
         HighwayPiece(
-          id: 'highway_beat_${kDrumPresets[i].name.toLowerCase()}',
-          level: i + 1,
+          id: 'highway_groove_${groove.name.toLowerCase().replaceAll(' ', '_')}',
+          level: groove.level,
           instruments: const {HighwayInstrument.drums},
           chart: highwayChartFromDrumRows(
-            kDrumPresets[i].pattern.rows,
+            groove.steps,
             lanes: kHighwayDrumLanes,
-            name: kDrumPresets[i].name,
-            bpm: 92,
+            name: groove.name,
+            bpm: groove.bpm,
+            // A short groove needs more passes to be an exercise; a long one
+            // fewer, so every piece lasts roughly the same.
+            repeats: groove.rows.values.first.length <= 12 ? 6 : 4,
           ),
         ),
     ];

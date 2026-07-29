@@ -19,6 +19,7 @@ import 'package:comet_beat/features/games/highway/note_highway_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Score, StaffView;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -293,6 +294,36 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(StaffView), findsNothing);
     expect(find.byType(HighwayReadingStrip), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the number keys play the drum lanes', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        const NoteHighwayScreen(
+          instrument: HighwayInstrument.drums,
+          gameId: 'beat_highway',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _tapStart(tester);
+    await tester.pump();
+    // Past the count-in and onto the first hit.
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // '1' is the kick — the leftmost lane — and it must be graded, not ignored.
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.pump(const Duration(milliseconds: 30));
+    await tester.sendKeyEvent(LogicalKeyboardKey.numpad2);
+    await tester.pump(const Duration(milliseconds: 30));
+    expect(tester.takeException(), isNull);
+
+    // A key with no lane behind it is ignored rather than crashing.
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
+    await tester.pump(const Duration(milliseconds: 30));
     expect(tester.takeException(), isNull);
   });
 

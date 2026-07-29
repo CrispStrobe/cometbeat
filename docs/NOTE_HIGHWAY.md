@@ -372,6 +372,22 @@ shapes claiming the ukulele, whose lowest string is C4).
   backing still line up with the whole. **A loop is practice and records no
   score**: eight bars twenty times is not the piece, and counting it would make
   stars measure patience.
+* ⚠️ **Beat Highway v1 was not playable, and the fix is the lesson.** The
+  maintainer's report: too fast at 100%, "rhythm extremely boring", "hat hits
+  throughout", no keyboard. All four were the same root cause — I had reused the
+  Drum Kit's four STARTER PRESETS as an exercise ladder. They are patterns for
+  *building* a beat: every one runs hats on every eighth at 92 bpm, which as a
+  thing to play is three hat taps a second on top of kick and snare before a
+  beginner has finished a bar. Reuse is right when two surfaces want the same
+  thing; these two wanted different things and I did not check.
+  Fixed 2026-07-29: `highway_grooves.dart` is a real ladder — **28 grooves**,
+  level 1 kick-and-snare only at 60 bpm, hats not appearing until level 3 and
+  only on the quarters, eighth-hats at level 4, independence patterns (off-beat
+  hats, shuffle, one-drop, bossa, ghost snares) at level 5. Tempo is per groove
+  and slow at the bottom: a beat you can play at 60 teaches more than one you
+  can watch at 92. Plus **number-key play** (1–5 = the lanes, digits shown on
+  the pads, numpad too), because a pad game with no keyboard is unplayable on a
+  desktop.
 * ~~No drum-kit map.~~ **DONE 2026-07-29** — a fourth tile, *Beat Highway*
   (`beat_highway`, under the drums module). One lane per kit piece, hits with no
   pitch at all (the lane IS the instruction), real `renderDrum` one-shots under

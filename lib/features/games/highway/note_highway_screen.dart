@@ -56,6 +56,7 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Score;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 /// Watch the piece play, or play it yourself.
@@ -146,6 +147,13 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   HighwayGrader? _grader;
   final List<HighwayFlash> _flashes = [];
 
+  /// Physical-keyboard play. The number row maps to the lanes left to right —
+  /// 1 = kick … 5 = crash — which is how a drum machine has always been typed,
+  /// and it is the only way this is playable on a desktop or with a keyboard
+  /// case. Pitched instruments keep the letter row for a later slice; the pads
+  /// are what needed it.
+  final FocusNode _keyFocus = FocusNode(debugLabel: 'highway-keys');
+
   // --- microphone ------------------------------------------------------------
   final MicrophonePitchService _mic = MicrophonePitchService();
   StreamSubscription<PitchReading>? _micSub;
@@ -173,6 +181,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
 
   @override
   void dispose() {
+    _keyFocus.dispose();
     _ticker.dispose();
     unawaited(_micSub?.cancel());
     _mic.dispose();
@@ -512,6 +521,47 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     );
   }
 
+  /// Which lane a key press means, or null. Digits 1..9 and the numpad both
+  /// work; a laptop's number row is the obvious target but a numpad is what a
+  /// desk player will reach for.
+  int? _laneForKey(LogicalKeyboardKey key) {
+    const digits = [
+      [LogicalKeyboardKey.digit1, LogicalKeyboardKey.numpad1],
+      [LogicalKeyboardKey.digit2, LogicalKeyboardKey.numpad2],
+      [LogicalKeyboardKey.digit3, LogicalKeyboardKey.numpad3],
+      [LogicalKeyboardKey.digit4, LogicalKeyboardKey.numpad4],
+      [LogicalKeyboardKey.digit5, LogicalKeyboardKey.numpad5],
+      [LogicalKeyboardKey.digit6, LogicalKeyboardKey.numpad6],
+      [LogicalKeyboardKey.digit7, LogicalKeyboardKey.numpad7],
+      [LogicalKeyboardKey.digit8, LogicalKeyboardKey.numpad8],
+      [LogicalKeyboardKey.digit9, LogicalKeyboardKey.numpad9],
+    ];
+    for (var i = 0; i < digits.length; i++) {
+      if (digits[i].contains(key)) return i;
+    }
+    return null;
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    // Only key DOWN: a repeat would machine-gun the lane, and a key-up would
+    // double every hit.
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final laneMap = _laneMap;
+    if (!_running || laneMap == null || _mode == HighwayMode.watch) {
+      return KeyEventResult.ignored;
+    }
+    final lane = _laneForKey(event.logicalKey);
+    if (lane == null || lane >= laneMap.laneCount) {
+      return KeyEventResult.ignored;
+    }
+    final key = laneMap.railKeys().firstWhere(
+          (k) => k.lane == lane,
+          orElse: () => laneMap.railKeys().first,
+        );
+    _onRailTap(key);
+    return KeyEventResult.handled;
+  }
+
   void _onRailTap(HighwayRailKey key) {
     final grader = _grader;
     if (!_running || grader == null || _mode == HighwayMode.watch) return;
@@ -839,6 +889,8 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
         if (e.lane != null) e.lane!,
     };
 
+    // The keyboard only reaches the game while it is the focused thing.
+    _keyFocus.requestFocus();
     return Column(
       children: [
         if (_showStrip)
@@ -858,25 +910,29 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
             noteNameOf: noteName,
           ),
         Expanded(
-          child: HighwayView(
-            chart: chart,
-            laneMap: laneMap,
-            notes: grader.notes,
-            beat: _beat,
-            rules: _rules,
-            palette: palette,
-            projection: _projection,
-            flashes: _flashes,
-            litMidi: litMidi,
-            litLanes: litLanes,
-            noteNameOf: noteName,
-            energy: (grader.multiplier - 1) / 3,
-            livePitch: _livePitch,
-            // With the microphone answering, the rail is a picture of the
-            // instrument, not a control: tapping it would let you "play" the
-            // piece with your thumbs while claiming to play it for real.
-            onRailTap:
-                _mode == HighwayMode.play && !_usingMic ? _onRailTap : null,
+          child: Focus(
+            focusNode: _keyFocus,
+            onKeyEvent: _onKey,
+            child: HighwayView(
+              chart: chart,
+              laneMap: laneMap,
+              notes: grader.notes,
+              beat: _beat,
+              rules: _rules,
+              palette: palette,
+              projection: _projection,
+              flashes: _flashes,
+              litMidi: litMidi,
+              litLanes: litLanes,
+              noteNameOf: noteName,
+              energy: (grader.multiplier - 1) / 3,
+              livePitch: _livePitch,
+              // With the microphone answering, the rail is a picture of the
+              // instrument, not a control: tapping it would let you "play" the
+              // piece with your thumbs while claiming to play it for real.
+              onRailTap:
+                  _mode == HighwayMode.play && !_usingMic ? _onRailTap : null,
+            ),
           ),
         ),
         _hud(context, l, grader),

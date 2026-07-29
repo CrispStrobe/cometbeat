@@ -105,9 +105,21 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (note-highway)** · 🚧 **CLAIMING — chord grips + strum arrows on the
-  fretted highway** (doc §7's last guitar item). Only my own files:
-  `core/games/highway/*` + `features/games/highway/highway_view.dart`.
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — chord grips + strum arrows,
+  and a REWRITE of the Beat Highway after maintainer feedback.** ⚠️ **The
+  feedback is worth inheriting: "unplayable, much too fast at 100%, rhythm
+  extremely boring, hat hits throughout, no keyboard".** All four came from one
+  mistake — I reused the Drum Kit's four starter PRESETS as an exercise ladder.
+  Those are patterns for *building* a beat (hats on every eighth at 92 bpm);
+  as something to *play* that is three hat taps a second before a beginner has
+  finished a bar. **Reuse is right when two surfaces want the same thing; these
+  wanted different things and I did not check.** Now `highway_grooves.dart`:
+  28 grooves, level 1 = kick+snare at 60 bpm with NO hat, hats on quarters at
+  level 3, eighths at 4, independence at 5, tempo per groove. Plus number-key
+  play (1–5 → lanes, printed on the pads) — a pad game without a keyboard is
+  unplayable on a desktop. Guitar chords also now draw as one grip with a
+  down/up strum arrow (`HighwayStrum`, tagged by the arranger, not invented by
+  the view).
 
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — the ENGRAVED reading strip.**
   A Song Book song carries its `Score` into the highway, and the strip shows the
