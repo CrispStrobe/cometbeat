@@ -10,7 +10,7 @@ import 'package:crisp_notation_core/crisp_notation_core.dart';
 /// voice-1-only count is blind to `\\`/voice-2 material and silently
 /// under-reports (the trap that made an earlier CPDL sweep read "0 gains").
 ///
-/// Usage: dart run tool/music_db_new_source_sweep.dart <dir> [report.json]
+/// Usage: `dart run tool/music_db_new_source_sweep.dart <dir> [report.json]`
 
 /// Reads an XML file as text, honouring a UTF-16 byte-order mark.
 ///
@@ -43,9 +43,11 @@ String _readText(File f) {
 String _utf16(List<int> bytes, int start, bool bigEndian) {
   final units = <int>[];
   for (var i = start; i + 1 < bytes.length; i += 2) {
-    units.add(bigEndian
-        ? (bytes[i] << 8) | bytes[i + 1]
-        : (bytes[i + 1] << 8) | bytes[i]);
+    units.add(
+      bigEndian
+          ? (bytes[i] << 8) | bytes[i + 1]
+          : (bytes[i + 1] << 8) | bytes[i],
+    );
   }
   return String.fromCharCodes(units);
 }
