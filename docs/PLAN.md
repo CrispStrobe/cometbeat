@@ -266,29 +266,28 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
-- **opus (workstation-parity)** · 🔶 **`WS-X1d` PARTIAL — app bar fixed; the
-  Tracker overflow is NOT the app bar, and I had that wrong too.**
-  ✅ **Shipped: `GameAppBar` scrolls its actions horizontally** (`a4080ca1`),
-  with the **sound toggle and "?" pinned OUTSIDE the scroll view** — the
-  previous attempt at this scrolled them too and was reverted (`ba96a26f`,
-  "keep game app bar layout stable"), and an app-wide mute you have to hunt for
-  is worse than no scroll. `Flexible` replaces that attempt's guessed 72% width.
-  **`test/game_app_bar_test.dart` restored** (the revert deleted it): 5 tests —
-  no overflow, toggle stays reachable, overflowing actions are scrolled not
-  lost, short rows unchanged for the other 124 screens. `layout_audit_test`
-  (every game × phone/tablet × EN/DE) green.
-  ❌ **BUT it does not fix the Tracker overflow I was chasing.** With the
-  first-run sheet dismissed the screen still throws **`RenderFlex overflowed by
-  368 px`** and **`by 171 px`** — so the offending Row is in the Tracker's own
-  body/toolbar, **not** in the app bar. My earlier note implying the app bar was
-  the culprit was wrong; this is the second wrong diagnosis I have posted on
-  this bug, both corrected here rather than left to mislead.
-  ⬜ **Still open, and the recipe is now complete:** find the two overflowing
-  Rows in `advanced_tracker_screen.dart`'s body (368 px + 171 px, reproducible
-  by dismissing the tutorial sheet at the standard game surface), then the
-  button-driven test becomes possible — dismiss the sheet, use fixed `pump`s,
-  never `pumpAndSettle` (playhead Ticker). Then `Add to project` on Tab · Score
-  · Loop Studio · Audio Editor, and mixer-strip → open. — opus
+- **opus (workstation-parity)** · ✅ **`WS-X1d` — the overflow is FOUND and
+  FIXED, and the button-driven test is finally green.**
+  🔴 **It was never the app bar and never the Ticker — both of which I claimed
+  in turn, and both wrong.** It is **one `Row`**, at
+  `advanced_tracker_screen.dart:5651` — `_menuRow`'s `Text(label)` was
+  unconstrained, so **opening the overflow MENU** overflowed by up to **368 px**.
+  Flutter names the culprit in `The relevant error-causing widget was:`; I had
+  been grepping only the summary line for three turns and never read it. **Read
+  the whole exception before theorising** — that is the lesson, and it cost more
+  than the fix did.
+  ✅ **Fix: `Expanded(child: Text(label))`.** One line. Overflow count 0. The
+  labels were also being CLIPPED, worst in German where several are half again
+  as long — so this was a live UX bug, not just a test obstacle.
+  ✅ **`WS-X1c` test now passes** — taps the real menu item and asserts the track
+  lands in the project. The recipe, for the next screen: dismiss the first-run
+  `BottomSheet` (else every AppBar control is `hitTestable == 0`), and use fixed
+  `pump`s, never `pumpAndSettle` (playhead Ticker).
+  ✅ `GameAppBar` horizontal scroll stands on its own merits (`a4080ca1`) — 125
+  screens, toggles pinned outside the scroll view, `layout_audit_test` green.
+  ⬜ **Remaining:** `Add to project` on Tab · Score · Loop Studio · Audio Editor
+  (the Tracker is the worked example), and mixer-strip → open, which is what
+  finally makes `openProjectTrack` reachable. — opus
 
 - **opus (workstation-parity)** · 🔶 **`WS-X1c` PARTIAL (1 of 5 surfaces) —
   releasing the claim, with the gap named.**

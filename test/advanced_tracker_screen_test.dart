@@ -46,6 +46,46 @@ void main() {
     MelodyBridge.instance.clear();
   });
 
+  testWidgets('WS-X1c — the MENU adds to the project, not just the seam', (
+    tester,
+  ) async {
+    // Drives the popup menu rather than calling addSongToProject() directly. A
+    // seam-level test is exactly what let this arc ship with no UI at all: a
+    // green suite, and a user who could never put a track in a project.
+    //
+    // Two things this screen needs, both of which cost real time to find:
+    //  • the first-run tutorial opens a modal BottomSheet over everything, so
+    //    every AppBar control reports hitTestable == 0 and taps hit nothing;
+    //  • the playhead Ticker runs forever, so pumpAndSettle never returns.
+    final projects = ProjectService();
+    await pumpGame(
+      tester,
+      const AdvancedTrackerScreen(),
+      extraProviders: [
+        ChangeNotifierProvider<ProjectService>.value(value: projects),
+      ],
+    );
+    if (find.byType(BottomSheet).evaluate().isNotEmpty) {
+      Navigator.of(tester.element(find.byType(AdvancedTrackerScreen))).pop();
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+    }
+
+    expect(projects.tracks, isEmpty);
+    await tester.tap(find.byIcon(Icons.more_vert));
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    await tester.tap(find.text('Add to project'));
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    expect(projects.tracks.single.kind, AppMode.tracker);
+    expect(find.text('Added to the project'), findsOneWidget);
+  });
+
   group('WS-X1 — live links, not copies', () {
     Future<(AdvancedTrackerTester, ProjectService)> pump(
       WidgetTester tester,

@@ -5652,7 +5652,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           children: [
             Icon(icon, size: 20),
             const SizedBox(width: 12),
-            Text(label),
+            // Expanded, not a bare Text: an unconstrained label overflowed this
+            // popup by up to 368px (measured), which throws during layout and
+            // clips the wording. German labels are the worst case — several are
+            // half again as long as the English.
+            Expanded(child: Text(label)),
           ],
         ),
       );
