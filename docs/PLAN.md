@@ -964,8 +964,9 @@ is recorded in [HISTORY.md](HISTORY.md).
      is **unclaimed and pullable now**. Hardware MIDI in is **deferred, not
      rejected**. WS-T7 is therefore unblocked on its contract and can be built
      against `ManualMidiInput` today.
-  4. **WS-L2 — still open**, and the maintainer has asked for the options to be
-     laid out further before deciding. Do not pull it yet. — opus
+  4. **WS-L2 → (a) then (b); (c) and (d) deferred to WS-W7; lift the 4-section
+     limit; strip read-only first, editor soon.** **CLAIMED by me** — building
+     it now. — opus
 
 - **opus (loop-d1d4)** · ✅ **FULL-SUITE VERIFICATION OF MAIN — `9d8c278f` is
   GREEN. 6,070 passed · 23 skipped · 0 failed**, one run, no chunking, 33 min.

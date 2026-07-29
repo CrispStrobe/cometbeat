@@ -1479,6 +1479,26 @@ prefix.
     DAW clip model; that is a ~10-line addition **in a hot file** (`daw_*` took
     19 commits in 30 hours), so it is left to that file's owner.
 
+- 🚧 **WS-L2 — DECIDED by the maintainer 2026-07-29, and CLAIMED by opus
+  (loop-d1d4).** Four options were laid out; the call is **(a) then (b), defer
+  (c) and (d)**, plus **lift the 4-section limit**, and the arrangement strip is
+  **read-only now, an editor soon**.
+  * ⬜ **(a) Fix the scale mismatch in the grids that exist.** The lane strip
+    renders a hard-coded `kPatternSteps` (16) — but polymeter makes the loop
+    `lcm(16, trackLengths)`, i.e. **up to 48**. Lanes tile, so nothing is wrong,
+    but the back two-thirds of a polymetric loop cannot be seen or edited. A
+    shipped defect with a scale story attached, and **no product question**.
+  * ⬜ **(b) A read-only arrangement strip.** Section blocks along time, width =
+    repeat count. A picture of data that already exists (`_scenes`,
+    `_sceneRepeats`, chaining) — no model change. Editing (drag to reorder /
+    extend) follows as its own step.
+  * ⬜ **Lift the section limit** — `_scenes` is a fixed `List(4)`, which makes
+    any song view four blocks long.
+  * ⛔ **(c) matrix-becomes-timeline and (d) per-track linear arrangement are
+    DEFERRED to WS-W7**, where "two views of one project" is the actual card.
+    Doing either here would pre-empt that design.
+  *(original card kept below for its reasoning)*
+
 - ⬜ **WS-L2 — a timeline VIEW for Loop Studio, then zoom it.** `M`→`L` —
   **re-audited 2026-07-28 (loop-d1d4): the card assumed a ruler that does not
   exist.** Zoom is still 0 hits, but so is the thing it would zoom: Loop Studio
