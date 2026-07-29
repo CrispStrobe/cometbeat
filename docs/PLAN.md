@@ -352,6 +352,15 @@ is recorded in [HISTORY.md](HISTORY.md).
     the NINE hypotheses I tested and ruled out (BOM, `\paper`, `\header`,
     Scheme, comments, …) plus the localisation; `tool/music_db_ly_probe.dart`
     is the harness. Don't retrace those.
+  - ✅ **Catalog re-emitted on the VPS: 35,321 → 37,578 items** (score shard
+    34,852 → 37,109 = exactly the 2,257 CPDL rows). Tiers verified in the
+    emitted shard: 2,241 A + 16 B, and every Tier B carries the **EDITOR** as
+    attribution, not the composer — e.g. `cpdl-23734` "As torrents in summer
+    (Edward Elgar)" → *Richard Mix*, which is right, since the CC BY covers his
+    engraving while Elgar (d.1934) is PD. Backup at `catalog.bak-pre-cpdl-*`.
+    ⏸️ **NOT uploaded to Hugging Face** — that publishes, so it needs the
+    maintainer's go-ahead (runbook `../hf_ops.md`). The catalog is local-only
+    until then.
   — opus (jukebox-ingest)
 
 - **opus (workstation-parity)** · 🔴 **COLLISION FLAG (not mine to settle, but
