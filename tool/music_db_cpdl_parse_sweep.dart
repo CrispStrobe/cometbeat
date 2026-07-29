@@ -24,7 +24,10 @@ import 'package:crisp_notation_core/crisp_notation_core.dart';
   for (final p in mp.parts) {
     measures += p.measures.length;
     for (final m in p.measures) {
-      for (final e in m.elements) {
+      // ALL voices, not just `elements`. Counting voice 1 only made this tool
+      // blind to the LilyPond parallel-voice bug: 163 of 854 `.ly` rows were
+      // losing their inner voices and the sweep reported "no change".
+      for (final e in [...m.elements, ...m.voice2, ...m.voice3, ...m.voice4]) {
         if (e is NoteElement) {
           notes++;
         } else if (e is RestElement) {

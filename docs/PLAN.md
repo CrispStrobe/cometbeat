@@ -466,7 +466,21 @@ is recorded in [HISTORY.md](HISTORY.md).
     ship `.ly` natively and the app reads it at load time. No `db.json` change
     needed — the files were always fine, the reader was wrong — they come right
     as soon as `../crisp_notation` is pulled.
-  - 🤝 **NEW BUG, unclaimed — the LilyPond reader SILENTLY DROPS `\\` voice 2.**
+  - ✅ **FIXED + SHIPPED — LilyPond `\\` voice 2** (crisp_notation `9360425`,
+    suite 1887 + 7 tests). Each `\\`-separated branch now reads into its own
+    voice; tuplet spans travel with their notes and are re-pointed at the voice
+    they landed in; an over-long branch keeps its overflow in its own voice
+    instead of being promoted to voice 1. `<< … >>` without `\\` still reads as
+    a container. 📊 **163 of 854 shipped `.ly` rows use `\\`** — Mutopia
+    150/442, CPDL 8/53, KWS 3/71, Season 2/52, Ebersberger 0. With the `\<`
+    truncation (110), **226 of 854 were hit by at least one silent-loss bug**;
+    Mutopia alone 190/442.
+    ⚠️ **Two FALSE-ZERO measurement traps, both mine, worth avoiding:** a regex
+    with `\\` escaping through `ssh` matched nothing ("0 of 854" — use a
+    `python3 << "PYEOF"` heredoc), and **`music_db_cpdl_parse_sweep.dart`
+    counted only `m.elements`**, so it was blind to voice 2 and reported "0
+    gains" from this very fix. Both fixed.
+  - 🤝 **Still unclaimed — LilyPond is NOT in the round-trip matrix.**
     Found by asking why the round-trip matrix missed the `\<` bug. Two answers:
     (a) **LilyPond is not in `roundtrip_property_test.dart` at all** (matrix is
     MusicXML/MEI/kern/ABC/MuseScore); (b) **even if it were, it could not have
