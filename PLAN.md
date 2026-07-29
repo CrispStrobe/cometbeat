@@ -1286,12 +1286,32 @@ prefix.
     **Worth checking on the other three surfaces**: the same two halves are easy
     to leave out, and neither shows up in a passing unit test of the linker.
 
-- ⬜ **WS-X2 — drag between surfaces.** `M` · Depends WS-W1, WS-X1.
-  One `DragTarget` protocol carrying `(kind, document)`: drag a tracker pattern
-  onto the timeline, a loop track into the Tab editor, an instrument from the
-  browser onto any track. Show the loss report **on drop** when kinds differ.
-  Acceptance: a drop of each supported pair lands an editable track, and a
-  lossy pair shows its report before committing.
+- 🔶 **WS-X2 — drag between surfaces.** **Step 1 (the protocol) SHIPPED; the
+  four drop TARGETS are not done and are deliberately left.**
+  * ✅ `core/interop/drag_payload.dart` — `MusicDragPayload (kind, document,
+    label, trackId)`, `DropDecision`, `dropDecisionFor`, `dropSummary`. Pure
+    Dart, no widgets, so the decision is testable without pumping a surface.
+  * **one protocol, not a handler per pair, is arithmetic:** five modes is
+    twenty ordered pairs, and twenty handlers is how nineteen end up subtly
+    different. `ProjectBridge` already converts any pair and already reports
+    the cost — this decides what should HAPPEN.
+  * ⚠️ **a same-kind drop does not touch the bridge at all.** A round trip
+    would introduce loss the drop never needed — the copy-instead-of-link bug
+    WS-X1 fixed, in another shape. Pinned by identity, not equality.
+  * **only a lossy drop asks for confirmation**, and a lossy decision must have
+    a non-empty report (a dialog with nothing in it is a lie). Making people
+    dismiss a dialog on every drop is how they learn to dismiss the one that
+    mattered.
+  * the conversion runs ONCE and is handed back: the report IS the conversion's
+    output, so a preview cannot be free, and the commit must not run it again
+    and risk a different answer.
+  * ⛔ **the drop targets are NOT done, on purpose.** They belong on the
+    Tracker, the Tab editor, Loop Studio and the timeline — four hot files that
+    three other lanes were shipping in this hour (WS-L2's arrangement editor,
+    the SE-C ladder, WS-X1 2b). Each is now a few lines over this protocol,
+    adoptable by whoever owns the file when they are not mid-flight.
+  Tests: `drag_payload_test` (13).
+
 
 ### Phase 4 — the console
 

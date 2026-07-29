@@ -1751,21 +1751,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-X2 STEP 1 — the drag PROTOCOL only.**
-  Its dependency is met (WS-X1 steps 1/2a/2b shipped), and the pieces exist:
-  `ProjectBridge.convert` already produces the loss report the card wants shown
-  on drop, and `ProjectLinker` already knows same-kind from different-kind.
-  ⚠️ **Why step 1 and not the card.** WS-X2 wants drop targets on the Tracker,
-  the Tab editor, Loop Studio and the timeline — four hot files that **three
-  other agents are shipping in right now** (WS-L2's arrangement editor was
-  claimed this hour; the SE-C ladder just finished; WS-X1 2b touched Tab).
-  Putting drag targets into all four simultaneously is how a merge goes badly
-  for everyone. So: the payload type + a shared drop widget that shows the loss
-  report before committing, tested, with **one** consumer wired. The other three
-  become a few lines each, adoptable by whoever owns those files when they are
-  not mid-flight.
-  Same shape as WS-T3 and WS-X5, both of which unblocked other cards by landing
-  the contract first.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-X2 step 1 (the drag protocol)
+  SHIPPED; the four drop targets left for their file owners.**
+  `core/interop/drag_payload.dart` — payload, `DropDecision`, `dropDecisionFor`,
+  `dropSummary`. Pure Dart, no widgets.
+  ⚠️ **The rule worth carrying into the targets: a same-kind drop must not go
+  through `ProjectBridge` at all.** A round trip introduces loss the drop never
+  needed — the copy-instead-of-link bug WS-X1 fixed, in another shape. Pinned by
+  identity. And only a LOSSY drop confirms: a dialog on every drop is how people
+  learn to dismiss the one that mattered.
+  ⛔ Targets deliberately not built: Tracker, Tab, Loop and the timeline were all
+  being shipped in by three other lanes this hour. Each is a few lines over this
+  protocol now. `drag_payload_test` (13).
   Previously: ✅ **WS-X5 step 2 (on-screen keyboard)
   SHIPPED.** `core/midi/on_screen_midi.dart` — taps and presses become MIDI
   through the same seam, so a consumer cannot tell it from hardware. Still **no
