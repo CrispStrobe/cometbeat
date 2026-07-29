@@ -67,6 +67,14 @@ const _loaded = TabColumn(
   pickStroke: true,
   leftFingers: [1, 3, 4],
   rightFinger: RightHandFinger.middle,
+  // ⚠️ COLUMN-level barre, which is NOT the `barreFret` inside the TabChord
+  // above — that one is part of the chord shape. These two were declared on
+  // TabColumn, listed in `tabColumnFieldKeys`, and never written by the codec:
+  // a saved barre was silently dropped. The completeness test below caught the
+  // missing KEY, but nothing could catch the missing WRITE, because the
+  // round-trip test asserts field by field and nobody added these two lines.
+  barreFret: 5,
+  barreString: 4,
   dynamic: DynamicLevel.ff,
   hairpin: HairpinType.crescendo,
 );
@@ -190,6 +198,13 @@ void main() {
       expect(back.rightFinger, RightHandFinger.middle);
       expect(back.dynamic, DynamicLevel.ff);
       expect(back.hairpin, HairpinType.crescendo);
+      // The two that were missing. This assertion is the ONLY thing standing
+      // between a declared field and a silent data loss on save: the key-list
+      // check above proves the codec KNOWS about a field, not that it writes
+      // one. Remove either line below and dropping the codec entry goes
+      // unnoticed again.
+      expect(back.barreFret, 5, reason: 'a saved barre must survive');
+      expect(back.barreString, 4);
     });
 
     test('the codec knows about every field TabColumn declares', () {
