@@ -3321,5 +3321,7 @@
   "fxPresetSaveTitle": "Name für diese Kette",
   "fxPresetNameHint": "z. B. Warme Begleitung",
   "fxPresetSave": "Sichern",
-  "fxPresetAutomationDropped": "Automation lässt sich nicht in einem Preset sichern — die Effekte bleiben, die bewegten Regler nicht."
+  "fxPresetAutomationDropped": "Automation lässt sich nicht in einem Preset sichern — die Effekte bleiben, die bewegten Regler nicht.",
+  "trayPutSong": "Song auf die Ablage legen",
+  "trayPutTab": "Tabulatur auf die Ablage legen"
 }

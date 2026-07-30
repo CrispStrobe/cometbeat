@@ -26,6 +26,7 @@ import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
+import 'package:comet_beat/core/tray/tray.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/chord_db.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
@@ -52,6 +53,7 @@ import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
+import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show setEquals;
@@ -174,6 +176,9 @@ abstract class TabWorkshopTester {
   void setCountIn(bool on);
   bool get isCountingIn;
   Set<String> get highlightedIds;
+
+  /// WS-X6 test seam: put this tab on the clipboard.
+  void putOnTray();
 
   /// WS-X2 test seam: drop [payload] on the grid, skipping the confirmation
   /// (the dialog is the shape the other three targets already proved). Returns
@@ -463,6 +468,13 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   // --- WS-X1 live project links ---------------------------------------------
 
+  /// WS-X6 — the clipboard, shared when provided and private otherwise (the
+  /// same rule the other hosts follow, so a bare mount still works).
+  final TrayService _ownTray = TrayService();
+  TrayService? _sharedTray;
+  TrayService get _tray => _sharedTray ?? _ownTray;
+  bool _trayOpen = false;
+
   /// The project track this screen is editing live, if any.
   ProjectLink? _projectLink;
   ProjectService? _projects;
@@ -480,6 +492,30 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     } on ProviderNotFoundException {
       _projects = null;
     }
+    try {
+      _sharedTray = Provider.of<TrayService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _sharedTray = null; // keeps the private one — see [_tray]
+    }
+  }
+
+  /// WS-X6 — put this tab on the shared clipboard.
+  @override
+  void putOnTray() {
+    _tray.add(
+      kind: AppMode.tab,
+      label: _sourceName ?? AppLocalizations.of(context)!.tabWorkshopTitle,
+      document: _doc,
+    );
+    setState(() => _trayOpen = true);
+  }
+
+  /// Tap-to-place from the clipboard — the SAME path a drop takes, so a tap and
+  /// a drag can never report different costs.
+  void _placeFromTray(TrayItem item) {
+    final payload = item.payload;
+    if (payload == null) return; // an instrument is a voice, not a document
+    unawaited(_dropHere(payload));
   }
 
   @override
@@ -1864,6 +1900,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   addLeftFingerings();
                 case 'inspect':
                   setState(() => _inspect = !_inspect);
+                case 'tray-put':
+                  putOnTray();
+                case 'tray-toggle':
+                  setState(() => _trayOpen = !_trayOpen);
                 case 'paste':
                   _promptPasteAscii();
                 case 'save':
@@ -1960,6 +2000,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 checked: _inspect,
                 child: Text(l10n.inspectMode),
               ),
+              _menuItem('tray-put', Icons.content_paste_go, l10n.trayPutTab),
+              _menuItem('tray-toggle', Icons.inbox_outlined, l10n.trayTitle),
               _menuItem('clear', Icons.delete_sweep_outlined, l10n.tabClear),
             ],
           ),
@@ -1972,6 +2014,15 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         child: Column(
           children: [
             _toolbar(l10n),
+            // WS-X6 — the clipboard band, inline above the grid so a chip and
+            // this screen's drop target live in one tree.
+            if (_trayOpen)
+              TrayPanel(
+                tray: _tray,
+                title: l10n.trayTitle,
+                emptyHint: l10n.trayEmpty,
+                onPlace: _placeFromTray,
+              ),
             const Divider(height: 1),
             Expanded(
               child: SingleChildScrollView(

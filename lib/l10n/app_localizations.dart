@@ -16591,6 +16591,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Automation lässt sich nicht in einem Preset sichern — die Effekte bleiben, die bewegten Regler nicht.'**
   String get fxPresetAutomationDropped;
+
+  /// No description provided for @trayPutSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Put song on clipboard'**
+  String get trayPutSong;
+
+  /// No description provided for @trayPutTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Put tab on clipboard'**
+  String get trayPutTab;
 }
 
 class _AppLocalizationsDelegate

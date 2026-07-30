@@ -1513,9 +1513,13 @@ prefix.
     `attach()` loads first and only THEN listens: the other order notifies its
     way through a save per restored item, and the first writes a half-loaded
     clipboard over the full one.
-  - ⬜ **Slice 2 remainder — the Tracker and the Tab Workshop as hosts.** Both
-    other lanes' files; each host is an app-bar action, the band in the layout,
-    and one place handler.
+  - ✅ **Slice 2 remainder — the Tracker and the Tab Workshop are hosts,
+    2026-07-30** (opus, daw-suite). Each is the same three parts, and the place
+    handler REUSES the drop path rather than adding a second landing route, so a
+    tap and a drag cannot report different costs.
+    ✅ **The cross-editor acceptance is proven both ways** — a tracker song put
+    on lands in the Tab Workshop and a tab lands in the Tracker. That is the
+    clause slice 1 could not show with one host.
   - **Acceptance.** An item put on the clipboard in one editor is present in
     another after navigating there, can be dragged or tapped onto that editor's
     surface, lands through `dropDecisionFor` with its conversion cost stated, and

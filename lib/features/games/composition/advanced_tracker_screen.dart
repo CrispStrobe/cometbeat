@@ -90,6 +90,7 @@ import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
+import 'package:comet_beat/core/tray/tray.dart';
 import 'package:comet_beat/features/games/composition/instrument_editor.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
@@ -129,6 +130,7 @@ import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:comet_beat/shared/widgets/performance_pads.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
+import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,
@@ -654,6 +656,9 @@ abstract interface class AdvancedTrackerTester {
   /// settles would test the sheet instead.
   ManualMidiInput get debugMidiInput;
 
+  /// WS-X6 test seam: put the current song on the clipboard.
+  void putOnTray();
+
   /// WS-X2 test seam: drop [payload] on the pattern grid, skipping the
   /// confirmation (the dialog is the shared shape Loop Studio's target already
   /// proved). Returns whether anything landed.
@@ -961,6 +966,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// current pattern's cells. Structural changes (add/remove track, set length,
   /// switch pattern, import) clear the history (a snapshot restores cells only
   /// at a fixed channel/row shape).
+  /// WS-X6 — the clipboard, shared when one is provided and private otherwise
+  /// (the same rule as the history and the transport: a screen mounted bare must
+  /// still work, and one code path either way).
+  final TrayService _ownTray = TrayService();
+  TrayService? _sharedTray;
+  TrayService get _tray => _sharedTray ?? _ownTray;
+  bool _trayOpen = false;
+
   /// WS-W4 — the shared, cross-surface history.
   ///
   /// The snapshot MECHANISM is unchanged: an entry still holds a whole-pattern
@@ -1107,6 +1120,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       _sharedHistory = Provider.of<UndoService>(context, listen: false);
     } on ProviderNotFoundException {
       _sharedHistory = null; // keeps the private one — see [_history]
+    }
+    try {
+      _sharedTray = Provider.of<TrayService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _sharedTray = null; // keeps the private one — see [_tray]
     }
   }
 
@@ -5783,6 +5801,18 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             // them: you either knew the FT2 conventions already or the whole
             // feature was invisible.
             IconButton(
+              key: const ValueKey('tracker-tray-put'),
+              icon: const Icon(Icons.content_paste_go),
+              tooltip: l10n.trayPutSong,
+              onPressed: putOnTray,
+            ),
+            IconButton(
+              key: const ValueKey('tracker-tray-toggle'),
+              icon: Icon(_trayOpen ? Icons.inbox : Icons.inbox_outlined),
+              tooltip: l10n.trayTitle,
+              onPressed: () => setState(() => _trayOpen = !_trayOpen),
+            ),
+            IconButton(
               icon: const Icon(Icons.keyboard),
               tooltip: 'Keyboard',
               onPressed: () => showKeymapSheet(
@@ -5981,6 +6011,17 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               child: Column(
                 children: [
                   _commandBar(l10n),
+                  // WS-X6 — the clipboard band, INLINE above the grid so a chip
+                  // and the drop target are in one tree: that is what lets
+                  // something put on in another editor be tapped straight into
+                  // this pattern.
+                  if (_trayOpen)
+                    TrayPanel(
+                      tray: _tray,
+                      title: l10n.trayTitle,
+                      emptyHint: l10n.trayEmpty,
+                      onPlace: _placeFromTray,
+                    ),
                   const Divider(height: 1),
                   Expanded(child: _grid(context)),
                   const Divider(height: 1),
@@ -6951,6 +6992,32 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         ),
       ),
     );
+  }
+
+  /// WS-X6 — put the current song on the shared clipboard.
+  ///
+  /// The whole song rather than the current pattern: a pattern without its
+  /// instruments is not something another editor can use, and the tray's job is
+  /// to carry something that lands.
+  @override
+  void putOnTray() {
+    _tray.add(
+      kind: AppMode.tracker,
+      label: AppLocalizations.of(context)!.trackerAdvancedTitle,
+      document: _song,
+    );
+    setState(() => _trayOpen = true);
+  }
+
+  /// Tap-to-place from the clipboard — the SAME path a drop takes.
+  ///
+  /// Deliberately not a second landing route: a tap and a drag must report the
+  /// same conversion cost, and the way to guarantee that is to have one
+  /// implementation rather than two that agree today.
+  void _placeFromTray(TrayItem item) {
+    final payload = item.payload;
+    if (payload == null) return; // an instrument is a voice, not a document
+    unawaited(_dropHere(payload));
   }
 
   /// WS-X2 — what dropping [payload] on the pattern grid would do.

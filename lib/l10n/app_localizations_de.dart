@@ -9184,4 +9184,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get fxPresetAutomationDropped =>
       'Automation lässt sich nicht in einem Preset sichern — die Effekte bleiben, die bewegten Regler nicht.';
+
+  @override
+  String get trayPutSong => 'Song auf die Ablage legen';
+
+  @override
+  String get trayPutTab => 'Tabulatur auf die Ablage legen';
 }
