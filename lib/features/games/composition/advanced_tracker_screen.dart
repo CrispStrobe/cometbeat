@@ -44,6 +44,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/sample_edit.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart' show TrackerSource;
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show convertDocTo;
 import 'package:comet_beat/core/audio/mod/module_doc.dart' show ModuleFormat;
@@ -127,6 +128,8 @@ import 'package:comet_beat/shared/music_io/export_sheet.dart';
 import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
+import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
+import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:comet_beat/shared/widgets/performance_pads.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
@@ -655,6 +658,11 @@ abstract interface class AdvancedTrackerTester {
   /// and driving them through a modal sheet on a screen whose Ticker never
   /// settles would test the sheet instead.
   ManualMidiInput get debugMidiInput;
+
+  /// Test seam: a channel's effect chain, and a way to set it — the rack itself
+  /// is covered by `fx_rack_test`.
+  List<FxSpec> channelFxChain(int channel);
+  void setChannelFxChain(int channel, List<FxSpec> chain);
 
   /// WS-X6 test seam: put the current song on the clipboard.
   void putOnTray();
@@ -7164,6 +7172,92 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     );
   }
 
+  /// The per-channel effect rack, with the saved-chain sheet beside it.
+  ///
+  /// The same shape the Tab Workshop and Loop Studio use — the shared `FxRack`
+  /// plus `showFxPresetSheet` — so a chain built on a tracker channel can be
+  /// saved and reused on a score part, which is the whole point of the presets
+  /// being a shelf rather than a per-surface list.
+  Future<void> _showChannelFx(int channel) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          void apply(List<FxSpec> chain) {
+            // No screen `setState`: the rack's sliders fire per drag FRAME, and
+            // nothing in this screen's build reads the chain — the same trap the
+            // Tab Workshop's rig sheet had, and the reason its drags used to
+            // rebuild a whole grid at 60 fps.
+            _song.engine.setChannelFxChain(channel, chain);
+            setSheetState(() {});
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_song.channels[channel].instrument.id} — '
+                    '${l10n.trackerFxAdvanced}',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: const ValueKey('tracker-channel-fx-presets'),
+                      icon: const Icon(Icons.bookmarks_outlined, size: 18),
+                      label: Text(l10n.fxPresetsTitle),
+                      onPressed: () async {
+                        final picked = await showFxPresetSheet(
+                          context,
+                          current: _song.channels[channel].fxChain,
+                        );
+                        if (picked == null) return;
+                        apply(picked);
+                      },
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 380),
+                    child: SingleChildScrollView(
+                      child: FxRack(
+                        key: const ValueKey('tracker-channel-fx'),
+                        chain: _song.channels[channel].fxChain,
+                        dense: true,
+                        onChanged: apply,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (!mounted) return;
+    // One re-render when the sheet closes, rather than per slider frame.
+    setState(() {});
+    _syncPlayback();
+  }
+
+  @override
+  List<FxSpec> channelFxChain(int channel) => _song.channels[channel].fxChain;
+
+  @override
+  void setChannelFxChain(int channel, List<FxSpec> chain) {
+    _song.engine.setChannelFxChain(channel, chain);
+    setState(() {});
+    _syncPlayback();
+  }
+
   Widget _channelHeader(int c, ColorScheme scheme) {
     final muted = _song.isMuted(c);
     final soloed = _song.isSoloed(c);
@@ -7172,8 +7266,17 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Instrument name — tap to change the track's instrument.
+          // Instrument name — tap to change the track's instrument, long-press
+          // for its effects.
+          //
+          // ⚠️ The ADVANCED tracker had no FX rack at all, while the BEGINNER
+          // one did — found by an interop matrix, and it reads as an oversight
+          // rather than a decision: `TrackerChannel.fxChain` and
+          // `setChannelFxChain` already existed and this screen simply never
+          // offered them. A long-press rather than another header button
+          // because this header is 74 px wide and already carries three.
           InkWell(
+            onLongPress: () => _showChannelFx(c),
             onTap: () => _pickInstrument(c),
             child: Text(
               _song.channels[c].instrument.id,

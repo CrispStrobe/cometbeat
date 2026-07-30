@@ -3293,6 +3293,30 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **DONE (idle) — the ADVANCED Tracker gets a
+  per-channel FX rack. The interop matrix is now complete on every axis.**
+  I boarded this as "someone else's" an hour ago; on looking, the file is mine
+  and the gap was one screen never offering what the engine already had:
+  `TrackerChannel.fxChain` and `TrackerEngine.setChannelFxChain` **already
+  existed** and the BEGINNER tracker used them, so the serious tracker was the
+  only surface in the app with no per-channel effects. That is an oversight, not
+  a decision, so I fixed it rather than leaving a ⬜ for nobody.
+  * **Long-press the channel header**, not a fourth header button: that header
+    is 74 px wide and already carries three controls.
+  * The sheet is the shape the other racks use — shared `FxRack` + the preset
+    sheet — so **a chain built on a tracker channel can be saved and reused on a
+    score part**, which is the point of presets being a shelf rather than a
+    per-surface list.
+  * 📌 **No screen `setState` while dragging a slider** (one `setState` when the
+    sheet closes): the same trap the Tab Workshop's rig sheet had, where a drag
+    rebuilt a whole grid at 60 fps. Taking the lesson from my own optimisation
+    pass rather than repeating it three days later.
+  * The FX-preset host-list test names it too, so the list stays a statement of
+    what is actually wired.
+  Tests: `tracker_channel_fx_test` (3) — including that a chain set on one
+  channel stays on THAT channel, since a rack applying to everything would be a
+  master bus wearing a channel's name; 97 green with the tracker suite.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — the SCORE WORKSHOP joins the interop
   set: a drop target and a clipboard host. All five surfaces are now equal on
   every interop axis that exists.**

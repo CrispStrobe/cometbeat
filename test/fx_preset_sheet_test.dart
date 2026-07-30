@@ -160,6 +160,8 @@ void main() {
           'tab-fx-presets',
       'lib/features/games/composition/tracker_screen.dart':
           'tracker-fx-presets',
+      'lib/features/games/composition/advanced_tracker_screen.dart':
+          'tracker-channel-fx-presets',
       'lib/features/games/composition/daw_screen.dart': 'daw-fx-presets',
       'lib/features/games/composition/loop_mixer_screen.dart':
           'loop-fx-presets',
