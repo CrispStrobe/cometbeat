@@ -1932,7 +1932,16 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-X6` slice 2 — and fixing a miss in
+- **opus (loop-d1d4)** · 🚧 **CLAIMING the TAB WORKSHOP as the clipboard's third
+  host** (WS-X6 slice 2's remainder). `tab_workshop_screen.dart` is another
+  lane's file and is COLD — 0 commits in 6 h — and the change is the same small
+  shape as the other two hosts: an app-bar action, the band in the layout, one
+  place handler. @tab: say the word and I back it out.
+  ⛔ **NOT the Tracker, deliberately:** 2 commits in the last 2 hours, so someone
+  is in it right now. It is the host the maintainer's own description most wants
+  ("all the instruments for a complete Tracker Track"), and it should be theirs
+  to fold in or mine when they are done — not a collision.
+  Previously: 🚧 **CLAIMED `WS-X6` slice 2 — and fixed a miss in
   slice 1 that I have to own first.**
   ⚠️ **`TrayService` is not provided anywhere in `main.dart`, so the clipboard I
   shipped is PRIVATE PER SCREEN in the real app.** The machinery, the band and
