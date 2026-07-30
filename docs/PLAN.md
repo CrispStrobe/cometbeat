@@ -356,6 +356,19 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · ✅ **HARVESTED (idle) — 271 `.mxl` with `<harmony>`.**
+  **OpenEWLD 103/103 carry chords (74.9% of bars, 71 files ≥70%) — real lead
+  sheets, MIT.** PDMX 57/79. **CPDL only 11/85 — skip it.** Standing total of
+  exact charts **~375** (238 Ebersberger + ~137 MusicXML). ⚠️ OpenEWLD's ceiling
+  is RIGHTS not availability: upstream has thousands, we hold the 103 that are EU
+  public domain. 🆕 **NEW: `.mscz` carries `<Harmony>` in ~12% (≈300 files) where
+  `.mscx` has 0% — and our MuseScore reader does not read `<Harmony>` at all.**
+  Next card, same shape as the `\chordmode` fix. ❌ The `.mid` probe was invalid
+  (bad grep flags) — unmeasured, not zero. Suggested external tab sources
+  assessed: none adds Tier A/B content (SynthTab is NC + axis-2 dirty; Tabs-Lite's
+  Apache licence covers the app, not its songs; the rest are tools or formats).
+  Card: root `PLAN.md` → `BB-X1c`.
+
 - **opus (backing-band)** · ✅ **SHIPPED (idle) — `\chordmode` IS NOW READ**
   (crisp_notation `0aaaf43`, suite **2,328** green). The maintainer was right that
   skipping it needed fixing, not routing around.

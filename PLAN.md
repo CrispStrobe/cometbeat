@@ -3460,6 +3460,54 @@ failed:**
     (PD works, but PDF → needs the OMR/vision route). Everything else found is
     licence-unclear and stays a control.
 
+- ✅ **BB-X1c — HARVEST RESULT + a source assessment (2026-07-30).**
+
+  **The `.mxl` harvest, by source** (271 unique files carrying `<harmony>`;
+  staging-dir duplicates excluded):
+
+  | source | charts from the file's OWN symbols | bars named | files ≥70% |
+  |---|---|---|---|
+  | **OpenEWLD** (MIT) | **103 of 103** | **74.9%** | **71** |
+  | PDMX | 57 of 79 | 45.6% | 34 |
+  | CPDL | 11 of 85 | 7.8% | 4 |
+
+  - ⇒ **OpenEWLD is the gold: real lead sheets, MIT, 100% carry chords.** PDMX is
+    worth taking. **CPDL is not** — Renaissance polyphony with an occasional stray
+    `<harmony>`, not lead sheets.
+  - **Standing total of exact charts: ~375** — 238 Ebersberger (LilyPond) + ~137
+    usable MusicXML.
+  - ⚠️ **The OpenEWLD ceiling is RIGHTS, not availability.** The upstream dataset
+    is thousands of lead sheets; we hold **103** because it was filtered to EU
+    public domain. The rest is in-copyright popular song. There is no bigger clean
+    slice to take.
+
+  🆕 **NEW in-corpus source found while checking: `.mscz` carries `<Harmony>`.**
+  **7 of 60 sampled (~12% → ≈300 of 2,555 files)** — where `.mscx` sampled **0 of
+  200**, so the two have different provenance and must be measured separately.
+  🔴 **And our MuseScore reader does not read `<Harmony>` at all**, so those ~300
+  charts are invisible today. That is the same shape as the `\chordmode` fix and
+  the obvious next card.
+
+  ❌ **`.mid` chord-text check was INVALID** — the probe used `grep -qmE1`, which
+  is not a flag, so every invocation errored and the "0 of 150" is meaningless.
+  Unmeasured, not zero.
+
+  **Assessment of externally-suggested tab/chord sources:**
+
+  | source | verdict |
+  |---|---|
+  | `tombatossals/chords-db` (MIT) | ✅ **already shipped** — bundled in `assets/chords/`, read by `composition/chord_db.dart`. Chord *shapes*, not songs. |
+  | **SynthTab** (CC BY-NC 4.0) | ❌ **NC → excluded**, and axis-2 dirty as well: synthesised from user-transcribed Guitar Pro files. Fails both axes. |
+  | **Tabs-Lite** (Apache-2.0) | ❌ ⚠️ **The APP is Apache; the "million songs" are not.** It is a client for a third-party tab database. Same "wrapper is not the grant" pattern as the MIDI-rendered corpora — and that database is already on this repo's do-not-connect list. |
+  | TuxGuitar (LGPL), alphaTab | 🔧 **tools, not content.** Genuinely useful as *oracles* for differential-testing our Guitar Pro import, the way OLGA is used for ASCII tab. No corpus value, and GPL/LGPL code must not be ported (clean-room rule). |
+  | OpenSong, OpenChord (GPL-3.0), Chord-Provider | 🔧 apps; their songs are user-supplied. No corpus. |
+  | ChordPro, MusicXML | ✅ already read. |
+  | OpenTab, alphaTex | ➕ **import features we lack**, not sources. Cheap to add, zero content. |
+
+  ⇒ **None of the suggested list adds Tier A/B corpus content.** The real remaining
+  leads are the ~300 `.mscz` above and, for tab specifically, GuitarSet's 360 takes
+  and IMSLP's 235 CC0 tab PDFs.
+
 - 📊 **BB-H9 — SYMBOLIC notes → chords: what we have and how good it is.
   Measured 2026-07-30, `tool/symbolic_chord_eval.dart`.** Same GuitarSet takes,
   same segments, same duration-weighted metric as the audio evaluations, but fed
