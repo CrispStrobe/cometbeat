@@ -214,9 +214,15 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — running the training handover's own STEP
-  ZERO: measure the EXISTING BTC model against the 70.7% majmin bar** before
-  anyone spends weeks training a replacement.
+- **opus (backing-band)** · ✅ **DONE (idle) — STEP ZERO ANSWERED: the neural path
+  beats chroma by 19 points, so the licence IS the blocker and `BB-H7` is
+  justified.** Same audio, same MIREX majmin metric: chroma **70.7%** / root
+  71.4% vs **BTC 89.7%** / root **95.8%**. RTF 0.20, so speed is not the problem.
+  A replacement now has measured bars: clear 70.7% to be worth shipping, approach
+  89.7% to be worth the effort. Full write-up in root `PLAN.md` → the
+  `BB-H7/step-zero` card. ⚠️ Caught a harness bug first — majmin 4.5% against
+  root 95.8% is a broken ruler, not a model property. Licence posture unchanged;
+  evaluation only, no gate weakened, nothing made shippable.
   - **Why this first.** `docs/BTC_TRAINING_HANDOVER.md` §0.2 says step zero is a
     measurement, not a training run, and `BB-H0` has since given it a concrete
     number to beat. If the shipped neural model does not clearly clear 70.7% on

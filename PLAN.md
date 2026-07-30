@@ -3168,6 +3168,46 @@ failed:**
   - ⚠️ Still n=70 on solo guitar. The direction is unambiguous; the exact
     percentages are not load-bearing.
 
+- ✅ **BB-H7/step-zero — ANSWERED 2026-07-30. The neural path is dramatically
+  better, so the licence IS the blocker and training a replacement is justified.**
+
+  `docs/BTC_TRAINING_HANDOVER.md` §0.2 said step zero is a measurement, not a
+  training run. Run, on the same 12 GuitarSet takes and the same MIREX-style
+  majmin duration-weighted metric (`tool/btc_guitarset_eval.dart`):
+
+  | path | majmin | root |
+  |---|---|---|
+  | chroma templates, best config (`BB-H0`) | 70.7% | 71.4% |
+  | **BTC (neural, NC weights)** | **89.7%** | **95.8%** |
+  | | **+19.0pp** | **+24.4pp** |
+
+  - ⇒ **The gap is real, large, and measured on our own data.** 89.7% sits at the
+    top of the published band (~83–85%), consistent with our set being
+    favourable (solo guitar, close mic). Chroma is not merely behind — it is a
+    different class of result.
+  - ⇒ **This validates `BB-H7`.** We have a model that works and cannot ship it.
+    The weeks of training work now have a measured prize rather than a hunch, and
+    a replacement has two numbers to hit: **clear 70.7% to be worth shipping at
+    all, approach 89.7% to be worth the effort.**
+  - ⇒ **And it re-prices the licence decision.** Choosing "ship symbolic only"
+    now means knowingly giving up a 19-point capability we have already built and
+    measured. That is a much sharper trade than it looked before.
+  - **Speed is not a blocker: RTF 0.20** — 289 s of audio in 58 s, ~5× real time
+    on this laptop. Fine offline (`BB-X2`); a real-time path would need work but
+    is not obviously out of reach.
+  - ⚠️ **Caught a harness bug before believing a wrong answer.** The first run
+    reported **majmin 4.5% against root 95.8%** — a gap that large between root
+    and quality is a bug in the ruler, not a property of a model. Cause:
+    `ChordEvent.quality` is literally `'maj'`/`'min'`, and I had reduced `''` to
+    major, so every major chord scored zero. 4.5% was exactly the minor-chord
+    fraction of the set. **The check that saved it was a plausibility check on the
+    shape of the result, not on the code.**
+  - **Licence posture, unchanged:** the weights are CC-BY-NC-SA-4.0, this was
+    non-commercial evaluation scoped by `COMET_ACCEPT_LICENSES`, and nothing here
+    makes the model shippable or weakens `model_license.dart`.
+  - ⚠️ Same caveat as everything else on this set: 69 maj/min segments, 278 s,
+    solo guitar.
+
 - 🛑 **BB-H0 — WHERE CHORD RECOGNITION ACTUALLY STANDS, and why to stop tuning
   the chroma path. Measured 2026-07-30. Read before pulling any `BB-H` card.**
 
