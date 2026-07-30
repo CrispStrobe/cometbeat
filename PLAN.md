@@ -3020,6 +3020,51 @@ failed:**
     audio at both spellings' bass notes; a `C/E` reads its bass as E; the shipped
     8-quality numbers do not regress (`tool/chord_template_ab.dart`).
 
+- 🔴 **BB-H1c — REAL AUDIO overturns the synthetic verdict. Read this before
+  tuning anything in the chord detector.** Measured 2026-07-30 on **GuitarSet**
+  (CC BY 4.0, real guitarists, real microphone, axis-2 clean; 12 takes across 6
+  players and 5 styles, 70 annotated chord segments) with
+  `tool/guitarset_chord_eval.dart`.
+
+  | vocabulary | synthetic exact | **real exact** | **real root** |
+  |---|---|---|---|
+  | shipped 8 | 86.1% | **24.3%** | 62.9% |
+  | modest +4 | 81.9% | 24.3% | 62.9% |
+  | full +9 | 75.3% | **25.7%** | **68.6%** |
+
+  - ❌ **The synthetic grid is NOT predictive, and every template number measured
+    on it is void.** 86% exact becomes 24% on real audio. The grid is a rigged
+    exam: the same code makes the sound and knows the answer, with no room, no
+    pick noise, no string bleed, no doubled roots and no human timing.
+  - ⚠️ **The extension verdict REVERSES.** Synthetically the full 17-quality set
+    was the worst (−10.8pp); on real audio it is the **best** — +1.4pp exact and
+    **+5.7pp root** over the shipped 8. The earlier rejection was an artifact of
+    measuring on a vocabulary that excluded the chords the extension exists to
+    catch. **Still not adopted at n=70** — the direction is clear, the magnitude
+    is not — but the synthetic grounds for rejecting it are gone.
+  - ✅ **Temporal voting nearly DOUBLES accuracy: 12.9% → 24.3% exact.** A single
+    window is the worst case for a per-frame detector; the diagnostics show why —
+    *"9 windows → 8 distinct answers, winner had 2"*. The detector is wildly
+    unstable frame to frame. A crude plurality vote buys 11pp, and a real
+    smoother (median or HMM over frames, which is what BTC's 108-frame context
+    is for) should buy more. **This is the largest cheap win left in the
+    non-neural path and nothing in the app does it today.**
+  - **The errors are systematic, not noise:** E♭ read as B♭ (its fifth — guitar
+    voicings double roots and fifths, and the low root's harmonics reinforce the
+    fifth) and A♭ read as Fm (its relative minor, sharing two of three notes).
+    Smoothing cannot fix a systematic bias; better features or a learned model
+    can.
+  - 📌 **Consequence for `BB-X5` (live grading): root accuracy of 63% on real
+    audio is NOT good enough to grade a player against.** This raises the
+    priority of temporal smoothing and of `BB-H7` (our own weights), and it means
+    grading should lean on the *chart's* chord — which we always know — rather
+    than on what the detector hears.
+  - ⚠️ **n=70 across 12 takes is small, and GuitarSet solo guitar is a FAVOURABLE
+    case** — one instrument, close mic, no drums or bass. Band audio will be
+    harder. The next step is more takes (the fetch is cheap: 39 HTTP range
+    requests pulled 12 files, 18 MB, instead of the 657 MB archive) and a real
+    smoother before any template decision is revisited.
+
 - ⬜ **BB-H2 — magnitude compression before folding.** `S`
   - **Goal.** Blunt the harmonic bias: a note's 3rd harmonic is a fifth above and
     its 5th a major third, so one C already looks slightly like C major, biasing
