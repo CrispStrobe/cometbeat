@@ -1642,6 +1642,10 @@
   },
   "librarySearchHint": "Search by title or composer",
   "libraryLoadMore": "Load more",
+  "librarySearchLyrics": "Search lyrics",
+  "@librarySearchLyrics": {
+    "description": "Toggle that also searches the sung text, fetching a separate lyrics shard"
+  },
   "@libraryLoadMore": {
     "description": "Button that fetches the next page of library search results"
   },

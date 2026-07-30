@@ -3704,6 +3704,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryLoadMore => 'Load more';
 
   @override
+  String get librarySearchLyrics => 'Search lyrics';
+
+  @override
   String get libraryImport => 'Import';
 
   @override

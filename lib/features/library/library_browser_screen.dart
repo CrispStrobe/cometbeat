@@ -295,13 +295,32 @@ class _LibraryBrowserScreenState extends State<LibraryBrowserScreen> {
       for (final facet in const ['kind', 'format', 'source'])
         if ((_facets[facet] ?? const []).length > 1) facet,
     ];
-    if (groups.isEmpty) return const SizedBox.shrink();
+    // The lyric toggle is always offered when the source can do it: it is the
+    // difference between finding a song by its title and finding it by the words
+    // a child remembers.
+    final lyricChip = _source is CometbeatCatalogSource
+        ? Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+            child: FilterChip(
+              avatar: const Icon(Icons.lyrics_outlined, size: 16),
+              label: Text(AppLocalizations.of(context)!.librarySearchLyrics),
+              selected: _filter.searchLyrics,
+              onSelected: (v) {
+                setState(() => _filter = _filter.withLyricSearch(v));
+                _reload();
+              },
+              visualDensity: VisualDensity.compact,
+            ),
+          )
+        : null;
+    if (groups.isEmpty && lyricChip == null) return const SizedBox.shrink();
     return SizedBox(
       height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
+          if (lyricChip != null) lyricChip,
           for (final facet in groups) ...[
             for (final v in _facets[facet]!)
               Padding(

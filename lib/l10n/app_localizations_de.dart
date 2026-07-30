@@ -3718,6 +3718,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get libraryLoadMore => 'Mehr laden';
 
   @override
+  String get librarySearchLyrics => 'Liedtext durchsuchen';
+
+  @override
   String get libraryImport => 'Importieren';
 
   @override

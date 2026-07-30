@@ -344,7 +344,23 @@ def _lyric_words_impl(raw):
     if raw[:4] == "MThd":
         out = [raw[m.end():m.end() + ord(m.group(1))]
                for m in re.finditer(r"\xff\x05([\x00-\x7f])", raw)]
-        return (re.sub(r"\s+", " ", " ".join(out)).strip())
+        # ⚠️ TWO things go wrong if you treat these like the other formats.
+        #
+        # (1) JOIN WITH NOTHING. A MIDI lyric event carries one syllable
+        # INCLUDING its own leading space, so the word boundaries are already in
+        # the data. Joining with " " inserts a space inside every word and
+        # "Stille Nacht" ships as "Stil le Nacht".
+        #
+        # (2) RE-DECODE AS UTF-8. The file is read latin-1 because it is binary,
+        # but the text inside a lyric event is usually UTF-8, so latin-1 turns
+        # "schläft" into "schlÃ¤ft". The latin-1 round-trip back to bytes is
+        # lossless, so re-decoding is safe; fall back when it is not UTF-8.
+        joined = "".join(out)
+        try:
+            joined = joined.encode("latin-1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            pass
+        return (re.sub(r"\s+", " ", joined).strip())
 
     # Humdrum kern: the sung text is a `**text` SPINE, addressed by column. Any
     # other spine is notation. Returning the whole file made Chopin's first

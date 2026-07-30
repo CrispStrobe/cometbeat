@@ -91,6 +91,11 @@ class CometbeatCatalogSource implements ContentSource {
   /// Fetched once per instance (the needed shards, flattened).
   List<LibraryItem>? _catalog;
 
+  ({String base, String version, List<dynamic>? shards})? _index;
+
+  /// id -> sung text, loaded only when a lyric search actually happens.
+  Map<String, String>? _lyrics;
+
   /// Process-wide cache so reopening the browser is instant instead of
   /// re-fetching the index + shards. Keyed by the kind-set; only used for the
   /// real published index, so test instances (custom [_indexUrl]) stay
@@ -183,6 +188,9 @@ class CometbeatCatalogSource implements ContentSource {
     // The index is the ~1 KB file we always fetch; its `version` is what decides
     // whether a persisted shard is still current.
     final version = (index['version'] as String?) ?? 'unversioned';
+    // Remembered so the lyrics shard can be fetched LATER, only if asked for.
+    _index =
+        (base: baseUrl, version: version, shards: index['shards'] as List?);
     final shards = (index['shards'] as List? ?? const [])
         .whereType<Map<String, dynamic>>()
         .where((s) => kinds.contains(s['kind']));
@@ -210,6 +218,7 @@ class CometbeatCatalogSource implements ContentSource {
             format: (raw['format'] as String?) ?? '',
             music: MusicInfo.fromJson(raw['music']),
             corpusSource: raw['source'] as String?,
+            textIncipit: raw['textIncipit'] as String?,
           ),
         );
       }
@@ -230,7 +239,11 @@ class CometbeatCatalogSource implements ContentSource {
     int limit = 60,
     int offset = 0,
   }) async {
-    final matched = _match(await _load(), query, filter);
+    final all = await _load();
+    final lyricHits = filter.searchLyrics
+        ? await _lyricMatches(query.trim())
+        : const <String>{};
+    final matched = _match(all, query, filter, lyricHits);
     return LibraryPage(
       items: matched.skip(offset).take(limit).toList(),
       total: matched.length,
@@ -264,17 +277,53 @@ class CometbeatCatalogSource implements ContentSource {
     };
   }
 
+  /// Ids whose sung text contains [q], fetching the lyrics shard on first use.
+  ///
+  /// Deliberately lazy: the shard is 3.6 MB gzipped against the browse path's
+  /// 2.6 MB, so paying for it up front would undo the work that got the catalog
+  /// small. Cached by catalog version like every other shard, so the cost is
+  /// once per publish, not once per launch.
+  Future<Set<String>> _lyricMatches(String q) async {
+    final idx = _index;
+    if (idx == null || q.isEmpty) return const {};
+    if (_lyrics == null) {
+      final shard = (idx.shards ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .where((s) => s['kind'] == 'lyrics')
+          .firstOrNull;
+      if (shard == null) return const {};
+      final data = _json(
+        await _shardBytes(shard, idx.base, idx.version),
+        'catalog shard lyrics',
+      );
+      _lyrics = {
+        for (final e in (data['items'] as Map? ?? const {}).entries)
+          '${e.key}': '${e.value}'.toLowerCase(),
+      };
+    }
+    final needle = q.toLowerCase();
+    return {
+      for (final e in _lyrics!.entries)
+        if (e.value.contains(needle)) e.key,
+    };
+  }
+
   List<LibraryItem> _match(
     List<LibraryItem> all,
     String query,
-    LibraryFilter filter,
-  ) {
+    LibraryFilter filter, [
+    Set<String> lyricHits = const {},
+  ]) {
     final q = query.trim().toLowerCase();
     return [
       for (final i in all)
         if ((q.isEmpty ||
                 i.title.toLowerCase().contains(q) ||
-                i.composer.toLowerCase().contains(q)) &&
+                i.composer.toLowerCase().contains(q) ||
+                // the inline incipit makes the common case work without the
+                // lyrics shard at all
+                (i.textIncipit?.toLowerCase().contains(q) ?? false) ||
+                lyricHits.contains(i.id)) &&
             (filter.isEmpty || filter.matches(i)))
           i,
     ];

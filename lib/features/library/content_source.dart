@@ -127,6 +127,13 @@ class LibraryItem {
   /// Precomputed musical description, when the catalog supplies one.
   final MusicInfo? music;
 
+  /// Opening words of the sung text, when the catalog supplies a readable one.
+  ///
+  /// Absent for rows whose reconstructed text has no usable word boundaries
+  /// (MIDI lyric events, interleaved kern spines) — that text is still
+  /// SEARCHABLE via the lyrics shard, just not fit to display.
+  final String? textIncipit;
+
   /// The CORPUS this row came from — "GregoBase", "CPDL", "NIFC Polish Scores".
   ///
   /// Distinct from [sourceName], which is the CONNECTOR ("CometBeat Library")
@@ -148,6 +155,7 @@ class LibraryItem {
     required this.format,
     this.music,
     this.corpusSource,
+    this.textIncipit,
   });
 }
 
@@ -165,12 +173,21 @@ class LibraryFilter {
     this.formats = const {},
     this.licences = const {},
     this.sources = const {},
+    this.searchLyrics = false,
   });
 
   final Set<String> kinds;
   final Set<String> formats;
   final Set<String> licences;
   final Set<String> sources;
+
+  /// Also match the query against the sung TEXT, not just title and composer.
+  ///
+  /// Opt-in because it costs a separate 3.6 MB shard fetch. Carried on the
+  /// filter rather than as another `browsePage` parameter so the nine sources
+  /// that ignore it need no signature change; sources without lyrics simply
+  /// never look at it.
+  final bool searchLyrics;
 
   bool get isEmpty =>
       kinds.isEmpty && formats.isEmpty && licences.isEmpty && sources.isEmpty;
@@ -191,6 +208,14 @@ class LibraryFilter {
     return true;
   }
 
+  LibraryFilter withLyricSearch(bool on) => LibraryFilter(
+        kinds: kinds,
+        formats: formats,
+        licences: licences,
+        sources: sources,
+        searchLyrics: on,
+      );
+
   LibraryFilter toggle(String facet, String value) {
     Set<String> flip(Set<String> s) => s.contains(value)
         ? (s.toSet()..remove(value))
@@ -200,6 +225,7 @@ class LibraryFilter {
       formats: facet == 'format' ? flip(formats) : formats,
       licences: facet == 'licence' ? flip(licences) : licences,
       sources: facet == 'source' ? flip(sources) : sources,
+      searchLyrics: searchLyrics,
     );
   }
 }

@@ -45,6 +45,15 @@ const _scoreShard = '{"version":"t","baseUrl":"https://h/","kind":"score",'
 
 Uint8List _b(String s) => Uint8List.fromList(utf8.encode(s));
 
+/// Byte-map HTTP stub that records what was requested — the recording is the
+/// point for the laziness tests.
+HttpGet httpWith(Map<String, Uint8List> raw, List<Uri> log) => (Uri url) async {
+      log.add(url);
+      final b = raw[url.toString()];
+      if (b == null) throw Exception('404 $url');
+      return b;
+    };
+
 HttpGet _fakeHttp(Map<String, String> byUrl) => (Uri url) async {
       final body = byUrl[url.toString()];
       if (body == null) throw Exception('404 $url');
@@ -510,6 +519,80 @@ void _pageMain() {
     );
     expect(only.total, 1);
     expect(only.items.single.title, 'Motet');
+  });
+
+  test('lyric search is lazy: the shard is fetched only when asked for',
+      () async {
+    const idx = '{"version":"t","baseUrl":"https://h/","count":2,"shards":['
+        '{"kind":"score","count":2,"url":"catalog/score.json"},'
+        '{"kind":"lyrics","count":1,"url":"catalog/lyrics.json"}]}';
+    const shard = '{"version":"t","baseUrl":"https://h/","kind":"score",'
+        '"items":['
+        '{"id":"a","name":"Opus 1","kind":"score","format":"mxl",'
+        '"license":"CC0 1.0","path":"a.mxl"},'
+        '{"id":"b","name":"Opus 2","kind":"score","format":"mxl",'
+        '"license":"CC0 1.0","path":"b.mxl"}]}';
+    const lyrics = '{"version":"t","kind":"lyrics","count":1,'
+        '"items":{"b":"drei chinesen mit dem kontrabass"}}';
+    final log = <Uri>[];
+    final src = CometbeatCatalogSource(
+      httpWith(
+        {
+          indexUrl: _b(idx),
+          'https://h/catalog/score.json': _b(shard),
+          'https://h/catalog/lyrics.json': _b(lyrics),
+        },
+        log,
+      ),
+      kinds: const {'score'},
+      indexUrl: indexUrl,
+      cache: _MemCache(),
+    );
+
+    // a plain search never touches the lyrics shard...
+    final plain = await src.browsePage(query: 'chinesen');
+    expect(plain.total, 0, reason: 'no title contains it');
+    expect(
+      log.map((u) => u.path).where((p) => p.contains('lyrics')),
+      isEmpty,
+      reason: 'lyrics cost 3.6 MB — never fetch them unasked',
+    );
+
+    // ...and opting in finds the row by its words
+    final sung = await src.browsePage(
+      query: 'chinesen',
+      filter: const LibraryFilter(searchLyrics: true),
+    );
+    expect(sung.total, 1);
+    expect(sung.items.single.title, 'Opus 2');
+    expect(
+      log.map((u) => u.path).where((p) => p.contains('lyrics')),
+      hasLength(1),
+    );
+  });
+
+  test('the inline incipit answers the common case without the shard',
+      () async {
+    const idx = '{"version":"t","baseUrl":"https://h/","count":1,"shards":['
+        '{"kind":"score","count":1,"url":"catalog/score.json"}]}';
+    const shard = '{"version":"t","baseUrl":"https://h/","kind":"score",'
+        '"items":[{"id":"a","name":"Untitled","kind":"score","format":"mxl",'
+        '"license":"CC0 1.0","path":"a.mxl",'
+        '"textIncipit":"Winter, ade! Scheiden thut weh…"}]}';
+    final src = CometbeatCatalogSource(
+      httpWith(
+        {
+          indexUrl: _b(idx),
+          'https://h/catalog/score.json': _b(shard),
+        },
+        <Uri>[],
+      ),
+      kinds: const {'score'},
+      indexUrl: indexUrl,
+      cache: _MemCache(),
+    );
+    final page = await src.browsePage(query: 'scheiden');
+    expect(page.total, 1, reason: 'matched on the incipit, no shard needed');
   });
 
   test('a source that cannot count leaves total null but still pages',

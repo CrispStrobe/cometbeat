@@ -6878,6 +6878,12 @@ abstract class AppLocalizations {
   /// **'Load more'**
   String get libraryLoadMore;
 
+  /// Toggle that also searches the sung text, fetching a separate lyrics shard
+  ///
+  /// In en, this message translates to:
+  /// **'Search lyrics'**
+  String get librarySearchLyrics;
+
   /// No description provided for @libraryImport.
   ///
   /// In en, this message translates to:
