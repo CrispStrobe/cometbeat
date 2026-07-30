@@ -40,6 +40,7 @@ else:
 
 canary, load_cache = _wd.canary, _wd.load_cache
 resolve, save_cache = _wd.resolve, _wd.save_cache
+all_candidates_pd = _wd.all_candidates_pd
 
 CUTOFF = 1955
 ANON = re.compile(r'^(anonymous|anon\.?|traditional|trad\.?|unknown|various)$', re.I)
@@ -135,6 +136,14 @@ def main():
                 if status == 'CLEAR' and not match_ok(n, label):
                     status, yr = 'UNKNOWN', None
                     label = f'{label} (rejected: name mismatch)'
+                if status == 'UNKNOWN':
+                    # Second chance that never IDENTIFIES anyone: if every
+                    # entity carrying this exact label is already PD, the row is
+                    # safe whichever one the score means. Recovers the
+                    # hymnwriters/psalmodists that the P106 occupation gate
+                    # rejects — the bulk of CPDL's early-American repertoire
+                    # (Kethe d.1594, Holdroyd d.1753, Pilsbury d.1873…).
+                    status, yr, label, qid = all_candidates_pd(n, cache)
                 verdicts[n] = {'status': status, 'death': yr,
                                'label': label, 'qid': qid}
 

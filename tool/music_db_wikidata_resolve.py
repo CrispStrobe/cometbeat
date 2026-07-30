@@ -22,6 +22,7 @@ lifespan parsing — is IMPORTED, not reimplemented. This file changes only how
 reliably we get an answer, never what counts as an answer.
 """
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -121,3 +122,71 @@ if __name__ == "__main__":
     for n in sys.argv[1:]:
         print(f"{n:30}", resolve(n, c))
     save_cache(c)
+
+
+def all_candidates_pd(name, cache, cutoff=1955):
+    """CLEAR when EVERY plausible person of this name is already PD.
+
+    The occupation gate exists to stop a famous namesake clearing an obscure
+    protected arranger. But it rejects the very people CPDL is full of —
+    hymnwriters, psalmodists, clerics, translators — whose death years Wikidata
+    knows perfectly well: Charles Wesley (1788) blocked 147 rows, William Kethe
+    (1594) 25, Israel Holdroyd (1753) 46.
+
+    This rule sidesteps identification entirely instead of loosening it. If
+    every entity carrying that exact label has a death year and ALL of them are
+    <= cutoff, then it does not matter which one the score means — whoever it
+    is, they are public domain. If any candidate lacks a death year, or any
+    died after the cutoff, we learn nothing and stay held.
+
+    Returns (status, year, label, qid) with status CLEAR or UNKNOWN.
+    """
+    key = f"__allpd__{name}"
+    if key in cache:
+        return tuple(cache[key])
+    try:
+        hits = _api({"action": "wbsearchentities", "search": name,
+                     "language": "en", "limit": 12}).get("search", [])
+    except Exception:
+        return "UNKNOWN", None, name, None
+    # Only entities whose LABEL is the name we asked about; a fuzzy hit is a
+    # different person and would silently widen the pool.
+    exact = [h for h in hits
+             if (h.get("label") or "").strip().casefold() == name.strip().casefold()]
+    if not exact:
+        cache[key] = ["UNKNOWN", None, name, None]
+        return tuple(cache[key])
+    try:
+        ents = _api({"action": "wbgetentities",
+                     "ids": "|".join(h["id"] for h in exact),
+                     "props": "claims|labels", "languages": "en"}).get("entities", {})
+    except Exception:
+        return "UNKNOWN", None, name, None
+
+    years, people = [], []
+    for qid, ent in ents.items():
+        claims = ent.get("claims", {})
+        # A entity with no death date might be alive, or might just be
+        # under-described. Either way it breaks the "all are PD" guarantee.
+        p570 = claims.get("P570")
+        if not p570:
+            # Tolerate non-persons (a ship, a place) — they hold no copyright.
+            if not claims.get("P31") or any(
+                    o["mainsnak"].get("datavalue", {}).get("value", {}).get("id") == "Q5"
+                    for o in claims.get("P31", [])):
+                cache[key] = ["UNKNOWN", None, name, None]
+                return tuple(cache[key])
+            continue
+        t = p570[0]["mainsnak"].get("datavalue", {}).get("value", {}).get("time")
+        if not t:
+            cache[key] = ["UNKNOWN", None, name, None]
+            return tuple(cache[key])
+        y = int(re.sub(r"^[+-]", "", t)[:4])
+        years.append(y)
+        people.append((qid, y))
+    if not years or max(years) > cutoff:
+        cache[key] = ["UNKNOWN", None, name, None]
+        return tuple(cache[key])
+    qid, y = max(people, key=lambda p: p[1])   # report the LATEST death
+    cache[key] = ["CLEAR", y, f"{name} (all {len(years)} candidates PD)", qid]
+    return tuple(cache[key])
