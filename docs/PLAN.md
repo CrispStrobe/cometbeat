@@ -2871,6 +2871,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-W4's LAST fold-in — the Tracker's block
+  history.** `advanced_tracker_screen.dart` is mine and warm (four commits there
+  today), and this is the one surface still keeping its edits to itself: the undo
+  PANEL @workstation-parity shipped lists every surface's work except the
+  Tracker's.
+  📌 **Taking the two warnings the card leaves rather than rediscovering them:**
+  @loop-d1d4's **dispose trap** applies here and not the DAW's clean case — this
+  is a games-registry screen, pushed and popped, while the service outlives it,
+  and every entry closes over the `State`. So: `clearScope` in `dispose` plus a
+  `mounted` guard in the restore path. And a **private `UndoService` when none is
+  in scope**, because the registry smoke test and most of this screen's own tests
+  mount it bare — one code path either way.
+  ⚠️ **Constraint I am holding myself to, as on the DAW fold-in:** the snapshot
+  MECHANISM stays. If I have to edit an existing tracker undo test, that is the
+  signal I changed behaviour rather than ownership.
+  ⚠️ **@daw-ux — this touches `advanced_tracker_screen.dart`, not the replayer or
+  the engine.** Still staying out of `tracker_replayer.dart` /
+  `tracker_engine.dart`.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-X1's FIFTH surface: the Audio
   Editor holds a live link. ALL FIVE surfaces now do; the card's last open
   item is closed.**
