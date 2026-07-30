@@ -177,16 +177,21 @@ repos below. Reachable, but dev/test only.
 The direct answer to "what have we covered / what could we still safely add."
 Every line here is a *licence/coverage* statement; detail per source follows.
 
-> **▶ Live DB snapshot (2026-07-23): `db.json` = 42,334 rows** — 41,944 scores +
-> 390 playback assets (223 instruments · 166 modules · 1 soundfont). The app-facing
-> **HF catalog ships 35,183 items** (score 34,723 · instrument 223 · module 139 ·
-> sample 97 · soundfont 1). Scores by source: GregoBase 18,710 · NIFC Polish 8,181 ·
-> **PDMX 10,799** (74 is_original + 3,352 classical MXL shippable; see below) ·
-> OpenScore Lieder 1,350 · NIFC Chopin 512 · Mutopia 510 · DCML Bach Chorales 361 ·
-> OpenScore SQ 122 · OpenEWLD 103 · **Wikimedia Commons (Gerloff) 1,088** (1,073 CC0/A + 15 CC-BY/B) · Kinder
-> wollen singen 155 · Musikpiraten Season Songs 52 · Pete Mac 15 · EGSet12 12.
-> Assets: VCSL 183 · ModArchive 166 · FreePats 39 · Salamander Grand Piano V3 1 ·
-> FluidR3 1.
+> **▶ Live DB snapshot (2026-07-30): `db.json` = 46,359 rows** — 45,960 scores +
+> 399 playback assets (232 instruments · 166 modules · 1 soundfont). The app-facing
+> **HF catalog ships 38,917 items** (score 38,448 · instrument 232 · module 139 ·
+> sample 97 · soundfont 1) — verified live and unauthenticated. Scores by source:
+> GregoBase 18,684 · **PDMX 10,799** (74 is_original + 3,352 classical MXL
+> shippable; see below) · NIFC Polish 8,181 · **CPDL 2,546** · OpenScore Lieder
+> 1,350 · **Wikimedia Commons (Gerloff) 1,088** (1,073 CC0/A + 15 CC-BY/B) ·
+> Tanzsammlung Dahlhoff 672 · NIFC Chopin 512 · Mutopia 510 · DCML Bach Chorales
+> 361 · Ebersberger 235 · Dreysser 1720 168 · **Wikimedia Commons (MIDI) 160** ·
+> Kinder wollen singen 154 · **Wikipedia (de) `<score>` 127 (Tier C, not shipped)**
+> · OpenScore SQ 122 · OpenEWLD 103 · Arendsee 68 · Musikpiraten Season Songs 51 ·
+> Internet Jukebox 31 · Pete Mac 15 · EGSet12 12. Assets: VCSL 183 · ModArchive 166
+> · FreePats 39 · Shortcircuit XT 9 · Salamander Grand Piano V3 1 · FluidR3 1.
+> The gap between 45,960 score rows and 38,448 shipped is the deliberate hold: SA
+> engravings, unverified PDMX axis 2, and the probation ledgers.
 
 > **🇩🇪 Wikimedia Commons — Peter Gerloff CC0 MIDI settings (German folk + hymns),
 > ingested 2026-07-23.** The **Rabanus Flavus** uploads of Peter Gerloff's MIDI
@@ -227,6 +232,80 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > default is unsafe — read the actual melody-source field and death-check named
 > composers; the parser must cover every language the source uses. ⚠ Wikimedia
 > rate-limits bots (HTTP 429) — the downloader paces 1.2 s/file + 60 s backoff.
+
+> **🌐 Wikimedia Commons — general MIDI sweep, tiered from STRUCTURED DATA
+> (2026-07-30). +160 rows.** The Gerloff pass above read one contributor's
+> uploads; this one sweeps `filemime:audio/midi` across Commons. The change that
+> makes it defensible is *where the tier comes from*: not
+> `extmetadata.LicenseShortName`, which is a rendered STRING produced by whichever
+> template the uploader happened to pick, but **Structured Data on Commons** —
+> `P6216` copyright status and `P275` licence as machine-readable Q ids. That is a
+> claim to point at rather than prose to pattern-match. A share-alike or GFDL
+> statement disqualifies even when the file *also* claims public domain: the most
+> restrictive statement governs what we may redistribute. `Q99263261` ("no known
+> copyright restrictions") is deliberately not treated as PD — it records an
+> absence of knowledge, not a grant. ⚠ Every Q id in the table was looked up; a
+> first pass *guessed* `Q71979350` meant "PD, author life+70" when it is a person's
+> name. Do not extend that table from memory.
+> **Axis 2 is decided separately** (`tool/music_db_commons_axis2.py`) and it is
+> where the interesting shape is. 357 files cleared axis 1; **247 cleared axis 2,
+> 110 held**, by four rules: **T** 123 — a generated theory example (scale,
+> hexachord, equal-temperament step, chord inversion) has no separate composer at
+> all, the uploader is the author and dedicated it PD, and a C-major scale is not a
+> copyrightable composition; **P1g** 75 — the credit splits as
+> `Melodie: <origin>; Satz und Tondatei: <arranger>`, so axis 2 turns on the
+> MELODY, not on the living arranger in the same line (this is what separates a
+> 1529 Wittenberg chorale from the person who typeset it); **P3** 36 — every named
+> person verified dead ≤1955 via Wikidata; **P2/P1c** 13 — an explicit lifespan or
+> century in the credit. Of the 247, **87 were already in the corpus** from the
+> Gerloff pass and were skipped — a general sweep re-finds a single-contributor
+> harvest, and two rows for one work is worse than a miss because nothing
+> downstream can tell them apart. **160 ingested, all Tier A (PD), 160/160 parse,
+> 25,842 notes.** The 110 held are parked in `commons-midi-held.json`.
+> **The trap worth recording:** the harvested `artist` field is the UPLOADER, not
+> the composer, and one editor accounts for a third of the set. Feeding it to a
+> resolver as a composer name is how a username coincidentally clears; the pass
+> therefore never takes names from the *title* (a work title is not a credit —
+> "Da Jesus an dem Kreuze stund" yields the name-shaped "Da Jesus") and never
+> resolves a **mononym**, since a one-word label is exactly what an
+> all-candidates-PD rule can clear by accident.
+
+> **🇩🇪 de.wikipedia `<score>` melodies — 127 rows, Tier C, LOCAL ONLY (2026-07-30).**
+> German song articles embed their melody as a LilyPond `<score>` block. The wiki
+> text is CC BY-SA, so the *engraving* is share-alike; whether a faithful
+> transcription of a public-domain melody carries any new authorship at all is a
+> maintainer call that has not been made, so share-alike governs and these are
+> **Tier C — in `db.json`, never in the shipped catalog** (`_tier()` sends any
+> `-sa` licence to C; `ships()` is A|B). Axis 2 is recorded as **UNASSESSED**
+> rather than guessed: writing a confident "traditional, PD" on a row nobody
+> checked is the exact failure the Ebersberger pass exists to prevent, and it
+> would become load-bearing the day someone promotes these. **Assess axis 2 before
+> any promotion.**
+> Two bugs surfaced here, both of which had been *silently* costing music:
+> (a) an earlier version of the harvester stripped `\addlyrics`/`\lyricmode` to
+> avoid copying text, which left dangling `verse = ` assignments that swallowed the
+> following `\score` block — 23 of 127 melodies read as empty for that reason
+> alone. The source is now kept whole (a song corpus needs its words, and a
+> protected text is a matter for the axis-2 gate, not for silent discard);
+> (b) `\transpose f g \relative c'' { … }` — the ordinary unbraced spelling — left
+> its body a *sibling* of the command, so a variable assignment bound the name to a
+> transpose with no music. Single-staff sources hid it; two-staff scores read as
+> silence. Fixed in crisp_notation `abb4b9e`. **All 127 now parse, 0 empty.**
+
+> **📊 Coverage measured against `de.wikipedia Kategorie:Volkslied` (2026-07-30).**
+> A category listing is a decent external yardstick for German folk-song coverage,
+> so: **428 articles · 241 we have · 187 we lack.** The 241 counts the 127 Tier C
+> rows above — every one of the 28 gap titles that embeds a `<score>` was already
+> in that batch, so *there is nothing left to harvest this way*. The remaining
+> **187 have no notation on their Wikipedia page at all**: filling them means
+> sourcing or writing the melody, not scraping. A sizeable share are non-German
+> folk songs catalogued in the German category (Arirang, Cielito lindo, Baïlèro,
+> Chad gadja) and a few are modern enough to be axis-2 blocked regardless
+> (Banana Boat Song, 1956). Tooling: `tool/music_db_wp_category_gap.py` (normalises
+> titles — disambiguators, umlaut transliteration, leading articles — because a raw
+> string compare reports nearly everything as missing and buries the real gaps) and
+> `tool/music_db_wp_score_check.py` (splits a gap list into harvestable-today vs
+> genuine content gap; without that split a gap list is only a wish list).
 
 > **⚠️ PDMX OVERHAUL (2026-07-23) — copyright incident + composer_name fix + classical
 > recovery.** A title scan caught **25 in-copyright holiday songs** (White Christmas,

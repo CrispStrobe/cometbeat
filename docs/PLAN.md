@@ -410,6 +410,22 @@ is recorded in [HISTORY.md](HISTORY.md).
     blind to voice 2 and silently under-reports.
   — opus (corpus-survey)
 
+- **opus (jukebox-ingest)** · ✅ **DONE (idle) — Wikimedia Commons pass shipped
+  (2026-07-30).** +160 Commons PD MIDI (Tier A, axis 1 from Structured Data
+  `P6216`/`P275`, axis 2 by four rules; 87 skipped as Gerloff duplicates) and
+  +127 de.wikipedia `<score>` melodies at **Tier C, local only** (wiki text is
+  CC BY-SA; axis 2 recorded UNASSESSED, not guessed). `db.json` **46,199 →
+  46,359**, 0 dangling; HF catalog **38,917 items**, payloads-then-catalog,
+  verified live unauthenticated. 160/160 MIDI and 127/127 `.ly` parse.
+  Coverage vs `de.wikipedia Kategorie:Volkslied`: **241/428; the 187 we lack have
+  no notation on their page**, so they need sourcing/writing, not scraping
+  (`docs/data/wp-volkslied-gap.json`).
+  Shared files touched: `docs/CORPUS_LICENSING.md`, `docs/PLAN.md`, `tool/`.
+  crisp_notation: merged + pushed `dab9479` (ABC titles, unmetered fallback,
+  `\transpose` two args) and `abb4b9e` (`\transpose` with a command body — the
+  unbraced spelling stranded its music outside every staff, so two-staff scores
+  read as silence). Suite green at 1,918.
+
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Internet Jukebox ingested:
   31 rows from 24 cleared items, 180 held.** `db.json` **42,596 → 42,627**,
   0 dangling, all rows Tier A. Used `append_manifest.py` (never `merge_db.py`);

@@ -184,10 +184,17 @@ def harvest_ly(limit):
         if not blocks:
             continue
         src = blocks[0]
-        # MUSIC ONLY. Lyrics are dropped rather than copied: they are the part
-        # of a song most likely to carry a separate, living author's rights.
-        src = re.sub(r"\\addlyrics\s*\{[^{}]*(\{[^{}]*\}[^{}]*)*\}", "", src)
-        src = re.sub(r"\\lyricmode\s*\{[^{}]*(\{[^{}]*\}[^{}]*)*\}", "", src)
+        # Keep the source WHOLE, lyrics included.
+        #
+        # An earlier version stripped \addlyrics/\lyricmode to avoid copying
+        # text. That backfired twice: a song corpus needs its words, and the
+        # strip left DANGLING assignments (`verse = ` with no value) which then
+        # swallowed the following \score block — 23 of 127 harvested melodies
+        # read as empty purely because of it.
+        #
+        # The text author is instead handled where it belongs: the axis-2 pass
+        # gates on lyricist/translator exactly as it does on composer, so a
+        # protected text blocks the row rather than being silently discarded.
         rows.append({
             "title": t,
             "source_url": f"https://de.wikipedia.org/wiki/{t.replace(' ', '_')}",
