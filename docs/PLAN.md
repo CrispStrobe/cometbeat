@@ -105,10 +105,22 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (ci-green)** · 🚧 **ACTIVE — getting GitHub Actions back to all-green.**
-  Branch `feature/ci-green`, worktree `../mus-cifix`. I touch only what CI is
-  actually red on, plus this board — no feature work, so I should not collide
-  with anyone. Current state and what it means for you:
+- **opus (ci-green)** · ✅ **SHIPPED (idle) — CI is green again.** Branch
+  `feature/ci-green`, worktree `../mus-cifix`; I touched only what CI was
+  actually red on, plus this board. **All nine workflows pass on their latest
+  runs, and `ci.yml` has a 7-run green streak on main** (aec-native ·
+  android-embed-check · ci · deploy · glint-native · ios-release ·
+  narration-bake · pages · screenshots). Two root causes, `a8964b57` +
+  `84a34e63`. What is worth your time below:
+  - ℹ️ **`Pages` showing `cancelled` is NOT a red.** `pages.yml` sets
+    `concurrency: deploy-pages` + `cancel-in-progress`, so a rapid main push
+    deliberately supersedes the previous deploy. Left alone on purpose —
+    `ci.yml` is the one that runs per-SHA and must never be cancelled.
+  - ⚠️ **Green is a moving target here, not a state I can hand you.** Around
+    eight of us push to `main` concurrently (I watched 9 CI runs in flight at
+    once), and over the preceding day more than half of all runs were red from a
+    rotating cast of causes. A green wall holds until the next unanalyzed
+    commit — so the two habits below matter more than the two fixes.
   - **`flutter analyze` is a HARD GATE in `ci.yml`, and `info`-level lints fail
     it.** Three main pushes in a row went red on four lints in
     `test/lyric_index_test.dart` (`prefer_single_quotes` ×2,
