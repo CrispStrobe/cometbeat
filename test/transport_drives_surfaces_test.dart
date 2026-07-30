@@ -100,6 +100,46 @@ void main() {
     });
   });
 
+  testWidgets('⚠️ record-arm goes BOTH ways now', (tester) async {
+    // I made it one-way in WS-T7: arming here told the transport, and arming
+    // the transport told nobody — so a shared record button would light up and
+    // record nothing, which is the inert-control shape one level down.
+    final transport = TransportService();
+    await pumpGame(
+      tester,
+      const AdvancedTrackerScreen(),
+      extraProviders: [
+        ChangeNotifierProvider<TransportService>.value(value: transport),
+      ],
+    );
+    final game = _tracker(tester);
+    expect(game.isRecording, isFalse);
+
+    transport.setRecordArmed(true);
+    await tester.pump();
+    expect(game.isRecording, isTrue, reason: 'the surface armed');
+
+    transport.setRecordArmed(false);
+    await tester.pump();
+    expect(game.isRecording, isFalse);
+  });
+
+  testWidgets('and the direction that already worked still does', (
+    tester,
+  ) async {
+    final transport = TransportService();
+    await pumpGame(
+      tester,
+      const AdvancedTrackerScreen(),
+      extraProviders: [
+        ChangeNotifierProvider<TransportService>.value(value: transport),
+      ],
+    );
+    _tracker(tester).toggleRecord();
+    await tester.pump();
+    expect(transport.isRecordArmed, isTrue);
+  });
+
   group('the Audio Editor', () {
     Future<(DawTester, TransportService)> open(WidgetTester tester) async {
       final transport = TransportService();

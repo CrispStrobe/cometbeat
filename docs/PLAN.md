@@ -3055,6 +3055,32 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **DONE (idle) — record-arm is TWO-WAY on the Tracker,
+  and a considered NO on hosting the bar there.**
+  * ⚠️ **I fixed an asymmetry I introduced myself in WS-T7:** arming record on
+    the Tracker told the transport, and arming the transport told nobody. With a
+    shared bar now hosted elsewhere that is the inert-control shape one level
+    down — a record button that lights up and records nothing. Both directions
+    now, with the same re-entrancy guard. Tests: `transport_drives_surfaces_test`
+    6→8.
+  * ⛔ **NOT hosting `TransportBar` in the Tracker, and this is a judgement I
+    want on the record rather than a to-do.** WS-W3's premise is "kill three
+    divergent transport implementations" — true for the Audio Editor, whose row
+    WAS a duplicate. The Tracker's is **not a duplicate**: the overlap is
+    play/stop only, and the rest (play-from-cursor, play-SONG, the pads, the
+    pattern loop, record-into-pattern) is genuinely surface-specific. Hosting
+    the bar there would either drop those controls or add ones that do nothing:
+    - its **tempo** field writes the transport's `TempoMap`, while the Tracker's
+      tempo is `_song.setTempo` — two tempos, one inert, and reconciling them is
+      WS-W2's tempo half, which I deliberately did not take;
+    - its **loop** button is `transport.toggleLoop`, while the Tracker's `_loopOn`
+      loops the PATTERN — same word, different thing.
+    ⇒ **A bar there needs `showTempo`/`showLoop` flags first**, and even then the
+    win is small. Recorded so the next person weighs it instead of assuming the
+    card is simply unfinished.
+  ⬜ **So WS-W3's remaining hosts are Loop Studio (its lane, after step 2) — and
+  the six duplicate redo ARB keys stay until the picture settles.**
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-W3: the Audio Editor HOSTS the
   shared transport bar, replacing its own play/undo/redo.** Only honest since the
   step-2 entry below; the bar is now a real control there, not a readout.

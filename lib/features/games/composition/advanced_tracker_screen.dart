@@ -2817,6 +2817,20 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void _onTransportCommand() {
     final transport = _transport;
     if (transport == null || _applyingTransport || !mounted) return;
+
+    // ⚠️ Record-arm was ONE-WAY, which I introduced in WS-T7: arming here told
+    // the transport, and arming the transport told nobody. That is the shape of
+    // an inert control on the other end — a shared record button that lights up
+    // and records nothing — so it goes both ways now.
+    if (transport.isRecordArmed != _recording) {
+      _applyingTransport = true;
+      try {
+        _setRecording(transport.isRecordArmed);
+      } finally {
+        _applyingTransport = false;
+      }
+    }
+
     final running = _clock.isRunning;
     if (transport.isPlaying == running) return;
     _applyingTransport = true;
