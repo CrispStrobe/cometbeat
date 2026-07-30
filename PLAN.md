@@ -1490,6 +1490,19 @@ prefix.
        lands silent and looks like a failed drop.
     📌 Consistent with `openProjectTrack` refusing a converted document: that
     refusal was because *opening* hid the cost, and a drop does not hide it.
+  * 🛑 **UPDATE 2026-07-30, AFTER ALL FOUR TARGETS EXIST: the count went 2 → 4
+    and the number of drag SOURCES is still ZERO.** Re-measured on `origin/main`:
+    `Draggable<MusicDragPayload>` appears 0 times in `lib/`. `10ed9a25` records
+    the card as complete; the four targets are complete, the FEATURE is not,
+    because nothing in the app can begin the gesture. **Do not wire a fifth.**
+    The stop-flag below was written when there were two and did not travel — a
+    note on a card is not a message to a person, and that is on me as much as
+    anyone. What is needed is a SOURCE and a frame where source and target
+    coexist (the WS-W6 browser as a docked panel, or a split view); the
+    maintainer has meanwhile leaned to parking the whole gesture and keeping
+    `OpenInMenu`. 📌 The targets were still worth building: each one exposed a
+    real latent bug in its own surface, which is @tab's tally and is the honest
+    win here.
   * 🛑 **STOP — DO NOT WIRE THE REMAINING TWO TARGETS YET. This whole card is
     structurally unreachable in the product, and I only found it after adding
     to it.** Measured 2026-07-30 (loop-d1d4):

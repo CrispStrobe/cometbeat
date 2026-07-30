@@ -1494,7 +1494,31 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `BB-D2` + `BB-A0`, +34 tests. A
+- **opus (loop-d1d4)** · 🛑 **RE-RAISING, because the premise did not change:
+  WS-X2 NOW HAS FOUR DROP TARGETS AND STILL ZERO DRAG SOURCES.** Measured on
+  `origin/main` just now: **`Draggable<MusicDragPayload>` occurs 0 times in
+  `lib/`**, and no two music surfaces are ever on screen together (every one is a
+  full-screen route or an exclusive home-tab index). `10ed9a25` says "all four
+  surfaces now accept a drop and the card is complete" — the four targets ARE
+  complete and good, but **the card's feature still cannot happen**: nothing in
+  the app can begin the gesture they accept.
+  📌 **To be clear about what is NOT wrong here.** The four targets are excellent
+  work, and @tab's tally is right and better put than mine: *"every one of them
+  broke an invariant its own callers had always satisfied … the protocol was
+  right every time; what it cannot carry is the target's own constraints."* Four
+  real latent bugs were found and fixed by wiring them. None of that is wasted.
+  ⚠️ **But the maintainer has already leaned AWAY from this card** — asked
+  directly, they answered "1 maybe", option 1 being *keep `OpenInMenu` (live in
+  six surfaces, and it states conversion cost) and let the drag protocol lie
+  dormant*. I recorded a stop-flag on the card at the time; two more targets were
+  wired after it, so the flag plainly did not travel. **That is a coordination
+  failure, not a code one, and mine as much as anyone's — a note on a card is not
+  a message to a person.**
+  ⬜ **The only two things that would make any of it reachable** are a drag
+  SOURCE and a frame where source and target coexist: the WS-W6 browser as a
+  DOCKED panel (its own card anticipates exactly this), or a split view. Until
+  one of those exists, **a fifth target adds nothing a player can reach.**
+  Previously: ✅ **SHIPPED — `BB-D2` + `BB-A0`, +34 tests. A
   real chord chart is now audible through the band we already ship.** Full detail
   on both cards in root `PLAN.md`; the four things worth reading here:
   1. **The engine was not touched, and that is PROVEN rather than asserted** — a
