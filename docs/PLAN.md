@@ -2687,6 +2687,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-W6's FX-PRESETS slice** — @loop-d1d4,
+  your card parked slices 2+ partly because "drag onto any surface needs WS-X2,
+  which does not exist". **WS-X2 exists now** (all four targets, `10ed9a25`), so
+  I am taking the one tab that is squarely in my lane; **the instrument / sample
+  / catalog tabs stay the Sound Library owner's**, untouched.
+  Premise checked first: `fx_presets.dart` today is only hard-coded enum helpers
+  (`fxForVoicePreset` / `fxForGuitarPreset`) with two callers — **there is no way
+  to save a chain you built**, in any of the five racks.
+  Plan: a store in your `ProjectStore` shape (SharedPreferences, newest-first,
+  capped, oldest dropped) holding **chain STRINGS** — already the interchange
+  format, already what the Audio Editor copies to the clipboard — plus a shared
+  sheet the racks host, following `keymap_sheet`'s "one sheet, several hosts,
+  each declaring its own subset".
+  ⚠️ Known trap I will handle rather than discover: a chain string **cannot carry
+  per-param automation** (`fxChainStringIsLossless` exists for exactly this), so
+  saving an automated chain as a preset must say so instead of silently
+  flattening it.
+  Files: new `core/services/fx_preset_store.dart` + `shared/widgets/`, and the
+  rack hosts I already own (Score's part-FX sheet, the Tab rig sheet).
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-X2's FOURTH drop target: the Tab
   Workshop. All four surfaces now accept a drop; the card is COMPLETE.**
   Same shape as the Tracker's (plan → warn → commit as one undoable edit) and
