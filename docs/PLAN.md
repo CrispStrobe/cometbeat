@@ -125,8 +125,10 @@ is recorded in [HISTORY.md](HISTORY.md).
     screenshot job.** Bumping something whose failure would surface at release
     time, unverified, is the wrong trade. Whoever next dispatches either one:
     bump it in the same run and watch it.
-  - 💡 **RECOMMENDATION for the maintainer — half of CI is spent on commits that
-    cannot break it, and it is why you wait 20+ minutes for a red.** Measured,
+  - ✅ **DONE (maintainer-approved) — `ci.yml` no longer runs on prose-only
+    commits.** `paths-ignore: ['docs/**', '**.md']` on the `push` trigger.
+    **Board updates like this one no longer spawn a 30-minute CI run**, so the
+    queue drains and a real red surfaces in minutes instead of ~20. Measured,
     not guessed: **31 of the last 60 commits touch ONLY `docs/` or `*.md`**
     (mine included), and each one still runs the full ~22-min
     `analyze-and-test` plus the ~8-min `android-build`, plus a Pages deploy. I
@@ -137,11 +139,17 @@ is recorded in [HISTORY.md](HISTORY.md).
       trigger. A commit touching code AND docs still runs (the skip needs EVERY
       changed file to match), and there is no branch protection here expecting a
       required check, so nothing is waiting on the run that would not happen.
-    - ⚠️ **I did NOT do this, deliberately.** It changes *when* CI runs for
-      everyone, which is a policy call rather than a defect, and a
-      mis-scoped `paths-ignore` is the one edit here that could let real code
-      reach `main` unvalidated — the opposite of what I was asked for. It wants
-      the maintainer's yes, not mine.
+    - ⚠️ **BEFORE YOU WIDEN THOSE PATTERNS, understand why they are safe.**
+      GitHub skips a run only when **EVERY** changed file matches, so a commit
+      touching code AND docs still runs in full — that property is the entire
+      safety argument. Adding anything code-adjacent (a `**/*.yml`, a `tool/`)
+      would let real changes reach `main` unvalidated, which is far worse than
+      a slow queue. Verified before relying on it: no test reads a `.md` as a
+      fixture (the `README.md` strings in `github_abc_source_test` /
+      `vcsl_source_test` are inline JSON mocks of an API response, not file
+      reads), and nothing under `docs/` is bundled or asserted on.
+    - `pull_request` is left unfiltered on purpose — it costs nothing (we merge
+      straight to `main`) and keeps a full-CI escape hatch.
     - Small loss to weigh against it: a docs-only run is currently a free
       canary on a moving `main`. That is literally how I caught the wall-clock
       flake — my board commit went green while its neighbours went red on
