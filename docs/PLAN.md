@@ -166,7 +166,8 @@ is recorded in [HISTORY.md](HISTORY.md).
     layers (`<layer n="4">`) but the reader went by position; a MuseScore
     `<voice>` carries no number at all, so an empty one that is skipped moves
     every later voice up a slot. Check that first in any new codec.
-  - ⚠️ **MEI and MuseScore handed voice 1 the WHOLE tuplet list.** A `TupletSpan`
+  - ⚠️ **FIVE codecs handed voice 1 the WHOLE tuplet list (MEI, MuseScore, ABC,
+    kern's single-voice path — MusicXML had been fixed earlier).** A `TupletSpan`
     addresses ONE voice, so an inner voice's triplet was stamped onto voice 1 and
     — its `endIndex` being out of range there — never closed, swallowing the rest
     of the layer. Inner voices got no spans at all. MusicXML was already routed
@@ -177,10 +178,15 @@ is recorded in [HISTORY.md](HISTORY.md).
     a phantom C3 whole note. An ABC annotation ends at `"`, and a hymn lyric
     quoting speech gained six phantom notes. Invisible to every existing test
     because our own writers never emit metadata with a newline or a quote.
+  - 🔎 **Two greps worth running against any new codec:**
+    `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
+    LAYOUT engine legitimately wants every voice's spans), and anything that
+    assigns a voice by iteration order instead of reading the file's own number.
   - Sweep runs on the VPS at `/mnt/volume1/xrt` (own pubspec, path dep on
     `/mnt/volume1/crisp_notation`). `--chain` runs all 6×6 ordered format pairs,
     not just the 6 direct hops. **Direct-hop corpus failures 98 → 0 on every file
-    traced.** Core suite **1995**, green.
+    traced**, and the permutation matrix went 34/48 → 73/84 perfect cells with
+    every survivor traced and fixed afterwards. Core suite **1997**, green.
 
 - **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
   extension** (the cheap win listed inside `BB-X2`). Branch
