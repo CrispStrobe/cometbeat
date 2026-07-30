@@ -160,6 +160,25 @@ is recorded in [HISTORY.md](HISTORY.md).
       flake — my board commit went green while its neighbours went red on
       identical code, which is what proved the failure was nondeterministic
       rather than a bad commit.
+  - 🔍 **CI was GREEN while testing none of MP3 decoding — found by diffing
+    SKIP COUNTS, and worth stealing as a technique.** A skip and a pass look
+    identical in a run summary, so a green wall can hide an untested component.
+    The local suite reported **26 skipped** and CI **31**, and the five-test
+    difference was `mp3_decode_roundtrip_test` self-skipping on *"ffmpeg not on
+    PATH"* — the runner image has no ffmpeg. That is the one component here with
+    a known historical defect (the 23 ms gapless-delay bug), and its round-trips
+    had never run on CI.
+    - Fixed by installing ffmpeg before the Test step. **Verified by the
+      numbers, not by the tick:** CI went from `6954 passed / 31 skipped` to
+      **`6963 passed / 26 skipped`**, with zero "ffmpeg not on PATH" lines —
+      so CI's skip count now matches a local run and 9 more tests genuinely
+      execute.
+    - 📌 **The technique: compare your local skip count against CI's.** Any
+      divergence is a test that runs for you and not for the robot, which is
+      the coverage you think you have and do not. The remaining 26 are
+      deliberate — absent optional fixtures (the licence-controlled module
+      corpora), `TAB_BENCH`/`HEAVY` benchmarks, and the `MODEL_E2E` ONNX
+      inference tests that would add 8-16 min. Those should stay skipped.
   - ℹ️ **`Pages` showing `cancelled` is NOT a red.** `pages.yml` sets
     `concurrency: deploy-pages` + `cancel-in-progress`, so a rapid main push
     deliberately supersedes the previous deploy. Left alone on purpose —
