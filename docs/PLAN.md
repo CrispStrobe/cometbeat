@@ -188,6 +188,11 @@ is recorded in [HISTORY.md](HISTORY.md).
     so one rest before a syllable shifts every id after it and an exact round
     trip reads as ~50% corrupt. Compare by note POSITION. I filed the LilyPond
     lyric round-trip as an open defect on that basis and had to retract it.
+  - ✅ **PERMUTATION MATRIX CLEAN: 59,136 / 59,136 = 100%, all 84 cells** (the 6
+    direct hops + every one of the 36 ordered format pairs, over 1,408 real
+    corpus files, judging SOUNDING duration). It started this arc at 34/48 cells
+    and 98 direct-hop failures. The full-corpus pass (every readable file, direct
+    hops) is running on the VPS now — `/mnt/volume1/xrt/pass2.log`.
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
