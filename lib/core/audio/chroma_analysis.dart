@@ -188,6 +188,7 @@ class ChordDetector {
     this.bassHarmonics = 6,
     this.bassFundamentalFloor = 0.12,
     this.bassHarmonicSupport = 0.05,
+    this.bassTieEpsilon = 0.02,
   });
 
   /// The register searched for the bass note: E1 (28) to E4 (64) by default.
@@ -208,6 +209,11 @@ class ChordDetector {
   /// A candidate must also carry harmonic support of at least this fraction of
   /// its own fundamental, which is what separates a real low note from leakage.
   final double bassHarmonicSupport;
+
+  /// How close two cosine scores must be before the bass is allowed to decide
+  /// between them. Small on purpose — the bass breaks TIES, it does not override
+  /// the harmony.
+  final double bassTieEpsilon;
 
   /// The chord vocabulary to match against. Defaults to [kChordTemplates], so
   /// every existing caller is unaffected.
@@ -295,7 +301,41 @@ class ChordDetector {
         ChordCandidate(rootPc: t.rootPc, suffix: t.suffix, score: dot),
       );
     }
-    scored.sort((a, b) => b.score.compareTo(a.score));
+    // 🔴 A DETERMINISTIC ORDER, not just a score order. Dart's `List.sort` is
+    // NOT stable, so two candidates with equal cosine could come back in either
+    // order — and the moment the vocabulary contains a true collision (`C6` and
+    // `Am7` are the same four pitch classes) that makes the reported chord name
+    // arbitrary between runs. The secondary keys are a documented PRIOR, applied
+    // only when the acoustic evidence is exhausted: prefer the SIMPLER chord
+    // (fewer tones — which is also how the cosine already behaves on
+    // subset/superset), then the lower root, then the name.
+    scored.sort((a, b) {
+      final byScore = b.score.compareTo(a.score);
+      if (byScore != 0) return byScore;
+      final byTones = _toneCount(a.suffix).compareTo(_toneCount(b.suffix));
+      if (byTones != 0) return byTones;
+      final byRoot = a.rootPc.compareTo(b.rootPc);
+      if (byRoot != 0) return byRoot;
+      return a.suffix.compareTo(b.suffix);
+    });
+
+    // Then let the BASS break a near-tie, because that is real evidence rather
+    // than a prior. Two chords with identical pitch-class sets differ only in
+    // which note is lowest, so this is the one thing that can separate them —
+    // and it is applied ONLY within a near-tie, never as a general preference:
+    // a first-inversion C major has E in the bass and is still a C chord.
+    final bassPc = _bassPcFrom(mags, fftN);
+    if (bassPc != null && scored.length > 1) {
+      final best = scored.first.score;
+      for (var i = 1; i < scored.length; i++) {
+        if (best - scored[i].score > bassTieEpsilon) break;
+        if (scored[i].rootPc == bassPc && scored.first.rootPc != bassPc) {
+          final promoted = scored.removeAt(i);
+          scored.insert(0, promoted);
+          break;
+        }
+      }
+    }
 
     if (scored.isEmpty || scored.first.score < scoreThreshold) {
       return ChordReading(
@@ -309,7 +349,7 @@ class ChordDetector {
       candidates: scored.take(maxCandidates).toList(),
       chroma: chroma,
       energy: energy,
-      bassPc: _bassPcFrom(mags, fftN),
+      bassPc: bassPc,
     );
   }
 
@@ -337,6 +377,14 @@ class ChordDetector {
     if (samples.length < 2) return null;
     final (mags, n) = _magnitudes(samples);
     return _bassPcFrom(mags, n);
+  }
+
+  /// How many tones a template's suffix names — the tie-break's simplicity key.
+  int _toneCount(String suffix) {
+    for (final t in templates) {
+      if (t.suffix == suffix) return t.intervals.length;
+    }
+    return 3;
   }
 
   double _midiHz(int midi) => a4 * pow(2.0, (midi - 69) / 12.0);

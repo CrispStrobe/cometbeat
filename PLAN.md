@@ -3034,7 +3034,34 @@ failed:**
   - **Acceptance.** Exact and root improve on the shipped 8, or it is not adopted.
     The silence/near-silence gate tests stay green.
 
-- ⬜ **BB-H3 — a deterministic tie-break.** `S`
+- ✅ **BB-H3 — deterministic ordering + bass tie-break. SHIPPED 2026-07-30, and
+  it made the SHIPPED detector better.** `S`
+  - **Measured, same grid as the rejection above:** the shipped 8 qualities go
+    **82.6 → 86.1% exact and 86.8 → 90.3% root (+3.5pp each)**. A free win — the
+    tie-break costs nothing and improves the path we already ship.
+  - **Two parts.** (a) A fully deterministic comparator: score, then FEWER TONES
+    (a documented prior, and also how the cosine already behaves on
+    subset/superset), then root, then name — because `List.sort` is not stable
+    and any exact tie otherwise makes the reported name arbitrary between runs.
+    (b) The bass then breaks a *near*-tie, which is real evidence rather than a
+    prior. Applied only within `bassTieEpsilon` — **never as a general
+    preference**, because a first-inversion C major has E in the bass and is
+    still a C chord. A test pins exactly that.
+  - 📊 **And it re-opened the rejected extension — but not far enough to ship.**
+    Re-measured with bass disambiguation: the full 17-quality set improves from
+    **63.5 → 75.3% exact** yet still regresses the shipped 8 by **−10.8pp**. A
+    targeted "+4 four-note only" set (`m7b5 dim7 6 m6`, no five-note ninths)
+    lands at **81.9% exact / 86.5% root — −4.2pp** while covering 12 qualities.
+  - ⚖️ **Neither is adopted, and the reason is that the synthetic grid cannot
+    settle it.** The −4.2pp is measured on a vocabulary that EXCLUDES the very
+    chords the extension exists to catch: today a half-diminished or a diminished
+    seventh is confidently named as something else entirely, so the 86.1%
+    baseline flatters the shipped set on any real jazz chart. **The decisive test
+    is real audio** — GuitarSet (CC BY, chord-annotated, axis-2 clean, and
+    already acquired in `jams-corpus/tierA`, parsed by our own `jams.dart`).
+    That is the next measurement, and it is cheap because both harnesses exist.
+
+- ⬜ **BB-H3b — (superseded card text, kept for its reasoning).** `S`
   - **Goal.** `scored.sort` is Dart's `List.sort`, which is **not stable**, so any
     exact tie makes the reported chord name arbitrary. Today the shipped 8 happen
     not to collide; `BB-H1` and any future template make that luck, not design.

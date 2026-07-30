@@ -184,4 +184,35 @@ void main() {
       expect(detector.bassPitchClass(Float64List(1)), isNull);
     });
   });
+
+  group('deterministic ordering + bass tie-break (BB-H3)', () {
+    test('the same input gives the same candidate order, every time', () {
+      // Dart's List.sort is NOT stable, so equal cosines could come back in
+      // either order — and with a true collision in the vocabulary that makes
+      // the reported chord name arbitrary between runs.
+      final d = ChordDetector();
+      final w = _chordWindow([_f(48), _f(52), _f(55)], 4096);
+      final first = d.analyze(w).candidates.map((c) => c.toString()).toList();
+      for (var i = 0; i < 5; i++) {
+        expect(
+          d.analyze(w).candidates.map((c) => c.toString()).toList(),
+          first,
+        );
+      }
+    });
+
+    test('the bass breaks a near-tie but never overrides the harmony', () {
+      // A first-inversion C major has E in the bass and is still a C chord: the
+      // bass is only allowed to decide between candidates that already score
+      // within bassTieEpsilon of each other.
+      final d = ChordDetector();
+      final cOverE = d.analyze(_chordWindow([_f(52), _f(55), _f(60)], 8192));
+      expect(cOverE.bassPc, 4);
+      expect(
+        cOverE.candidates.first.rootPc,
+        0,
+        reason: 'C/E must still be named C, not E-something',
+      );
+    });
+  });
 }

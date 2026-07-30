@@ -180,12 +180,26 @@ void main(List<String> args) {
     ChordTemplate('maj9', [0, 4, 7, 11, 14]),
   ];
 
+  // A targeted middle option: only the FOUR-note qualities a chart actually
+  // needs. The five-note ninths in `candidate` are the densest templates and
+  // therefore the most likely to steal the top slot from a correct triad, so
+  // they are separated out rather than assumed guilty.
+  const modest = <ChordTemplate>[
+    ...kChordTemplates,
+    ChordTemplate('m7b5', [0, 3, 6, 10]),
+    ChordTemplate('dim7', [0, 3, 6, 9]),
+    ChordTemplate('6', [0, 4, 7, 9]),
+    ChordTemplate('m6', [0, 3, 7, 9]),
+  ];
+
   // Each set is measured over BOTH vocabularies, because the two questions are
   // different: "did adding templates break the chords we already handled?" and
   // "can the bigger set name the new chords at all?".
   final oldOnOld = measure(shipped, vocabulary: shipped);
   final newOnOld = measure(candidate, vocabulary: shipped);
   final newOnNew = measure(candidate, vocabulary: candidate);
+  final modestOnOld = measure(modest, vocabulary: shipped);
+  final modestOnNew = measure(modest, vocabulary: modest);
 
   void row(String label, _Score s) {
     stdout.writeln(
@@ -205,6 +219,15 @@ void main(List<String> args) {
   stdout.writeln('  delta: exact ${dExact >= 0 ? '+' : ''}'
       '${dExact.toStringAsFixed(1)}pp  '
       'root ${dRoot >= 0 ? '+' : ''}${dRoot.toStringAsFixed(1)}pp');
+  row('modest set (+4 four-note only)', modestOnOld.total);
+  final mExact = modestOnOld.total.exactPct - oldOnOld.total.exactPct;
+  final mRoot = modestOnOld.total.rootPct - oldOnOld.total.rootPct;
+  stdout.writeln('  delta: exact ${mExact >= 0 ? '+' : ''}'
+      '${mExact.toStringAsFixed(1)}pp  '
+      'root ${mRoot >= 0 ? '+' : ''}${mRoot.toStringAsFixed(1)}pp');
+  stdout.writeln('\n=== COVERAGE: the modest set over its own '
+      '${modest.length} qualities ===');
+  row('modest set', modestOnNew.total);
 
   stdout.writeln(
     '\n=== COVERAGE: all ${candidate.length} candidate qualities ===',
