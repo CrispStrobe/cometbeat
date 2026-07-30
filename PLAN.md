@@ -2960,7 +2960,45 @@ failed:**
 
 #### The cards
 
-- ⬜ **BB-H1 — a second chroma over the BASS BAND.** `S` ⭐ *highest value here.*
+- ✅ **BB-H1 — bass detection. SHIPPED 2026-07-30, but NOT as carded.** `S`
+  - **Result:** the bass pitch class is now on `ChordReading.bassPc`. Measured
+    (`tool/bass_detect_ab.dart`, 100 root-position chords + 84 inversions):
+    **74% correct at the shipped 4096 window, 100% at 8192; inversions 82% / 87%.**
+    All four collision cases resolve at *both* windows — `C6`→C, `Am7`→A,
+    `Cm6`→C, `Am7♭5`→A. Chroma path **unchanged**: the template A/B still reads
+    exactly 82.6% exact / 86.8% root.
+  - ❌ **The card's own premise was WRONG and is refuted by measurement.** "A
+    second chroma over the bass band" cannot work at any window we can afford: at
+    44.1 kHz a 4096-point FFT has 10.77 Hz bins while a semitone spans 7.8 Hz at
+    C3, 4.9 Hz at E2 and 3.3 Hz at A1 — **midi 28–40 all land in bins 4–8**, so
+    folding the low band into 12 pitch classes measures leakage, not the bass.
+  - **Three measured dead ends on the way, recorded so nobody retries them:**
+    1. **Harmonic summation alone** → 29% correct / 71% unknown. Candidates a
+       fourth or fifth away collect the real note's partials, so the scores
+       cluster and everything reads as ambiguous.
+    2. **+ a fundamental-presence test, taking the argmax** → 14% correct /
+       **43% wrong**. The conceptual error: **the bass is the LOWEST note, not
+       the loudest**, and an argmax finds the strongest note in the register.
+    3. **Walking upward with a widened window** → 4% correct / 96% wrong. The
+       ±2-bin widening lets a candidate steal the peak of the note a semitone
+       above it, giving a systematic "reports the note just below" error.
+  - ✅ **What actually worked: peak-picking with parabolic interpolation.** The
+    insight is that the resolution limit applies to *separating* two close
+    partials, not to *locating* an isolated one — and a bass fundamental has
+    nothing within a semitone of it. Sub-bin interpolation over the peak and its
+    two neighbours recovers its frequency far more precisely than the bin width,
+    which is what makes this tractable at 4096 at all.
+  - ⚠️ **`bassMaxMidi` is E4, deliberately above a "bass" register**: an
+    inversion puts the lowest sounding note in the middle of the chord, and that
+    note is still the bass for naming. Capping at G3 cost 60pp on inversions.
+  - 📌 **Follow-on, unclaimed:** the default window stays **4096** — raising it to
+    8192 takes bass detection to 100% but doubles latency to 186 ms, which is a
+    call for whoever owns live grading (`BB-X5`), not one to make here. And now
+    that the bass is available, **re-run the rejected template extension with
+    bass disambiguation** — the 66 collisions that sank it are exactly what
+    `bassPc` resolves.
+
+- ⬜ **BB-H1b — (superseded card text, kept for its reasoning).** `S`
   - **Goal.** Identify the lowest sounding note, which **removes** a structural
     limitation instead of mitigating it.
   - **Why it beats everything else on this list.** It *resolves* `C6` vs `Am7`

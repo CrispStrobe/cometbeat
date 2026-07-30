@@ -133,4 +133,55 @@ void main() {
       expect(detector.analyze(noise).hasChord, isFalse);
     });
   });
+
+  group('bass detection (BB-H1)', () {
+    // A chromagram folds away the octave, so `C` and `C/E` are the same twelve
+    // numbers and `C6` and `Am7` are literally the same four pitch classes. The
+    // bass is the only thing that separates them, and chroma cannot carry it.
+    //
+    // ⚠️ These use a 8192-sample window, not the detector's default 4096. That is
+    // not a convenience: at 44.1 kHz a 4096-point FFT has 10.77 Hz bins while a
+    // semitone at C3 spans 7.8 Hz, so below ~F#3 it cannot SEPARATE adjacent
+    // semitones. Measured over 100 root-position chords the bass is right 74% of
+    // the time at 4096 and 100% at 8192 (tool/bass_detect_ab.dart).
+    final detector = ChordDetector();
+    const bassWindow = 8192;
+
+    Float64List win(List<int> midis) =>
+        _chordWindow(midis.map(_f).toList(), bassWindow);
+
+    test('names the lowest note, not the loudest', () {
+      // The bug this pins: an argmax over candidate scores finds the strongest
+      // note in the register, which on this voicing is not the bass at all.
+      expect(detector.analyze(win([48, 52, 55, 57])).bassPc, 0); // C3 lowest
+      expect(detector.analyze(win([45, 48, 52, 55])).bassPc, 9); // A2 lowest
+    });
+
+    test('separates C6 from Am7 — the collision chroma cannot see', () {
+      final c6 = detector.analyze(win([48, 52, 55, 57])); // C E G A
+      final am7 = detector.analyze(win([45, 48, 52, 55])); // A C E G
+      // Same four pitch classes…
+      expect(
+        c6.chroma.map((v) => v > 0.3).toList(),
+        am7.chroma.map((v) => v > 0.3).toList(),
+      );
+      // …told apart only by the bass.
+      expect(c6.bassPc, 0);
+      expect(am7.bassPc, 9);
+    });
+
+    test('reads an inversion: C/E has E in the bass', () {
+      expect(detector.analyze(win([52, 55, 60])).bassPc, 4); // E3 G3 C4
+      expect(detector.analyze(win([55, 60, 64])).bassPc, 7); // G3 C4 E4
+    });
+
+    test('says nothing rather than guessing on silence', () {
+      expect(detector.analyze(Float64List(bassWindow)).bassPc, isNull);
+    });
+
+    test('a too-short frame is not a crash', () {
+      expect(detector.analyze(Float64List(1)).bassPc, isNull);
+      expect(detector.bassPitchClass(Float64List(1)), isNull);
+    });
+  });
 }
