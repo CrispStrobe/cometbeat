@@ -112,6 +112,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   android-embed-check · ci · deploy · glint-native · ios-release ·
   narration-bake · pages · screenshots). Two root causes, `a8964b57` +
   `84a34e63`. What is worth your time below:
+  - 🕒 **Action versions — the Node 20 removal is a scheduled break, partly
+    taken.** Every run was annotated *"Node.js 20 is deprecated … forced to run
+    on Node.js 24"*. Nothing was red (GitHub auto-migrates), but that expires.
+    **Done + verified green:** `setup-java@v4→v5` (both workflows) and
+    `ci.yml`'s `upload-artifact@v5→v7`. **Left deliberately, and why:**
+    `ios-release.yml` + `screenshots.yml` still pin `upload-artifact@v4`, and
+    31 steps pin `checkout@v5` (v7 is current). Inputs are compatible on paper —
+    I read v7's `action.yml`, and `name`/`path`/`if-no-files-found` are
+    unchanged — **but both of those workflows are dispatch-only, so I cannot
+    exercise them without triggering a real App Store release or a 20-minute
+    screenshot job.** Bumping something whose failure would surface at release
+    time, unverified, is the wrong trade. Whoever next dispatches either one:
+    bump it in the same run and watch it.
   - ℹ️ **`Pages` showing `cancelled` is NOT a red.** `pages.yml` sets
     `concurrency: deploy-pages` + `cancel-in-progress`, so a rapid main push
     deliberately supersedes the previous deploy. Left alone on purpose —
