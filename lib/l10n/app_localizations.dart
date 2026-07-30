@@ -3506,6 +3506,42 @@ abstract class AppLocalizations {
   /// **'Projects'**
   String get projectBrowser;
 
+  /// No description provided for @projectTemplates.
+  ///
+  /// In en, this message translates to:
+  /// **'Templates'**
+  String get projectTemplates;
+
+  /// No description provided for @projectTemplateEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Blank project'**
+  String get projectTemplateEmpty;
+
+  /// No description provided for @projectTemplateBeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Just a beat'**
+  String get projectTemplateBeat;
+
+  /// No description provided for @projectTemplateBand.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole band'**
+  String get projectTemplateBand;
+
+  /// No description provided for @projectTemplateSlowBand.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole band, slower'**
+  String get projectTemplateSlowBand;
+
+  /// No description provided for @projectBrowserTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your music'**
+  String get projectBrowserTitle;
+
   /// No description provided for @projectSave.
   ///
   /// In en, this message translates to:

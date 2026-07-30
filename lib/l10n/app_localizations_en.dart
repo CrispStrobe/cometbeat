@@ -1889,6 +1889,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectBrowser => 'Projects';
 
   @override
+  String get projectTemplates => 'Templates';
+
+  @override
+  String get projectTemplateEmpty => 'Blank project';
+
+  @override
+  String get projectTemplateBeat => 'Just a beat';
+
+  @override
+  String get projectTemplateBand => 'Whole band';
+
+  @override
+  String get projectTemplateSlowBand => 'Whole band, slower';
+
+  @override
+  String get projectBrowserTitle => 'Your music';
+
+  @override
   String get projectSave => 'Save';
 
   @override

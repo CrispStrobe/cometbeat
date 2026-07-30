@@ -20,6 +20,7 @@
 // time stops being read, which is the same reasoning the Open-in menu uses for
 // lossless conversions.
 
+import 'package:comet_beat/core/project/project_templates.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/project_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -53,6 +54,10 @@ class _ProjectBrowser extends StatefulWidget {
 
 class _ProjectBrowserState extends State<_ProjectBrowser> {
   late List<SavedProject> _saved = widget.store.list();
+
+  /// Which tab is showing. Starts on projects: a returning player is the common
+  /// case, and templates are one tap away.
+  bool _showTemplates = false;
 
   /// One controller for the whole sheet, disposed with it.
   ///
@@ -139,6 +144,36 @@ class _ProjectBrowserState extends State<_ProjectBrowser> {
     _refresh();
   }
 
+  /// Starts from a template. Confirms first only when there is work to lose —
+  /// the same rule as opening a saved project, and for the same reason.
+  Future<void> _startFrom(ProjectTemplate template, String label) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.service.tracks.isNotEmpty) {
+      final ok = await _confirm(
+        title: l10n.projectTemplates,
+        message: l10n.projectOpenConfirm(label),
+      );
+      if (ok != true) return;
+    }
+    // `build()` per tap, never a shared instance — see the templates header.
+    widget.service.project = template.build();
+    if (!mounted) return;
+    Navigator.pop(context, label);
+  }
+
+  /// Template names live in the ARBs, not in the template list — the list is
+  /// pure Dart so it can be tested without Flutter, and a name is the one part
+  /// of a template a translator needs.
+  String _templateLabel(AppLocalizations l10n, String id) => switch (id) {
+        'empty' => l10n.projectTemplateEmpty,
+        'beat' => l10n.projectTemplateBeat,
+        'band' => l10n.projectTemplateBand,
+        'slow' => l10n.projectTemplateSlowBand,
+        // A template added without a name still shows SOMETHING findable
+        // rather than an empty row.
+        _ => id,
+      };
+
   Future<String?> _askForName({
     required String title,
     required String initial,
@@ -208,8 +243,12 @@ class _ProjectBrowserState extends State<_ProjectBrowser> {
             Row(
               children: [
                 Expanded(
+                  // NOT `projectBrowser` ("Projects") any more: that was an
+                  // accurate heading while this sheet held only projects, and
+                  // became a duplicate of the tab beneath it the moment a
+                  // second tab existed.
                   child: Text(
-                    l10n.projectBrowser,
+                    l10n.projectBrowserTitle,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
@@ -222,7 +261,46 @@ class _ProjectBrowserState extends State<_ProjectBrowser> {
               ],
             ),
             const SizedBox(height: 8),
-            if (_saved.isEmpty)
+            // Two tabs rather than one long list: a template is a thing you do
+            // ONCE, at the start, and a saved project is what you come back to
+            // — mixing them would put the rarely-wanted rows permanently above
+            // the often-wanted ones.
+            SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  label: Text(l10n.projectBrowser),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text(l10n.projectTemplates),
+                ),
+              ],
+              selected: {_showTemplates},
+              showSelectedIcon: false,
+              onSelectionChanged: (s) =>
+                  setState(() => _showTemplates = s.first),
+            ),
+            const SizedBox(height: 8),
+            if (_showTemplates)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 360),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: kProjectTemplates.length,
+                  itemBuilder: (context, i) {
+                    final template = kProjectTemplates[i];
+                    final label = _templateLabel(l10n, template.id);
+                    return ListTile(
+                      key: Key('project-template-${template.id}'),
+                      leading: const Icon(Icons.auto_awesome_outlined),
+                      title: Text(label),
+                      onTap: () => _startFrom(template, label),
+                    );
+                  },
+                ),
+              )
+            else if (_saved.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Text(l10n.projectNone),
