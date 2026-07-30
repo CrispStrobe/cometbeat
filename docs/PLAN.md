@@ -348,8 +348,32 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — harvest the ~575 `.mxl` charts that
-  ALREADY parse.** The census showed `musicxml_reader` has been turning
+- **opus (backing-band)** · ✅ **SHIPPED (idle) — `\chordmode` IS NOW READ**
+  (crisp_notation `0aaaf43`, suite **2,328** green). The maintainer was right that
+  skipping it needed fixing, not routing around.
+  - **On 40 real Ebersberger songs: 37 now yield EXACT charts from their own
+    chord tracks, 28 of them at ≥90% of bars named. Previously: zero.**
+    e.g. `| C | Gm | Cm | Gm | D | Gm | Cm | Eb |`.
+  - ✅ **Display needs NO work** — `layout_annotations.dart` already places
+    `score.chordSymbols`. Supplying them is enough to draw them, so the app gets
+    chord display the moment `../crisp_notation` is pulled.
+  - 🔴 **The guard that mattered:** chord-track notes must never reach the melody
+    stream. Note count is unchanged and a test pins it by name, because losing
+    that would inflate counts across every `.ly` file with a chord track and look
+    like nothing was wrong.
+  - ⚠️ **Anchoring ADVANCES rather than drops.** `ChordSymbol` binds to a note
+    element id; a chord track has its own rhythm and is often denser than the
+    melody. A first version anchored one symbol per note and dropped collisions,
+    silently losing 2 of 7 chords in a four-bar example including a real Gm7. A
+    missing chord is a hole in the chart; a shifted one is a small timing error.
+  - An unrecognised quality degrades to a major triad rather than discarding the
+    chord — the root is what a player most needs.
+  - 📌 **Still open:** the ~575 `.mxl` files (scan found 289 and was still
+    running) already parse and need only harvesting; and the app must pull
+    `../crisp_notation` to see any of this.
+
+- **opus (backing-band)** · ✅ **(superseded claim) — was: harvest the `.mxl`
+  charts.** The census showed `musicxml_reader` has been turning
   `<harmony>` into `Score.chordSymbols` all along, so this is validation and
   wiring, not a library change — and it outranks the LilyPond reader work.
   - **Plan:** scan the 38,367 corpus `.mxl` for `<harmony>`, run the real reader
