@@ -175,10 +175,22 @@ is recorded in [HISTORY.md](HISTORY.md).
     `require_trailing_commas` ×2) — and because Analyze runs *before* Test, the
     whole test suite and the Chrome web-seam run never executed on those
     commits. Fixed on main by `a8964b57`.
-  - ⚠️ **`dart format` does NOT fix `require_trailing_commas`.** The pre-commit
-    order in CLAUDE.md (format first, analyze LAST) exists precisely because of
-    this class: a formatted file can still be a red one. Run `flutter analyze`
-    over `test/` too, not just `lib/`.
+  - 🔁 **`require_trailing_commas` has now reddened `main` THREE times**
+    (`lyric_index_test`, `musicdb_cli_test`, `score_interop_test`). It is
+    always someone different, so it is a missing habit, not a careless agent.
+    **`dart format` does NOT fix it** — that is the trap; a
+    perfectly-formatted file is still a red one.
+    - ✅ **`dart fix --apply` DOES fix it. Verified, not assumed** — I reproduced
+      the lint in a scratch file, ran `dart fix --apply`, and it reported
+      `require_trailing_commas - 1 fix`; `dart analyze` then said *No issues
+      found*.
+    - **Order matters**, and it is one step longer than CLAUDE.md says:
+      **`dart fix --apply` → `dart format .` → `flutter analyze`.** `dart fix`
+      leaves `,);` which `format` reflows into the canonical multi-line call
+      (idempotent afterwards — checked). Running format FIRST and stopping there
+      is exactly how all three of these reached `main`.
+    - Analyze covers `test/` too, not just `lib/` — every one of the three was
+      in a test file.
   - ⚠️ **WALL-CLOCK FLAKE — read this before writing a widget test against any
     surface with a playhead.** `tracker_midi_record_test.dart` failed three main
     runs with `Expected: <2> Actual: <1>` and passed a fourth on identical code.
