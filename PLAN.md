@@ -3065,6 +3065,40 @@ failed:**
     requests pulled 12 files, 18 MB, instead of the 657 MB archive) and a real
     smoother before any template decision is revisited.
 
+- ✅ **BB-H4b — `ChordSmoother`: temporal smoothing. SHIPPED 2026-07-30.** `S`
+  - **The largest measured win in the non-neural path, and nothing in the app did
+    it before.** Measured on GuitarSet (real audio, 70 segments), against the
+    performed annotation:
+
+    | mode | exact | root |
+    |---|---|---|
+    | single window (was) | 12.9% | 57.1% |
+    | `labelVote` | **24.3%** | 62.9% |
+    | `medianChroma` | 21.4% | 68.6% |
+    | `meanChroma` | 20.0% | **70.0%** |
+
+  - ⚖️ **My hypothesis was half wrong and the split is the finding.** I expected
+    chroma-domain smoothing to beat label voting outright because it keeps the
+    continuous evidence. It wins decisively on **root** (+12.9pp over a single
+    window) and LOSES on **exact** (20.0 vs 24.3). Explicable: averaging
+    stabilises the overall pitch-class profile but blurs qualities that differ by
+    a single note, so the muddier the chroma the harder maj7-vs-maj becomes. With
+    the dense 17-template set `meanChroma` collapses to 11.4% exact for the same
+    reason.
+  - ⇒ **Pick the mode by what the caller needs, and the defaults differ by use
+    case.** Live grading (`BB-X5`) wants **root** → `meanChroma`. Chart-from-audio
+    (`BB-X2`) wants **exact** → `labelVote` with the fuller vocabulary. The class
+    defaults to `medianChroma` as the balanced middle; neither extreme is right
+    for both.
+  - **Design.** Separate class, because `ChordDetector` documents itself as
+    stateless per window and stays that way. `matchChroma` was extracted and made
+    public so a smoothed chroma is ranked by **identical** ordering rules to an
+    unsmoothed one — otherwise the two paths would disagree subtly. The bass
+    votes rather than averages, being categorical. `reset()` exists because
+    without it the previous take's chords bleed into the next one's first second.
+  - ⚠️ Still n=70 on solo guitar. The direction is unambiguous; the exact
+    percentages are not load-bearing.
+
 - ⬜ **BB-H2 — magnitude compression before folding.** `S`
   - **Goal.** Blunt the harmonic bias: a note's 3rd harmonic is a fifth above and
     its 5th a major third, so one C already looks slightly like C major, biasing

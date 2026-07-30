@@ -215,4 +215,65 @@ void main() {
       );
     });
   });
+
+  group('ChordSmoother — temporal smoothing', () {
+    // Measured on real audio (GuitarSet, tool/guitarset_chord_eval.dart): over a
+    // single sustained chord, nine frames produce EIGHT different answers. A
+    // per-frame chord detector is far less stable than its confidence suggests,
+    // and combining frames is the largest cheap win in this path.
+    final detector = ChordDetector();
+    Float64List cmaj() => _chordWindow([_f(48), _f(52), _f(55)], 4096);
+
+    test('a steady chord smooths to that chord, in every mode', () {
+      for (final mode in ChordSmoothing.values) {
+        final sm = ChordSmoother(detector, mode: mode);
+        ChordReading? out;
+        for (var i = 0; i < 9; i++) {
+          out = sm.add(detector.analyze(cmaj()));
+        }
+        expect(out!.hasChord, isTrue, reason: mode.name);
+        expect(out.candidates.first.rootPc, 0, reason: mode.name);
+      }
+    });
+
+    test('one odd frame does not derail a steady chord', () {
+      // The point of smoothing: a re-strum or passing note is outvoted.
+      final sm = ChordSmoother(detector);
+      final odd = _chordWindow([_f(54), _f(58), _f(61)], 4096); // F#
+      ChordReading? out;
+      for (var i = 0; i < 9; i++) {
+        out = sm.add(detector.analyze(i == 4 ? odd : cmaj()));
+      }
+      expect(out!.candidates.first.rootPc, 0);
+    });
+
+    test('reset drops history, so one take cannot bleed into the next', () {
+      final sm = ChordSmoother(detector);
+      for (var i = 0; i < 9; i++) {
+        sm.add(detector.analyze(cmaj()));
+      }
+      sm.reset();
+      final after = sm.add(detector.analyze(Float64List(4096)));
+      expect(after.hasChord, isFalse);
+    });
+
+    test('is deterministic', () {
+      List<String> run() {
+        final sm = ChordSmoother(detector);
+        ChordReading? out;
+        for (var i = 0; i < 9; i++) {
+          out = sm.add(detector.analyze(cmaj()));
+        }
+        return out!.candidates.map((c) => c.toString()).toList();
+      }
+
+      expect(run(), run());
+    });
+
+    test('silence in, silence out', () {
+      final sm = ChordSmoother(detector);
+      final out = sm.add(ChordReading.silent());
+      expect(out.hasChord, isFalse);
+    });
+  });
 }

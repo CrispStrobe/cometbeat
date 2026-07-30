@@ -83,6 +83,11 @@ String? _suffix(String quality) {
   };
 }
 
+class _Pair {
+  final _Tally instructed = _Tally();
+  final _Tally performed = _Tally();
+}
+
 class _Tally {
   int n = 0, root = 0, exact = 0;
   double get rootPct => n == 0 ? 0 : 100 * root / n;
@@ -126,6 +131,10 @@ void main(List<String> args) {
   };
 
   final tallies = {for (final k in sets.keys) k: _Tally()};
+  final smoothed = <String, _Pair>{
+    for (final k in sets.keys)
+      for (final sm in ChordSmoothing.values) '$k|${sm.name}': _Pair(),
+  };
   final performedTallies = {for (final k in sets.keys) k: _Tally()};
   final detectors = {
     for (final e in sets.entries) e.key: ChordDetector(templates: e.value),
@@ -220,6 +229,23 @@ void main(List<String> args) {
         }
 
         for (final entry in detectors.entries) {
+          // Compare the smoothing strategies head to head on the same frames.
+          for (final sm in ChordSmoothing.values) {
+            final smoother = ChordSmoother(entry.value, mode: sm);
+            ChordReading? out;
+            for (final w in windows) {
+              out = smoother.add(entry.value.analyze(w));
+            }
+            final st = smoothed['${entry.key}|${sm.name}']!;
+            (annIndex == 0 ? st.instructed : st.performed).n++;
+            if (out != null && out.hasChord) {
+              final c = out.candidates.first;
+              final t2 = annIndex == 0 ? st.instructed : st.performed;
+              if (c.rootPc == pc) t2.root++;
+              if (c.rootPc == pc && c.suffix == suffix) t2.exact++;
+            }
+          }
+
           final ballot = <String, int>{};
           for (final w in windows) {
             final r = entry.value.analyze(w);
@@ -269,6 +295,17 @@ void main(List<String> args) {
     stdout.writeln('  ${k.padRight(12)} '
         'exact ${t.exactPct.toStringAsFixed(1).padLeft(5)}%   '
         'root ${t.rootPct.toStringAsFixed(1).padLeft(5)}%   (n=${t.n})');
+  }
+
+  stdout.writeln('\n=== SMOOTHING head to head '
+      '(9 frames, scored against the performed annotation) ===');
+  for (final k in sets.keys) {
+    for (final sm in ChordSmoothing.values) {
+      final t = smoothed['$k|${sm.name}']!.performed;
+      stdout.writeln('  ${k.padRight(11)} ${sm.name.padRight(13)} '
+          'exact ${t.exactPct.toStringAsFixed(1).padLeft(5)}%   '
+          'root ${t.rootPct.toStringAsFixed(1).padLeft(5)}%');
+    }
   }
 
   stdout.writeln('\n=== what was actually PLAYED (performed annotation) ===');
