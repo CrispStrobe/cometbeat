@@ -24,6 +24,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
     show StretchQuality;
 import 'package:comet_beat/core/audio/daw_edits.dart'
     show ClipStats, GeneratorShape, clipStatsOf;
+import 'package:comet_beat/core/audio/daw_project.dart' show projectToJson;
 import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_tempo_map.dart'
     show TempoMap, kMaxBpm, kMinBpm;
@@ -52,6 +53,7 @@ import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/interop/project_bridge.dart'
     show AppMode, ProjectBridge;
+import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart' show SharedBeat;
 import 'package:comet_beat/core/services/daw_service.dart';
@@ -160,6 +162,13 @@ abstract interface class DawTester {
   /// mixed alongside the other kinds. Returns the new track's id, or null when
   /// no project is provided.
   String? addToProject({String? name});
+
+  /// WS-X1 — open a project track LIVE, so edits go back to it rather than to a
+  /// copy. False when there is no project, the track is not audio, or it cannot
+  /// be read.
+  bool openProjectTrack(String trackId);
+  bool get hasLiveProjectLink;
+  bool writeBackToProject();
 
   /// Merge/convert: flatten every clip into one baked audio take; freeze a
   /// single live clip to audio; whether a clip is already baked; remove a clip.
@@ -476,22 +485,74 @@ class _DawScreenState extends State<DawScreen>
   }
 
   /// WS-W1c — the Audio Editor's timeline joins the project as an `audio`
-  /// track. There is no LIVE link here and deliberately so: this screen holds a
-  /// timeline of clips rather than one document, so what goes in is a snapshot,
-  /// and calling it live would promise a write-back that does not exist.
+  /// track.
+  ///
+  /// ⚠️ This used to say there could be no LIVE link here, because the screen
+  /// "holds a timeline of clips rather than one document". That was true when it
+  /// was written and stopped being true with `WS-W1c` itself: the codec it
+  /// registered makes **the timeline the document** — a `.cbdaw` is exactly one
+  /// — so a link has something to point at and a write-back has something to
+  /// write. See [openProjectTrack].
   @override
   String? addToProject({String? name}) {
-    final ProjectService projects;
-    try {
-      projects = Provider.of<ProjectService>(context, listen: false);
-    } on ProviderNotFoundException {
-      return null;
-    }
+    final projects = _projects;
+    if (projects == null) return null;
     return projects.addTrack(
       kind: AppMode.audio,
       document: _daw.timeline,
       name: name ?? 'Audio',
     );
+  }
+
+  /// The project track this screen is editing live, if any.
+  ProjectLink? _projectLink;
+
+  ProjectService? get _projects {
+    try {
+      return Provider.of<ProjectService>(context, listen: false);
+    } on ProviderNotFoundException {
+      // Every existing test mounts this screen without a project tree.
+      return null;
+    }
+  }
+
+  ProjectLinker? get _linker {
+    final projects = _projects;
+    return projects == null ? null : ProjectLinker(projects);
+  }
+
+  /// WS-X1 — the FIFTH and last surface to hold a live link.
+  ///
+  /// Same shape as Tab and Score: a same-kind open needs no conversion, so the
+  /// track's own document comes back and edits go home to it. A track of another
+  /// kind is refused rather than converted — a conversion belongs behind the
+  /// "Open in…" menu, where its cost is shown before the user commits.
+  @override
+  bool openProjectTrack(String trackId) {
+    final linker = _linker;
+    if (linker == null) return false;
+    final link = linker.open(trackId, AppMode.audio);
+    final document = link.document;
+    if (document is! DawTimeline) return false;
+    // Through the service's own loader rather than assigning the timeline: it
+    // also resets the render cache and the undo history, which is what opening
+    // a different arrangement has to mean. The round trip through json is the
+    // same one `.cbdaw` takes — the timeline carries no baked PCM of its own, so
+    // this is where the clips get their audio back.
+    _daw.loadProject(projectToJson(document));
+    setState(() => _projectLink = link);
+    return true;
+  }
+
+  @override
+  bool get hasLiveProjectLink => _projectLink?.live ?? false;
+
+  @override
+  bool writeBackToProject() {
+    final linker = _linker;
+    final link = _projectLink;
+    if (linker == null || link == null) return false;
+    return linker.writeBack(link, _daw.timeline);
   }
 
   void _onTick(Duration elapsed) {

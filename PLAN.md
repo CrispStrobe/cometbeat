@@ -1316,7 +1316,15 @@ prefix.
   handle and asserts bounds + a single undo entry — the card's acceptance).
 ### Phase 3 — liveness (fixes the copy-not-link half of S1)
 
-- 🔶 **WS-X1 — live links, not copies.** `L` · **STEP 1 SHIPPED 2026-07-28**
+- ✅ **WS-X1 — live links, not copies. COMPLETE 2026-07-30 — all five surfaces**
+  (Tracker · Tab · Score · Loop Studio · Audio Editor).
+  ⚠️ **The last one shipped because a "not possible" note had expired.** The
+  card recorded, correctly at the time, that the Audio Editor could not hold a
+  link because audio had no project codec. `WS-W1c` then added one — making the
+  timeline the document — and nothing re-read the note. **A note that says
+  something is impossible is the least re-read line in a plan; date them, and
+  re-check them when the thing they depend on lands.**
+- 🔶 **WS-X1 — the original card, for reference.** `L` · **STEP 1 SHIPPED 2026-07-28**
   (opus, workstation-parity). `lib/core/project/project_link.dart` + the Tracker
   using it; 5 tests in the tracker suite.
   - **The rule, and it is one line:** a **same-kind open needs no conversion at
