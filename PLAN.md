@@ -2698,10 +2698,11 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     `core/audio/chroma_analysis.dart`, `features/games/transcribe/`.
   - **Build.** Chord detection + beat/downbeat tracking → bars → `Chart`. Present
     it as a **draft to correct**, never as truth.
-  - ⚠️ `ChordDetector` ships **9 chord templates** — enough for a triad quiz, not
+  - ⚠️ `ChordDetector` ships **8 chord templates** — enough for a triad quiz, not
     for a jazz chart. Extending the template set (maj7/m7/7/m7♭5/dim7/6/9/13/sus)
-    is part of this card, and it must be measured, not assumed: A/B the extended
-    set against the existing chord tests before adopting it.
+    was part of this card — and it has now been MEASURED and **REJECTED**
+    (−19.1pp exact). See *"Chord identification — the measured state"* below and
+    the `BB-H` cards; do not retry a bigger flat vocabulary.
   - **Acceptance.** Synthesise a known chart → render → detect → compare, and
     report per-chord accuracy (the synth→detector→classifier roundtrip pattern
     `beat_capture_test` established). A real recording produces a plausible chart
@@ -2800,6 +2801,158 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     shipping a weaker version of a catalogue. **We compete on the arranger and on
     listening** (BB-A1–A6, BB-X5, BB-X6) — capabilities a catalogue cannot copy —
     rather than on content we cannot legally own.
+
+### Chord identification — the measured state, and the `BB-H` ladder (2026-07-30)
+
+Written up after measuring rather than arguing. Two findings reframe everything
+above about hearing chords, and they point in opposite directions.
+
+#### ❌ REJECTED — extending the chroma template set. Do NOT retry as-is.
+
+The `BB-X2` card listed "extend the `ChordDetector` templates" as a cheap win.
+**Measured, it is a −19pp regression.** `tool/chord_template_ab.dart` (12 roots ×
+3 voicings × each quality, synthesised through the same renderer the chroma tests
+use, so the numbers are comparable to that gate):
+
+| vocabulary | exact | root | top3 | n |
+|---|---|---|---|---|
+| **shipped 8** (`''` `m` `7` `m7` `maj7` `sus4` `dim` `aug`) | **82.6%** | **86.8%** | 95.8% | 288 |
+| + `m7b5 dim7 6 m6 sus2 mMaj7 9 m9 maj9` | 63.5% | 71.5% | 93.4% | 288 |
+| | **−19.1pp** | **−15.3pp** | −2.4pp | |
+
+**Why, and it is structural, not a tuning problem.** The templates are BINARY
+pitch-class vectors matched by cosine, so a denser template has more ones and
+partially matches more things — a five-note 9th steals the top slot from the
+correct triad. And **66 template pairs in the extended vocabulary have IDENTICAL
+pitch-class sets** (`C6` = `Am7`, `Cm6` = `Am7♭5`, `dim7` symmetric across four
+roots), which no chromagram can separate, because they differ only in *which note
+is in the bass* — and chroma throws the bass away.
+
+📌 **Correction: there are 8 shipped templates, not 9** (an earlier count here and
+in `docs/BACKING_BAND.md` included the constructor line).
+
+⇒ A bigger flat vocabulary is the wrong lever. `BB-H1` is the right one.
+
+#### ✅ ALREADY BUILT — neural chord recognition, and its licence is the problem
+
+**`W-HARMONY` shipped; BTC is in the app**, not a gap:
+`core/audio/transcription/harmony.dart` (inference + 170 labels) ·
+`harmony_cqt.dart` · `harmony_model_store.dart` (download-on-demand) ·
+`bin/transcribe_chords.dart` (WAV → timed chord chart, pure Dart) ·
+`features/games/transcribe/harmony_provider*.dart`, reachable from
+`transcribe_screen.dart`. Runtime is **ONNX** via `onnx_runtime_dart`.
+
+🛑 **`HarmonyModelStore.licenseSpdx = 'CC-BY-NC-SA-4.0'` — the BTC weights are
+NON-COMMERCIAL**, gated behind explicit acceptance in `model_license.dart`. **So
+chart-from-audio has a working engine whose licence bars it from being the shipped
+default.** That is a rights decision, not an engineering one — see the decision
+below.
+
+**`cstr/btc-chords-GGUF` is NOT referenced anywhere** in `lib/`, `bin/`, `docs/`
+or `tool/`. The ggml/GGUF seam is well worn for other models (`cstr/tabcnn-GGUF`,
+`cstr/crepe-GGUF`, `cstr/kokoro-82m-GGUF`), so wiring it is cheap — but it would
+be **consolidation, not capability** (one runtime instead of two, plus Metal/mobile
+speed), and **the same NC weights in a different container are still NC**.
+
+#### The architecture map — these methods split on INPUT, and that decides the work
+
+| method | input | our problem |
+|---|---|---|
+| Boundary-Aware Symbolic CR | **symbolic** | `BB-X1` corpus derivation |
+| AugmentedNet (CRNN) | **symbolic** | `BB-X1` + `BB-X6` (key/RN/quality/inversion, multi-task) |
+| ChordGNN (GNN) | **symbolic** | `BB-X1` + `BB-X6` (functional harmony) |
+| Harmony Transformer | **audio** | `BB-X2` (joint boundary + label) |
+| BTC | **audio** | `BB-X2` — **already built, NC-licensed** |
+
+**This is three problems, not one, and treating them as one is why the cheap win
+failed:**
+- **symbolic** → `BB-X1`/`BB-X6`. Today `analyze()` (Krumhansl + template chord ID
+  + roman numerals). The three symbolic models are a real accuracy upgrade on it.
+- **audio, offline** → `BB-X2`. BTC exists.
+- **audio, LIVE** → `BB-X5` grading. Needs sub-frame on-device latency; a
+  transformer is not a candidate at interactive latency. **The chroma matcher stays
+  and is the right tool here** — which is what makes `BB-H1`–`H3` worth doing at
+  all rather than waiting for a model.
+
+#### The cards
+
+- ⬜ **BB-H1 — a second chroma over the BASS BAND.** `S` ⭐ *highest value here.*
+  - **Goal.** Identify the lowest sounding note, which **removes** a structural
+    limitation instead of mitigating it.
+  - **Why it beats everything else on this list.** It *resolves* `C6` vs `Am7`
+    rather than guessing (they differ only in the bass); it gives us **slash
+    chords** (`C/E`, `Cm7/B♭`), which chroma cannot express today and which
+    `ChordSpec` already models; and it disambiguates `dim7`'s four-way symmetry.
+  - **Files.** `core/audio/chroma_analysis.dart` (**shared — claim it**).
+  - **Build.** A second chroma folded from ~65–200 Hz only, off the SAME FFT (no
+    extra transform, negligible cost). Expose it on `ChordReading`; use it to pick
+    among tied candidates and to fill a bass field.
+  - **Acceptance.** `C6`/`Am7` and `Cm6`/`Am7♭5` are told apart on synthesised
+    audio at both spellings' bass notes; a `C/E` reads its bass as E; the shipped
+    8-quality numbers do not regress (`tool/chord_template_ab.dart`).
+
+- ⬜ **BB-H2 — magnitude compression before folding.** `S`
+  - **Goal.** Blunt the harmonic bias: a note's 3rd harmonic is a fifth above and
+    its 5th a major third, so one C already looks slightly like C major, biasing
+    everything toward major triads and phantom fifths.
+  - **Build.** Sweep `none / sqrt / log(1+x)` on the magnitudes **before** folding
+    into 12 bins, and adopt on measurement.
+  - ⚠️ **Must NOT touch the energy gate.** The gate is deliberately computed on the
+    **raw** chroma sum per input sample; `chroma_analysis.dart` carries a pointed
+    comment that peak-normalising first makes any sum over it scale-invariant, so
+    the gate would only catch bit-exact silence and inaudible noise would be
+    emitted as a confident chord. Compress the MATCHING copy only.
+  - **Acceptance.** Exact and root improve on the shipped 8, or it is not adopted.
+    The silence/near-silence gate tests stay green.
+
+- ⬜ **BB-H3 — a deterministic tie-break.** `S`
+  - **Goal.** `scored.sort` is Dart's `List.sort`, which is **not stable**, so any
+    exact tie makes the reported chord name arbitrary. Today the shipped 8 happen
+    not to collide; `BB-H1` and any future template make that luck, not design.
+  - **Build.** For a true collision there is **no acoustic evidence** — it is a
+    PRIOR, so make it explicit rather than emergent: prefer the bass-supported
+    reading (`BB-H1`) where one exists, else fewer tones (triad over 6th/7th,
+    which is also how the cosine already behaves on subset/superset), else the
+    lower table index. Documented, tested, never sort-order-dependent.
+  - **Acceptance.** The same audio yields the same name across runs; a synthesised
+    `dim7` names one root deterministically.
+
+- ⬜ **BB-H4 — BTC into the chart flow (`BB-X2`).** `M` — **BLOCKED on the
+  decision below.** The engine, the CQT, the store, the CLI and a provider all
+  exist; what is missing is the licence call, not code.
+
+- ⬜ **BB-H5 — GGUF consolidation.** `S` — **last, and optional.** One runtime
+  instead of two (`cstr/btc-chords-GGUF` via the existing crispasr/ggml FFI seam)
+  plus Metal/mobile speed. Buys no capability, and does not change the licence.
+
+- ⬜ **BB-H6 — symbolic models OFFLINE on the VPS, shipping the DATA not the
+  model.** `L` — *the biggest win on this list, and it needs no app change.*
+  - **Goal.** Upgrade `BB-X1`'s chord/RN derivation using AugmentedNet / ChordGNN
+    / boundary-aware symbolic CR, without shipping a model, paying latency, adding
+    a runtime, or taking on-device licence exposure.
+  - **Why it is fast.** `BB-X1` is already an offline corpus job — 45,930 rows at
+    ~30 files/sec through the chunked, resumable `featgen` pipeline whose merge
+    **asserts the write is additive**. These models are Python/PyTorch and the VPS
+    runs Python. Their output becomes a `chords` field with provenance.
+  - ⚠️ **Gate BEFORE running:** each model's own licence, and whether shipping
+    derived labels is clean. Chord labels are facts and facts are not
+    copyrightable, but that is to be verified per model, not assumed — and a
+    model whose weights are NC may still constrain what we do with its outputs.
+  - **Acceptance.** Measured against `analyze()` on a hand-known set (a chorale's
+    cadences, a blues's I-IV-V, a standard's ii-V chain) before any promotion, and
+    the additive-write assertion holds.
+
+#### ⚖️ A DECISION for the maintainer: what do we do about the NC chord model?
+
+BTC works, is wired, and is `CC-BY-NC-SA-4.0`. Options, none of them free:
+1. **Keep it opt-in and non-default** (status quo) — chart-from-audio exists but
+   is never the shipped default, and the commercial app leans on `BB-H1`–`H3`.
+2. **Find or train a permissively-licensed chord model** — real work, and the
+   training data has its own axis-2 problem (see `docs/CORPUS_LICENSING.md`).
+3. **Ship only symbolic derivation** (`BB-H6`) commercially and treat all
+   audio→chord as a local, opt-in convenience.
+Nothing in `BB-H1`–`H3` or `BB-H6` depends on which way this goes; it gates
+`BB-H4`/`BB-H5` only.
 
 ### Phase 6 — the gates
 

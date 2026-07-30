@@ -170,7 +170,19 @@ class ChordDetector {
     this.energyGate = 1e-4,
     this.scoreThreshold = 0.6,
     this.maxCandidates = 3,
+    this.templates = kChordTemplates,
   });
+
+  /// The chord vocabulary to match against. Defaults to [kChordTemplates], so
+  /// every existing caller is unaffected.
+  ///
+  /// Injectable because extending this vocabulary has to be MEASURED, not argued
+  /// about — more templates is not automatically better, since a denser template
+  /// has more ones and partially matches more things. `tool/
+  /// chord_template_ab.dart` A/Bs a candidate set against the shipped one; the
+  /// first thing it measured was a **−19pp regression** from the obvious
+  /// extension, which is why nothing here changes without a number.
+  final List<ChordTemplate> templates;
 
   final int sampleRate;
   final double a4;
@@ -194,11 +206,10 @@ class ChordDetector {
   late final List<({int rootPc, String suffix, List<double> vec})> _templates =
       _buildTemplates();
 
-  static List<({int rootPc, String suffix, List<double> vec})>
-      _buildTemplates() {
+  List<({int rootPc, String suffix, List<double> vec})> _buildTemplates() {
     final out = <({int rootPc, String suffix, List<double> vec})>[];
     for (var root = 0; root < 12; root++) {
-      for (final t in kChordTemplates) {
+      for (final t in templates) {
         final v = List<double>.filled(12, 0);
         for (final iv in t.intervals) {
           v[(root + iv) % 12] = 1.0;
