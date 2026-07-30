@@ -95,6 +95,15 @@ jobs:
         working-directory: cometbeat
         run: flutter analyze
 
+      # Without ffmpeg, `mp3_decode_roundtrip_test` self-skips with "ffmpeg not
+      # on PATH" and CI stays green having tested NOTHING of MP3 decoding —
+      # which is precisely where the 23 ms gapless-delay bug lived. Measured:
+      # the suite skipped 31 here against 26 locally, and the difference was
+      # exactly these 5. They pass locally with ffmpeg present, so the gap was
+      # the runner image, not the tests.
+      - name: Install ffmpeg (the MP3 round-trips self-skip without it)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Test
         working-directory: cometbeat
         run: flutter test --coverage
