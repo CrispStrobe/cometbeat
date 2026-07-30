@@ -951,43 +951,33 @@ is recorded in [HISTORY.md](HISTORY.md).
     blind to voice 2 and silently under-reports.
   — opus (corpus-survey)
 
-- **opus (jukebox-ingest)** · 🚧 **ACTIVE (low) — corpus re-screen running, then
-  an HF upload.** VPS-side only (`bin/`, `db.json`, the HF dataset) plus `docs/`.
-  **No shared app files in flight**; all app work this session is landed, pushed
-  and green (`flutter analyze` clean, catalog + lyric-index suites pass).
-  **📌 The publish gate paid for itself on its FIRST real run — worth knowing if
-  you ingest anything.** It refused to publish and named 6 hits. All 6 were false
-  positives of one over-broad pattern (`\bn[eè]gre\w*` matching Latin
-  *"…n Egredietur"* and Italian *"Negre e ardenti fian le nevi"*, where the word
-  is just the feminine plural of *black*) — **but chasing them uncovered a
-  SHIPPED data defect**: 6,970 of 18,589 GregoBase chants had their gabc header
-  (`initial-style: 1; name: …; book: …`) sitting in the published lyrics shard.
-  Two compounding causes: those files store `\r\n` as LITERAL escape sequences
-  so the newline-based header split silently did nothing, and some carry a whole
-  second header pasted into the body so `%%` occurs twice. Fixed in
-  `bin/music_db_content_screen.py` (`bc11ea3d`); chant text now reads as chant,
-  coverage 27,649 → **28,665 rows** and the text SHRANK 13.6 → **11.9 MB**
-  because the junk was inflating both. **Lesson for anyone adding a term: fix the
-  pattern, don't exempt the rows** — exempting makes the gate quieter and less
-  true.
-  ⚠️ Two VPS traps already cost me a 40-minute run, both now in
-  `music-db-publish-gate` memory: a long job **dies with its ssh session**
-  (detach with `setsid nohup … < /dev/null & disown`), and **`pgrep -f` matches
-  your own ssh command string** and reports a phantom "still running" — use
-  `ps -eo pid,etime,args --no-headers | grep "[m]yscript"`.
-  🙏 `a8964b57` — that analyze red on main was mine; took your fix over mine.
-  **Landed** (`bc11ea3d`, `ec818ebd`, `d31f2512`, `b41c6a09`, `4e88591c`):
-  * **`bin/music_db_publish.py`** — the corpus ship gate (screen → hold → emit →
-    verify, under the db lock; **exit 2 on any unreviewed content hit**).
-    **Publish through this**, not `emit_catalog` directly.
-  * **`bin/music_db_lock.py`** — db.json mutex + change guard. ⚠️ I watched
-    db.json move **46,357 → 46,354** under me. **Use `db_lock()` +
-    `guarded_write()`.**
-  * SQLite FTS5 lyric search native + web · library facet filters + paging +
-    exact totals · `bin/musicdb.dart` (`--live` hits the PUBLISHED catalog) ·
-    lyric incipits + lazy `catalog/lyrics.json.gz` · catalog 36.5 MB → 2.57 MB gz.
-  * `docs/APP_STORE_CONTENT_READINESS.md` — rating / Guideline 1.1.1 / Content
-    Rights answers. **⬜ OPEN, maintainer's: the Kids Category decision.**
+- **opus (jukebox-ingest)** · ✅ **DONE (idle) — corpus published and verified
+  live. Lane free; no files held.**
+  Live: catalog **38,896 items** (score 38,427 · lyrics 28,539 · instrument 232 ·
+  module 139 · sample 97 · soundfont 1). Verified unauthenticated: the new
+  payload 200s, both held payloads 404.
+  **📌 If you ingest anything, publish with `bin/music_db_publish.py`** — not
+  `emit_catalog` directly. It refused twice on real runs today, and both refusals
+  were worth having: 6 false positives whose investigation uncovered a SHIPPED
+  data defect (6,970 of 18,589 chants had their gabc header in the lyrics shard),
+  and then a genuine hit (Lili Boulanger's *Clairières dans le ciel*, exempted
+  under the maintainer's standing art-song rule). Fixing the gabc extraction
+  raised lyric coverage to **28,539 rows** while SHRINKING the text 13.6 →
+  11.9 MB, because the junk was inflating both.
+  ⚠️ **Use `db_lock()` + `guarded_write()` from `bin/music_db_lock.py`** for any
+  db.json write — I watched it move **46,357 → 46,354** under me mid-session.
+  ⚠️ A long VPS job **dies with its ssh session**; detach with
+  `setsid nohup … < /dev/null & disown`, and check with `ps … | grep "[m]y"`,
+  never `pgrep -f` (it matches your own ssh command string).
+  🙏 `a8964b57` — that analyze red was mine; took your fix over mine.
+  **Shipped this session:** the content gate (racial-slur / NS repertoire; 23
+  held · 10 exempt) · `bin/music_db_publish.py` + `bin/music_db_lock.py` ·
+  SQLite FTS5 lyric search native + web · library facet filters + paging + exact
+  totals · `bin/musicdb.dart` (`--live`) · lyric incipits + lazy lyrics shard ·
+  catalog 36.5 MB → 2.69 MB gz, cached by version · Commons ingest (+160 MIDI,
+  +125 Tier C `.ly`) · 11 crisp_notation reader fixes ·
+  `docs/APP_STORE_CONTENT_READINESS.md`.
+  **⬜ OPEN, maintainer's:** the **Kids Category** decision before submission.
 
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Wikimedia Commons pass shipped
   (2026-07-30).** +160 Commons PD MIDI (Tier A, axis 1 from Structured Data
