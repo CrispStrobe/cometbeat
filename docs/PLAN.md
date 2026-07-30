@@ -283,6 +283,18 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **ACTIVE — closing the gap I flagged: measure
+  `durationWeightedPerBar` END TO END through `analyze()`.** `BB-H9`'s 34%→66%
+  came from a standalone selection rule, not from the library function, so the
+  shipped `BB-H10` is a plausible improvement rather than a measured one and I do
+  not want it read as the latter.
+  - **Does NOT need `../crisp_notation` pulled.** The measurement runs inside my
+    own worktree `../crisp_notation-harmony` against the GuitarSet JAMS, so the
+    shared clone (carrying another agent's 16 uncommitted changes) stays
+    untouched.
+  - Files: a new tool script in the crisp_notation worktree. **No shared file, no
+    app change, no pubspec override.**
+
 - **opus (backing-band)** · ✅ **SHIPPED to crisp_notation (idle) —
   `HarmonicWeighting.durationWeightedPerBar`** (`0b6e863`, worktree
   `../crisp_notation-harmony`, suite 2,022 green). One chord per bar from
