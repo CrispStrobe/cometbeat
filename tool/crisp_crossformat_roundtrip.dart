@@ -108,10 +108,14 @@ Score? _load(File f) {
 /// reading 3:2 back as 5:4 changes what you hear and nothing this function used
 /// to look at. Sounding duration catches that and ignores the respelling.
 ///
-/// Voices 2-4 are compared only under `--voices`. Several formats in the matrix
-/// carry a single voice by construction, so folding them in unconditionally
-/// would report that structural limit once per inner-voice note and drown the
-/// codec defects this harness exists to find.
+/// Voices 2-4 are compared only under `--voices`.
+///
+/// NOT because any format here is limited to one voice — that was an assumption
+/// and it is FALSE. Measured: a 4-voice bar round-trips with all four voices
+/// intact through every one of musicxml, mei, kern, abc, lilypond and musescore.
+/// The flag exists so the inner-voice result can be read separately from the
+/// voice-1 one, since a codec can be exact on voice 1 while mangling the rest —
+/// which is precisely what five of them were doing with inner-voice tuplets.
 bool _allVoices = false;
 
 List<String> _content(Score s) {

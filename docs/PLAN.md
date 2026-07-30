@@ -230,7 +230,10 @@ is recorded in [HISTORY.md](HISTORY.md).
     assigns a voice by iteration order instead of reading the file's own number.
   - Sweep runs on the VPS at `/mnt/volume1/xrt` (own pubspec, path dep on
     `/mnt/volume1/crisp_notation`). `--chain` runs all 6×6 ordered format pairs,
-    not just the 6 direct hops. **Direct-hop corpus failures 98 → 0 on every file
+    not just the 6 direct hops. ⚠️ **I earlier claimed several of these formats
+    carry one voice by construction — that is FALSE, measured:** a 4-voice bar
+    round-trips with all four voices intact through every one of them. `--voices`
+    exists only to read the inner-voice result separately from the voice-1 one. **Direct-hop corpus failures 98 → 0 on every file
     traced**, and the permutation matrix went 34/48 → 73/84 perfect cells with
     every survivor traced and fixed afterwards. Core suite **2006**, green.
 
