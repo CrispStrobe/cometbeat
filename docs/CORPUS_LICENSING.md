@@ -1181,6 +1181,38 @@ clear separately** from melody and often later. This is why OpenScore Lieder
 needs a composer-**and**-poet death check, and why CPDL/Mutopia need a per-item
 filter that also considers the modern editor.
 
+### Using a rejected site as a *bibliography* — where that stops working
+
+A tempting move when a song site is licence-blocked: ignore its content and
+mine its **source apparatus** (which songbook a tune came from, what year, who
+wrote the text), then fetch the actual music from a clean archive. The facts
+themselves are not protected — the same principle that lets us re-express
+curriculum scope in our own words.
+
+Two things bound it, and both bit on the one worked example (2026-07-30):
+
+1. **§87a-e UrhG, the sui-generis database right, applies to the INDEX even
+   when the facts are free.** A curated bibliographic apparatus representing a
+   substantial investment is protected against extraction of a *substantial
+   part*, independently of any copyright in the songs. Reading a handful of
+   entries to chase a lead is fine; systematically harvesting a five-figure
+   entry set is a database-right problem in its own right, and one that no
+   amount of "but facts aren't copyrightable" answers.
+2. **The upstream sources are almost always scans.** Historical songbooks
+   (18th–20th c.) are digitized as page images by MDZ / archive.org / DDB, so
+   even from a spotless archive they are OMR or transcription input, not
+   symbolic corpus material — the same gate that rejects the library guides.
+   Dating also still has to be checked per book: a 1920s–40s songbook can carry
+   a living arranger's or editor's layer over a PD tune.
+
+**Worked example, and why it yielded nothing:** the bibliography for one
+canonical children's song named eight collections (1776 through 1945). All are
+scans; the song itself was already in `db.json` **four times over** from
+independent cleared sources. Spot-checks of five canonical German children's
+songs found every one already held, typically 3–5×. Our German folk and
+children's repertoire is at practical saturation, so the bibliography route has
+little left to find — check `db.json` for the title *before* chasing a source.
+
 ## Recommended next actions (when limits + VPS return)
 
 1. **OpenScore Lieder, death-date filtered** — reuse the OpenEWLD Wikidata filter
