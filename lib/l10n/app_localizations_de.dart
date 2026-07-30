@@ -1914,6 +1914,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get projectBrowserTitle => 'Deine Musik';
 
   @override
+  String get trayTitle => 'Zwischenablage';
+
+  @override
+  String get trayEmpty => 'Noch nichts da. Leg etwas aus einem Editor hinein.';
+
+  @override
+  String get trayPutGroove => 'Groove in die Zwischenablage';
+
+  @override
   String get projectSave => 'Speichern';
 
   @override

@@ -1907,6 +1907,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectBrowserTitle => 'Your music';
 
   @override
+  String get trayTitle => 'Clipboard';
+
+  @override
+  String get trayEmpty =>
+      'Nothing here yet. Put something on it from any editor.';
+
+  @override
+  String get trayPutGroove => 'Put groove on clipboard';
+
+  @override
   String get projectSave => 'Save';
 
   @override

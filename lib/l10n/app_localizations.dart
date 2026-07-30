@@ -3542,6 +3542,24 @@ abstract class AppLocalizations {
   /// **'Your music'**
   String get projectBrowserTitle;
 
+  /// No description provided for @trayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard'**
+  String get trayTitle;
+
+  /// No description provided for @trayEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet. Put something on it from any editor.'**
+  String get trayEmpty;
+
+  /// No description provided for @trayPutGroove.
+  ///
+  /// In en, this message translates to:
+  /// **'Put groove on clipboard'**
+  String get trayPutGroove;
+
   /// No description provided for @projectSave.
   ///
   /// In en, this message translates to:

@@ -68,6 +68,7 @@ import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
+import 'package:comet_beat/core/tray/tray.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/custom_progressions.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart';
@@ -105,6 +106,7 @@ import 'package:comet_beat/shared/undo/undo_history_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/step_grid.dart';
+import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         Clef,
@@ -219,6 +221,9 @@ abstract interface class LoopMixerTester {
   /// WS-X1 — put this groove in the project, re-open that track LIVE, and have
   /// edits land back in it.
   String? addToProject({String? name});
+
+  /// WS-X6 — put the whole groove on the shared clipboard.
+  void putGrooveOnTray();
   bool openProjectTrack(String trackId);
   bool get hasLiveProjectLink;
   bool writeBackToProject();
@@ -698,6 +703,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     } on ProviderNotFoundException {
       _projects = null;
     }
+    try {
+      _sharedTray = Provider.of<TrayService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _sharedTray = null;
+    }
     UndoService? shared;
     try {
       shared = Provider.of<UndoService>(context, listen: false);
@@ -721,6 +731,30 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   }
 
   bool _historyWired = false;
+
+  /// WS-X6 — whether the clipboard band is showing.
+  bool _trayOpen = false;
+
+  /// The shared clipboard when one is in scope, else a private one, so this
+  /// screen behaves identically when mounted bare by the games registry — the
+  /// same rule the undo history follows.
+  final TrayService _ownTray = TrayService();
+  TrayService? _sharedTray;
+  TrayService get _tray => _sharedTray ?? _ownTray;
+
+  /// Puts the whole groove on the clipboard, to be used in another editor.
+  @override
+  void putGrooveOnTray() {
+    _tray.add(
+      kind: AppMode.loop,
+      label: '${_engine.tempoBpm} BPM · ${_engine.enabled.length} tracks',
+      document: _engine.spec,
+    );
+    if (!_trayOpen) setState(() => _trayOpen = true);
+  }
+
+  /// Tap-to-place: the same path a drop takes, so the two cannot diverge.
+  void _placeFromTray(TrayItem item) => unawaited(_dropHere(item.payload));
 
   void _onHistoryChanged() {
     if (mounted) setState(() {});
@@ -4135,6 +4169,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             toggleScorePanel();
           case 'history':
             unawaited(showUndoHistorySheet(context, history: _undo));
+          case 'tray':
+            putGrooveOnTray();
           case 'infinite':
             toggleInfinite();
           case 'quantize':
@@ -4174,6 +4210,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         PopupMenuItem<String>(
           value: 'history',
           child: Text(l10n.loopMixerEditHistory),
+        ),
+        PopupMenuItem<String>(
+          value: 'tray',
+          child: Text(l10n.trayPutGroove),
         ),
         const PopupMenuDivider(),
         _menuSectionHeader(l10n.loopMixerGroupPerform),
@@ -5968,7 +6008,22 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     return Scaffold(
       // LM-UX6: the "?" opens the concept + what-each-control-does primer.
       appBar: widget.showAppBar
-          ? GameAppBar(title: l10n.gameLoopMixer, tutorial: loopMixerPrimer)
+          ? GameAppBar(
+              title: l10n.gameLoopMixer,
+              tutorial: loopMixerPrimer,
+              // WS-X6 — in the APP BAR, whose actions scroll horizontally, and
+              // deliberately not in the toolbar below it: that Row has five
+              // fixed icon buttons and has overflowed by 23px twice.
+              actions: [
+                IconButton(
+                  key: const Key('loop-tray-toggle'),
+                  tooltip: l10n.trayTitle,
+                  isSelected: _trayOpen,
+                  icon: const Icon(Icons.content_paste),
+                  onPressed: () => setState(() => _trayOpen = !_trayOpen),
+                ),
+              ],
+            )
           : null,
       // WS-T3 — Loop Studio had NO keyboard support at all, not even
       // space-to-play. Hosting the shared table is what gives it one, and a
@@ -5988,6 +6043,15 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 child: _actionBar(l10n),
               ),
               const Divider(height: 1),
+              // The clipboard sits IN this tree rather than over it, so a chip
+              // can be dragged onto the surface below with nothing in between.
+              if (_trayOpen)
+                TrayPanel(
+                  tray: _tray,
+                  title: l10n.trayTitle,
+                  emptyHint: l10n.trayEmpty,
+                  onPlace: _placeFromTray,
+                ),
               Expanded(child: _dropZone(child: _mixerLayout(l10n))),
             ],
           ),
