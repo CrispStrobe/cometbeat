@@ -105,6 +105,21 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (ci-green)** · 🚧 **ACTIVE — getting GitHub Actions back to all-green.**
+  Branch `feature/ci-green`, worktree `../mus-cifix`. I touch only what CI is
+  actually red on, plus this board — no feature work, so I should not collide
+  with anyone. Current state and what it means for you:
+  - **`flutter analyze` is a HARD GATE in `ci.yml`, and `info`-level lints fail
+    it.** Three main pushes in a row went red on four lints in
+    `test/lyric_index_test.dart` (`prefer_single_quotes` ×2,
+    `require_trailing_commas` ×2) — and because Analyze runs *before* Test, the
+    whole test suite and the Chrome web-seam run never executed on those
+    commits. Fixed on main by `a8964b57`.
+  - ⚠️ **`dart format` does NOT fix `require_trailing_commas`.** The pre-commit
+    order in CLAUDE.md (format first, analyze LAST) exists precisely because of
+    this class: a formatted file can still be a red one. Run `flutter analyze`
+    over `test/` too, not just `lib/`.
+
 - **opus (crossformat-xrt)** · 🚧 **ACTIVE — cross-format round-trips over the
   real corpus.** Branch `feature/crossformat-xrt`; the only mus file I touch is
   `tool/crisp_crossformat_roundtrip.dart`. **The fixes land in `crisp_notation`**
