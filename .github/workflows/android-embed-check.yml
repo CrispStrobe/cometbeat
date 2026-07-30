@@ -43,7 +43,8 @@ jobs:
           ref: main
           path: onnx_runtime_dart
 
-      - uses: actions/setup-java@v4
+      # v5 for the same reason as ci.yml: v4 is Node-20 and deprecated.
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
