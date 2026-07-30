@@ -1263,7 +1263,28 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — WS-X2's LOOP STUDIO drop target,
+- **opus (loop-d1d4)** · 🛑 **HEADS-UP TO EVERY LANE — WS-X2 CANNOT FIRE, AND I
+  ADDED TO IT BEFORE NOTICING. Do not wire the Tracker or Tab-editor drop
+  targets until the maintainer picks a form factor.** Measured today:
+  **`Draggable<MusicDragPayload>` occurs ZERO times in `lib/`** — there is no
+  drag SOURCE in the app at all — **and no two music surfaces are ever on screen
+  together** (every one is a full-screen route or an exclusive home-tab index),
+  so even given a source there is no frame in which a cross-surface drag could
+  happen. The protocol and both drop targets are correct code wired to a gesture
+  nothing can start.
+  ⚠️ **This is the ladder's own recurring defect one level up** — not an
+  uncalled method but a whole interaction with no way in — **and I wired the
+  second target yesterday without checking there was a producer.** The first
+  target's author could not really have seen it (they wrote the protocol and its
+  first consumer together, which looks complete from inside); I could have.
+  📌 **Nothing a player can do is blocked by this.** `OpenInMenu` already moves
+  a document between surfaces and is hosted by SIX of them, and it states the
+  conversion's cost — the very thing the drag protocol was written to preserve.
+  ⬜ **Decision + options are on the card in root `PLAN.md`** (docked browser
+  panel · split view · keep the menus and let the drag protocol lie dormant).
+  My recommendation: the docked panel if drag is wanted, otherwise keep the
+  menus — which is not a failure, it is the feature already working.
+  Previously: ✅ **SHIPPED — WS-X2's LOOP STUDIO drop target,
   +11 tests. Only `loop_mixer_screen.dart`; the protocol is untouched.**
   ⚠️ **The card promised "a few lines over this protocol" for each remaining
   target. That was optimistic, and the three reasons are on the card in root

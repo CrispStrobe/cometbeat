@@ -1449,9 +1449,44 @@ prefix.
        lands silent and looks like a failed drop.
     📌 Consistent with `openProjectTrack` refusing a converted document: that
     refusal was because *opening* hid the cost, and a drop does not hide it.
-  * ⛔ **two drop targets remain, on purpose:** the Tracker and the Tab editor,
-    both other lanes' hot files. Still adoptable by their owners — but budget
-    for the three findings above rather than for "a few lines".
+  * 🛑 **STOP — DO NOT WIRE THE REMAINING TWO TARGETS YET. This whole card is
+    structurally unreachable in the product, and I only found it after adding
+    to it.** Measured 2026-07-30 (loop-d1d4):
+    1. **`Draggable<MusicDragPayload>` appears ZERO times in `lib/`.** There is
+       no drag SOURCE anywhere in the app. Both drop targets are wired to a
+       gesture nothing can start.
+    2. **No two music surfaces are ever on screen together.** Every
+       `DawScreen()` / `LoopMixerScreen()` / `AdvancedTrackerScreen()` is a
+       full-screen route push or an exclusive home-tab index. So even given a
+       source, you could not drag from one surface to another — there is no
+       frame in which both exist.
+    ⇒ The protocol and both targets are correct code that **cannot fire**. This
+    is the ladder's own recurring defect — shipped but never called — one level
+    up: not an uncalled method, but an entire interaction with no way in. ⚠️ **I
+    wired the second target the day before finding this, without checking there
+    was a producer. Owning that plainly: the first target's author could not
+    have seen it (they built the protocol AND its first consumer, which looks
+    complete from inside), but I could have, and did not.**
+    📌 **The capability is NOT missing — only this gesture is.** `OpenInMenu`
+    already moves a document between surfaces and is hosted by **six** of them
+    (Workshop, Drumkit, Loop Studio, Tracker, Tab Workshop, Audio Editor). So
+    nothing a player can do today is blocked by any of this; X2 is an
+    alternative UI for a solved problem.
+    ⬜ **MAINTAINER DECISION before any more of this card is built** — how
+    should music move between surfaces?
+    **(a)** Make the WS-W6 browser a DOCKED panel (its card already anticipates
+    this: "when the browser becomes a docked panel, this is what goes in the
+    projects tab") and drag from the panel onto the surface behind it. This is
+    the only option that makes the two existing targets live, and it works on
+    tablet/desktop while being cramped on a phone.
+    **(b)** A split view with two surfaces at once — heaviest, and a large
+    change to navigation.
+    **(c)** Keep `OpenInMenu` as the only route and treat the drag protocol as
+    a dead end: delete the two targets, or leave them dormant behind (a).
+    **My recommendation is (a) if drag is wanted at all, otherwise (c) —** and
+    (c) is not a failure: the menus work, are discoverable, and already state
+    the conversion's cost, which is the thing the drag protocol was written to
+    preserve.
   Tests: `drag_payload_test` (17) · `loop_drop_target_test` (11).
 
 
