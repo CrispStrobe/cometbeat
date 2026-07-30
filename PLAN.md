@@ -2992,6 +2992,37 @@ failed:**
   decision below.** The engine, the CQT, the store, the CLI and a provider all
   exist; what is missing is the licence call, not code.
 
+- ⬜ **BB-H7 — train our OWN chord-recognition weights.** `L` — full handover in
+  **[docs/BTC_TRAINING_HANDOVER.md](docs/BTC_TRAINING_HANDOVER.md)**.
+  - **Goal.** Replace the NC weights with ones we own, trained on data whose
+    licence we control, so chart-from-audio can ship commercially.
+  - 🛑 **STEP ZERO IS A MEASUREMENT, NOT A TRAINING RUN.** The shipped checkpoint
+    has a **25-class** head (12 maj + 12 min + `N`) — it cannot say a seventh at
+    all, while the *non-neural* chroma matcher already handles eight qualities. So
+    first run BTC over the same synthetic grid `tool/chord_template_ab.dart` uses
+    (chroma baseline: **exact 82.6% · root 86.8%**) restricted to maj/min. If the
+    neural path is not clearly ahead, the licence is **not** blocking live grading
+    and training is justified only by the extended vocabulary. A day of work that
+    decides whether the rest is worth weeks.
+  - **Why we are unusually well placed.** We can render labelled-by-construction
+    audio at scale: `ChordSpec` × `comp_arranger` voicings × 232 licence-cleared
+    registry instruments × the ~30-type FX rack for augmentation, through
+    `bin/rendersong.dart`. And real clean audio is **already acquired** —
+    `jams-corpus/tierA` holds **GuitarSet 360 (CC BY)**, recorded for the dataset
+    with nothing underneath, whose chord JAMS our own `jams.dart` already parses.
+  - ❌ **MIDI-rendered corpora with a permissive wrapper (Slakh2100 and kin) are
+    REJECTED on all three layers**, not merely deprioritised: the wrapper covers
+    the renders, not the MIDI; the upstream collection states that attributing its
+    files to authors *is not feasible*, which disqualifies an **attribution**
+    licence on its own terms (the same *uploader ≠ author* failure that held 1,752
+    modules here); and underneath sit both the copyrighted compositions and the
+    sequencer's own transcription copyright. **A permissive wrapper cannot launder
+    the layer beneath it** — check what the compiler had the right to grant.
+  - 🛑 **Never distil the NC model's predictions** into ours — that launders the
+    licence through a training step.
+  - **Does not block `BB-H1`/`H2`/`H3`/`H6`**, all of which are cheaper. A
+    live-grading path needing no model at all is worth more than a better model.
+
 - ⬜ **BB-H5 — GGUF consolidation.** `S` — **last, and optional.** One runtime
   instead of two (`cstr/btc-chords-GGUF` via the existing crispasr/ggml FFI seam)
   plus Metal/mobile speed. Buys no capability, and does not change the licence.
@@ -3022,6 +3053,9 @@ BTC works, is wired, and is `CC-BY-NC-SA-4.0`. Options, none of them free:
    training data has its own axis-2 problem (see `docs/CORPUS_LICENSING.md`).
 3. **Ship only symbolic derivation** (`BB-H6`) commercially and treat all
    audio→chord as a local, opt-in convenience.
+4. **Train our own** (`BB-H7`) — weeks, but it is the only option that ends with
+   a commercially shippable audio→chord path we control, and it doubles as a
+   vocabulary upgrade since we choose the labels.
 Nothing in `BB-H1`–`H3` or `BB-H6` depends on which way this goes; it gates
 `BB-H4`/`BB-H5` only.
 

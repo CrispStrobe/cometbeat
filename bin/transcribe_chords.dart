@@ -10,7 +10,10 @@
 // Convert anything to mono WAV first, e.g.
 //   ffmpeg -i in.ogg -ac 1 -ar 44100 -c:a pcm_s16le out.wav
 //
-// The MIT BTC model + CQT asset download on first run (see HarmonyModelStore).
+// The BTC model + CQT asset download on first run (see HarmonyModelStore).
+// ⚠️ The BTC *code* is MIT but these *weights* are CC-BY-NC-SA-4.0 —
+// NON-COMMERCIAL, and the store gates on that. This comment used to call it
+// "the MIT BTC model", which is wrong and contradicts the store.
 library;
 
 import 'dart:convert';
@@ -23,8 +26,10 @@ import 'package:comet_beat/core/audio/wav_io.dart';
 Future<void> main(List<String> args) async {
   final positional = args.where((a) => !a.startsWith('--')).toList();
   if (positional.isEmpty) {
-    stderr.writeln('usage: dart run bin/transcribe_chords.dart audio.wav '
-        '[--keep-n] [--json]');
+    stderr.writeln(
+      'usage: dart run bin/transcribe_chords.dart audio.wav '
+      '[--keep-n] [--json]',
+    );
     exit(64);
   }
   final path = positional.first;
@@ -35,8 +40,10 @@ Future<void> main(List<String> args) async {
 
   final wav = readWavPcm16(File(path).readAsBytesSync());
   final mono = wavToMonoFloat(wav);
-  stderr.writeln('loaded $path — ${wav.sampleRate} Hz, ${wav.channels}ch, '
-      '${(mono.length / wav.sampleRate).toStringAsFixed(2)} s');
+  stderr.writeln(
+    'loaded $path — ${wav.sampleRate} Hz, ${wav.channels}ch, '
+    '${(mono.length / wav.sampleRate).toStringAsFixed(2)} s',
+  );
 
   final bundle = await HarmonyModelStore().load();
   final sw = Stopwatch()..start();
@@ -66,9 +73,11 @@ Future<void> main(List<String> args) async {
     stdout.writeln('${chords.length} chords  (${sw.elapsedMilliseconds} ms):');
     stdout.writeln('   start      end     chord');
     for (final c in chords) {
-      stdout.writeln('${(c.onMs / 1000).toStringAsFixed(2).padLeft(7)}s '
-          '${(c.offMs / 1000).toStringAsFixed(2).padLeft(7)}s   '
-          '${c.label}');
+      stdout.writeln(
+        '${(c.onMs / 1000).toStringAsFixed(2).padLeft(7)}s '
+        '${(c.offMs / 1000).toStringAsFixed(2).padLeft(7)}s   '
+        '${c.label}',
+      );
     }
   }
 }
