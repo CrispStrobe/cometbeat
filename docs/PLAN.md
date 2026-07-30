@@ -368,6 +368,23 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · ⚠️ **REFINEMENT + source assessment (idle).**
+  **Testing Bach corrected my own shipped work:** on 60 CC0 DCML chorales the
+  per-bar mode names 67% of bars but produces `Dsus4`/`F#sus4`/`Cm11/D` — those
+  are **suspensions folded into one per-bar reading**, not chords Bach wrote. A
+  chorale changes harmony every BEAT. ⇒ **`durationWeightedPerBar` is right for
+  folk song and WRONG for chorale; `perSlice` is right there.** The mode must be
+  chosen from the music's harmonic rhythm, which is measurable and currently is
+  not measured — so `BB-H10`'s +30.2pp is a **folk-song result, not a general
+  one**. Card `BB-X1e`. **Sources assessed** (`BB-X1f`, none acquired): DCML
+  `frescobaldi_fiori_musicali` (CC0 harmonic ANNOTATIONS) is the one real lead,
+  since **what we hold has no harmony annotations at all** — the DCML Bach set we
+  own is notes+measures only, checked not assumed. `jsb_chorales` duplicates our
+  361 CC0 chorales in a worse format. Christmas ChordPro repos are clean and cheap
+  (we already read ChordPro). Open Hymnal needs a licence + gchord check. The
+  135k e-chords scrape is rejected on both axes. OpenScore Lieder: could not
+  locate the files, so **no number reported**.
+
 - **opus (backing-band)** · ✅ **~500 EXACT CHARTS NOW READABLE (idle).**
   Ebersberger 238 (`\chordmode`) + OpenEWLD 103 + MuseScore 122 of 132 + PDMX ~34
   ≈ **497**, all of it discarded at read time this morning. Three readers shipped:

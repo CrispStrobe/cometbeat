@@ -3582,6 +3582,54 @@ failed:**
   `../crisp_notation` is pulled. **That pull is the only thing standing between
   this work and the user seeing it.**
 
+- ⚠️ **BB-X1e — THE WEIGHTING MODE MUST FOLLOW THE HARMONIC RHYTHM. A refinement
+  to `BB-H10`, found by testing Bach (2026-07-30).**
+
+  Ran the deriver over 60 DCML Bach chorales (CC0, already in `db.json`, four-part
+  homophonic — the *ideal* input, since every slice really is a chord). Result:
+  67.1% of bars named, 29 files at 70–90%. But the READINGS are wrong in a
+  diagnosable way:
+
+  `| ? | Em(add9) | B | Dsus4 | F#sus4 | ? | F#sus4 | ? |`
+
+  `Dsus4`, `F#sus4`, `Cm11/D` in a Bach chorale are not chords Bach wrote — they
+  are **suspensions and passing tones folded into one per-bar reading**. A chorale
+  changes harmony every BEAT; folding a bar into a single duration-weighted chord
+  is simply the wrong granularity, and it manufactures colour that is not there.
+
+  ⇒ **`durationWeightedPerBar` is right for folk song (one chord per bar) and
+  WRONG for chorale (one chord per beat).** `perSlice` — the existing default — is
+  right for chorales. **Neither mode is universally better; the mode must be
+  chosen from the music's harmonic rhythm**, which is measurable (chord-change
+  rate per bar) and currently is not measured. That is the follow-up, and it means
+  `BB-H10`'s +30.2pp is a folk-song result, not a general one. Recorded here so
+  nobody applies the per-bar mode to a chorale corpus and trusts the output.
+
+- 📚 **BB-X1f — SOURCE ASSESSMENT: annotated-harmony corpora (2026-07-30).**
+  Evaluated against both axes; **none acquired**, since acquisition is the
+  maintainer's call.
+
+  | source | axis 1 | axis 2 | verdict |
+  |---|---|---|---|
+  | **DCML `frescobaldi_fiori_musicali`** | CC0 | Frescobaldi 1635, PD | ✅ **the one real lead** — actual harmonic ANNOTATIONS, which we have none of. Small (one 1635 collection), but DCML publishes other annotated corpora and the annotations are exactly what we lack. |
+  | `handson-ml2/jsb_chorales` | PD | Bach, PD | ⚪ **already held, better** — we have **361 DCML Bach chorales, CC0**, as `.mscx` + notes/measures TSV. The CSV version is the same repertoire in a poorer format. **Do not acquire.** |
+  | `cardinote/christmas-chords-lyrics` | MIT/PD | PD carols | ✅ clean and small; **ChordPro, which we already read** — near-zero integration cost. |
+  | `pathawks/Christmas-Songs` | needs checking | PD carols | 🟡 same shape; verify the licence file before taking. |
+  | **Open Hymnal Project** | needs checking | PD hymns | 🟡 **worth a look** — distributes ABC; must verify both the site's licence statement AND whether the ABC actually carries gchords (Dreysser taught us not to assume). |
+  | `NLP-Project-Hit-Machine` (135,783 songs) | **unknown** | **modern pop, copyrighted** | ❌ **REJECT.** Scraped from a chord site, unknown licence, in-copyright material. Fails both axes — the same shape as the tab archives and the MIDI-rendered corpora. |
+  | `shonegrad/chorde` | MIT | — | 🔧 an app, not data. Its "search-based import" pulls from Open Hymnal; the value is upstream. |
+
+  ⚠️ **What we hold has NO harmony annotations at all.** The DCML Bach extraction
+  we own contains `measures/` and `notes/` only — I checked rather than assumed.
+  So an annotated corpus would be genuinely new capability: it is the **ground
+  truth** a harmoniser needs (`BB-X1`'s inference half), and we currently have
+  none.
+
+  📌 **OpenScore: unverified.** There is an `openscore-manifest.json` in the corpus
+  but I could not locate the Lieder files to measure, so I am not reporting a
+  number. By genre, art song rarely carries chord symbols — but that is a
+  prediction, not a measurement.
+
 - 📊 **BB-H9 — SYMBOLIC notes → chords: what we have and how good it is.
   Measured 2026-07-30, `tool/symbolic_chord_eval.dart`.** Same GuitarSet takes,
   same segments, same duration-weighted metric as the audio evaluations, but fed
