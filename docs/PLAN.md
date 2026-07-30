@@ -205,6 +205,12 @@ is recorded in [HISTORY.md](HISTORY.md).
     corpus files, judging SOUNDING duration). It started this arc at 34/48 cells
     and 98 direct-hop failures. The full-corpus pass (every readable file, direct
     hops) is running on the VPS now — `/mnt/volume1/xrt/pass2.log`.
+  - ✅ **App side verified against the updated library**, since every agent's
+    `../crisp_notation` resolves to these changes: `flutter analyze` on the whole
+    mus project is clean, and the 181 notation-facing app tests
+    (`import` · `library_import_formats` · `export_sheet` ·
+    `composition_workshop` · `interop_notation_carry` · `grand_staff_from_score`
+    · `mid_score_change` · `github_abc_source` · `library_music_info`) pass.
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
