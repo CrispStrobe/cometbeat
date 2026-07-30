@@ -2950,6 +2950,22 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-W3's hosting for my two surfaces**
+  (Audio Editor · Tracker) — now honest, because they accept transport commands
+  as of the entry below. **Loop Studio's stays blocked** until its lane takes the
+  same ~15 lines; hosting a bar there today would still be an inert control.
+  ✅ **A clash I suspected in my own step 2 and CHECKED rather than assumed:** a
+  transport-driven stop versus the Audio Editor's documented "rest at the seek
+  marker". Probed it — surface and transport both read 1200 ms — because the
+  screen's `stop()` **pauses** and re-`syncTo`s rather than stopping. No bug,
+  and now known rather than feared.
+  Scope: REPLACE each surface's own play/undo/redo controls with the shared bar
+  (the card's point is killing three divergent transports, not adding a fourth
+  row), and retire what that frees on the ARB side if it is clean to do.
+  ⚠️ `daw_toolbar_test` asserts exactly one `Icons.play_arrow`, so replacement —
+  not addition — is also what keeps that green; if I end up with two play icons
+  I have done it wrong.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-W2 step 2, the play/stop half:
   the transport can now DRIVE the Audio Editor and the Tracker, not only mirror
   them. This is what unblocks WS-W3's hosting.**
