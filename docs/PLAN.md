@@ -1186,42 +1186,35 @@ is recorded in [HISTORY.md](HISTORY.md).
     blind to voice 2 and silently under-reports.
   — opus (corpus-survey)
 
-- **opus (jukebox-ingest)** · ✅ **DONE (idle) — corpus published, verified live,
-  and the last loose ends closed. Lane free; no files held.**
-  Live catalog **38,896 items** (score 38,427 · lyrics 28,539 · instrument 232 ·
-  module 139 · sample 97 · soundfont 1); new payload 200s, held payloads 404.
-  ⚠️ **Fixed a silent-loss hazard I had created:** three sources added today
-  (`commons-midi` 160 · `commons-wp-ly` 125 · `derived` 1) were written into
-  db.json by `append_manifest.py` but **never listed in `merge_db.py`'s
-  extra-manifest tuple**, so a rebuild would have reported success and dropped
-  286 rows. Now wired (backup + `ast.parse` before writing, since that file is
-  another agent's). **If you add a source, wire it there too** — this is the same
-  failure shape as the Mutopia/Lieder path truncation that file already warns
-  about.
-  🙏 **@ci-green** — I added `sqlite3 ^3.5.0` to `pubspec.yaml` after your 7-run
-  streak, then found and fixed the way I would have broken it (`849e97b8`):
-  `test/lyric_index_test.dart` REQUIRED sqlite3 via `expect(index, isNotNull)`,
-  which is the opposite of the feature's contract (FTS5 accelerates, the linear
-  scan is the floor). It would have gone red for a missing accelerator, not a
-  broken feature. Now probes and skips with a visible reason.
-  **Verified locally as CI runs it:** `flutter analyze` clean · full suite
-  **6,949 passed / 26 skipped** · `flutter test test/web --platform chrome`
-  green. **CI itself remains unconfirmed — every run is still queued/in-progress**
-  (runner pool saturated). Whoever gets the first completed `CI` after
-  `849e97b8`, a glance would close this out.
-  **📌 Publish with `bin/music_db_publish.py`**, not `emit_catalog` directly — it
-  refused twice today and both refusals were worth having (6 false positives that
-  exposed a shipped defect in 6,970 chant lyrics; then a genuine art-song hit).
-  ⚠️ **Use `db_lock()` + `guarded_write()`** for any db.json write.
-  ⚠️ A long VPS job **dies with its ssh session** — `setsid nohup … & disown`,
-  and check with `ps … | grep "[m]y"`, never `pgrep -f`.
-  **✅ Kids Category DECIDED (maintainer): we stay OUT** — 4+ and child-suitable
-  but not filed there. Reasoning in `docs/APP_STORE_CONTENT_READINESS.md` §5:
-  compliance would have been cheap (4 parental gates; no ads/analytics/IAP
-  already), but the category declares "primarily directed at children" and caps
-  at age 11, which contradicts the Scratch-model positioning. Consequence noted:
-  nothing external now audits child-suitability, which is why the content gate is
-  enforced in the pipeline.
+- **opus (jukebox-ingest)** · ✅ **DONE (idle) — all flagged gaps closed; corpus
+  published and verified live. Lane free.**
+  Live catalog **38,896 items** (score 38,427 · **lyrics 28,803** · instrument
+  232 · module 139 · sample 97 · soundfont 1).
+  ✅ **CI confirmed GREEN** — and my earlier "unconfirmed" was my own query
+  artefact: I filtered `name=='CI'` out of a truncated `gh run list --limit 12`,
+  which only ever surfaced the newest in-progress runs. **Use
+  `gh run list --workflow=ci.yml`.** The run for `849e97b8` (the commit carrying
+  `sqlite3` AND the test that exercises it) passed Analyze · Test · Test (web
+  seams, Chrome) · android-build. @ci-green: your streak is longer, not broken.
+  ✅ **Kern lyric extraction fixed** (`dd317c7a`) — 415 NIFC rows were
+  searchable-but-unreadable (*"Iesu exaudi vocem"* → `JEexvoexex…`). Kern
+  `**text` hyphenates on **BOTH** sides (`JE-` `-ſu` `ex-` `-au-` `-di`), so a
+  LEADING hyphen marks a continuation syllable — and my token filter was dropping
+  every one of them, leaving only word-openings. Lyric text 11.9 → **15.9 MB**
+  and coverage 28,665 → **28,929 rows** because real content was being discarded.
+  ⚠️ **Knock-on worth knowing:** making that text legible surfaced **13 new
+  content hits** the screen could not previously see — 11 more scenes of
+  Paderewski's *Manru* plus 2 Polish art songs (Moniuszko, Stefani). All exempted
+  under the maintainer's standing rule (canonical art song/opera keeps the
+  historical text). **A parser fix can change what a content screen finds** —
+  re-run the gate after any extraction change, which is what it is for.
+  ⚠️ Three sources I added were absent from `merge_db.py`'s extra tuple; a
+  rebuild would have silently dropped 286 rows. Wired. **Wire your source there.**
+  ⚠️ **Use `db_lock()` + `guarded_write()`** for db.json writes · a long VPS job
+  **dies with its ssh session** (`setsid nohup … & disown`) · never `pgrep -f`
+  (self-matches your ssh command).
+  ✅ **Kids Category DECIDED: we stay OUT** — reasoning in
+  `docs/APP_STORE_CONTENT_READINESS.md` §5.
 
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Wikimedia Commons pass shipped
   (2026-07-30).** +160 Commons PD MIDI (Tier A, axis 1 from Structured Data
