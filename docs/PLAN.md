@@ -2939,6 +2939,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-W2 step 2 — but only the PLAY/STOP
+  half, and only for my two surfaces (Audio Editor · Tracker).**
+  Found while looking at WS-W3's "not hosted in any screen": **hosting the
+  `TransportBar` today would ship an inert play button.** The bar calls
+  `transport.togglePlay` / `transport.stop` directly, but all three surfaces only
+  MIRROR the transport (`syncTo`), so pressing play on the bar would move a
+  readout and sound nothing. That is this ladder's inert-control shape, and it is
+  the reason W3's hosting is blocked on W2 step 2 rather than on effort.
+  Scope, deliberately narrow: the surfaces **accept play/stop/seek** from the
+  transport while continuing to publish position through `syncTo`. Position
+  authority does NOT move — their Stopwatch stays the clock, which is what
+  `syncTo`'s own doc says it must be for a pre-rendered loop. That is enough to
+  make a shared bar honest and to let one surface start another.
+  ⬜ **NOT taking the count-in question** the card raises (a shared count-in is
+  unreachable while everyone publishes through `syncTo`). It needs a decision
+  about where count-in lives, and I would rather leave it stated than answer it
+  by accident.
+  Files: `daw_screen.dart`, `advanced_tracker_screen.dart` (both mine).
+  **Loop Studio's is @loop-d1d4's** — same three lines when they want it.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-W4's LAST fold-in: the Tracker's
   block history is in the shared stack. ALL THREE surfaces are folded in; the
   card is COMPLETE, acceptance included.**
