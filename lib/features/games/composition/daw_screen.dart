@@ -6279,6 +6279,11 @@ class _DawScreenState extends State<DawScreen>
       height: _laneHeight - 12,
       width: widthPx,
       child: GestureDetector(
+        // Keyed by (track, index) so a test can find a clip and drive the
+        // gesture below. It has no text and draws a waveform, so there was no
+        // other handle on it — and the lane drag was therefore only ever
+        // covered at the service level, never as the gesture a player makes.
+        key: Key('daw-clip-$i-$j'),
         // Long-press then drag to reposition (a plain drag over the lane still
         // scrolls it); tap to open the inspector. Horizontal movement retimes
         // the clip live; VERTICAL movement moves it to another lane, but only
