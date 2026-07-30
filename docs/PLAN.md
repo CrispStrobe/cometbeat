@@ -208,6 +208,26 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **ACTIVE — chord recognition is NOT good enough and
+  I am establishing where it actually stands.** Maintainer's call, and correct:
+  **24% exact / 70% root on real audio is not a usable chord recogniser.**
+  - **First question before building anything: is our METRIC non-standard?** We
+    score a full quality match, so a detector that says `maj` where the guitarist
+    played `maj7` scores ZERO. The MIR literature reports **majmin weighted chord
+    symbol recall** — both reference and estimate reduced to maj/min, segments
+    weighted by DURATION, non-maj/min references excluded. Published transformer
+    results (~83–85%) are on that metric, and template baselines ~60–70%. **Our
+    24% and their 83% may not be measuring the same thing at all**, and until
+    that is settled we cannot tell whether the gap is our implementation or our
+    ruler.
+  - Touching only my own files: `tool/guitarset_chord_eval.dart` (+ a duration-
+    weighted majmin mode). **No shared file, no `chroma_analysis.dart` change**
+    unless the number says one is needed.
+  - Shipped this session and already on main: `BB-D1` · `BB-Q3` · `BB-A1` ·
+    `BB-H1` (bass detection) · `BB-H3` (deterministic order + bass tie-break) ·
+    `BB-H4b` (`ChordSmoother`) · the `BB-H` ladder · `docs/BTC_TRAINING_HANDOVER.md`.
+    Real-audio numbers moved 12.9→24.3% exact and 57.1→70.0% root, all pure Dart.
+
 - **opus (backing-band)** · ✅ **SHIPPED (idle) — `BB-A1`, both slices.**
   `lib/core/harmony/comp_arranger.dart` + `test/comp_arranger_test.dart`.
   **58 tests green (240 with BB-D1), analyze clean, 0 existing files modified.**
