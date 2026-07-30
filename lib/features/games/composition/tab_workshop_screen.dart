@@ -172,6 +172,16 @@ abstract class TabWorkshopTester {
   void setCountIn(bool on);
   bool get isCountingIn;
   Set<String> get highlightedIds;
+
+  /// How many times the SCREEN has rebuilt.
+  ///
+  /// A perf seam, not a feature: two of this screen's biggest costs were
+  /// whole-screen rebuilds nothing visible needed (an FX slider drag at ~60 fps,
+  /// and the playhead moving to the next column). Both are now narrowed, and a
+  /// counter is the only way to keep them narrow — a wall-clock assertion on
+  /// shared CI hardware is noise, but "this gesture must not rebuild the screen"
+  /// is exact.
+  int get debugBuildCount;
   void toggleTechnique(TabTechnique t);
   Set<TabTechnique> techniquesAt(int col);
   void setChordByName(String? name);
@@ -495,7 +505,24 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   bool _articulate = false;
   bool _countingIn = false;
   int _playToken = 0; // bumped to cancel an in-flight count-in
-  Set<String> _highlightedIds = const {};
+  /// The sounding column, as a notifier rather than plain state.
+  ///
+  /// ⚠️ PERF: this used to be a field set through `setState`, so every time the
+  /// playhead moved to the next column the WHOLE screen rebuilt — a full
+  /// `toScore`, a full tab layout and every grid cell, twice a second at 120 bpm,
+  /// to move one highlight. The three views already repaint without relayout
+  /// when only `highlightedIds` changes (`RenderStaffView`), so the narrow path
+  /// existed in the renderer and the screen was throwing it away.
+  final _highlighted = ValueNotifier<Set<String>>(const {});
+
+  /// Where the last tick found the playhead in [_schedule].
+  ///
+  /// ⚠️ PERF: the tick used to scan the whole schedule EVERY frame to find the
+  /// sounding column. The schedule is sorted and time only moves forward within
+  /// a pass, so a cursor makes it O(1) amortised — the same fix the note-highway
+  /// card describes for its per-frame grader scan. Reset whenever playback
+  /// restarts, including on a loop wrap.
+  int _scheduleCursor = 0;
   List<({int col, int start, int end, bool note})> _schedule = const [];
   int _totalMs = 0;
   // Practice tools (D4): loop the piece, and a speed trainer that ramps the
@@ -556,6 +583,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     _mic.dispose();
     _ticker.dispose();
     _focus.dispose();
+    _highlighted.dispose();
     super.dispose();
   }
 
@@ -745,7 +773,9 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   @override
   bool get isCountingIn => _countingIn;
   @override
-  Set<String> get highlightedIds => _highlightedIds;
+  Set<String> get highlightedIds => _highlighted.value;
+  @override
+  int get debugBuildCount => _buildCount;
   @override
   void toggleTechnique(TabTechnique t) {
     _snapshot();
@@ -1413,6 +1443,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   }
 
   void _startPlayback() {
+    _scheduleCursor = 0; // a new pass starts at the beginning of the schedule
     // Audio: every track sounding together. Highlight: the ACTIVE track's own
     // column timeline (that's what the preview shows). [_playBpm] is the authored
     // [_bpm] normally, or the speed trainer's current ramp step.
@@ -1454,7 +1485,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       _schedule = schedule;
       _totalMs = t;
       _playing = true;
-      _highlightedIds = const {};
+      _highlighted.value = const {};
     });
     _ticker.start();
   }
@@ -1465,7 +1496,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     setState(() {
       _playing = false;
       _countingIn = false;
-      _highlightedIds = const {};
+      _highlighted.value = const {};
     });
   }
 
@@ -1485,15 +1516,26 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       _stopPlayback();
       return;
     }
+    // Walk forward from where the last tick stopped rather than scanning the
+    // whole schedule: entries are in time order and `ms` only grows within a
+    // pass, so anything before the cursor can no longer be sounding.
+    while (_scheduleCursor < _schedule.length &&
+        _schedule[_scheduleCursor].end <= ms) {
+      _scheduleCursor++;
+    }
     Set<String> ids = const {};
-    for (final e in _schedule) {
-      if (e.note && ms >= e.start && ms < e.end) {
+    for (var i = _scheduleCursor; i < _schedule.length; i++) {
+      final e = _schedule[i];
+      if (e.start > ms) break; // not started yet — nor is anything after it
+      if (e.note && ms < e.end) {
         ids = {'t${e.col}'};
         break;
       }
     }
-    if (!setEquals(ids, _highlightedIds)) {
-      setState(() => _highlightedIds = ids);
+    if (!setEquals(ids, _highlighted.value)) {
+      // No `setState`: only the three views read this, and they repaint without
+      // relayout.
+      _highlighted.value = ids;
     }
   }
 
@@ -1622,23 +1664,42 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    _buildCount++;
+    // Cleared per build rather than invalidated per edit: the document is
+    // mutable in place, so "this build's answers" is the only claim that is
+    // certainly true.
+    _fingerCache.clear();
     final score = _doc.toScore(capo: _capo);
     // Tab and notation are independent, stacked panes (notation on top).
+    // Each pane rebuilds when the PLAYHEAD moves, and only that pane — the rest
+    // of the screen (and `toScore` above) is untouched.
     final panes = <Widget>[
       if (_notation == _Notation.standard)
-        StaffView(score: score, highlightedIds: _highlightedIds),
+        ValueListenableBuilder<Set<String>>(
+          valueListenable: _highlighted,
+          builder: (context, ids, _) =>
+              StaffView(score: score, highlightedIds: ids),
+        ),
       if (_notation == _Notation.grand)
-        GrandStaffView(
-          grandStaff: grandStaffFromScore(score),
-          highlightedIds: _highlightedIds,
+        ValueListenableBuilder<Set<String>>(
+          valueListenable: _highlighted,
+          // The grand-staff split is derived per build, so it is computed here
+          // rather than inside the builder: the playhead does not change it.
+          builder: (grandContext, ids, child) => GrandStaffView(
+            grandStaff: grandStaffFromScore(score),
+            highlightedIds: ids,
+          ),
         ),
       if (_showTab)
-        TabStaffView(
-          score: score,
-          tuning: _doc.tuning,
-          capo: _capo,
-          showTuning: true,
-          highlightedIds: _highlightedIds,
+        ValueListenableBuilder<Set<String>>(
+          valueListenable: _highlighted,
+          builder: (context, ids, _) => TabStaffView(
+            score: score,
+            tuning: _doc.tuning,
+            capo: _capo,
+            showTuning: true,
+            highlightedIds: ids,
+          ),
         ),
     ];
     final Widget view = Column(
@@ -1897,8 +1958,16 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             child: StatefulBuilder(
               builder: (context, setSheetState) {
                 final track = _tracks[_active];
+                // ⚠️ PERF: no screen `setState` here. `FxRack`'s sliders call
+                // `onChanged` per drag FRAME, and this screen's `build` does a
+                // full `toScore` + a whole non-lazy grid + a tab layout — so
+                // dragging one knob used to rebuild the entire Workshop at
+                // ~60 fps, behind a sheet that covers it. Nothing in `build`
+                // reads `fxChain`: it is used when rendering audio, which
+                // happens on a later, explicit action. The sheet still rebuilds,
+                // because the rack is what has to redraw.
                 void apply(List<FxSpec> chain) {
-                  setState(() => track.fxChain = chain);
+                  track.fxChain = chain;
                   setSheetState(() {});
                 }
 
@@ -2115,8 +2184,12 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
           final scheme = Theme.of(ctx).colorScheme;
+          // ⚠️ PERF: same as the rig sheet — the volume and pan sliders fire
+          // per drag frame, and neither value is read by this screen's `build`
+          // (they are mix parameters, applied when audio is rendered). Only the
+          // sheet needs to redraw.
           void bump(VoidCallback f) {
-            setState(f);
+            f();
             setSheet(() {});
           }
 
@@ -2702,10 +2775,28 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     final column = _doc.columns[col];
     final fingers = column.leftFingers;
     if (fingers == null || !column.frets.containsKey(string)) return null;
-    final strings = column.frets.keys.toList()..sort((a, b) => b.compareTo(a));
-    final i = strings.indexOf(string);
-    return i >= 0 && i < fingers.length ? fingers[i] : null;
+    // ⚠️ PERF: this is called once per CELL, and it used to allocate a list,
+    // sort it and linear-search it every time — so a 6-string grid did six
+    // sorts per column, per build, for a value that is the same for the whole
+    // column. Now the column's string→finger map is built once and reused;
+    // `_fingerCache` is cleared at the top of `build`, so it can never outlive
+    // an edit.
+    final byString = _fingerCache[col] ??= () {
+      final strings = column.frets.keys.toList()
+        ..sort((a, b) => b.compareTo(a));
+      return <int, int>{
+        for (var i = 0; i < strings.length && i < fingers.length; i++)
+          strings[i]: fingers[i],
+      };
+    }();
+    return byString[string];
   }
+
+  /// Rebuild count, for the perf guard (see `TabWorkshopTester.debugBuildCount`).
+  int _buildCount = 0;
+
+  /// Per-column string→finger maps, valid for ONE build (see [_fingerAt]).
+  final _fingerCache = <int, Map<int, int>>{};
 
   Widget _cell(int col, int string) {
     final fret = _doc.columns[col].frets[string];

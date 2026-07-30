@@ -2369,16 +2369,65 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING the TAB WORKSHOP — maintainer asked for it
-  to be optimised.** `tab_workshop_screen.dart` + `tab_document.dart` +
-  `tab_fx.dart`. Last commits there are a day old (the barre work) and
-  @tab-patterns signed off "now idle", so I am treating it as cold — **say so
-  here if you are back in it.**
-  Scope: PERFORMANCE first (measured, not guessed — I am profiling the hot paths
-  before touching anything), and while I am in the file, WS-X2's fourth and last
-  drop target, which is the one card still open against that screen.
-  ⚠️ I will not reshape the arranging/fretting behaviour to win a benchmark: the
-  tab suites pin those, and a faster wrong answer is not an optimisation.
+- **opus (daw-suite)** · ✅ **TAB WORKSHOP optimised — pass 1, measured.** Only
+  `tab_workshop_screen.dart` + two new test files. **This screen had no perf
+  test and no benchmark; both now exist**, which is most of the value.
+  **The two real wins were rebuilds nothing visible needed:**
+  1. **An FX-rack slider drag rebuilt the WHOLE screen at ~60 fps** — `FxRack`
+     fires `onChanged` per drag frame and the handler called the screen's
+     `setState`, so each frame re-derived the score (`toScore`), re-engraved it
+     (`TabLayoutEngine.layout` runs inside `TabStaffView.build`, ungated) and
+     rebuilt a non-lazy grid of `columns × strings` cells — **behind a sheet
+     covering the screen.** Nothing in `build` reads `fxChain`. Same shape in the
+     mixer (volume + pan). Now only the sheet rebuilds.
+  2. **The playhead rebuilt the whole screen per sounding column** — twice a
+     second at 120 bpm, to move one highlight. The three views already repaint
+     WITHOUT relayout when only `highlightedIds` changes, so the narrow path
+     existed in the renderer and the screen was throwing it away; it now travels
+     through a `ValueNotifier`. The per-frame schedule scan became a cursor
+     (O(1) amortised) — the same fix the note-highway card describes.
+  * `_fingerAt` allocated a list, **sorted it and linear-searched it once per
+    CELL** for a value that is per column: `columns × strings` sorts per build
+    → one per column, cached and cleared at the top of `build`.
+  ⚠️ **I REVERTED an optimisation I could not measure, and it is worth knowing
+  why.** Hoisting `_anchor` out of `arrangeTab`'s Viterbi inner loop looks
+  obviously right — the loop is up to 64×64 per column and recomputed both
+  anchors per pair. My first version precomputed the whole anchors MATRIX and
+  measured **slower** at 512 columns (13.9 → 20.7 ms): allocating
+  columns × candidates boxed nullable ints costs more than the recomputation
+  saves. A carry-one-column-forward version then landed **inside the noise**
+  (11.5 / 15.1 / 14.6 ms against 13.9). So the recomputation is not the
+  bottleneck there — candidate generation and `_localCost`'s sort-with-cost-in-
+  the-comparator are the places to look next. Reverted rather than shipped: an
+  unmeasurable change is churn, and it deleted a helper for nothing.
+  ⚠️ **And my first benchmark was too noisy to trust** — 3 warm-up runs left the
+  first sample ~2× the rest, which briefly made a hoist look like a regression.
+  20 warm-ups now, median of 25, and **dense 4-note chords**, because 1–2 note
+  columns generate so few candidates that they never exercise the loop that
+  costs anything.
+  **New instruments:** `test/tab_bench_test.dart` (OPT-IN, `TAB_BENCH=1` — a
+  wall-clock assertion on shared CI is noise, and a benchmark that fails the
+  build teaches people to ignore it) and `test/tab_workshop_perf_test.dart`
+  (**counting**, not timing: "the playhead must not rebuild the screen" is exact
+  and cannot rot — plus the inverse, "an edit still DOES rebuild", because a test
+  that only asserts fewer rebuilds would pass a screen that never repaints).
+  ⚠️ `tab_document.dart` imports the Flutter-facing `crisp_notation`, so
+  `dart run` **cannot** compile a headless tool against the tab model (the FFI
+  transformer crashes on the app's native bindings) — that is why the benchmark
+  is a test. Worth knowing before writing the next `tool/` script.
+  ⬜ **NOT done, deliberately, and the biggest remaining item: the grid is not
+  lazy.** ~3000 cells for a 512-column 6-string import, materialised on every
+  rebuild inside nested `SingleChildScrollView`s. Making it lazy is the real
+  win, but `tab_workshop_test.dart` asserts rendered cells (digits, barre) with
+  finders that would stop finding off-screen widgets — so it needs its own pass,
+  with those tests reworked deliberately rather than as collateral. Also open:
+  the derived `Score` is still recomputed per build (a revision-keyed cache is
+  the fix, and the risk is a stale document, so it wants its own guard) ·
+  `toScore` has two genuine O(n²) shapes (`nextNoteful` per slide/hammer, and
+  the hairpin pass) · `barCapacity` is an allocating getter read inside per-
+  column loops · `_captureState` deep-copies the whole document per keystroke.
+  ⬜ WS-X2's fourth drop target (this screen) is **still open** — I stopped here
+  rather than mixing a feature into a measured perf pass.
 
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-X2's TRACKER drop target, third
   of four.** Only `advanced_tracker_screen.dart` + a new pure
