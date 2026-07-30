@@ -7,6 +7,28 @@ name: CI
 on:
   push:
     branches: [main]
+    # Skip the run when a commit changes NOTHING but prose. Measured before
+    # adding this: 31 of 60 consecutive commits touched only `docs/` or a
+    # `.md`, and each still burned the full ~22-min test job plus the ~8-min
+    # Android build. The queue routinely sat 17 deep, which starved the
+    # path-triggered native workflows and delayed every real red by ~20 min.
+    #
+    # ⚠️ READ THE SEMANTICS BEFORE EDITING. GitHub skips only when EVERY
+    # changed file matches, so a commit touching code AND docs still runs in
+    # full. That property is the whole safety argument — widening these
+    # patterns to anything code-adjacent would let real changes reach main
+    # unvalidated, which is far worse than a slow queue. Verified when added
+    # that no test reads a `.md` as a fixture (the `README.md` strings in
+    # `github_abc_source_test` / `vcsl_source_test` are inline JSON mocks of a
+    # GitHub API response, not file reads) and that nothing under `docs/` is
+    # bundled or asserted on.
+    #
+    # Deliberately NOT applied to `pull_request` below: it costs nothing there
+    # (we merge straight to main rather than opening PRs), and leaving that
+    # path unfiltered keeps a full-CI escape hatch.
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   pull_request:
 
 # Group per PR (a new push to a PR cancels its superseded run) but per COMMIT on
