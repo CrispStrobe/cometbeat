@@ -89,6 +89,7 @@ import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
+import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/features/games/composition/instrument_editor.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
@@ -293,6 +294,12 @@ double? followScrollOffset({
   // Otherwise ease: a fraction of what remains, per frame.
   return current + delta * kFollowEase;
 }
+
+/// WS-W4 — this surface's slice of the shared undo history.
+///
+/// Public and top-level, like `DawService.kUndoScope`, because the history
+/// PANEL and the tests both need to name it and the state class is private.
+const String kTrackerUndoScope = 'tracker';
 
 class AdvancedTrackerScreen extends StatefulWidget {
   const AdvancedTrackerScreen({
@@ -954,9 +961,20 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// current pattern's cells. Structural changes (add/remove track, set length,
   /// switch pattern, import) clear the history (a snapshot restores cells only
   /// at a fixed channel/row shape).
-  final _undoStack = <List<List<TrackerCell>>>[];
-  final _redoStack = <List<List<TrackerCell>>>[];
-  static const _maxUndo = 80;
+  /// WS-W4 — the shared, cross-surface history.
+  ///
+  /// The snapshot MECHANISM is unchanged: an entry still holds a whole-pattern
+  /// `exportCells()` before and after, because that is what a tracker edit is.
+  /// What changed is who owns the stack, so the Tracker's work finally appears
+  /// in the history panel beside every other surface's.
+  ///
+  /// ⚠️ A PRIVATE service when none is in scope. The games registry and most of
+  /// this screen's own tests mount it bare, and undo has worked there since it
+  /// shipped — one code path either way, rather than a screen that silently
+  /// stops recording depending on how it was reached.
+  UndoService get _history => _sharedHistory ?? _ownHistory;
+  final _ownHistory = UndoService();
+  UndoService? _sharedHistory;
 
   final _vScroll = ScrollController();
   // The on-screen piano sweeps C1..~C7; start scrolled to around C3.
@@ -1081,6 +1099,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     } on ProviderNotFoundException {
       _projects = null;
     }
+    try {
+      _sharedHistory = Provider.of<UndoService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _sharedHistory = null; // keeps the private one — see [_history]
+    }
   }
 
   // --- WS-X1 live links -----------------------------------------------------
@@ -1155,6 +1178,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   void dispose() {
+    // ⚠️ Every entry closes over this `State`, and the shared service outlives
+    // the screen. Leaving them in place would let an undo pressed on another
+    // surface reach into a dead screen — the trap @loop-d1d4 documented, which
+    // this screen inherits and the DAW does not.
+    _history.clearScope(kTrackerUndoScope);
     _midiSub?.cancel();
     _midi.dispose();
     _ticker.dispose();
@@ -1676,37 +1704,60 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   // --- Undo / redo (pattern cell edits) ----------------------------------
 
-  bool get _canUndo => _undoStack.isNotEmpty;
-  bool get _canRedo => _redoStack.isNotEmpty;
+  bool get _canUndo => _history.canUndoScope(kTrackerUndoScope);
+  bool get _canRedo => _history.canRedoScope(kTrackerUndoScope);
 
   /// Snapshot the current pattern's cells before a cell edit.
-  void _pushUndo() {
-    _undoStack.add(_song.engine.exportCells());
-    if (_undoStack.length > _maxUndo) _undoStack.removeAt(0);
-    _redoStack.clear();
+  ///
+  /// The `before` snapshot is taken now and the `after` one lazily, on the first
+  /// undo — the same shape the DAW fold-in uses, and for the same reason: at
+  /// push time the edit has not happened yet, so there is nothing to record as
+  /// its result.
+  void _pushUndo([String? label]) {
+    final before = _song.engine.exportCells();
+    List<List<TrackerCell>>? after;
+    _history.push(
+      UndoEntry(
+        label: label ?? _labelForEdit(),
+        scope: kTrackerUndoScope,
+        undo: () {
+          // ⚠️ The trap this screen inherits and the DAW does not: it is a
+          // games-registry screen, pushed and popped, while the service
+          // outlives it — and every entry closes over this `State`. An undo
+          // pressed on another surface afterwards would `setState` on a dead
+          // screen.
+          if (!mounted) return;
+          after = _song.engine.exportCells();
+          setState(() => _song.engine.importCells(before));
+          _syncPlayback();
+        },
+        redo: () {
+          final restore = after;
+          if (!mounted || restore == null) return;
+          setState(() => _song.engine.importCells(restore));
+          _syncPlayback();
+        },
+      ),
+    );
   }
+
+  /// What the edit about to happen should be called in the history.
+  ///
+  /// Coarse on purpose. Naming it at every one of the ~30 call sites would be
+  /// this ladder's recurring inert seam: the site that forgets does not fail, it
+  /// files its edit under the wrong name. "Pattern edit" is missing detail;
+  /// a wrong name is worse.
+  String _labelForEdit() => _recording ? 'Recorded notes' : 'Pattern edit';
 
   /// Drop the history — after a structural change a snapshot can't be restored.
-  void _clearUndo() {
-    _undoStack.clear();
-    _redoStack.clear();
-  }
+  ///
+  /// `clearScope`, not `clear`: another surface's entries are still perfectly
+  /// good, and this screen has no business dropping them.
+  void _clearUndo() => _history.clearScope(kTrackerUndoScope);
 
-  void _undo() {
-    if (_undoStack.isEmpty) return;
-    _redoStack.add(_song.engine.exportCells());
-    final snap = _undoStack.removeLast();
-    setState(() => _song.engine.importCells(snap));
-    _syncPlayback();
-  }
+  void _undo() => _history.undoScope(kTrackerUndoScope);
 
-  void _redo() {
-    if (_redoStack.isEmpty) return;
-    _undoStack.add(_song.engine.exportCells());
-    final snap = _redoStack.removeLast();
-    setState(() => _song.engine.importCells(snap));
-    _syncPlayback();
-  }
+  void _redo() => _history.redoScope(kTrackerUndoScope);
 
   /// Scrolls the grid so the edit cursor's row stays on-screen (with a margin)
   /// — called on every cursor move so typing/arrowing never loses the cursor.

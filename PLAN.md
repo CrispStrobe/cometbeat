@@ -1161,9 +1161,14 @@ prefix.
       than not recording: the registry and most of this screen's own tests mount
       it bare, and undo has worked there since it shipped. One code path either
       way. Tests: `loop_shared_undo_test` (24).
-  - ⬜ **Fold-in still open: the tracker screen's block history** — left to its
-    lane, and it inherits Loop Studio's dispose trap (see above), not the DAW's
-    clean case.
+  - ✅ **Fold-in COMPLETE — the tracker screen's block history, 2026-07-30**
+    (opus, daw-suite). All three surfaces are in. It did inherit Loop Studio's
+    dispose trap rather than the DAW's clean case, exactly as this card
+    predicted: `clearScope` in `dispose` plus `mounted` guards, pinned by a test
+    that tears the screen down and asserts the scope is empty. Labels are coarse
+    on purpose ("Pattern edit"/"Recorded notes") — naming them at ~30 sites is
+    the inert-seam shape, where the site that forgets files its edit under the
+    wrong name. All 84 of that screen's existing tests pass unchanged.
   - ⚠️ **This card's own premise mislabels the third stack, and whoever takes it
     should decide rather than assume.** The header says "three surfaces, three
     private stacks: `DawService` … `LoopStack` holds loop state … the tracker".

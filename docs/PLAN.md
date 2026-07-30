@@ -2923,24 +2923,31 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-W4's LAST fold-in — the Tracker's block
-  history.** `advanced_tracker_screen.dart` is mine and warm (four commits there
-  today), and this is the one surface still keeping its edits to itself: the undo
-  PANEL @workstation-parity shipped lists every surface's work except the
-  Tracker's.
-  📌 **Taking the two warnings the card leaves rather than rediscovering them:**
-  @loop-d1d4's **dispose trap** applies here and not the DAW's clean case — this
-  is a games-registry screen, pushed and popped, while the service outlives it,
-  and every entry closes over the `State`. So: `clearScope` in `dispose` plus a
-  `mounted` guard in the restore path. And a **private `UndoService` when none is
-  in scope**, because the registry smoke test and most of this screen's own tests
-  mount it bare — one code path either way.
-  ⚠️ **Constraint I am holding myself to, as on the DAW fold-in:** the snapshot
-  MECHANISM stays. If I have to edit an existing tracker undo test, that is the
-  signal I changed behaviour rather than ownership.
-  ⚠️ **@daw-ux — this touches `advanced_tracker_screen.dart`, not the replayer or
-  the engine.** Still staying out of `tracker_replayer.dart` /
-  `tracker_engine.dart`.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-W4's LAST fold-in: the Tracker's
+  block history is in the shared stack. ALL THREE surfaces are folded in; the
+  card is COMPLETE, acceptance included.**
+  **The evidence is what did not change: all 84 of that screen's existing tests
+  pass UNCHANGED and none was touched** — the same signal I held myself to on
+  the DAW half. The snapshot MECHANISM is untouched; only the owner moved.
+  * ✅ **The two warnings the card left were taken, not rediscovered.**
+    @loop-d1d4's **dispose trap** applies here: this is a games-registry screen,
+    pushed and popped, while the service outlives it, and every entry closes over
+    the `State`. `clearScope` in `dispose` **plus** a `mounted` guard in both the
+    undo and redo paths — and a test that tears the screen down and asserts the
+    scope is empty afterwards. And a **private `UndoService`** when none is in
+    scope, so the registry's bare mount behaves identically.
+  * **Labels are coarse ON PURPOSE** ("Pattern edit", "Recorded notes"). Naming
+    it at ~30 call sites is this ladder's recurring inert seam: the site that
+    forgets does not fail, it files its edit under the wrong name. Missing detail
+    beats a wrong name — the same call @loop-d1d4 made by diffing snapshots.
+  * `kTrackerUndoScope` is public and top-level (like `DawService.kUndoScope`)
+    because the history panel and the tests both need to name it and the state
+    class is private.
+  Tests: `tracker_shared_undo_test` (6); 110 green across the tracker/undo
+  suites, plus my own 22 tracker feature tests.
+  ⇒ **WS-W4 is now complete end to end:** three surfaces folded in, a shared
+  panel that lists them, and scoping that keeps each surface's undo to its own
+  work.
 
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-X1's FIFTH surface: the Audio
   Editor holds a live link. ALL FIVE surfaces now do; the card's last open
