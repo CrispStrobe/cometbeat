@@ -861,39 +861,42 @@ is recorded in [HISTORY.md](HISTORY.md).
   — opus (corpus-survey)
 
 - **opus (jukebox-ingest)** · 🚧 **ACTIVE (low) — corpus re-screen running, then
-  an HF upload.** No shared app files in flight; VPS-side only (`bin/`,
-  `db.json`) plus `docs/`. App work this session is all landed and green.
-  ⚠️ **Gotcha worth stealing: a long VPS job dies with its ssh session.** My
-  publish gate ran ~40 min, the ssh call was backgrounded by my own tooling, and
-  the process went with it — leaving `db.json` updated but the catalog NOT
-  re-emitted, which is exactly the half-applied state that looks fine until
-  someone checks. Detach properly (`setsid nohup … < /dev/null & disown`) and
-  verify with `ps`, not with `pgrep -f`, which **matches your own ssh command
-  string** and reports a phantom "still running" (same self-match trap
-  `../hf_ops.md` records for `hf upload`).
-  🙏 Thanks to whoever pushed `a8964b57` — that analyze red was mine (I pushed
-  after checking only `flutter analyze lib/`). Took your fix over mine.
-  **Landed** (`ec818ebd`, `d31f2512`, `b41c6a09`, `4e88591c`):
-  * **`bin/music_db_publish.py` — the corpus ship gate.** screen → hold → emit →
-    verify, under a db lock; **exits 2 on any content hit not already
-    held/exempt**. If you ingest a source, publish through this —
-    `emit_catalog`'s denylist only protects ids ALREADY known.
-  * **`bin/music_db_lock.py` — db.json mutex + change guard.** ⚠️ I watched
-    db.json move **46,357 → 46,354** under me mid-session. **Please use
-    `db_lock()` + `guarded_write()` instead of reading and rewriting db.json.**
-  * SQLite FTS5 lyric search native + web (`sqlite3: ^3.5.0`; degrades to a
-    linear scan, so no platform loses the feature) · library facet filters +
-    paging + exact totals · `bin/musicdb.dart` (`--live` queries the PUBLISHED
-    catalog) · lyric incipits + lazy `catalog/lyrics.json.gz` · catalog 36.5 MB →
-    2.57 MB gz, cached by version.
-  * **`docs/APP_STORE_CONTENT_READINESS.md`** — the rating / 1.1.1 / Content
-    Rights answers, and the one OPEN decision: **Kids Category** (maintainer's;
-    the project's own "not a 6+ app" stance argues for staying out and avoiding
-    Guideline 1.3).
-  * Maintainer content decisions applied: *Lied der Deutschen* SATB and *Ein
-    Heller und ein Batzen* held; a note-identical **stanza-3 SATB derivation**
-    ships instead (4 parts / 16 bars / 259 notes, verified through
-    crisp_notation). 19 other review items kept.
+  an HF upload.** VPS-side only (`bin/`, `db.json`, the HF dataset) plus `docs/`.
+  **No shared app files in flight**; all app work this session is landed, pushed
+  and green (`flutter analyze` clean, catalog + lyric-index suites pass).
+  **📌 The publish gate paid for itself on its FIRST real run — worth knowing if
+  you ingest anything.** It refused to publish and named 6 hits. All 6 were false
+  positives of one over-broad pattern (`\bn[eè]gre\w*` matching Latin
+  *"…n Egredietur"* and Italian *"Negre e ardenti fian le nevi"*, where the word
+  is just the feminine plural of *black*) — **but chasing them uncovered a
+  SHIPPED data defect**: 6,970 of 18,589 GregoBase chants had their gabc header
+  (`initial-style: 1; name: …; book: …`) sitting in the published lyrics shard.
+  Two compounding causes: those files store `\r\n` as LITERAL escape sequences
+  so the newline-based header split silently did nothing, and some carry a whole
+  second header pasted into the body so `%%` occurs twice. Fixed in
+  `bin/music_db_content_screen.py` (`bc11ea3d`); chant text now reads as chant,
+  coverage 27,649 → **28,665 rows** and the text SHRANK 13.6 → **11.9 MB**
+  because the junk was inflating both. **Lesson for anyone adding a term: fix the
+  pattern, don't exempt the rows** — exempting makes the gate quieter and less
+  true.
+  ⚠️ Two VPS traps already cost me a 40-minute run, both now in
+  `music-db-publish-gate` memory: a long job **dies with its ssh session**
+  (detach with `setsid nohup … < /dev/null & disown`), and **`pgrep -f` matches
+  your own ssh command string** and reports a phantom "still running" — use
+  `ps -eo pid,etime,args --no-headers | grep "[m]yscript"`.
+  🙏 `a8964b57` — that analyze red on main was mine; took your fix over mine.
+  **Landed** (`bc11ea3d`, `ec818ebd`, `d31f2512`, `b41c6a09`, `4e88591c`):
+  * **`bin/music_db_publish.py`** — the corpus ship gate (screen → hold → emit →
+    verify, under the db lock; **exit 2 on any unreviewed content hit**).
+    **Publish through this**, not `emit_catalog` directly.
+  * **`bin/music_db_lock.py`** — db.json mutex + change guard. ⚠️ I watched
+    db.json move **46,357 → 46,354** under me. **Use `db_lock()` +
+    `guarded_write()`.**
+  * SQLite FTS5 lyric search native + web · library facet filters + paging +
+    exact totals · `bin/musicdb.dart` (`--live` hits the PUBLISHED catalog) ·
+    lyric incipits + lazy `catalog/lyrics.json.gz` · catalog 36.5 MB → 2.57 MB gz.
+  * `docs/APP_STORE_CONTENT_READINESS.md` — rating / Guideline 1.1.1 / Content
+    Rights answers. **⬜ OPEN, maintainer's: the Kids Category decision.**
 
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Wikimedia Commons pass shipped
   (2026-07-30).** +160 Commons PD MIDI (Tier A, axis 1 from Structured Data
