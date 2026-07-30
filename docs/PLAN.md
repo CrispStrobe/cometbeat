@@ -167,6 +167,22 @@ is recorded in [HISTORY.md](HISTORY.md).
     - Same hazard defused in the one-undo test. `pattern_record.dart`'s pure
       functions remain the right place for row/quantise decisions; the widget
       test should only be asked whether the two ends are joined up.
+    - ✅ **I went looking for more of these, and found none.** Two passes, not
+      one: (1) read every test that asserts a clock-derived position
+      (`playingRow` / `currentStep` / `positionMs` / `playheadMs`) — the rest are
+      safe because they assert `isPlaying` booleans, or an explicit `seekTo`
+      value, or compare two SNAPSHOTS that only the tick updates
+      (`daw.playheadMs` is `_positionMs.value`, not a live Stopwatch read);
+      (2) because a code read is not evidence, re-ran the playback-heavy files
+      **under 6–8-way CPU load, twice each** — `tracker_midi_record` ·
+      `daw_screen` · `transport_drives_surfaces` · `tracker_follow` ·
+      `loop_mixer` · `advanced_tracker_screen` · `tracker_screen` ·
+      `perform_screen`. **304 tests, 4/4 runs green**, and the load bit (one
+      pass took 4m37 against 2m57 for the same files). That is the perturbation
+      that exposes this class, so the negative result is worth something.
+    - ⚠️ **Scope of that claim:** it covers the playback surfaces, NOT the whole
+      ~6,900-test suite. A test only breaks this way if it asserts on something
+      the wall clock indexes; if you add one that does, load-test it.
 
 - **opus (crossformat-xrt)** · 🚧 **ACTIVE — cross-format round-trips over the
   real corpus.** Branch `feature/crossformat-xrt`; the only mus file I touch is
