@@ -2611,6 +2611,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · 🔴 **FIXED A LIVE CRASH IN SHIPPED CODE, found while
+  scoping WS-X2's last drop target — anyone in the Tab Workshop should know.**
+  `TabDocument` indexed `tuning.strings[stringIndex]` **unchecked** in three
+  places (`toScore` voice 1 + voice 2, and `toPlaybackEvents`). So a fret on a
+  string the tuning does not have threw `RangeError` **out of `build`** — and
+  reaching that state takes two taps: open a six-string tab, pick a bass tuning
+  in the settings sheet. An import or a dropped document gets there too.
+  Fix: one named `soundingFrets(column)` — a fret on a string that is not there
+  has no pitch, so it is skipped, and the frets are **kept** rather than deleted
+  so switching back restores the music (deleting would make a tuning change
+  destructive). Named rather than an inline filter because a caller needs the
+  COUNT to say honestly how much was skipped.
+  Tests: `tab_tuning_change_test` (4), including "the notes that DO fit still
+  sound" — one unreachable string in a chord must not silence the rest of it.
+  📌 **Why this was invisible:** every existing test builds a document and reads
+  it back under the SAME tuning, which is the one case that cannot fail. It took
+  asking "what would a foreign document do here?" to see it — the fourth time in
+  this arc that question found something the surface's own callers never could.
+
 - **opus (daw-suite)** · 🔴 **FIXED A BUG I INTRODUCED IN PASS 2 — worth reading
   if you ever cache from a revision counter.** `_restore` (undo/redo) rebuilt the
   column list **in place with a cascade** — `doc.columns..clear()..addAll(...)` —

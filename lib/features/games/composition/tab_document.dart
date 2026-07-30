@@ -809,6 +809,22 @@ class TabDocument {
     _touch();
   }
 
+  /// The fret entries of [column] that this tuning can actually sound, lowest
+  /// string first.
+  ///
+  /// ⚠️ **This exists because a fret on a string the tuning does not have used to
+  /// CRASH.** `tuning.strings[e.key]` was indexed unchecked, so a six-string tab
+  /// switched to a bass tuning — which the settings sheet offers in two taps —
+  /// threw `RangeError` from `toScore`, i.e. from inside `build`. A dropped
+  /// document from another surface reaches the same state, and so does an import.
+  ///
+  /// Skipping is the only sensible reading: a fret on a string that is not there
+  /// has no pitch. Callers that need to TELL the user how much was skipped can
+  /// compare against `column.frets.length` — the drop path does exactly that.
+  Iterable<MapEntry<int, int>> soundingFrets(TabColumn column) =>
+      (column.frets.entries.toList()..sort((a, b) => a.key.compareTo(b.key)))
+          .where((e) => e.key >= 0 && e.key < tuning.stringCount);
+
   /// Replace every column at once — what restoring an undo snapshot does.
   ///
   /// ⚠️ This exists because the screen used to do it by hand
@@ -1176,7 +1192,7 @@ class TabDocument {
           vb.add(
             NoteElement(
               pitches: [
-                for (final e in entries)
+                for (final e in soundingFrets(col))
                   pitchFromMidi(
                     tuning.strings[e.key].midiNumber + e.value + capo,
                   ),
@@ -1247,8 +1263,7 @@ class TabDocument {
       if (col.isEmpty) {
         bar.add(RestElement(col.duration));
       } else {
-        final entries = col.frets.entries.toList()
-          ..sort((a, b) => a.key.compareTo(b.key));
+        final entries = soundingFrets(col).toList();
         final pitches = [
           for (final e in entries)
             pitchFromMidi(tuning.strings[e.key].midiNumber + e.value + capo),
@@ -1462,9 +1477,7 @@ class TabDocument {
     }
 
     List<int> midis(TabColumn c) => [
-          for (final e
-              in (c.frets.entries.toList()
-                ..sort((a, b) => a.key.compareTo(b.key))))
+          for (final e in soundingFrets(c))
             tuning.strings[e.key].midiNumber + e.value + capo,
         ];
     final start0 = from.clamp(0, columns.length);
