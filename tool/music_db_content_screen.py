@@ -186,6 +186,11 @@ _LYRIC_BLOCK = re.compile(
 # real exporters write `number="part1verse1"`. Demanding \d+ meant every verse
 # fell into one bucket and four stanzas interleaved into gibberish.
 _VERSE = re.compile(r'(?:number|no)\s*=\s*"([^"]+)"', re.I)
+# MuseScore: `<Lyrics><no>1</no><syllabic>…` — the verse is a child element, so
+# an attribute-only regex put every stanza in one bucket and welded them.
+# NB 0-BASED: MuseScore omits <no> for verse 1 and writes <no>1</no> for
+# verse 2, so an absent verse must default to "0" or the two collide.
+_VERSE_EL = re.compile(r"<no>\s*(\d+)\s*</no>", re.I)
 _NOTE_BLOCK = re.compile(r"<(?:note|Chord|Rest)\b.*?</(?:note|Chord|Rest)>",
                          re.S | re.I)
 _VOICE = re.compile(r"<voice>\s*(\d+)\s*</voice>", re.I)
@@ -246,8 +251,8 @@ def lyric_words(raw):
             v = _VOICE.search(n)
             voice = v.group(1) if v else "1"
             for attrs, b in _LYRIC_BLOCK.findall(n):
-                num = _VERSE.search(attrs)
-                streams[(voice, num.group(1) if num else "1")].append(b)
+                num = _VERSE.search(attrs) or _VERSE_EL.search(b)
+                streams[(voice, num.group(1) if num else "0")].append(b)
         out = []
         for key in sorted(streams):
             out.append(_join_syllables(streams[key]))
@@ -263,8 +268,8 @@ def lyric_words(raw):
         # inventing a word nobody sang.
         verses = defaultdict(list)
         for attrs, b in blocks:
-            v = _VERSE.search(attrs)
-            verses[v.group(1) if v else "1"].append(b)
+            v = _VERSE.search(attrs) or _VERSE_EL.search(b)
+            verses[v.group(1) if v else "0"].append(b)
         out = []
         for v in sorted(verses):
             cur = ""
@@ -284,7 +289,38 @@ def lyric_words(raw):
             if cur:
                 out.append(cur)
         return " ".join(out)
-    # Non-XML formats mark syllable continuation inline.
+    # ⚠️ The fallback used to return the WHOLE raw document whenever no lyric
+    # element was found. For an XML score that means the markup itself became
+    # the "sung text" — the OpenScore Lieder `.mscx` above has 166 <Lyrics>
+    # elements yet came back as 139 KB starting `<?xml version=`, because the
+    # pre-<Staff> header segment has no lyrics and dumped itself. For a MIDI it
+    # means binary soup, which is how a 1915 Sousa march once matched "WOG".
+    # So: an XML document with no lyric elements has no sung text. Say so.
+    # GABC (Gregorian chant) interleaves text with neumes: the sung syllables are
+    # OUTSIDE the parentheses — `AL(dc~)le(c/e'gF'EC'd)lú(dc/fg)` is "Alleluia".
+    # 18,684 GregoBase rows are chant, so without this the largest text-bearing
+    # source in the corpus reads as unsearchable notation.
+    if re.search(r"^\s*name:", raw, re.M) or "%%\n" in raw[:2000]:
+        body = raw.split("%%", 1)[1] if "%%" in raw else raw
+        body = re.sub(r"\([^)]*\)", "", body)      # drop neume groups
+        body = re.sub(r"<[^>]*>", "", body)        # gabc inline markup (<i>ij.</i>)
+        body = re.sub(r"[{}<>*|~]", "", body)
+        return re.sub(r"\s+", " ", body).strip()
+
+    if "<" in raw[:400] and re.search(r"<[a-zA-Z?][^>]*>", raw[:4000]):
+        return ""
+
+    # MIDI: lyrics live in `FF 05` meta events (and text in `FF 01`), not in the
+    # byte stream at large. Reading the raw bytes as latin-1 turns arbitrary
+    # binary into matchable letters, which produces phantom hits.
+    if raw[:4] == "MThd":
+        out = []
+        for m in re.finditer(r"\xff([\x01\x05])([\x00-\x7f])", raw):
+            n = ord(m.group(2))
+            out.append(raw[m.end():m.end() + n])
+        return re.sub(r"\s+", " ", " ".join(out)).strip()
+
+    # Genuinely text formats mark syllable continuation inline.
     s = raw
     s = re.sub(r"\s*--\s*", "", s)             # LilyPond
     s = re.sub(r"(\w)-\s+(\w)", r"\1\2", s)    # kern "dark-" / ABC "dark- ey"
