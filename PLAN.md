@@ -967,9 +967,16 @@ prefix.
     because all three publish through `syncTo`. ⬜ Either `syncTo` learns to hold
     for a count-in, or a migrating surface drives count-in explicitly — an open
     question for whoever does step 2.
-  - ⬜ **Step 2 for all three — invert ownership** so the transport DRIVES the
-    surfaces instead of mirroring them. Only now worth doing: with three
-    publishers proven, the shape is known.
+  - 🔶 **Step 2 — the PLAY/STOP half is done for two of three surfaces**
+    (Audio Editor · Tracker, 2026-07-30, opus daw-suite). The transport can
+    drive them; position authority deliberately stays with each surface's own
+    clock, which is what `syncTo` requires for a pre-rendered loop.
+    ⚠️ **This is what WS-W3's hosting was actually blocked on:** the bar calls
+    `transport.togglePlay`, the surfaces listened to nothing, so a hosted bar
+    would have been an inert control — and `transport_bar_test` would still have
+    passed, because it asserts the bar drives the service.
+    ⬜ Loop Studio is the third surface (its lane's, ~15 lines). ⬜ The count-in
+    question is still open and still a decision, not code.
 
   **WS-W2 — the original card, for reference (NOT a task):**
   - **Goal.** Position, tempo, loop range, play/stop/record, count-in and

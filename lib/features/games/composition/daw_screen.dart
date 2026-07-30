@@ -468,6 +468,7 @@ class _DawScreenState extends State<DawScreen>
 
   @override
   void dispose() {
+    _transport?.removeListener(_onTransportCommand);
     _keyFocus.dispose();
     _ticker.dispose();
     _positionMs.dispose();
@@ -478,7 +479,11 @@ class _DawScreenState extends State<DawScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     try {
-      _transport = Provider.of<TransportService>(context, listen: false);
+      final transport = Provider.of<TransportService>(context, listen: false);
+      if (!identical(transport, _transport)) {
+        _transport?.removeListener(_onTransportCommand);
+        _transport = transport..addListener(_onTransportCommand);
+      }
     } on ProviderNotFoundException {
       _transport = null;
     }
@@ -3615,6 +3620,37 @@ class _DawScreenState extends State<DawScreen>
       ?..syncTo(_seekMs)
       ..play();
     setState(() => _playing = true);
+  }
+
+  /// WS-W2 step 2 — the transport can now DRIVE this surface, not only mirror
+  /// it.
+  ///
+  /// ⚠️ Why this is needed and was not obvious: the shared `TransportBar` calls
+  /// `transport.togglePlay` directly, while every surface published its state
+  /// through `syncTo` and listened to nothing. So a bar hosted on any screen
+  /// would have moved a readout and sounded NOTHING — an inert control, which is
+  /// the shape this ladder keeps finding. Accepting play/stop closes that
+  /// without moving position authority: this screen's ticker stays the clock,
+  /// which is exactly what `syncTo` documents it must be.
+  ///
+  /// [_applyingTransport] breaks the loop: our own `play()` tells the transport,
+  /// which notifies us, which would tell it again.
+  bool _applyingTransport = false;
+
+  void _onTransportCommand() {
+    final transport = _transport;
+    if (transport == null || _applyingTransport || !mounted) return;
+    if (transport.isPlaying == _playing) return;
+    _applyingTransport = true;
+    try {
+      if (transport.isPlaying) {
+        play();
+      } else {
+        stop();
+      }
+    } finally {
+      _applyingTransport = false;
+    }
   }
 
   @override

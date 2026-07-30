@@ -2950,25 +2950,34 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-W2 step 2 — but only the PLAY/STOP
-  half, and only for my two surfaces (Audio Editor · Tracker).**
-  Found while looking at WS-W3's "not hosted in any screen": **hosting the
-  `TransportBar` today would ship an inert play button.** The bar calls
-  `transport.togglePlay` / `transport.stop` directly, but all three surfaces only
-  MIRROR the transport (`syncTo`), so pressing play on the bar would move a
-  readout and sound nothing. That is this ladder's inert-control shape, and it is
-  the reason W3's hosting is blocked on W2 step 2 rather than on effort.
-  Scope, deliberately narrow: the surfaces **accept play/stop/seek** from the
-  transport while continuing to publish position through `syncTo`. Position
-  authority does NOT move — their Stopwatch stays the clock, which is what
-  `syncTo`'s own doc says it must be for a pre-rendered loop. That is enough to
-  make a shared bar honest and to let one surface start another.
-  ⬜ **NOT taking the count-in question** the card raises (a shared count-in is
-  unreachable while everyone publishes through `syncTo`). It needs a decision
-  about where count-in lives, and I would rather leave it stated than answer it
-  by accident.
-  Files: `daw_screen.dart`, `advanced_tracker_screen.dart` (both mine).
-  **Loop Studio's is @loop-d1d4's** — same three lines when they want it.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-W2 step 2, the play/stop half:
+  the transport can now DRIVE the Audio Editor and the Tracker, not only mirror
+  them. This is what unblocks WS-W3's hosting.**
+  ⚠️ **The finding, and why it stayed invisible:** the shared `TransportBar`
+  calls `transport.togglePlay` directly, while every surface published its state
+  through `syncTo` and **listened to nothing**. So hosting the bar on any screen
+  would have shipped a play button that moved a readout and sounded nothing —
+  and **`transport_bar_test` would still have passed**, because it asserts the
+  bar drives the SERVICE, which it always did. The missing half was on the other
+  side of the seam, where no test was looking.
+  * Both surfaces now accept play/stop from the transport, with a re-entrancy
+    guard (our own `play()` tells the transport, which notifies us, which would
+    tell it again) and a `mounted` check.
+  * **Position authority did NOT move** — each surface's own clock stays the
+    reference, which is exactly what `syncTo`'s doc says it must be for a
+    pre-rendered loop. This is the honest minimum that makes a shared bar real.
+  * Listeners are removed in `dispose`, and a surface with no transport in scope
+    behaves exactly as before (most of these screens' tests mount them bare).
+  ⬜ **@loop-d1d4 — Loop Studio is the third surface and it is yours**: the same
+  ~15 lines (`addListener` in `didChangeDependencies`, a guarded handler,
+  `removeListener` in `dispose`). Once it is in, **`TransportBar` can be hosted
+  anywhere and mean something** — which is WS-W3's remaining item.
+  ⬜ **NOT taken, and stated rather than answered by accident:** the shared
+  count-in is still unreachable while everyone publishes through `syncTo`. It
+  needs a decision about where count-in lives, not code.
+  Tests: `transport_drives_surfaces_test` (6) — including both directions and
+  the no-feedback-loop case; 130 + 110 green across the transport, DAW and
+  tracker suites.
 
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-W4's LAST fold-in: the Tracker's
   block history is in the shared stack. ALL THREE surfaces are folded in; the

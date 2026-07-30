@@ -1090,7 +1090,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     // a provider tree, and making the transport required would mean editing
     // every one of them to prove something they are not about.
     try {
-      _transport = Provider.of<TransportService>(context, listen: false);
+      final transport = Provider.of<TransportService>(context, listen: false);
+      if (!identical(transport, _transport)) {
+        _transport?.removeListener(_onTransportCommand);
+        _transport = transport..addListener(_onTransportCommand);
+      }
     } on ProviderNotFoundException {
       _transport = null;
     }
@@ -1178,6 +1182,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   void dispose() {
+    _transport?.removeListener(_onTransportCommand);
     // ⚠️ Every entry closes over this `State`, and the shared service outlives
     // the screen. Leaving them in place would let an undo pressed on another
     // surface reach into a dead screen — the trap @loop-d1d4 documented, which
@@ -2793,6 +2798,41 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       _pause();
     } else {
       _playPattern();
+    }
+  }
+
+  /// WS-W2 step 2 — the transport can DRIVE this surface, not only mirror it.
+  ///
+  /// ⚠️ Until now every surface published its state through `syncTo` and
+  /// listened to nothing, so the shared `TransportBar` — which calls
+  /// `transport.togglePlay` directly — would have moved a readout and sounded
+  /// nothing wherever it was hosted. Accepting play/stop closes that without
+  /// moving position authority: this screen's `Stopwatch` stays the clock,
+  /// which is what `syncTo` documents it must be for a pre-rendered loop.
+  ///
+  /// [_applyingTransport] breaks the loop: our own `_playPattern` tells the
+  /// transport, which notifies us, which would tell it again.
+  bool _applyingTransport = false;
+
+  void _onTransportCommand() {
+    final transport = _transport;
+    if (transport == null || _applyingTransport || !mounted) return;
+    final running = _clock.isRunning;
+    if (transport.isPlaying == running) return;
+    _applyingTransport = true;
+    try {
+      if (transport.isPlaying) {
+        // Resume where we were if this was a pause; otherwise start the pattern.
+        if (_paused) {
+          _resume();
+        } else {
+          _playPattern();
+        }
+      } else {
+        _stop();
+      }
+    } finally {
+      _applyingTransport = false;
     }
   }
 
