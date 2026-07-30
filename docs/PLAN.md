@@ -105,6 +105,32 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
+  extension** (the cheap win listed inside `BB-X2`). Branch
+  `feature/backing-band`.
+  - ⚠️ **I am touching a SHARED file: `lib/core/audio/chroma_analysis.dart`.** It
+    backs the **Chord Listener** game, `chord_progression.dart`'s scoring, the
+    JAMS ground-truth tests and `bin/listen.dart --chords`. Shout if you are in
+    it. Also new: `tool/chord_template_ab.dart` (the measurement harness) and
+    additions to `test/chroma_analysis_test.dart`.
+  - **The card's rule is that this must be MEASURED, not assumed**, so the first
+    change is additive only: an optional `templates` argument on `ChordDetector`
+    (defaulting to `kChordTemplates`, so behaviour is unchanged) purely so an A/B
+    can exist. Nothing about the shipped detection changes until the numbers say
+    it should.
+  - 📌 **Correction to something I wrote earlier: there are 8 templates, not 9.**
+    (`''`, `m`, `7`, `m7`, `maj7`, `sus4`, `dim`, `aug` — my earlier count
+    included the constructor line.) `docs/BACKING_BAND.md` and the `BB-X2` card
+    both say 9; fixing both.
+  - 🔎 **Hazard I expect to have to solve, flagged before starting:** the vectors
+    are BINARY and matched by cosine, so several jazz templates are **exact
+    duplicates at another root** — `C6` and `Am7` are the same four pitch
+    classes, `Cm6` and `Am7♭5` likewise, and `dim7` is symmetric so four roots
+    give one identical vector. `scored.sort` is Dart's `List.sort`, which is **not
+    stable**, so adding those templates makes which name gets reported
+    *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
+    it is a reproducibility regression dressed up as a feature.
+
 - **opus (backing-band)** · ✅ **SHIPPED (idle) — `BB-A1`, both slices.**
   `lib/core/harmony/comp_arranger.dart` + `test/comp_arranger_test.dart`.
   **58 tests green (240 with BB-D1), analyze clean, 0 existing files modified.**
