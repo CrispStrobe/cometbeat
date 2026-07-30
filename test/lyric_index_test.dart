@@ -13,10 +13,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 const _texts = {
   'a': 'Drei Chinesen mit dem Kontrabass saßen auf der Straße',
-  'b': "Stille Nacht, heilige Nacht, alles schläft, einsam wacht",
+  'b': 'Stille Nacht, heilige Nacht, alles schläft, einsam wacht',
   'c': 'Winter, ade! Scheiden thut weh. Aber dein Scheiden macht',
   'd': 'Alleluia. Laudem Domini loquetur os meum',
-  'e': "Rock-a-bye baby, on the tree top",
+  'e': 'Rock-a-bye baby, on the tree top',
 };
 
 void main() {
@@ -99,8 +99,11 @@ void main() {
     expect(File(oldPath).existsSync(), isTrue);
 
     final fresh = await fts(at: dir.path, version: 'new');
-    expect(File(oldPath).existsSync(), isFalse,
-        reason: 'a derived index for a stale catalog is deleted, not migrated');
+    expect(
+      File(oldPath).existsSync(),
+      isFalse,
+      reason: 'a derived index for a stale catalog is deleted, not migrated',
+    );
     await fresh.dispose();
   });
 
@@ -118,8 +121,11 @@ void main() {
 
   test('an unusable directory falls back instead of throwing', () async {
     // A path that cannot be created — the accelerator must degrade quietly.
-    final i = await Fts5LyricIndex.open(_texts,
-        version: 'v1', directory: '/dev/null/nope');
+    final i = await Fts5LyricIndex.open(
+      _texts,
+      version: 'v1',
+      directory: '/dev/null/nope',
+    );
     // Either it returned null (caller uses the linear index) or it recovered
     // in memory. What it must NOT do is throw.
     if (i != null) {
