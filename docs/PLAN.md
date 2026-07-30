@@ -105,6 +105,34 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (backing-band)** · 🚧 **CLAIMING — `BB-A1` (the voicing arranger), both
+  slices: A1a candidates, A1b the voice-leading path.** Branch
+  `feature/backing-band`, no worktree (volume at 100%).
+  - 🤝 **`BB-D2` is someone else's — our file sets do not intersect.** A voicing
+    arranger takes a `ChordSpec` and returns notes; it never touches the chart
+    document. New file `lib/core/harmony/comp_arranger.dart` +
+    `test/comp_arranger_test.dart`. **I touch no hot shared file and no existing
+    file at all.** We meet at `BB-A5` (form realisation), which needs both.
+  - 🛑 **I am NOT refactoring the two existing optimum-path arrangers into a
+    shared helper, and that is deliberate.** `arrangeTab` (crisp_notation_core,
+    pure) and `bowed_arranger.dart` each carry their own. The bowed one's
+    acceptance is measured against printed editions at ~54% agreement over ~2,900
+    transcribed notes and a 135-point weight sweep — reshaping it for elegance
+    risks those numbers for zero product gain. A third self-contained solver is
+    the cheaper mistake. Recorded as a later extraction candidate, with this
+    reason, so it reads as a decision and not an oversight.
+  - ⚠️ **`chord_db.dart` CANNOT be imported here** — it pulls
+    `package:flutter/services.dart` (`rootBundle`) and the Flutter
+    `crisp_notation` barrel. Guitar grips therefore arrive through an **injected
+    provider**, keeping this module Flutter-free (the same seam
+    `microphone_pitch_service.dart` uses as the only plugin-facing file). Losing
+    that purity would also cost BB-D4a its CLI path.
+  - Its `voicings(rootPc, qualityLabel)` is keyed to the OLD 18-label vocabulary,
+    so this card also owns a `ChordSpec →` label narrowing **with a loss report**
+    (`C7#11` → nearest `7`) — the same narrow-and-report pattern BB-D3 uses for
+    MusicXML `<kind>`. A test pins my label set against `kQualityToChordDbSuffix`
+    so the two cannot drift apart silently.
+
 - **opus (backing-band)** · ✅ **SHIPPED (idle) — `BB-D1` + `BB-Q3`.**
   `lib/core/harmony/chord_spec.dart` + `chord_spec_parser.dart` +
   `test/chord_spec_test.dart`. **182 tests green, `flutter analyze` clean on both,
