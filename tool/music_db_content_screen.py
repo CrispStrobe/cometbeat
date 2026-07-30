@@ -220,8 +220,35 @@ _TEXTEL = re.compile(r"<text>(.*?)</text>", re.S | re.I)
 _ENT = {"&apos;": "'", "&amp;": "&", "&quot;": '"', "&lt;": "<", "&gt;": ">"}
 
 
+def _language_or_empty(text):
+    """Text if it plausibly contains WORDS, else ''.
+
+    Every extraction path can yield structure that survives as whitespace or
+    punctuation — empty syllable slots in a string-quartet .mscx came back as
+    6,381 characters of spaces and were counted as lyrics. Require a handful of
+    real alphabetic runs before calling something sung text.
+    """
+    if not text:
+        return ""
+    runs = re.findall(r"[^\W\d_]{2,}", text, re.UNICODE)
+    letters = sum(len(r) for r in runs)
+    if len(runs) < 3 or letters < 12 or letters / len(text) < 0.25:
+        return ""
+    return text
+
+
 def lyric_words(raw):
-    """The sung text with syllables rejoined into words, or '' if none found."""
+    """The sung text with syllables rejoined into words, or '' if none found.
+
+    A thin gate over the per-format extraction. Gating each `return` inside the
+    implementation was tried and failed: the recursive staff/voice branches join
+    N empty strings with a space, so a string quartet produced 6,760 characters
+    of pure whitespace that passed for lyrics. One boundary, one check.
+    """
+    return _language_or_empty(_lyric_words_impl(raw))
+
+
+def _lyric_words_impl(raw):
     # Group by VOICE and verse, not document order. An SATB psalm setting is
     # commonly ONE <part> containing four <voice>s, so neither document order nor
     # a part split helps: grouping by verse alone welds syllables across voices
@@ -236,11 +263,11 @@ def lyric_words(raw):
     if re.search(r"<Staff\b[^>]*>", raw):
         segs = re.split(r"<Staff\b[^>]*>", raw)
         if len(segs) > 1:
-            return " ".join(lyric_words(s) for s in segs if s)
+            return " ".join(_lyric_words_impl(s) for s in segs if s)
     if re.search(r"<voice>\s*<", raw):
         segs = re.split(r"<voice>", raw)
         if len(segs) > 1:
-            return " ".join(lyric_words(s) for s in segs if s)
+            return " ".join(_lyric_words_impl(s) for s in segs if s)
 
     notes = _NOTE_BLOCK.findall(raw)
     if notes and any("<lyric" in n.lower() for n in notes):
@@ -256,7 +283,7 @@ def lyric_words(raw):
         out = []
         for key in sorted(streams):
             out.append(_join_syllables(streams[key]))
-        return " ".join(out)
+        return (" ".join(out))
 
     blocks = _LYRIC_BLOCK.findall(raw)
     if blocks:
@@ -288,7 +315,7 @@ def lyric_words(raw):
                     cur = ""
             if cur:
                 out.append(cur)
-        return " ".join(out)
+        return (" ".join(out))
     # ⚠️ The fallback used to return the WHOLE raw document whenever no lyric
     # element was found. For an XML score that means the markup itself became
     # the "sung text" — the OpenScore Lieder `.mscx` above has 166 <Lyrics>
@@ -305,27 +332,79 @@ def lyric_words(raw):
         body = re.sub(r"\([^)]*\)", "", body)      # drop neume groups
         body = re.sub(r"<[^>]*>", "", body)        # gabc inline markup (<i>ij.</i>)
         body = re.sub(r"[{}<>*|~]", "", body)
-        return re.sub(r"\s+", " ", body).strip()
+        return (re.sub(r"\s+", " ", body).strip())
 
     if "<" in raw[:400] and re.search(r"<[a-zA-Z?][^>]*>", raw[:4000]):
         return ""
 
-    # MIDI: lyrics live in `FF 05` meta events (and text in `FF 01`), not in the
-    # byte stream at large. Reading the raw bytes as latin-1 turns arbitrary
-    # binary into matchable letters, which produces phantom hits.
+    # MIDI: only `FF 05` LYRIC events. `FF 01` is generic text and carries track
+    # names and "creator: GNU LilyPond 2.18.2", which is metadata, not something
+    # anyone sings — counting it made every instrumental Mutopia MIDI look like it
+    # had words.
     if raw[:4] == "MThd":
-        out = []
-        for m in re.finditer(r"\xff([\x01\x05])([\x00-\x7f])", raw):
-            n = ord(m.group(2))
-            out.append(raw[m.end():m.end() + n])
-        return re.sub(r"\s+", " ", " ".join(out)).strip()
+        out = [raw[m.end():m.end() + ord(m.group(1))]
+               for m in re.finditer(r"\xff\x05([\x00-\x7f])", raw)]
+        return (re.sub(r"\s+", " ", " ".join(out)).strip())
 
-    # Genuinely text formats mark syllable continuation inline.
-    s = raw
-    s = re.sub(r"\s*--\s*", "", s)             # LilyPond
-    s = re.sub(r"(\w)-\s+(\w)", r"\1\2", s)    # kern "dark-" / ABC "dark- ey"
-    s = re.sub(r"(\w)-(\w)", r"\1\2", s)       # ABC "dark-ey"
-    return s
+    # Humdrum kern: the sung text is a `**text` SPINE, addressed by column. Any
+    # other spine is notation. Returning the whole file made Chopin's first
+    # editions report 23,853 characters of "lyrics" — they are solo piano.
+    if "**kern" in raw[:4000] or raw.lstrip().startswith("!!!"):
+        cols = None
+        percol = defaultdict(list)
+        for line in raw.splitlines():
+            if line.startswith("!") or not line.strip():
+                continue
+            f = line.split("\t")
+            if line.startswith("**"):
+                cols = [i for i, x in enumerate(f) if x.strip() == "**text"]
+                continue
+            if not cols:
+                continue
+            for i in cols:
+                if i >= len(f):
+                    continue
+                tok = f[i]
+                if tok[:1] in (".", "*", "=", "!", "-") or not tok.strip():
+                    continue
+                percol[i].append(tok)
+        joined = "  ".join(" ".join(percol[i]) for i in sorted(percol))
+        joined = re.sub(r"(\w)-\s+(\w)", r"\1\2", joined)   # syllable continuation
+        return (re.sub(r"\s+", " ", joined).strip())
+
+    # LilyPond: only \addlyrics / \lyricmode bodies. The rest is notation, and a
+    # whole-file dump also swept up the engraver's header comments.
+    if "\\relative" in raw or "\\version" in raw or "\\score" in raw:
+        out = []
+        for m in re.finditer(r"\\(?:addlyrics|lyricmode|lyricsto)\b", raw):
+            i = raw.find("{", m.end())
+            if i < 0:
+                continue
+            depth, j = 0, i
+            while j < len(raw):
+                if raw[j] == "{":
+                    depth += 1
+                elif raw[j] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            body = raw[i + 1:j]
+            body = re.sub(r"\\[a-zA-Z]+", " ", body)     # \set stanza etc.
+            body = re.sub(r"\b(?:stanza|set)\b\s*=?\s*\"?[^\"\s]*\"?",
+                          " ", body)                    # the \set stanza residue
+            body = re.sub(r"\s*--\s*", "", body)         # syllable joins
+            out.append(re.sub(r"[{}#\"]", " ", body))
+        return (re.sub(r"\s+", " ", " ".join(out)).strip())
+
+    # ABC: the `w:` / `W:` lyric lines only.
+    if re.search(r"^X:", raw, re.M):
+        out = [m.group(1) for m in re.finditer(r"^[wW]:(.*)$", raw, re.M)]
+        joined = " ".join(out)
+        joined = re.sub(r"(\w)-\s*", r"\1", joined)       # ABC syllable hyphens
+        return (re.sub(r"[\s*|~]+", " ", joined).strip())
+
+    return ""
 
 
 COLLAPSED = [
