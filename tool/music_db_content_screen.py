@@ -61,7 +61,12 @@ SLUR = {
     # they raise is handled by the exemption ledger, not by a weaker pattern.
     "other": [
         r"\bcygan\w*", r"\bcyg[aá]n\w*", r"\bcik[aá]n\w*", r"\bcig[aá]ny\w*",
-        r"\bn[eè]gre\w*", r"\bn[eè]gresse\w*", r"\bnegerin\w*",
+        # ACCENT REQUIRED. `\bn[eè]gre\w*` matched Latin "Egredietur" (via a
+        # preceding "n") and Italian "negre", the everyday feminine plural of
+        # "black" — 6 false positives, 0 true ones. The accent is what marks the
+        # French word; an unaccented spelling still reaches the review tier via
+        # the collapsed net.
+        r"\bnègres?\b", r"\bn[ée]gresses?\b", r"\bnegerin\w*",
         r"\bmoricaud\w*", r"\bnegrillon\w*",
     ],
 }
@@ -327,9 +332,33 @@ def _lyric_words_impl(raw):
     # OUTSIDE the parentheses — `AL(dc~)le(c/e'gF'EC'd)lú(dc/fg)` is "Alleluia".
     # 18,684 GregoBase rows are chant, so without this the largest text-bearing
     # source in the corpus reads as unsearchable notation.
-    if re.search(r"^\s*name:", raw, re.M) or "%%\n" in raw[:2000]:
-        body = raw.split("%%", 1)[1] if "%%" in raw else raw
+    if re.search(r"^\s*name:", raw, re.M) or "%%" in raw[:2000]:
+        # Some GregoBase files carry \r\n and \uXXXX as LITERAL escape
+        # sequences rather than real characters. The header split is newline-
+        # based, so it silently did nothing on those and the gabc header
+        # (font/height/width) shipped as sung text for 6,970 of 18,589 chants.
+        # Normalise first, then split.
+        if "\\r" in raw[:4000] or "\\u00" in raw[:4000]:
+            raw = (raw.replace("\\r\\n", "\n")
+                      .replace("\\n", "\n").replace("\\r", "\n"))
+            raw = re.sub(r"\\u([0-9a-fA-F]{4})",
+                         lambda m: chr(int(m.group(1), 16)), raw)
+        # Take the LAST header separator, not the first. Some GregoBase files
+        # have a whole second gabc header pasted into their body, so `%%` occurs
+        # twice and splitting on the first left "initial-style: 1; name: …;
+        # book: …" sitting in the sung text — 6,970 of 18,589 shipped chants.
+        # Only trust the last segment if it still looks like gabc (neumes are
+        # parenthesised); otherwise fall back to the first split.
+        if "%%" in raw:
+            segs = raw.split("%%")
+            body = segs[-1] if "(" in segs[-1] else segs[1]
+        else:
+            body = raw
         body = re.sub(r"\([^)]*\)", "", body)      # drop neume groups
+        # gabc control macros (\greheightstar, \grealtvirg …) are engraving
+        # directives, not words — they were reaching the shipped lyric text.
+        body = re.sub(r"\\+[a-zA-Z]+", " ", body)
+        body = body.replace('"', " ")
         body = re.sub(r"<[^>]*>", "", body)        # gabc inline markup (<i>ij.</i>)
         body = re.sub(r"[{}<>*|~]", "", body)
         return (re.sub(r"\s+", " ", body).strip())
