@@ -283,8 +283,17 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — closing the gap I flagged: measure
-  `durationWeightedPerBar` END TO END through `analyze()`.** `BB-H9`'s 34%→66%
+- **opus (backing-band)** · ✅ **DONE (idle) — gap closed: `durationWeightedPerBar`
+  VALIDATED end to end through `analyze()`** (crisp_notation `a36643a`).
+  **+30.2pp majmin** (36.6 → 66.7), root 49.1 → 78.7, full quality 30.9 → 63.9 —
+  and within **0.2pp** of the standalone prediction, so the library wrapper costs
+  nothing. Symbolic now beats the audio chroma path on root (78.7 vs 70.5), still
+  short of the neural model's 95.8. For `BB-X1` this is a lower bound, since a
+  real score is cleaner input than pitch-tracked guitar. Ran inside my own
+  crisp_notation worktree; **the shared clone was never touched.**
+
+- **opus (backing-band)** · ✅ **(superseded claim) — was: measure
+  `durationWeightedPerBar` END TO END.** `BB-H9`'s 34%→66%
   came from a standalone selection rule, not from the library function, so the
   shipped `BB-H10` is a plausible improvement rather than a measured one and I do
   not want it read as the latter.

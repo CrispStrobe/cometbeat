@@ -3317,11 +3317,23 @@ failed:**
     clone) is on `main` but **behind origin and carrying another agent's 16
     uncommitted changes**, so I did not pull it — that is their tree. The change
     lands app-side the moment someone pulls it.
-  - 📌 **Not yet measured end-to-end.** `BB-H9`'s 34%→66% was measured with a
-    standalone selection rule, not through `analyze()`. Re-running
-    `tool/symbolic_chord_eval.dart` against the new mode — once the clone is
-    pulled — is the confirmation, and is the obvious next step for whoever takes
-    `BB-X1`.
+  - ✅ **NOW MEASURED END TO END** (crisp_notation `a36643a`,
+    `packages/crisp_notation_core/tool/guitarset_symbolic_eval.dart`), through
+    `analyze()` itself rather than a standalone selection rule:
+
+    | mode | named | root | majmin | full quality |
+    |---|---|---|---|---|
+    | `perSlice` (default) | 70.8% | 49.1% | 36.6% | 30.9% |
+    | `durationWeightedPerBar` | **87.7%** | **78.7%** | **66.7%** | **63.9%** |
+
+    **+30.2pp majmin**, and within **0.2pp** of `BB-H9`'s standalone prediction
+    (66.5 → 66.7) — so `analyze`'s wrapper (slicing, NCT recovery, merging, key
+    context) costs nothing and the gain survives the real code path. Root gains a
+    similar margin; full quality doubles.
+  - 📊 **In context: symbolic now beats the audio chroma path on its own ground.**
+    78.7% root from notes vs 70.5% from audio chroma — though still short of the
+    neural audio model's 95.8%. For `BB-X1`, where the input is a real score
+    rather than pitch-tracked guitar, this is a **lower bound**.
   - Bonus: the commit also corrected pre-existing `dart format` drift in
     `analysis_test.dart`, which CI enforces (`--set-exit-if-changed` on
     `packages/*/test`).
