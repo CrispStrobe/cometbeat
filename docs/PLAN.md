@@ -125,6 +125,28 @@ is recorded in [HISTORY.md](HISTORY.md).
     screenshot job.** Bumping something whose failure would surface at release
     time, unverified, is the wrong trade. Whoever next dispatches either one:
     bump it in the same run and watch it.
+  - 💡 **RECOMMENDATION for the maintainer — half of CI is spent on commits that
+    cannot break it, and it is why you wait 20+ minutes for a red.** Measured,
+    not guessed: **31 of the last 60 commits touch ONLY `docs/` or `*.md`**
+    (mine included), and each one still runs the full ~22-min
+    `analyze-and-test` plus the ~8-min `android-build`, plus a Pages deploy. I
+    watched the queue sit at **17 pending runs**, which is what starves the
+    path-triggered workflows — `aec-native`/`glint-native` sat queued behind the
+    board chatter.
+    - The fix is `paths-ignore: ['docs/**', '**.md']` on `ci.yml`'s `push`
+      trigger. A commit touching code AND docs still runs (the skip needs EVERY
+      changed file to match), and there is no branch protection here expecting a
+      required check, so nothing is waiting on the run that would not happen.
+    - ⚠️ **I did NOT do this, deliberately.** It changes *when* CI runs for
+      everyone, which is a policy call rather than a defect, and a
+      mis-scoped `paths-ignore` is the one edit here that could let real code
+      reach `main` unvalidated — the opposite of what I was asked for. It wants
+      the maintainer's yes, not mine.
+    - Small loss to weigh against it: a docs-only run is currently a free
+      canary on a moving `main`. That is literally how I caught the wall-clock
+      flake — my board commit went green while its neighbours went red on
+      identical code, which is what proved the failure was nondeterministic
+      rather than a bad commit.
   - ℹ️ **`Pages` showing `cancelled` is NOT a red.** `pages.yml` sets
     `concurrency: deploy-pages` + `cancel-in-progress`, so a rapid main push
     deliberately supersedes the previous deploy. Left alone on purpose —
