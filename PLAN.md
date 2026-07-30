@@ -2240,7 +2240,36 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     the *notation* layer; a chart needs a richer type that can *narrow* to it.
     BB-D3 owns that narrowing, with its loss report.
 
-- ⬜ **BB-D2 — the chart document.** `M`
+- ✅ **BB-D2 — the chart document. SHIPPED 2026-07-30** (opus, loop-d1d4;
+  maintainer-authorised cross-lane pull, claimed before writing code).
+  `lib/core/harmony/chart.dart` + `chart_codec.dart`, pure Dart, 17 tests.
+  - **CHORDS ARE STORED AS SYMBOLS, and that is exact rather than merely tidy.**
+    `ChordSpec` (BB-D1) documents the invariant it rests on — *"`parse(format(x))
+    == x` holds even where `format(parse(s)) != s`"* — so a chart file says
+    `"Cmaj7"` and not eleven fields, which matters because a chart is a file
+    people open in a text editor. ⚠️ **Verified, not trusted:** the encoder
+    re-parses every symbol it writes and falls back to a structural form for any
+    chord that does not come back identical, and a 30-symbol corpus test asserts
+    the fallback is never needed today. A construct D1's formatter could not
+    express would otherwise be saved as a *different chord*.
+  - **Unknown keys survive TWO round trips**, not one. One can pass by accident
+    if `extra` is merely held in memory; open→save→open→save is the sequence that
+    actually loses a newer build's form, so that is what the test does.
+  - **Hostile input costs the smallest possible thing:** an unreadable chord
+    symbol costs that chord, not the bar or the file; a garbage meter falls back
+    to 4/4; `repeat: 0` plays once instead of vanishing; nonsense reads as "not a
+    chart" rather than throwing at the call site.
+  - ⬜ **ONE piece of the acceptance is DEFERRED, deliberately and measured:**
+    *"`Chart` opens as a `ProjectTrack`"*. The registry is keyed by `AppMode` and
+    there is no `AppMode.chart`. Adding one is not free — **3 files switch on
+    `AppMode` (`advanced_tracker_screen`, `daw_screen`, `tab_workshop_screen`),
+    none with a fallback case**, so a new value puts analyzer complaints in three
+    other lanes' hot files, and whole-project `flutter analyze` is a CI gate. My
+    claim promised not to touch hot shared files, so this wants its own
+    coordinated card rather than a drive-by enum edit. Everything else the card
+    asked for is done, and nothing in Phase 2 is blocked by it.
+  Original card:
+- ⬜ **BB-D2 (original) — the chart document.** `M`
   - **Goal.** A serializable chart: bars, chords in bars, sections, repeats,
     form. The thing every other card reads.
   - **Depends.** BB-D1.
@@ -2332,7 +2361,42 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
 
 ### Phase 2 — the arranger (fixes G2; this is the product)
 
-- ⬜ **BB-A0 — drive the EXISTING groove engine from a `Chart`.** `S` ⭐ *pull this
+- ✅ **BB-A0 — drive the EXISTING groove engine from a `Chart`. SHIPPED
+  2026-07-30** (opus, loop-d1d4). `lib/core/harmony/chart_to_groove.dart`, 17
+  tests. A chart is audible through the shipped band before any of BB-A1–A6
+  exists, exactly as the card intended.
+  - **THE GUARD the card asked for, in its strongest cheap form:** feed the
+    engine a progression this code BUILT from text and one the engine already
+    ships, and the two renders are **byte-identical**. That makes the projection
+    provably a re-description rather than a second arranger — stronger than
+    "I did not edit the file".
+  - **Two failure kinds, kept apart because they mean different things to a
+    player.** *Approximated* — it plays without its colour (`Cmaj7` → `C`), which
+    is what a beginner's band would play anyway. *Unrepresentable* — it cannot
+    play, and is **not** bent onto something nearby, because a wrong chord in a
+    backing track makes a player doubt their own reading of the chart. `Bb7` in C
+    and any diminished/augmented triad are reported, never substituted.
+  - ⚠️ **QUALITY IS MATCHED, NOT JUST THE ROOT — the trap in this card.** `Cm` in
+    C major shares the tonic's root, so a root-only match would play it as a
+    MAJOR `I`: a wrong chord that sounds confident. Pinned by a test.
+  - ⚠️ **THE ENGINE HAS NO MINOR MODE, and anyone reading a report needs to know.**
+    `ChordDegree` is a MAJOR-key set, so a minor chart projects through its
+    RELATIVE MAJOR — which is how the engine already models minor
+    (`GrooveScale.minorPentatonic` is "the relative-major set, +3 semitones").
+    An A-minor chart therefore reports its tonic as **`vi`, not `i`**. The chords
+    are right; the numerals are relative-major. Mapping onto the minor tonic
+    instead would put a major triad on `Am`.
+    📌 A test caught that the *message* still named the wrong key ("C minor" for
+    an A-minor chart) because the shifted tonic was passed to the reporter as
+    well as to the mapper. Reports get read; a report naming the wrong key is
+    worse than no report.
+  - **Answering the card's own question early:** reduction is useful enough to
+    keep as a beginner fallback *when the chart is diatonic*, and useless outside
+    that — a I–vi–IV–V chart plays exactly, while a chart of dominant sevenths
+    yields nothing playable at all. So it is scaffolding for jazz and a real
+    feature for pop. Decide at the end of Phase 2, as the card says.
+  Original card:
+- ⬜ **BB-A0 (original) — drive the EXISTING groove engine from a `Chart`.** `S` ⭐ *pull this
   second, right after BB-D2 — it is the whole vertical slice in one session.*
   - **Goal.** Make a real chart audible **before any of BB-A1–A6 exists**, by
     feeding it to the arranger we already ship. Decision 2 asks for Loop Studio

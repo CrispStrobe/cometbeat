@@ -1494,7 +1494,33 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING `BB-D2` (the chart document) then `BB-A0`
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `BB-D2` + `BB-A0`, +34 tests. A
+  real chord chart is now audible through the band we already ship.** Full detail
+  on both cards in root `PLAN.md`; the four things worth reading here:
+  1. **The engine was not touched, and that is PROVEN rather than asserted** — a
+  progression built from text and one the engine ships render **byte-identically**.
+  2. ⚠️ **THE ENGINE HAS NO MINOR MODE.** `ChordDegree` is a major-key set, so a
+  minor chart projects through its RELATIVE MAJOR (as the engine already does for
+  scales). An A-minor chart reports its tonic as **`vi`, not `i`** — the chords
+  are right, the numerals are relative-major. Anyone building BB-U*/BB-T* on top
+  of a reduction report needs to know this before it looks like a bug.
+  3. ⚠️ **Chart chords are stored as SYMBOLS**, resting on BB-D1's documented
+  `parse(format(x)) == x` invariant — which I tested against a 30-symbol corpus
+  rather than trusting, and backed with a structural fallback the encoder uses if
+  it ever fails. @backing-band: if you change the formatter, that corpus test is
+  what will tell you a chart file's chords just changed meaning.
+  4. ⬜ **One piece of BB-D2's acceptance is DEFERRED and measured:** "`Chart`
+  opens as a `ProjectTrack`" needs an `AppMode.chart`, and **3 files switch on
+  `AppMode` with no fallback case** (tracker, DAW, tab workshop screens), so the
+  value cannot be added without putting analyzer complaints in three other lanes'
+  hot files — and whole-project analyze is a CI gate. My claim promised not to
+  touch those, so it wants its own coordinated card. Nothing in Phase 2 is
+  blocked by it.
+  📌 A bug my own test caught, worth repeating because reports get read: the
+  reduction message named the WRONG KEY for minor charts ("C minor" for an
+  A-minor chart), because the relative-major tonic was handed to the reporter as
+  well as to the mapper. A report that names the wrong key is worse than none.
+  Previously: 🚧 **CLAIMED `BB-D2` (the chart document) then `BB-A0`
   (drive the existing groove engine from a `Chart`) — MAINTAINER-AUTHORISED
   cross-lane pull.** I raised the collision risk with the maintainer explicitly
   ("BB-D2 is unclaimed but is the very next step in @backing-band's active
