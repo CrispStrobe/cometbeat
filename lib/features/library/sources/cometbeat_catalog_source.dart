@@ -29,6 +29,7 @@ import 'package:archive/archive.dart';
 // has/read/write/delete, nothing speech-specific.
 import 'package:comet_beat/core/audio/tts/tts_asset_cache.dart';
 import 'package:comet_beat/features/library/content_source.dart';
+import 'package:comet_beat/features/library/lyric_index_wiring.dart';
 
 /// Thrown when the catalog index/shard comes back unreadable (a changed layout,
 /// an error body) — loud, so an empty listing isn't mistaken for "nothing here".
@@ -53,8 +54,10 @@ class CometbeatCatalogSource implements ContentSource {
     this.kinds = const {'soundfont', 'instrument', 'sample'},
     String indexUrl = _kIndexUrl,
     TtsAssetCache? cache,
+    String? lyricIndexDirectory,
   })  : _indexUrl = indexUrl,
-        _cache = cache;
+        _cache = cache,
+        _indexDir = lyricIndexDirectory;
 
   /// The playable sound library (SoundFonts + SFZ instruments + samples).
   factory CometbeatCatalogSource.sounds(HttpGet http) =>
@@ -93,8 +96,17 @@ class CometbeatCatalogSource implements ContentSource {
 
   ({String base, String version, List<dynamic>? shards})? _index;
 
-  /// id -> sung text, loaded only when a lyric search actually happens.
-  Map<String, String>? _lyrics;
+  /// Built only when a lyric search actually happens. FTS5 where available,
+  /// a linear scan otherwise — see `lyric_index.dart`.
+  LyricIndex? _lyricIndex;
+
+  /// Where a native FTS index may be persisted. Null = in-memory only.
+  final String? _indexDir;
+
+  /// Which backend answered the last lyric search ('fts5', 'fts5-wasm',
+  /// 'linear'), or null if none has. Exposed because a silent fallback is
+  /// otherwise invisible — the feature works either way, just slower.
+  String? get lyricBackend => _lyricIndex?.backend;
 
   /// Process-wide cache so reopening the browser is instant instead of
   /// re-fetching the index + shards. Keyed by the kind-set; only used for the
@@ -286,7 +298,8 @@ class CometbeatCatalogSource implements ContentSource {
   Future<Set<String>> _lyricMatches(String q) async {
     final idx = _index;
     if (idx == null || q.isEmpty) return const {};
-    if (_lyrics == null) {
+    if (_lyricIndex == null) {
+      installLyricIndexBackend();
       final shard = (idx.shards ?? const [])
           .whereType<Map<String, dynamic>>()
           .where((s) => s['kind'] == 'lyrics')
@@ -296,16 +309,17 @@ class CometbeatCatalogSource implements ContentSource {
         await _shardBytes(shard, idx.base, idx.version),
         'catalog shard lyrics',
       );
-      _lyrics = {
+      final texts = {
         for (final e in (data['items'] as Map? ?? const {}).entries)
-          '${e.key}': '${e.value}'.toLowerCase(),
+          '${e.key}': '${e.value}',
       };
+      _lyricIndex = await lyricIndexBuilder(
+        texts,
+        version: idx.version,
+        directory: _indexDir,
+      );
     }
-    final needle = q.toLowerCase();
-    return {
-      for (final e in _lyrics!.entries)
-        if (e.value.contains(needle)) e.key,
-    };
+    return _lyricIndex!.search(q);
   }
 
   List<LibraryItem> _match(

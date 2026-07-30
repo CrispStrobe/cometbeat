@@ -125,10 +125,7 @@ dependencies:
   # glint sources with native/glint/sync_glint.sh.
   glint_vorbis:
     path: native/glint
-
-# crisp_notation_core is published (0.4.3), but the path dep above tracks main,
-# which runs ahead of it — pin core to the same workspace so the two never
-# resolve to different versions. Drop this once mus depends on pub.dev releases.
+  sqlite3: ^3.5.0
 dependency_overrides:
   crisp_notation_core:
     path: ../crisp_notation/packages/crisp_notation_core
