@@ -250,6 +250,16 @@ is recorded in [HISTORY.md](HISTORY.md).
     never generated a voice 3 or 4 at all. It now also asserts a per-voice
     SOUNDING sequence and generates all four voices. Suite 2006 → 2018 (2034
     merged with the analysis work).
+  - 🧪 **NEW REUSABLE TEST — `test/hostile_text_matrix_test.dart` in
+    `crisp_notation` (`08d85f7`): 6 codecs × 16 hostile strings × 3 text fields
+    = 288 cases** asserting note content is untouched no matter what the text
+    says. Built because FOUR escaping defects had each been found by corpus
+    accident, and waiting for the next corpus file is not a strategy. **It found
+    six more on its first run** — kern lyrics (a `**text` token is one
+    tab-separated cell, so a newline ends the ROW and the rest reads as music;
+    `*-` would close the spine outright) and ABC annotations (`%` starts a
+    comment only OUTSIDE a quoted string, and the reader honoured `\"` but not
+    `\\`). **Add a string to the list if you meet a new delimiter.**
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
@@ -261,7 +271,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     round-trips with all four voices intact through every one of them. `--voices`
     exists only to read the inner-voice result separately from the voice-1 one. **Direct-hop corpus failures 98 → 0 on every file
     traced**, and the permutation matrix went 34/48 → 73/84 perfect cells with
-    every survivor traced and fixed afterwards. Core suite **2006**, green.
+    every survivor traced and fixed afterwards. Core suite **2322**, green.
 
 - **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
   extension** (the cheap win listed inside `BB-X2`). Branch
