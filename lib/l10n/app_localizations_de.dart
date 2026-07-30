@@ -9145,4 +9145,31 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trackerDropAnyway => 'Trotzdem ablegen';
+
+  @override
+  String get fxPresetsTitle => 'Gespeicherte Effekte';
+
+  @override
+  String get fxPresetsHint =>
+      'Von dir gespeicherte Ketten — von überall. Tippe eine an, um sie hier zu verwenden.';
+
+  @override
+  String get fxPresetsEmpty =>
+      'Noch nichts gespeichert. Baue eine Kette und sichere sie hier.';
+
+  @override
+  String get fxPresetSaveCurrent => 'Diese Kette sichern';
+
+  @override
+  String get fxPresetSaveTitle => 'Name für diese Kette';
+
+  @override
+  String get fxPresetNameHint => 'z. B. Warme Begleitung';
+
+  @override
+  String get fxPresetSave => 'Sichern';
+
+  @override
+  String get fxPresetAutomationDropped =>
+      'Automation lässt sich nicht in einem Preset sichern — die Effekte bleiben, die bewegten Regler nicht.';
 }

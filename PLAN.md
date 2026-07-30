@@ -1612,7 +1612,14 @@ prefix.
     `GrooveSlotsService` shape: SharedPreferences, newest-first, capped at 30
     dropping the OLDEST) + `shared/widgets/project_browser_sheet.dart`, raised
     from the home bar.
-  - ⬜ **Slices 2+ — the other five tabs.** Templates · instruments · samples ·
+  - ✅ **FX PRESETS tab — shipped 2026-07-30** (opus, daw-suite), unblocked by
+    WS-X2 completing. `core/services/fx_preset_store.dart` (the `ProjectStore`
+    shape; stores chain STRINGS) + `shared/widgets/fx_preset_sheet.dart` (the
+    `keymap_sheet` pattern), hosted by Score's part-FX sheet and the Tab rig.
+    **The gap was real: five surfaces host a rack and none could keep a chain.**
+    ⚠️ A chain string cannot carry per-param automation, so the sheet says so
+    before saving an automated chain — and stays quiet for a plain one. 18 tests.
+  - ⬜ **Slices 2+ — the remaining four tabs.** Templates · instruments · samples ·
     FX presets · the asset catalog. Deliberately not started: the
     instrument/sample/catalog tabs are the Sound Library owner's domain, and the
     card's "drag onto any surface" needs **WS-X2**, which does not exist. The

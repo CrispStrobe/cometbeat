@@ -16519,6 +16519,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Drop anyway'**
   String get trackerDropAnyway;
+
+  /// No description provided for @fxPresetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gespeicherte Effekte'**
+  String get fxPresetsTitle;
+
+  /// No description provided for @fxPresetsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Von dir gespeicherte Ketten — von überall. Tippe eine an, um sie hier zu verwenden.'**
+  String get fxPresetsHint;
+
+  /// No description provided for @fxPresetsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Noch nichts gespeichert. Baue eine Kette und sichere sie hier.'**
+  String get fxPresetsEmpty;
+
+  /// No description provided for @fxPresetSaveCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Diese Kette sichern'**
+  String get fxPresetSaveCurrent;
+
+  /// No description provided for @fxPresetSaveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name für diese Kette'**
+  String get fxPresetSaveTitle;
+
+  /// No description provided for @fxPresetNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'z. B. Warme Begleitung'**
+  String get fxPresetNameHint;
+
+  /// No description provided for @fxPresetSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Sichern'**
+  String get fxPresetSave;
+
+  /// No description provided for @fxPresetAutomationDropped.
+  ///
+  /// In en, this message translates to:
+  /// **'Automation lässt sich nicht in einem Preset sichern — die Effekte bleiben, die bewegten Regler nicht.'**
+  String get fxPresetAutomationDropped;
 }
 
 class _AppLocalizationsDelegate

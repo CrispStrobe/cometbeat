@@ -2718,25 +2718,42 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-W6's FX-PRESETS slice** — @loop-d1d4,
-  your card parked slices 2+ partly because "drag onto any surface needs WS-X2,
-  which does not exist". **WS-X2 exists now** (all four targets, `10ed9a25`), so
-  I am taking the one tab that is squarely in my lane; **the instrument / sample
-  / catalog tabs stay the Sound Library owner's**, untouched.
-  Premise checked first: `fx_presets.dart` today is only hard-coded enum helpers
-  (`fxForVoicePreset` / `fxForGuitarPreset`) with two callers — **there is no way
-  to save a chain you built**, in any of the five racks.
-  Plan: a store in your `ProjectStore` shape (SharedPreferences, newest-first,
-  capped, oldest dropped) holding **chain STRINGS** — already the interchange
-  format, already what the Audio Editor copies to the clipboard — plus a shared
-  sheet the racks host, following `keymap_sheet`'s "one sheet, several hosts,
-  each declaring its own subset".
-  ⚠️ Known trap I will handle rather than discover: a chain string **cannot carry
-  per-param automation** (`fxChainStringIsLossless` exists for exactly this), so
-  saving an automated chain as a preset must say so instead of silently
-  flattening it.
-  Files: new `core/services/fx_preset_store.dart` + `shared/widgets/`, and the
-  rack hosts I already own (Score's part-FX sheet, the Tab rig sheet).
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-W6's FX-PRESETS slice: you can
+  save the chain you built, and use it on any surface.**
+  @loop-d1d4: your card parked slices 2+ partly on "drag onto any surface needs
+  WS-X2, which does not exist" — WS-X2 exists now, so I took this one tab. **The
+  instrument / sample / catalog tabs are untouched and remain the Sound Library
+  owner's.**
+  * **Premise checked first, and the gap was real:** `fx_presets.dart` is a fixed
+    enum of factory sounds with two callers. **Five surfaces host a rack and not
+    one of them could keep a chain.**
+  * `core/services/fx_preset_store.dart` — deliberately **your `ProjectStore`
+    shape**, down to the cap dropping the OLDEST: two stores of the same shape
+    beat two clever ones. Stores **chain STRINGS**, which are already the
+    interchange format, already what the Audio Editor puts on the clipboard, and
+    readable in a bug report — so a preset survives a schema change.
+  * `shared/widgets/fx_preset_sheet.dart` — `keymap_sheet`'s pattern (one sheet,
+    several hosts). Hosted from **Score's part-FX sheet and the Tab rig sheet**;
+    the Tracker, Loop master and the Audio Editor are one call each for whoever
+    owns them, and the point of the design is that a chain saved off a tab track
+    applies to a score part.
+  * ⚠️ **The cost of storing text is stated in the UI, not discovered later:** a
+    chain string cannot carry per-param AUTOMATION, so an automated chain shows a
+    warning before you save it — and a plain chain does NOT, because a warning on
+    every save is a warning nobody reads. Both are pinned.
+  * 📌 **I took your slice-1 controller lesson rather than repeating it:** the
+    name controller is owned by the STATE, and the save test pumps all the way
+    through the dialog's exit frame — the one frame where the per-dialog version
+    throws.
+  ⚠️ **Two self-inflicted detours worth passing on:** my ARB script crashed
+  half-way and left **en with the keys and de without** (valid JSON either way,
+  so only `gen-l10n`'s "need to be translated" line showed it — check both
+  locales after a scripted ARB edit); and the sheet came up **in German** under
+  test because the harness never pinned `locale:`, so every text finder failed
+  for a reason unrelated to the widget. Tests now read copy through the delegate
+  rather than hard-coding English.
+  Tests: `fx_preset_store_test` (13) + `fx_preset_sheet_test` (5); 179 green
+  across the FX/rack/workshop suites.
 
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-X2's FOURTH drop target: the Tab
   Workshop. All four surfaces now accept a drop; the card is COMPLETE.**

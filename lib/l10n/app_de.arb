@@ -3309,5 +3309,13 @@
   "highwayInputReviewHint": "Spiel das ganze Stück auf deinem Instrument. Während des Spielens wird nichts bewertet — die Aufnahme wird danach angehört, so zählen auch Akkorde.",
   "highwayReviewListening": "Deine Aufnahme wird angehört…",
   "trackerDropLossyTitle": "Beim Ablegen geht etwas verloren",
-  "trackerDropAnyway": "Trotzdem ablegen"
+  "trackerDropAnyway": "Trotzdem ablegen",
+  "fxPresetsTitle": "Gespeicherte Effekte",
+  "fxPresetsHint": "Von dir gespeicherte Ketten — von überall. Tippe eine an, um sie hier zu verwenden.",
+  "fxPresetsEmpty": "Noch nichts gespeichert. Baue eine Kette und sichere sie hier.",
+  "fxPresetSaveCurrent": "Diese Kette sichern",
+  "fxPresetSaveTitle": "Name für diese Kette",
+  "fxPresetNameHint": "z. B. Warme Begleitung",
+  "fxPresetSave": "Sichern",
+  "fxPresetAutomationDropped": "Automation lässt sich nicht in einem Preset sichern — die Effekte bleiben, die bewegten Regler nicht."
 }

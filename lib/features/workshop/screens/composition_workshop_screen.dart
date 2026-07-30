@@ -67,6 +67,7 @@ import 'package:comet_beat/shared/music/music_picker.dart'
 import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/music_glyph.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
@@ -1987,6 +1988,26 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 12),
+                // WS-W6 — the saved-chain sheet, hosted here as one of several.
+                // A chain saved off a tab track is worth having on a score part;
+                // that is the whole reason presets are not per-surface.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const ValueKey('workshop-fx-presets'),
+                    icon: const Icon(Icons.bookmarks_outlined, size: 18),
+                    label: Text(l10n.fxPresetsTitle),
+                    onPressed: () async {
+                      final picked = await showFxPresetSheet(
+                        context,
+                        current: scoreFxChain(part.metadata),
+                      );
+                      if (picked == null) return;
+                      setPartFxChain(index, picked);
+                      setSheetState(() {});
+                    },
+                  ),
+                ),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 380),
                   child: SingleChildScrollView(

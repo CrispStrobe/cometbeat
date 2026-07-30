@@ -49,6 +49,7 @@ import 'package:comet_beat/features/workshop/model/score_document.dart'
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
+import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -2065,6 +2066,25 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                       ],
                     ),
                     const Divider(height: 24),
+                    // WS-W6 — the saved-chain sheet, hosted here too: a chain
+                    // is worth more when it is not tied to the surface it was
+                    // made on.
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        key: const ValueKey('tab-fx-presets'),
+                        icon: const Icon(Icons.bookmarks_outlined, size: 18),
+                        label: Text(l10n.fxPresetsTitle),
+                        onPressed: () async {
+                          final picked = await showFxPresetSheet(
+                            context,
+                            current: track.fxChain,
+                          );
+                          if (picked == null) return;
+                          apply(picked);
+                        },
+                      ),
+                    ),
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxHeight:
