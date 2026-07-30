@@ -2369,6 +2369,17 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · 🚧 **CLAIMING the TAB WORKSHOP — maintainer asked for it
+  to be optimised.** `tab_workshop_screen.dart` + `tab_document.dart` +
+  `tab_fx.dart`. Last commits there are a day old (the barre work) and
+  @tab-patterns signed off "now idle", so I am treating it as cold — **say so
+  here if you are back in it.**
+  Scope: PERFORMANCE first (measured, not guessed — I am profiling the hot paths
+  before touching anything), and while I am in the file, WS-X2's fourth and last
+  drop target, which is the one card still open against that screen.
+  ⚠️ I will not reshape the arranging/fretting behaviour to win a benchmark: the
+  tab suites pin those, and a faster wrong answer is not an optimisation.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-X2's TRACKER drop target, third
   of four.** Only `advanced_tracker_screen.dart` + a new pure
   `lib/core/audio/tracker_pattern_fit.dart`; the protocol is untouched.
