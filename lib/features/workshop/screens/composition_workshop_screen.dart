@@ -28,6 +28,7 @@ import 'package:comet_beat/core/audio/transcription/transcription_service.dart'
 import 'package:comet_beat/core/games/highway/highway_chart.dart'
     show highwayChartFromScore;
 import 'package:comet_beat/core/interop/app_mode.dart';
+import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/notation/bowed_arranger.dart'
     show BowedInstrument, BowedSkill;
@@ -45,6 +46,7 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/tray/tray.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_gp_plan.dart'
     show gpFretPlanFor;
@@ -71,6 +73,7 @@ import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/music_glyph.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
+import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's pitch Step wins here.
 import 'package:file_selector/file_selector.dart';
@@ -525,6 +528,12 @@ abstract interface class CompositionWorkshopTester {
   int get partCount;
   int get activePartIndex;
 
+  /// WS-X2 test seam: land [score]'s parts as new parts, as a drop does.
+  void addDroppedParts(MultiPartScore score);
+
+  /// WS-X6 test seam: put this score on the clipboard.
+  void putOnTray();
+
   /// WS-X3 test seam: give part [index] an effect chain, as the rack's sheet
   /// does. The rack widget itself is covered by `fx_rack_test`; what is new
   /// here is that the chain reaches the DOCUMENT, and from there the export.
@@ -963,6 +972,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       _projects = Provider.of<ProjectService>(context, listen: false);
     } on ProviderNotFoundException {
       _projects = null;
+    }
+    try {
+      _sharedTray = Provider.of<TrayService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _sharedTray = null; // keeps the private one — see [_tray]
     }
   }
 
@@ -1504,6 +1518,106 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         _mutedParts.clear();
         _mpd.addPart(name: name, clef: clef);
       });
+
+  // --- WS-X2 / WS-X6 — the last surface joins the interop set ---------------
+
+  /// What dropping [payload] on the score would do.
+  ///
+  /// No `acceptsDirectly`: this surface is a MODE, not a container — it has no
+  /// slot that holds a foreign document as it is, so everything but a score
+  /// converts, with the cost shown before it commits.
+  DropDecision _dropDecision(MusicDragPayload payload) =>
+      dropDecisionFor(payload, AppMode.score);
+
+  /// Land a dragged or clipboard document on the score.
+  ///
+  /// ⚠️ It lands as NEW PARTS rather than replacing the document — the opposite
+  /// call to the Tracker's and the Tab Workshop's, and particular to this
+  /// surface: a score IS its parts, so arriving beside the existing ones is the
+  /// natural reading of a drop AND the non-destructive one. (Replacing would
+  /// also be unrecoverable here: the adopt path rebuilds `_mpd` wholesale.)
+  Future<bool> _dropHere(MusicDragPayload payload) async {
+    final decision = _dropDecision(payload);
+    final document = decision.document;
+    if (!decision.canDrop || document is! MultiPartScore) return false;
+
+    final report = decision.report;
+    final lines = <String>[
+      if (report != null) ...[
+        for (final lost in report.lost) '• $lost',
+        for (final near in report.approximated) '~ $near',
+      ],
+    ];
+    if (decision.needsConfirmation && lines.isNotEmpty) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(AppLocalizations.of(ctx)!.trackerDropLossyTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [for (final line in lines) Text(line)],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(AppLocalizations.of(ctx)!.trackerDropAnyway),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) return false;
+    }
+    addDroppedParts(document);
+    return true;
+  }
+
+  /// Append every part of [score] to the document on screen.
+  @override
+  void addDroppedParts(MultiPartScore score) {
+    setState(() {
+      for (final part in score.parts) {
+        final index = _mpd.addPart(
+          name: part.metadata.instrument,
+          clef: part.clef,
+        );
+        _mpd.parts[index].loadScore(part);
+      }
+      _mutedParts.clear();
+    });
+  }
+
+  /// WS-X6 — put this score on the shared clipboard.
+  @override
+  void putOnTray() {
+    _tray.add(
+      kind: AppMode.score,
+      label: _scoreTitle.trim().isEmpty
+          ? AppLocalizations.of(context)!.workshopTitle
+          : _scoreTitle.trim(),
+      document: _mpd.buildMultiPart(),
+    );
+    setState(() => _trayOpen = true);
+  }
+
+  /// Tap-to-place from the clipboard — the SAME path a drop takes, so the two
+  /// can never report different costs.
+  void _placeFromTray(TrayItem item) {
+    final payload = item.payload;
+    if (payload == null) return; // an instrument is a voice, not a document
+    unawaited(_dropHere(payload));
+  }
+
+  /// The clipboard: shared when provided, private otherwise — the rule every
+  /// other host follows, so a bare mount still works.
+  final TrayService _ownTray = TrayService();
+  TrayService? _sharedTray;
+  TrayService get _tray => _sharedTray ?? _ownTray;
+  bool _trayOpen = false;
 
   void _selectPart(int i) => setState(() {
         _mpd.setActive(i);
@@ -4892,6 +5006,15 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           ),
           body: Column(
             children: [
+              // WS-X6 — the clipboard band, above the score as on every other
+              // host: a chip and this screen's drop target in one tree.
+              if (_trayOpen)
+                TrayPanel(
+                  tray: _tray,
+                  title: l10n.trayTitle,
+                  emptyHint: l10n.trayEmpty,
+                  onPlace: _placeFromTray,
+                ),
               if (narrow)
                 SizedBox(
                   width: double.infinity,
@@ -4939,189 +5062,244 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     Expanded(
                       // Isolate the canvas's repaints (live drag / ghost / caret)
                       // from the dock + piano so a drag never repaints the screen.
-                      child: RepaintBoundary(
-                        child: ColoredBox(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerLowest,
-                          // G6: with more than one instrument part, show the full-score
-                          // canvas (tap selects across parts; the bottom dock edits the
-                          // active part). One part keeps the single-part interactive
-                          // pipeline (ghost/drag/staff-tap placement).
-                          child: _mpd.partCount > 1
-                              ? Stack(
-                                  children: [
-                                    MultiPartCanvas(
-                                      document: _mpd,
-                                      staffSpace: _zoom,
-                                      onElementTap: _onGlobalElementTap,
-                                      onStaffTap: _onMpStaffTap,
-                                      onHover: _onMpHover,
-                                      onElementHover:
-                                          _inspect ? _onMpElementHover : null,
-                                      ghostPart: _hoverPart,
-                                      ghostTarget: _hover,
-                                      ghostDuration: _ghostDuration,
-                                      // While playing, the moving cursor (sounding
-                                      // global ids) takes over the highlight from the
-                                      // selection.
-                                      highlightedIds: _isPlaying
-                                          ? _soundingIds
-                                          : _mpd.selectedGlobalIds,
-                                      elementColors: mpElementColors,
-                                      suppressElementIds: _mpSuppressed,
-                                      onElementDragStart: _onMpDragStart,
-                                      onElementDragUpdate: _onMpDragUpdate,
-                                      onElementDragEnd: _onMpDragEnd,
-                                      controller: _regions,
-                                      onMarquee:
-                                          _marquee ? _applyMpMarquee : null,
-                                      caret: _mpCaret,
-                                      showEndCaret:
-                                          _doc.caretBeforeId == null &&
-                                              !_doc.isEmpty,
-                                      showMeasureNumbers: _barNumbers,
-                                      showNoteNames: _noteNames,
-                                      // Note names carry their octave (F2) in
-                                      // the editor, where exact pitch matters.
-                                      showNoteOctaves: _noteNames,
-                                      noteNameStyle: _noteNameStyle,
-                                    ),
-                                    if (_inspect && _hoverInfo != null)
-                                      _hoverInspectCard(),
-                                  ],
-                                )
-                              // Bind the engraving width to the visible viewport so
-                              // systems break within the screen (never off the edge).
-                              : LayoutBuilder(
-                                  builder: (context, constraints) =>
-                                      SingleChildScrollView(
-                                    padding: const EdgeInsets.all(16),
-                                    child: SizedBox(
-                                      width: (constraints.maxWidth - 32)
-                                          .clamp(0.0, 4000.0),
-                                      // Passively track the canvas-local pointer so a drag's
-                                      // drop position can reorder a note (fine, C7 regions).
-                                      // The MouseRegion adds the desktop 🔍 hover
-                                      // sweep (no-op on touch).
-                                      child: MouseRegion(
-                                        onHover: (e) =>
-                                            _onCanvasHover(e.localPosition),
-                                        onExit: (_) => _clearHoverInspect(),
-                                        child: Listener(
-                                          onPointerDown: (e) =>
-                                              _pointerLocal = e.localPosition,
-                                          onPointerMove: (e) =>
-                                              _pointerLocal = e.localPosition,
-                                          child: Stack(
-                                            children: [
-                                              _grand
-                                                  ? InteractiveGrandStaffView(
-                                                      grandStaff: _doc
-                                                          .buildGrandStaff(),
-                                                      theme: theme,
-                                                      staffSpace: _zoom,
-                                                      showMeasureNumbers:
-                                                          _barNumbers,
-                                                      noteNameStyle:
-                                                          _noteNameStyle,
-                                                      controller: _regions,
-                                                      elementColors:
-                                                          elementColors,
-                                                      dragPreviewOpacity:
-                                                          _kDragPreviewOpacity,
-                                                      onElementTap:
-                                                          _onElementTap,
-                                                      onStaffTap: _onStaffTap,
-                                                      onHover: _onHover,
-                                                      ghostTarget: _hover,
-                                                      ghostDuration:
-                                                          _ghostDuration,
-                                                      caret: caret,
-                                                      onElementDragStart:
-                                                          _onElementDragStart,
-                                                      onElementDragUpdate:
-                                                          _onElementDragUpdate,
-                                                      onElementDragEnd:
-                                                          _onElementDragEnd,
-                                                    )
-                                                  : MultiSystemView(
-                                                      score: _doc.buildScore(),
-                                                      theme: theme,
-                                                      staffSpace: _zoom,
-                                                      // Single-part bar numbers
-                                                      // come from the app overlay
-                                                      // (every measure), so the
-                                                      // engine's stay off (the
-                                                      // default) to avoid drawing
-                                                      // them twice.
-                                                      noteNameStyle:
-                                                          _noteNameStyle,
-                                                      controller: _regions,
-                                                      elementColors:
-                                                          elementColors,
-                                                      dragPreviewOpacity:
-                                                          _kDragPreviewOpacity,
-                                                      onElementTap:
-                                                          _onElementTap,
-                                                      onStaffTap: _onStaffTap,
-                                                      onHover: _onHover,
-                                                      ghostTarget: _hover,
-                                                      ghostDuration:
-                                                          _ghostDuration,
-                                                      caret: caret,
-                                                      onElementDragStart:
-                                                          _onElementDragStart,
-                                                      onElementDragUpdate:
-                                                          _onElementDragUpdate,
-                                                      onElementDragEnd:
-                                                          _onElementDragEnd,
-                                                    ),
-                                              if (_barNumbers ||
-                                                  _noteNames ||
-                                                  (_doc.caretBeforeId == null &&
-                                                      !_doc.isEmpty))
-                                                Positioned.fill(
-                                                  child: IgnorePointer(
-                                                    child: CustomPaint(
-                                                      painter:
-                                                          _WorkshopNotationOverlayPainter(
-                                                        regions: _regions,
-                                                        score: score,
-                                                        showBarNumbers:
-                                                            _barNumbers,
-                                                        showNoteNames:
-                                                            _noteNames,
-                                                        showEndCaret:
-                                                            _doc.caretBeforeId ==
-                                                                    null &&
-                                                                !_doc.isEmpty,
-                                                        naming: context
-                                                            .read<
-                                                                SettingsService>()
-                                                            .noteNaming,
-                                                        l10n: l10n,
+                      child: DragTarget<MusicDragPayload>(
+                        // WS-X2 — the score canvas is this surface's drop
+                        // target, the fifth and last. Wrapped around the CANVAS
+                        // rather than the whole body, so a drag over the input
+                        // dock or the piano does not read as a drop onto music.
+                        onWillAcceptWithDetails: (d) =>
+                            _dropDecision(d.data).canDrop,
+                        onAcceptWithDetails: (d) =>
+                            unawaited(_dropHere(d.data)),
+                        builder: (context, candidate, rejected) => Stack(
+                          children: [
+                            RepaintBoundary(
+                              child: ColoredBox(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerLowest,
+                                // G6: with more than one instrument part, show the full-score
+                                // canvas (tap selects across parts; the bottom dock edits the
+                                // active part). One part keeps the single-part interactive
+                                // pipeline (ghost/drag/staff-tap placement).
+                                child: _mpd.partCount > 1
+                                    ? Stack(
+                                        children: [
+                                          MultiPartCanvas(
+                                            document: _mpd,
+                                            staffSpace: _zoom,
+                                            onElementTap: _onGlobalElementTap,
+                                            onStaffTap: _onMpStaffTap,
+                                            onHover: _onMpHover,
+                                            onElementHover: _inspect
+                                                ? _onMpElementHover
+                                                : null,
+                                            ghostPart: _hoverPart,
+                                            ghostTarget: _hover,
+                                            ghostDuration: _ghostDuration,
+                                            // While playing, the moving cursor (sounding
+                                            // global ids) takes over the highlight from the
+                                            // selection.
+                                            highlightedIds: _isPlaying
+                                                ? _soundingIds
+                                                : _mpd.selectedGlobalIds,
+                                            elementColors: mpElementColors,
+                                            suppressElementIds: _mpSuppressed,
+                                            onElementDragStart: _onMpDragStart,
+                                            onElementDragUpdate:
+                                                _onMpDragUpdate,
+                                            onElementDragEnd: _onMpDragEnd,
+                                            controller: _regions,
+                                            onMarquee: _marquee
+                                                ? _applyMpMarquee
+                                                : null,
+                                            caret: _mpCaret,
+                                            showEndCaret:
+                                                _doc.caretBeforeId == null &&
+                                                    !_doc.isEmpty,
+                                            showMeasureNumbers: _barNumbers,
+                                            showNoteNames: _noteNames,
+                                            // Note names carry their octave (F2) in
+                                            // the editor, where exact pitch matters.
+                                            showNoteOctaves: _noteNames,
+                                            noteNameStyle: _noteNameStyle,
+                                          ),
+                                          if (_inspect && _hoverInfo != null)
+                                            _hoverInspectCard(),
+                                        ],
+                                      )
+                                    // Bind the engraving width to the visible viewport so
+                                    // systems break within the screen (never off the edge).
+                                    : LayoutBuilder(
+                                        builder: (context, constraints) =>
+                                            SingleChildScrollView(
+                                          padding: const EdgeInsets.all(16),
+                                          child: SizedBox(
+                                            width: (constraints.maxWidth - 32)
+                                                .clamp(0.0, 4000.0),
+                                            // Passively track the canvas-local pointer so a drag's
+                                            // drop position can reorder a note (fine, C7 regions).
+                                            // The MouseRegion adds the desktop 🔍 hover
+                                            // sweep (no-op on touch).
+                                            child: MouseRegion(
+                                              onHover: (e) => _onCanvasHover(
+                                                e.localPosition,
+                                              ),
+                                              onExit: (_) =>
+                                                  _clearHoverInspect(),
+                                              child: Listener(
+                                                onPointerDown: (e) =>
+                                                    _pointerLocal =
+                                                        e.localPosition,
+                                                onPointerMove: (e) =>
+                                                    _pointerLocal =
+                                                        e.localPosition,
+                                                child: Stack(
+                                                  children: [
+                                                    _grand
+                                                        ? InteractiveGrandStaffView(
+                                                            grandStaff: _doc
+                                                                .buildGrandStaff(),
+                                                            theme: theme,
+                                                            staffSpace: _zoom,
+                                                            showMeasureNumbers:
+                                                                _barNumbers,
+                                                            noteNameStyle:
+                                                                _noteNameStyle,
+                                                            controller:
+                                                                _regions,
+                                                            elementColors:
+                                                                elementColors,
+                                                            dragPreviewOpacity:
+                                                                _kDragPreviewOpacity,
+                                                            onElementTap:
+                                                                _onElementTap,
+                                                            onStaffTap:
+                                                                _onStaffTap,
+                                                            onHover: _onHover,
+                                                            ghostTarget: _hover,
+                                                            ghostDuration:
+                                                                _ghostDuration,
+                                                            caret: caret,
+                                                            onElementDragStart:
+                                                                _onElementDragStart,
+                                                            onElementDragUpdate:
+                                                                _onElementDragUpdate,
+                                                            onElementDragEnd:
+                                                                _onElementDragEnd,
+                                                          )
+                                                        : MultiSystemView(
+                                                            score: _doc
+                                                                .buildScore(),
+                                                            theme: theme,
+                                                            staffSpace: _zoom,
+                                                            // Single-part bar numbers
+                                                            // come from the app overlay
+                                                            // (every measure), so the
+                                                            // engine's stay off (the
+                                                            // default) to avoid drawing
+                                                            // them twice.
+                                                            noteNameStyle:
+                                                                _noteNameStyle,
+                                                            controller:
+                                                                _regions,
+                                                            elementColors:
+                                                                elementColors,
+                                                            dragPreviewOpacity:
+                                                                _kDragPreviewOpacity,
+                                                            onElementTap:
+                                                                _onElementTap,
+                                                            onStaffTap:
+                                                                _onStaffTap,
+                                                            onHover: _onHover,
+                                                            ghostTarget: _hover,
+                                                            ghostDuration:
+                                                                _ghostDuration,
+                                                            caret: caret,
+                                                            onElementDragStart:
+                                                                _onElementDragStart,
+                                                            onElementDragUpdate:
+                                                                _onElementDragUpdate,
+                                                            onElementDragEnd:
+                                                                _onElementDragEnd,
+                                                          ),
+                                                    if (_barNumbers ||
+                                                        _noteNames ||
+                                                        (_doc.caretBeforeId ==
+                                                                null &&
+                                                            !_doc.isEmpty))
+                                                      Positioned.fill(
+                                                        child: IgnorePointer(
+                                                          child: CustomPaint(
+                                                            painter:
+                                                                _WorkshopNotationOverlayPainter(
+                                                              regions: _regions,
+                                                              score: score,
+                                                              showBarNumbers:
+                                                                  _barNumbers,
+                                                              showNoteNames:
+                                                                  _noteNames,
+                                                              showEndCaret: _doc
+                                                                          .caretBeforeId ==
+                                                                      null &&
+                                                                  !_doc.isEmpty,
+                                                              naming: context
+                                                                  .read<
+                                                                      SettingsService>()
+                                                                  .noteNaming,
+                                                              l10n: l10n,
+                                                            ),
+                                                          ),
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ),
+                                                    if (_marquee)
+                                                      Positioned.fill(
+                                                        child: _MarqueeOverlay(
+                                                          onSelect:
+                                                              _applyMarquee,
+                                                        ),
+                                                      ),
+                                                    if (_inspect &&
+                                                        _hoverInfo != null &&
+                                                        _hoverAt != null)
+                                                      _hoverInspectCard(),
+                                                  ],
                                                 ),
-                                              if (_marquee)
-                                                Positioned.fill(
-                                                  child: _MarqueeOverlay(
-                                                    onSelect: _applyMarquee,
-                                                  ),
-                                                ),
-                                              if (_inspect &&
-                                                  _hoverInfo != null &&
-                                                  _hoverAt != null)
-                                                _hoverInspectCard(),
-                                            ],
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
+                              ),
+                            ),
+                            if (candidate.isNotEmpty && candidate.first != null)
+                              Positioned(
+                                left: 12,
+                                top: 8,
+                                child: Material(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    // Say what a release would do, while the
+                                    // finger is still down.
+                                    child: Text(
+                                      dropSummary(
+                                        _dropDecision(candidate.first!),
+                                      ),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.labelMedium,
                                     ),
                                   ),
                                 ),
+                              ),
+                          ],
                         ),
                       ),
                     ),

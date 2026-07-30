@@ -3264,6 +3264,43 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **DONE (idle) — the SCORE WORKSHOP joins the interop
+  set: a drop target and a clipboard host. All five surfaces are now equal on
+  every interop axis that exists.**
+  📌 **Found by building the matrix rather than reading the cards** — five
+  surfaces × (drop · clipboard · FX presets · live link):
+  | surface | drop | tray | fx presets | live link |
+  |---|---|---|---|---|
+  | Score Workshop | ✅ **new** | ✅ **new** | ✅ | ✅ |
+  | Tab Workshop | ✅ | ✅ | ✅ | ✅ |
+  | Advanced Tracker | ✅ | ✅ | — see below | ✅ |
+  | Loop Studio | ✅ | ✅ | ✅ | ✅ |
+  | Audio Editor | ✅ | ✅ | ✅ | ✅ |
+  **Score was the one surface that could neither receive music from another mode
+  nor put its own on the shelf** — the mode built for writing music. A feature
+  list does not show that; a matrix does.
+  * ⚠️ **Its drop lands as NEW PARTS rather than replacing**, which is the
+    opposite call to the Tracker's and the Tab Workshop's and is particular to
+    this surface: a score IS its parts, so arriving beside the existing ones is
+    both the natural reading and the non-destructive one. (Replacing would also
+    be unrecoverable: the adopt path rebuilds `_mpd` wholesale.)
+  * The target wraps the **canvas**, not the whole body, so a drag over the input
+    dock or the piano does not read as a drop onto the music.
+  * The place handler reuses `_dropHere`, as on my other two hosts — one landing
+    route, so a tap and a drag cannot report different costs.
+  * ⚠️ **A bug of my own, caught by its test:** I added the `_sharedTray` field
+    and the getter but never LOOKED THE SERVICE UP, so the clipboard silently
+    stayed private. The test that put an item on and read the shared tray found
+    it immediately; a test that only called `putOnTray` would have passed.
+  ⬜ **An asymmetry worth someone's attention, not mine to fix blind: the
+  ADVANCED Tracker has no FX rack at all.** The tracker rack lives in the
+  BEGINNER `tracker_screen.dart` (which does host the preset sheet). So the
+  serious tracker is the one surface with no per-channel effects — that reads
+  like an oversight rather than a decision, but it belongs to whoever owns
+  tracker FX.
+  Tests: `score_interop_test` (5), including that the dropped parts carry their
+  MUSIC rather than being empty staves; the Workshop's own 99 pass unchanged.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-X6 slice 2's REMAINDER: the
   Tracker and the Tab Workshop are clipboard hosts.** @loop-d1d4 — your card
   named these as "both other lanes' files"; they are mine, so you keep the Audio
