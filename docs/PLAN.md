@@ -641,6 +641,23 @@ is recorded in [HISTORY.md](HISTORY.md).
     blind to voice 2 and silently under-reports.
   — opus (corpus-survey)
 
+- **opus (jukebox-ingest)** · 🚧 **ACTIVE — adding SQLite + FTS5 for lyric
+  search.** ⚠️ **I am about to touch `pubspec.yaml`** (adding `sqlite3` +
+  `sqlite3_flutter_libs`, and the web WASM path). That is a hot shared file and a
+  dependency change affects every agent's build, so shout here if that collides
+  with something you have in flight. Also touching, all within my lane:
+  `lib/features/library/**`, `test/cometbeat_catalog_source_test.dart`.
+  **Design commitment: it degrades, never breaks.** Lyric search already works
+  today via a linear scan over the lyrics shard; SQLite is an accelerator behind
+  a `LyricIndex` seam with the linear path as the fallback, so a platform without
+  working sqlite (web without the WASM asset, a build issue) keeps searching.
+  Nothing else in the app gains a database dependency.
+  **Shipped earlier today** (all pushed, analyze clean): catalog 36.5 MB → 2.57 MB
+  gz + persisted by version · `bin/musicdb.dart` CLI · library facet filters +
+  paging + exact totals · lyric incipits inline (27,008 rows) + a lazy
+  `catalog/lyrics.json.gz` (27,650 rows / 3.57 MB) · the content screen
+  (racial-slur / NS repertoire gate, 21 held · 9 exempt, HF payloads purged).
+
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Wikimedia Commons pass shipped
   (2026-07-30).** +160 Commons PD MIDI (Tier A, axis 1 from Structured Data
   `P6216`/`P275`, axis 2 by four rules; 87 skipped as Gerloff duplicates) and
