@@ -348,7 +348,7 @@ class SettingsScreen extends StatelessWidget {
               title: Text(l10n.librarySourcesCredits),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => AttributionScreen()),
+                MaterialPageRoute(builder: (_) => const AttributionScreen()),
               ),
             ),
           ),

@@ -14,20 +14,41 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class AttributionScreen extends StatelessWidget {
+class AttributionScreen extends StatefulWidget {
   /// Donation config for the optional "Support the developer" tile (off by
   /// default). Injectable for tests.
   final DonationConfig donation;
 
   /// The "My Samples" store, whose attribution-required clips are credited
   /// alongside imported songs. Injectable for tests.
-  final SampleClipStore sampleStore;
+  final SampleClipStore? store;
 
-  AttributionScreen({
+  const AttributionScreen({
     super.key,
     this.donation = kDonation,
-    SampleClipStore? store,
-  }) : sampleStore = store ?? SampleClipStore();
+    this.store,
+  });
+
+  @override
+  State<AttributionScreen> createState() => _AttributionScreenState();
+}
+
+/// Stateful only to hold the sample-load future.
+///
+/// As a `StatelessWidget` this used `FutureBuilder(future: sampleStore.load())`
+/// — a NEW future on every rebuild. The screen `watch`es `UserSongsService`, so
+/// it rebuilds freely, and each rebuild re-read the store from disk and reset
+/// the builder to `waiting`, blanking the credits list for a frame. Loading
+/// once per screen is both correct and cheaper.
+///
+/// ⚠️ NOT the reason a test could not see the samples section — that was the
+/// `ListView` simply not having built that far (see `library_connector_test`).
+/// Recorded because the inline-future shape reads like a cause and is not one.
+class _AttributionScreenState extends State<AttributionScreen> {
+  late final SampleClipStore _sampleStore = widget.store ?? SampleClipStore();
+
+  /// Loaded ONCE, for this screen's lifetime.
+  late final Future<List<SampleClip>> _clips = _sampleStore.load();
 
   void _open(String? url) {
     if (url == null) return;
@@ -43,18 +64,18 @@ class AttributionScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.librarySourcesCredits)),
-      bottomNavigationBar: donation.isActive
+      bottomNavigationBar: widget.donation.isActive
           ? SafeArea(
               child: ListTile(
                 leading: const Icon(Icons.local_cafe),
                 title: Text(l10n.librarySupportDev),
                 trailing: const Icon(Icons.open_in_new, size: 18),
-                onTap: () => _open(donation.url),
+                onTap: () => _open(widget.donation.url),
               ),
             )
           : null,
       body: FutureBuilder<List<SampleClip>>(
-        future: sampleStore.load(),
+        future: _clips,
         builder: (context, snap) {
           final sampleCredits = (snap.data ?? const <SampleClip>[])
               .where((c) => c.needsAttribution)

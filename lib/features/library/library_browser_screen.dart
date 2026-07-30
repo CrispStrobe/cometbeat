@@ -107,7 +107,7 @@ class _LibraryBrowserScreenState extends State<LibraryBrowserScreen> {
             icon: const Icon(Icons.copyright),
             tooltip: l10n.librarySourcesCredits,
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => AttributionScreen()),
+              MaterialPageRoute(builder: (_) => const AttributionScreen()),
             ),
           ),
         ],

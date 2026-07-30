@@ -357,15 +357,14 @@ void main() {
       (tester) async {
     final svc = UserSongsService();
 
-    await tester.pumpWidget(_wrap(AttributionScreen(), svc));
+    await tester.pumpWidget(_wrap(const AttributionScreen(), svc));
     await tester.pump();
     expect(find.byIcon(Icons.local_cafe), findsNothing);
 
     await tester.pumpWidget(
       _wrap(
-        AttributionScreen(
-          donation:
-              const DonationConfig(enabled: true, url: 'https://ko-fi.com/x'),
+        const AttributionScreen(
+          donation: DonationConfig(enabled: true, url: 'https://ko-fi.com/x'),
         ),
         svc,
       ),
@@ -394,6 +393,15 @@ void main() {
     await tester.pumpWidget(
       _wrap(AttributionScreen(store: store), UserSongsService()),
     );
+    await tester.pumpAndSettle();
+
+    // ⚠️ SCROLL FIRST. The samples section sits below the standing
+    // source-level credits, which grew long enough (29b0213d) to push it off
+    // the first screenful — and a `ListView` only builds the children it can
+    // show, so the finder saw nothing and this read as "samples are not
+    // credited". They are; you scroll to them. The assertion, not the screen,
+    // was what stopped being true.
+    await tester.drag(find.byType(ListView), const Offset(0, -2000));
     await tester.pumpAndSettle();
 
     expect(find.text('by loop'), findsOneWidget); // credited
