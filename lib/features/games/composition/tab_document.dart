@@ -721,28 +721,55 @@ List<(List<int>, int)> mergePlaybackEvents(
 
 /// A mutable tablature document: [tuning] + a list of [columns].
 class TabDocument {
-  Tuning tuning;
+  /// The tuning every fret is read against.
+  ///
+  /// A setter rather than a field so a change bumps [revision] — a consumer
+  /// caching anything derived from this document has to be told, and the screen
+  /// does exactly that with the engraved score.
+  Tuning get tuning => _tuning;
+  set tuning(Tuning value) {
+    _tuning = value;
+    _touch();
+  }
+
+  Tuning _tuning;
+
   final List<TabColumn> columns;
 
   /// The meter columns are tiled into. Default 4/4; set it and a bar holds
   /// [barSteps] thirty-second-note steps (3/4 = 24, 6/8 = 24, 5/4 = 40, …).
-  TimeSignature timeSignature;
+  TimeSignature get timeSignature => _timeSignature;
+  set timeSignature(TimeSignature value) {
+    _timeSignature = value;
+    _touch();
+  }
+
+  TimeSignature _timeSignature;
 
   /// The key signature (circle-of-fifths count, −7..+7; 0 = C/a). Drives the
   /// accidental spelling on the standard/grand-staff views and exports.
-  KeySignature keySignature;
+  KeySignature get keySignature => _keySignature;
+  set keySignature(KeySignature value) {
+    _keySignature = value;
+    _touch();
+  }
+
+  KeySignature _keySignature;
 
   /// An optional SECOND voice (C2): a parallel column list tiled into the same
   /// bars as [columns] and emitted as `Measure.voice2`. Empty = single voice.
   final List<TabColumn> voice2;
 
   TabDocument({
-    required this.tuning,
+    required Tuning tuning,
     List<TabColumn>? columns,
-    this.timeSignature = TimeSignature.fourFour,
-    this.keySignature = const KeySignature(0),
+    TimeSignature timeSignature = TimeSignature.fourFour,
+    KeySignature keySignature = const KeySignature(0),
     List<TabColumn>? voice2,
-  })  : columns = columns ?? <TabColumn>[],
+  })  : _tuning = tuning,
+        _timeSignature = timeSignature,
+        _keySignature = keySignature,
+        columns = columns ?? <TabColumn>[],
         voice2 = voice2 ?? <TabColumn>[];
 
   /// A blank document with [initialColumns] empty columns.
@@ -759,111 +786,136 @@ class TabDocument {
   int get barCapacity =>
       (timeSignature.toFraction().toDouble() * _kBarSteps).round();
 
+  /// Bumped on every change, so a consumer can tell "this is the same document"
+  /// without comparing it.
+  ///
+  /// ⚠️ PERF, and the reason it is worth the discipline: the Tab Workshop
+  /// derives a whole `Score` from this document to draw anything, and it used to
+  /// do that on every build — including builds that changed nothing about the
+  /// music. A counter is the cheapest honest answer to "has it changed?", but it
+  /// is only honest if EVERY mutation bumps it, which is why the writes below
+  /// all funnel through [_write] / [_touch] and why
+  /// `tab_document_revision_test.dart` walks every public mutator and fails if
+  /// one of them forgets.
+  int get revision => _revision;
+  int _revision = 0;
+
+  /// Record that something changed.
+  void _touch() => _revision++;
+
+  /// The single place a column is written.
+  void _write(int col, TabColumn column) {
+    columns[col] = column;
+    _touch();
+  }
+
   /// Grows [columns] so index [col] exists (padding with empty columns).
   void _ensure(int col) {
+    if (columns.length > col) return;
     while (columns.length <= col) {
       columns.add(const TabColumn());
     }
+    _touch();
   }
 
   /// Sets the [fret] on [string] at [col] (creating the column if needed).
   void setFret(int col, int string, int fret) {
     _ensure(col);
-    columns[col] = columns[col].withFret(string, fret);
+    _write(col, columns[col].withFret(string, fret));
   }
 
   /// Clears [string] at [col] (leaving other strings in that column).
   void clearCell(int col, int string) {
     if (col < columns.length) {
-      columns[col] = columns[col].withoutString(string);
+      _write(col, columns[col].withoutString(string));
     }
   }
 
   /// Sets the [duration] of the column at [col].
   void setDuration(int col, NoteDuration duration) {
     _ensure(col);
-    columns[col] = columns[col].withDuration(duration);
+    _write(col, columns[col].withDuration(duration));
   }
 
   /// Toggles technique [t] on the column at [col].
   void toggleTechnique(int col, TabTechnique t) {
     _ensure(col);
-    columns[col] = columns[col].toggleTechnique(t);
+    _write(col, columns[col].toggleTechnique(t));
   }
 
   /// Sets whether the note at [col] ties into the next column.
   void setTie(int col, bool tie) {
     _ensure(col);
-    columns[col] = columns[col].withTie(tie);
+    _write(col, columns[col].withTie(tie));
   }
 
   /// Sets (or clears, when null) the tuplet ratio on the column at [col].
   void setTuplet(int col, (int, int)? ratio) {
     _ensure(col);
-    columns[col] = columns[col].withTuplet(ratio);
+    _write(col, columns[col].withTuplet(ratio));
   }
 
   /// Sets (or clears, when null) the parametric bend curve on the column at
   /// [col] (B1). Use [TabBends] for the stock shapes.
   void setBend(int col, List<BendPoint>? points) {
     _ensure(col);
-    columns[col] = columns[col].withBend(points);
+    _write(col, columns[col].withBend(points));
   }
 
   /// Sets (or clears, when null) the whammy-bar curve on the column at [col]
   /// (B2).
   void setWhammy(int col, List<BendPoint>? points) {
     _ensure(col);
-    columns[col] = columns[col].withWhammy(points);
+    _write(col, columns[col].withWhammy(points));
   }
 
   /// Sets (or clears, when null) the slide-in/out ornament on the column at
   /// [col] (B3).
   void setSlide(int col, SlideInOut? kind) {
     _ensure(col);
-    columns[col] = columns[col].withSlide(kind);
+    _write(col, columns[col].withSlide(kind));
   }
 
   /// Sets right-hand tapping on the column at [col] (B4).
   void setTap(int col, bool on) {
     _ensure(col);
-    columns[col] = columns[col].withTap(on);
+    _write(col, columns[col].withTap(on));
   }
 
   /// Sets (or clears, when null) the harmonic kind on the column at [col] (B5).
   void setHarmonic(int col, TabNoteStyle? kind) {
     _ensure(col);
-    columns[col] = columns[col].withHarmonic(kind);
+    _write(col, columns[col].withHarmonic(kind));
   }
 
   /// Sets palm-mute on the column at [col] (B6).
   void setPalmMute(int col, bool on) {
     _ensure(col);
-    columns[col] = columns[col].withPalmMute(on);
+    _write(col, columns[col].withPalmMute(on));
   }
 
   /// Sets let-ring on the column at [col] (B6).
   void setLetRing(int col, bool on) {
     _ensure(col);
-    columns[col] = columns[col].withLetRing(on);
+    _write(col, columns[col].withLetRing(on));
   }
 
   /// Toggles articulation [a] on the column at [col] (B6).
   void toggleArticulation(int col, Articulation a) {
     _ensure(col);
-    columns[col] = columns[col].toggleArticulation(a);
+    _write(col, columns[col].toggleArticulation(a));
   }
 
   /// Sets (or clears, when null) the dynamic on the column at [col] (C1).
   void setDynamic(int col, DynamicLevel? d) {
     _ensure(col);
-    columns[col] = columns[col].withDynamic(d);
+    _write(col, columns[col].withDynamic(d));
   }
 
   /// Starts (or clears, when null) a hairpin at the column at [col] (C1).
   void setHairpin(int col, HairpinType? h) {
     _ensure(col);
-    columns[col] = columns[col].withHairpin(h);
+    _write(col, columns[col].withHairpin(h));
   }
 
   /// Sets the repeat barlines of the BAR containing [col] (anchored to that
@@ -872,7 +924,7 @@ class TabDocument {
     if (columns.isEmpty) return;
     final (first, _) = barBoundsAt(col);
     _ensure(first);
-    columns[first] = columns[first].withRepeat(start: start, end: end);
+    _write(first, columns[first].withRepeat(start: start, end: end));
   }
 
   /// Sets (or clears, when null) the alternate-ending (volta) number of the BAR
@@ -881,7 +933,7 @@ class TabDocument {
     if (columns.isEmpty) return;
     final (first, _) = barBoundsAt(col);
     _ensure(first);
-    columns[first] = columns[first].withVolta(volta);
+    _write(first, columns[first].withVolta(volta));
   }
 
   /// Sets (or clears, when null) the direction mark of the BAR containing [col].
@@ -889,7 +941,7 @@ class TabDocument {
     if (columns.isEmpty) return;
     final (first, _) = barBoundsAt(col);
     _ensure(first);
-    columns[first] = columns[first].withNavigation(mark);
+    _write(first, columns[first].withNavigation(mark));
   }
 
   /// Sets (or clears, when null) the tempo change (BPM) of the BAR containing
@@ -898,14 +950,14 @@ class TabDocument {
     if (columns.isEmpty) return;
     final (first, _) = barBoundsAt(col);
     _ensure(first);
-    columns[first] = columns[first].withTempo(bpm);
+    _write(first, columns[first].withTempo(bpm));
   }
 
   /// Sets (or clears, when null) the section/rehearsal label on the column at
   /// [col] (it shows above that note).
   void setSection(int col, String? label) {
     _ensure(col);
-    columns[col] = columns[col].withSection(label);
+    _write(col, columns[col].withSection(label));
   }
 
   /// Marks the [count] columns starting at [start] as one tuplet of [ratio]
@@ -919,7 +971,7 @@ class TabDocument {
   /// Sets (or clears, when null) the chord diagram on the column at [col].
   void setChord(int col, ChordDiagram? chord) {
     _ensure(col);
-    columns[col] = columns[col].withChord(chord);
+    _write(col, columns[col].withChord(chord));
   }
 
   /// Replaces the selected column's frets with the playable strings in
@@ -934,22 +986,28 @@ class TabDocument {
         if (fret >= 0 && string < tuning.stringCount) frets[string] = fret;
       }
     }
-    columns[col] = TabColumn(
-      frets: frets,
-      duration: current.duration,
-      techniques: current.techniques,
-      chord: chord,
+    _write(
+      col,
+      TabColumn(
+        frets: frets,
+        duration: current.duration,
+        techniques: current.techniques,
+        chord: chord,
+      ),
     );
   }
 
   /// Inserts an empty column at [col].
-  void insertColumn(int col) =>
-      columns.insert(col.clamp(0, columns.length), const TabColumn());
+  void insertColumn(int col) {
+    columns.insert(col.clamp(0, columns.length), const TabColumn());
+    _touch();
+  }
 
   /// Insert a run of ready-made columns (a strum, arpeggio or scale) at [at].
   void insertColumnsAt(int at, List<TabColumn> cols) {
     if (cols.isEmpty) return;
     columns.insertAll(at.clamp(0, columns.length), cols);
+    _touch();
   }
 
   /// The `[start, end)` column range of the ≤8-step (4/4) bar containing [col] —
@@ -978,6 +1036,7 @@ class TabDocument {
     if (e <= s) return 0;
     final copies = [for (var c = s; c < e; c++) columns[c].copy()];
     columns.insertAll(e, copies);
+    _touch();
     return copies.length;
   }
 
@@ -997,10 +1056,15 @@ class TabDocument {
     for (var c = 0; c < columns.length; c++) {
       final col = columns[c];
       if (col.frets.isEmpty) continue;
-      columns[c] = TabColumn(
-        frets: {for (final e in col.frets.entries) e.key: e.value + semitones},
-        duration: col.duration,
-        techniques: col.techniques,
+      _write(
+        c,
+        TabColumn(
+          frets: {
+            for (final e in col.frets.entries) e.key: e.value + semitones,
+          },
+          duration: col.duration,
+          techniques: col.techniques,
+        ),
       );
     }
     return true;
@@ -1010,6 +1074,7 @@ class TabDocument {
   void removeColumn(int col) {
     if (columns.length > 1 && col >= 0 && col < columns.length) {
       columns.removeAt(col);
+      _touch();
     }
   }
 

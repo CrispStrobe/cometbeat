@@ -173,6 +173,21 @@ abstract class TabWorkshopTester {
   bool get isCountingIn;
   Set<String> get highlightedIds;
 
+  /// Set the capo, as the settings sheet's stepper does.
+  ///
+  /// A seam because the capo is SCREEN state that changes what the score sounds,
+  /// which makes it part of the derived-score cache key — and a key is only
+  /// worth having if something proves it is complete.
+  void debugSetCapo(int frets);
+
+  /// How many times the engraved score has actually been DERIVED.
+  ///
+  /// The other half of the rebuild story: a build that reuses the cached score is
+  /// far cheaper than one that re-derives it, and this is what proves the cache
+  /// is working rather than quietly missing every time — the failure mode that
+  /// looks exactly like success.
+  int get debugScoreBuilds;
+
   /// How many times the SCREEN has rebuilt.
   ///
   /// A perf seam, not a feature: two of this screen's biggest costs were
@@ -326,8 +341,17 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   final List<(int, List<TabColumn>)> _redoStack = [];
   static const _maxUndo = 50;
 
-  (int, List<TabColumn>) _captureState() =>
-      (_active, [for (final c in _doc.columns) c.copy()]);
+  /// ⚠️ PERF: a SHALLOW list copy, not a deep one.
+  ///
+  /// This used to `copy()` every column, so a single fret keystroke deep-copied
+  /// the whole document — three collections and up to four lists per column,
+  /// through a 30-parameter `copyWith` — and fifty of those were retained.
+  /// `TabColumn` is immutable and every edit goes through `copyWith`, so an
+  /// unchanged column can be SHARED with the history instead of duplicated: the
+  /// snapshot needs the list to stop changing, not the columns. Structural
+  /// sharing, and it is only sound because of that immutability — if a column
+  /// ever gains an in-place mutator this has to go back to a deep copy.
+  (int, List<TabColumn>) _captureState() => (_active, List.of(_doc.columns));
 
   /// Snapshot the active track before a mutation so [undo] can restore it. A
   /// fresh edit invalidates the redo history.
@@ -777,6 +801,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   @override
   int get debugBuildCount => _buildCount;
   @override
+  int get debugScoreBuilds => _scoreBuilds;
+  @override
+  void debugSetCapo(int frets) => setState(() => _capo = frets.clamp(0, 12));
+  @override
   void toggleTechnique(TabTechnique t) {
     _snapshot();
     setState(() => _doc.toggleTechnique(_selCol, t));
@@ -1170,7 +1198,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       ? multiPartToMusicXml(
           MultiPartScore([for (final t in _tracks) t.doc.toScore(capo: _capo)]),
         )
-      : scoreToMusicXml(_doc.toScore(capo: _capo));
+      : scoreToMusicXml(_score());
 
   @override
   void saveToSongBook(String title) {
@@ -1541,7 +1569,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   // ── Export ───────────────────────────────────────────────────────────────
   Future<void> _export(String format) async {
-    final score = _doc.toScore(capo: _capo);
+    final score = _score();
     final base = (_sourceName ?? 'tab').replaceAll(RegExp(r'\.[^.]*$'), '');
     switch (format) {
       case 'gp':
@@ -1669,7 +1697,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     // mutable in place, so "this build's answers" is the only claim that is
     // certainly true.
     _fingerCache.clear();
-    final score = _doc.toScore(capo: _capo);
+    final score = _score();
     // Tab and notation are independent, stacked panes (notation on top).
     // Each pane rebuilds when the PLAYHEAD moves, and only that pane — the rest
     // of the screen (and `toScore` above) is untouched.
@@ -2791,6 +2819,50 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     }();
     return byString[string];
   }
+
+  /// The engraved score, derived once per CHANGE rather than once per build.
+  ///
+  /// ⚠️ PERF, and the single biggest win in this screen: `toScore` walks every
+  /// column and allocates a `NoteElement` plus ~22 span lists, and it used to run
+  /// on every build — including the many builds that change nothing about the
+  /// music (a selection move, a toolbar toggle, a window resize, a keyboard
+  /// animation frame). Worse, the result was a NEW `Score` each time, so
+  /// `StaffView`'s `==` gate had to deep-compare the whole document to discover
+  /// nothing had changed, and `TabStaffView` re-engraved unconditionally.
+  ///
+  /// Keyed on `TabDocument.revision` + the capo (which is screen state, not
+  /// document state, and changes what the score sounds). The document bumps its
+  /// revision on every mutation, and `tab_document_revision_test.dart` walks
+  /// every mutator to keep that true — because the failure mode here is not a
+  /// slow screen but a screen showing music that is no longer there.
+  /// ⚠️ Keyed on the DOCUMENT too, not just its revision. `_doc` is
+  /// `_tracks[_active].doc`, so switching tracks swaps the document underneath —
+  /// and two documents can easily be sitting on the same revision number, which
+  /// would serve one track's music while the other is selected. Identity is what
+  /// makes the key unique; the revision is what makes it fresh.
+  Score _score() {
+    final doc = _doc;
+    final revision = doc.revision;
+    if (_cachedScore case final cached?
+        when identical(_cachedDoc, doc) &&
+            _cachedFor == revision &&
+            _cachedCapo == _capo) {
+      return cached;
+    }
+    final score = doc.toScore(capo: _capo);
+    _scoreBuilds++;
+    _cachedScore = score;
+    _cachedDoc = doc;
+    _cachedFor = revision;
+    _cachedCapo = _capo;
+    return score;
+  }
+
+  int _scoreBuilds = 0;
+  Score? _cachedScore;
+  TabDocument? _cachedDoc;
+  int? _cachedFor;
+  int? _cachedCapo;
 
   /// Rebuild count, for the perf guard (see `TabWorkshopTester.debugBuildCount`).
   int _buildCount = 0;

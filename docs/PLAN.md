@@ -2446,6 +2446,63 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **TAB WORKSHOP optimised — PASS 2 (deeper), and it
+  turned into a library win plus two reds cleared off other lanes' work.**
+  * ✅ **`crisp_notation` `2ae3a59`: `TabStaffView` engraves once per CHANGE.**
+    It ran the whole `TabLayoutEngine` in `build`, and `highlightedIds` only
+    reaches the PAINTER — so a moving playhead re-laid out every note of the
+    piece for each column it lit. Everything downstream was already careful
+    (`StaffView`'s render object gates; the painter repaints without relayout),
+    which is exactly why this went unnoticed. Now cached on score IDENTITY +
+    tuning/capo/flag/font, with `engraveCount` `@visibleForTesting` — a cache
+    nobody can observe is a cache nobody will notice breaking.
+  * ✅ **`TabDocument.revision` + the app caches the derived `Score` on it.**
+    `toScore` ran on every build, including builds that change nothing musical.
+    ⚠️ Keyed on the document IDENTITY as well as the revision: `_doc` is
+    `_tracks[_active].doc`, so a track switch swaps the document and two
+    documents can sit on the same revision number — that would have served one
+    track's music while the other was selected.
+    ⚠️ The revision is only honest if EVERY mutation bumps it, so the writes now
+    funnel through one `_write`/`_touch`, the three public fields became bumping
+    setters, and **`tab_document_revision_test.dart` (36) walks every mutator**
+    — the failure mode here is not a slow screen but a screen showing music that
+    is no longer there.
+  * ✅ **The undo snapshot is a SHALLOW copy.** It deep-copied every column per
+    keystroke (three collections + up to four lists each, ×50 retained).
+    `TabColumn` is immutable and every edit goes through `copyWith`, so history
+    can SHARE unchanged columns. Measured: ~41–91 µs per keystroke → ~0.
+  ⚠️ **A measurement correction I owe the record.** Pass 1 said the arranger
+  hoist was "within noise" — **that verdict was taken while my own background
+  test runs were saturating the CPU.** On a quiet machine everything measures
+  5–10× faster and is repeatable to ±2%, and the hoist is a real **13%** at 512
+  columns (2.65 → 2.31 ms) but a small **loss** at 128. Still not worth shipping
+  for an import-time path, so it stays reverted — but the earlier reasoning was
+  wrong even though the conclusion held. **Never benchmark with a background
+  `flutter test` running.**
+  📌 **And the profile says the thing I assumed was slow is not:** `toScore` is
+  0.10/0.41/0.58 ms at 32/128/512 columns. Caching it paid off because it ran
+  per build *alongside* engraving and a deep `Score ==`, not because it is slow.
+  ⚠️ **TWO reds were already on `crisp_notation` main, neither mine — both now
+  fixed in `2ae3a59`, and both have the same cause worth naming:**
+  1. `goldens/118_notation_tab_pair.png` stale since **`4a67ae3`** ("clear low
+     notes above tab"), which legitimately grew the paired view 282 → 342 px.
+     @score-fixes: your note says the **core** suite was green — the golden lives
+     in the **widget** package, which is how it went unnoticed. Regenerated.
+  2. `musicxml_odd_meter_test` asserted `3/32` reads unmetered; **`71df9cc`**
+     (128th/256th durations) raised `maxBeatUnit` to 1024, so `3/32` is now
+     representable and the assertion became false **because the model got
+     better**. Restated with a still-unrepresentable meter, and `3/32` is now
+     asserted to work.
+  ⇒ **If you ship a layout or model change in `crisp_notation`, run
+  `flutter test` in `packages/crisp_notation` too, not just the core suite.**
+  Tests: `tab_document_revision_test` (36) · `tab_workshop_perf_test` 3→6 ·
+  `tab_staff_view_memo_test` (3, library); app tab suites green (326), library
+  312 widget + 1960 core.
+  ⬜ **Still open, and now the clear next item: the grid is not lazy** (~3000
+  cells per rebuild inside nested `SingleChildScrollView`s). Everything cheaper
+  than that is done; this one needs `tab_workshop_test`'s finders reworked first,
+  which is its own pass.
+
 - **opus (daw-suite)** · ✅ **TAB WORKSHOP optimised — pass 1, measured.** Only
   `tab_workshop_screen.dart` + two new test files. **This screen had no perf
   test and no benchmark; both now exist**, which is most of the value.

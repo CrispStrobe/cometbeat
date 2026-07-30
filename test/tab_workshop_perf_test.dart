@@ -76,6 +76,68 @@ void main() {
     expect(tab.debugBuildCount, greaterThan(builds));
   });
 
+  group('the engraved score is derived once per CHANGE, not per build', () {
+    testWidgets('a rebuild that changes nothing musical reuses it', (
+      tester,
+    ) async {
+      // `toScore` walks every column and allocates ~22 span lists; it used to run
+      // on every build, including builds that change nothing about the music.
+      await pumpGame(tester, const TabWorkshopScreen());
+      final tab = _tab(tester);
+      tab.selectCell(0, 0);
+      tab.enterFret(3);
+      await tester.pump();
+
+      final derived = tab.debugScoreBuilds;
+      // Moving the selection rebuilds the screen but changes no music.
+      tab.selectCell(1, 0);
+      await tester.pump();
+      tab.selectCell(2, 0);
+      await tester.pump();
+
+      expect(
+        tab.debugScoreBuilds,
+        derived,
+        reason: 'the cached score was reused',
+      );
+    });
+
+    testWidgets('⚠️ an EDIT re-derives it — a stale score is the real danger', (
+      tester,
+    ) async {
+      // The failure this guards is not slowness, it is a screen showing music
+      // that is no longer there.
+      await pumpGame(tester, const TabWorkshopScreen());
+      final tab = _tab(tester);
+      tab.selectCell(0, 0);
+      tab.enterFret(3);
+      await tester.pump();
+      final derived = tab.debugScoreBuilds;
+
+      tab.enterFret(7);
+      await tester.pump();
+      expect(tab.debugScoreBuilds, greaterThan(derived));
+      expect(tab.fretAt(0, 0), 7);
+    });
+
+    testWidgets('the capo re-derives it, because it changes the pitches', (
+      tester,
+    ) async {
+      // Capo is SCREEN state, not document state, so a revision-only key would
+      // have served the old pitches.
+      await pumpGame(tester, const TabWorkshopScreen());
+      final tab = _tab(tester);
+      tab.selectCell(0, 0);
+      tab.enterFret(3);
+      await tester.pump();
+      final derived = tab.debugScoreBuilds;
+
+      tab.debugSetCapo(2);
+      await tester.pump();
+      expect(tab.debugScoreBuilds, greaterThan(derived));
+    });
+  });
+
   testWidgets('the grid still shows what it should after the finger cache', (
     tester,
   ) async {

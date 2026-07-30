@@ -107,6 +107,29 @@ void main() {
   );
 
   test(
+    'an undo snapshot: deep copy vs sharing immutable columns',
+    () {
+      // What a single keystroke used to cost before the snapshot went shallow —
+      // and fifty of these are retained at a time.
+      stdout.writeln('columns   deep      shallow');
+      for (final size in const [32, 128, 512]) {
+        final doc = _doc(size);
+        final deep = _median(25, () {
+          [for (final c in doc.columns) c.copy()];
+        });
+        final shallow = _median(25, () {
+          List.of(doc.columns);
+        });
+        stdout.writeln(
+          '${size.toString().padRight(9)} '
+          '${deep.toStringAsFixed(3).padLeft(7)}ms '
+          '${shallow.toStringAsFixed(3).padLeft(8)}ms',
+        );
+      }
+    },
+    skip: Platform.environment['TAB_BENCH'] == null ? 'set TAB_BENCH=1' : null,
+  );
+  test(
     'toScore, by document size',
     () {
       stdout.writeln('columns   toScore   notes   per-note');
