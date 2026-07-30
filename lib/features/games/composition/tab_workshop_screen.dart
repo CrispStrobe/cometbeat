@@ -407,9 +407,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   void _restore((int, List<TabColumn>) snap) {
     final (track, cols) = snap;
     _active = track.clamp(0, _tracks.length - 1);
-    _tracks[_active].doc.columns
-      ..clear()
-      ..addAll(cols);
+    // Through the document, so `revision` moves and the engraved score is
+    // re-derived: an undo that only fixed the GRID left the notation and tab
+    // panes showing the edit it had just taken back.
+    _tracks[_active].doc.replaceColumns(cols);
     _selCol = _selCol.clamp(0, _doc.columns.length - 1);
   }
 

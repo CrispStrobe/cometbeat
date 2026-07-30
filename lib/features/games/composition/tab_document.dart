@@ -809,6 +809,22 @@ class TabDocument {
     _touch();
   }
 
+  /// Replace every column at once — what restoring an undo snapshot does.
+  ///
+  /// ⚠️ This exists because the screen used to do it by hand
+  /// (`doc.columns..clear()..addAll(snapshot)`), which **bypassed [revision]**:
+  /// the columns changed and nothing said so, so anything caching a derived
+  /// value from this document kept serving the pre-undo music. Exactly the
+  /// failure the revision counter is for, arriving through the one door the
+  /// counter could not see. A cascade also hides from a naive grep for
+  /// `columns.clear(`, which is how it survived a sweep.
+  void replaceColumns(List<TabColumn> next) {
+    columns
+      ..clear()
+      ..addAll(next);
+    _touch();
+  }
+
   /// Grows [columns] so index [col] exists (padding with empty columns).
   void _ensure(int col) {
     if (columns.length > col) return;

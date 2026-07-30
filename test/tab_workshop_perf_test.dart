@@ -138,6 +138,49 @@ void main() {
     });
   });
 
+  testWidgets('⚠️ UNDO re-derives the score — the cache bug this nearly was', (
+    tester,
+  ) async {
+    // Found while wiring the next feature, not by a test: `_restore` rebuilt the
+    // column list in place with a CASCADE (`columns..clear()..addAll(...)`),
+    // which bypassed the revision bump — so undo fixed the grid while the
+    // notation and tab panes kept showing the edit it had just taken back. A
+    // cascade also hides from a grep for `columns.clear(`, which is how it
+    // survived my sweep.
+    await pumpGame(tester, const TabWorkshopScreen());
+    final tab = _tab(tester);
+    tab.selectCell(0, 0);
+    tab.enterFret(3);
+    await tester.pump();
+    final derived = tab.debugScoreBuilds;
+
+    tab.undo();
+    await tester.pump();
+
+    expect(tab.fretAt(0, 0), isNull, reason: 'the edit was taken back');
+    expect(
+      tab.debugScoreBuilds,
+      greaterThan(derived),
+      reason: 'and the engraved score was re-derived, not served stale',
+    );
+  });
+
+  testWidgets('redo re-derives it as well', (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final tab = _tab(tester);
+    tab.selectCell(0, 0);
+    tab.enterFret(3);
+    await tester.pump();
+    tab.undo();
+    await tester.pump();
+    final derived = tab.debugScoreBuilds;
+
+    tab.redo();
+    await tester.pump();
+    expect(tab.fretAt(0, 0), 3);
+    expect(tab.debugScoreBuilds, greaterThan(derived));
+  });
+
   group('the grid is LAZY', () {
     // It used to be row-major in a plain SingleChildScrollView: nothing was
     // lazy, so a 512-column six-string piece materialised ~3000 cells (≈15–20k

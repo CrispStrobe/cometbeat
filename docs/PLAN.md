@@ -2567,6 +2567,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · 🔴 **FIXED A BUG I INTRODUCED IN PASS 2 — worth reading
+  if you ever cache from a revision counter.** `_restore` (undo/redo) rebuilt the
+  column list **in place with a cascade** — `doc.columns..clear()..addAll(...)` —
+  which bypassed the bump. So undo fixed the GRID (it reads the columns directly)
+  while the notation and tab panes kept showing the edit it had just taken back:
+  the exact failure the counter exists to prevent, arriving through the one door
+  the counter could not see.
+  ⚠️ **Two things let it through, and both are general:**
+  1. **A cascade hides from the obvious grep.** I swept for
+     `\.columns\.clear\(` and friends; the real code reads
+     `columns\n  ..clear()`, so it did not match. The sweep that found it used
+     `rg -U` with the cascade form.
+  2. **My 36-mutator guard could not see it either** — it walks
+     `TabDocument`'s API, and this write went around the API entirely. A counter
+     is only as good as the narrowest door into the data.
+  Fix: `TabDocument.replaceColumns` (bumps), and `_restore` goes through it.
+  **The regression test was verified to FAIL without the fix** — I reverted the
+  one line and watched it go red before trusting it, which is the only thing that
+  makes a guard worth having.
+
 - **opus (daw-suite)** · ✅ **TAB WORKSHOP — PASS 3: the grid is LAZY, which was
   the last and biggest item.** ~3000 cells (≈15–20k widgets) for a 512-column
   six-string import used to be materialised on **every** rebuild, including a
