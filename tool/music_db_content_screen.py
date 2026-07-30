@@ -45,7 +45,12 @@ SLUR = {
         r"\bhottentott?e?n?\w*", r"\bkaffern?\b", r"\bbimbo\b",
     ],
     "en": [
-        r"\bnigg\w+", r"\bdarke?y\b", r"\bdarkies\b", r"\bpickaninn\w+",
+        # NOT `\bnigg\w+`: "niggard" / "niggardly" is an ordinary English word
+        # meaning miserly, from Old Norse, etymologically unrelated to the slur.
+        # The broad prefix held Elgar's "The River" — "On thy narrowed, niggard
+        # strand" — which is a false accusation against the text, not caution.
+        r"\bnigger\w*", r"\bnigga\b", r"\bniggas\b", r"\bniggah\w*",
+        r"\bdarke?y\b", r"\bdarkies\b", r"\bpickaninn\w+",
         r"\bsambo\b", r"\bgypsy\b", r"\bgypsies\b", r"\bsquaw\w*",
         r"\bhalf-?breed\b", r"\bhottentot\w*",
     ],
@@ -171,9 +176,40 @@ def combined():
 # (begin/middle continue a word, end/single close it), so that path is precise.
 # The others mark continuation in the text itself: LilyPond `dark -- ey`, ABC
 # `w:dark-ey`, kern `dark-` in a **text spine.
+# `\b` is NOT enough after "lyric": it also matches `<lyric-font …/>` and
+# `<lyric-language …/>` in the MusicXML <defaults> block, which then open a
+# bogus element that runs to the next real </lyric> and swallow font metadata
+# into the sung text. Require the next char to end the tag name.
 _LYRIC_BLOCK = re.compile(
-    r"<(?:lyric|Lyrics)\b([^>]*)>(.*?)</(?:lyric|Lyrics)>", re.S | re.I)
-_VERSE = re.compile(r'(?:number|no)\s*=\s*"?(\d+)', re.I)
+    r"<(?:lyric|Lyrics)(?=[\s>])([^>]*)>(.*?)</(?:lyric|Lyrics)>", re.S | re.I)
+# The verse identifier is a TOKEN, not a number — MusicXML allows any value and
+# real exporters write `number="part1verse1"`. Demanding \d+ meant every verse
+# fell into one bucket and four stanzas interleaved into gibberish.
+_VERSE = re.compile(r'(?:number|no)\s*=\s*"([^"]+)"', re.I)
+_NOTE_BLOCK = re.compile(r"<(?:note|Chord|Rest)\b.*?</(?:note|Chord|Rest)>",
+                         re.S | re.I)
+_VOICE = re.compile(r"<voice>\s*(\d+)\s*</voice>", re.I)
+
+
+def _join_syllables(blocks):
+    """Rejoin one voice/verse stream's syllables into words."""
+    words, cur = [], ""
+    for b in blocks:
+        syl = (_SYLLABIC.search(b).group(1).lower()
+               if _SYLLABIC.search(b) else "single")
+        txt = "".join(_TEXTEL.findall(b))
+        for k, v in _ENT.items():
+            txt = txt.replace(k, v)
+        txt = txt.strip()
+        if not txt:
+            continue
+        cur += txt
+        if syl in ("end", "single"):
+            words.append(cur)
+            cur = ""
+    if cur:
+        words.append(cur)
+    return " ".join(words)
 _SYLLABIC = re.compile(r"<syllabic>\s*(\w+)\s*</syllabic>", re.I)
 _TEXTEL = re.compile(r"<text>(.*?)</text>", re.S | re.I)
 _ENT = {"&apos;": "'", "&amp;": "&", "&quot;": '"', "&lt;": "<", "&gt;": ">"}
@@ -181,6 +217,42 @@ _ENT = {"&apos;": "'", "&amp;": "&", "&quot;": '"', "&lt;": "<", "&gt;": ">"}
 
 def lyric_words(raw):
     """The sung text with syllables rejoined into words, or '' if none found."""
+    # Group by VOICE and verse, not document order. An SATB psalm setting is
+    # commonly ONE <part> containing four <voice>s, so neither document order nor
+    # a part split helps: grouping by verse alone welds syllables across voices
+    # into gibberish. Stephenson's "Attend, O Earth" reconstructed as "my most
+    # the reare Son, liLord venge they this mits" and coined the non-word
+    # "negreheir", which then matched as a French slur. Words only mean anything
+    # when they come from one voice at a time.
+    # MuseScore states voices STRUCTURALLY — `<Staff id=..>` per singer and
+    # `<voice>…</voice>` as a container — where MusicXML uses a per-note leaf
+    # `<voice>1</voice>`. Both have to be handled or an SATB .mscz still welds
+    # four singers into one stream. Recurse into each structural segment first.
+    if re.search(r"<Staff\b[^>]*>", raw):
+        segs = re.split(r"<Staff\b[^>]*>", raw)
+        if len(segs) > 1:
+            return " ".join(lyric_words(s) for s in segs if s)
+    if re.search(r"<voice>\s*<", raw):
+        segs = re.split(r"<voice>", raw)
+        if len(segs) > 1:
+            return " ".join(lyric_words(s) for s in segs if s)
+
+    notes = _NOTE_BLOCK.findall(raw)
+    if notes and any("<lyric" in n.lower() for n in notes):
+        streams = defaultdict(list)
+        for n in notes:
+            if "<lyric" not in n.lower():
+                continue
+            v = _VOICE.search(n)
+            voice = v.group(1) if v else "1"
+            for attrs, b in _LYRIC_BLOCK.findall(n):
+                num = _VERSE.search(attrs)
+                streams[(voice, num.group(1) if num else "1")].append(b)
+        out = []
+        for key in sorted(streams):
+            out.append(_join_syllables(streams[key]))
+        return " ".join(out)
+
     blocks = _LYRIC_BLOCK.findall(raw)
     if blocks:
         # Verses are INTERLEAVED in the file — verse 1 and verse 2 of the same

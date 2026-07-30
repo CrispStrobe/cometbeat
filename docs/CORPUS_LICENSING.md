@@ -313,6 +313,39 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > `tool/music_db_wp_score_check.py` (splits a gap list into harvestable-today vs
 > genuine content gap; without that split a gap list is only a wish list).
 
+> **📦 SHIPPED-CATALOG SIZE — measured and cut 18x (2026-07-30).** The score shard
+> was **36.5 MB of raw JSON, re-downloaded on every cold start**: the app's cache
+> was in-process only, and the source file's own header wrongly claimed *"HF's CDN
+> serves each file gzipped on the wire"* — it does not, verified by requesting the
+> shard with and without `Accept-Encoding` and getting the identical byte count.
+> Where the bytes went (38,431 items): `music` 10.81 MB · `sha256` 2.92 · `path`
+> 2.41 · `sourceUrl` 2.14 · `attribution` 1.25 · `license` 1.23 · `bytes` 0.50.
+> Three of those the client never reads — `LibraryItem` is built from
+> id/name/kind/format/license/attribution/sourceUrl/path/music, and
+> `incipitIntervals` (2.72 MB) is simply the first differences of `incipit`.
+> **Dropped all three (−9.8 MB) and emitted a `.json.gz` twin advertised as
+> `urlGz`: 36.5 MB → 26.7 MB raw → 2.00 MB gzipped.** Removing the incompressible
+> sha256 hex also lifted the gz ratio from 8.0x to 13.3x, and not hashing ~2.5 GB
+> cut `emit_catalog.py` from **2m11s to 19s**. App side prefers `urlGz`, sniffs
+> the gzip magic rather than trusting the URL, and **persists shard bytes keyed on
+> the catalog `version`** (reusing the existing files-on-native /
+> IndexedDB-on-web byte store), so a cold start costs one ~1 KB index fetch.
+> Cache faults degrade to the network — a browse that cannot persist is still a
+> browse. 5 regression tests cover prefer-gz, cross-launch reuse, version
+> eviction, a throwing cache, and an un-gzipped shard.
+> **⚠️ Lesson from a self-inflicted bug in this very change:** the first patch's
+> anchor (`"bytes": …` + `"sha256": …`) appears TWICE in `emit_catalog.py`, and it
+> asserted only that the anchor was PRESENT before replacing with `count=1` — so
+> it stripped sha256 from 97 percussion samples and left it on all 38,431 scores,
+> i.e. exactly the 2.9 MB it was meant to remove. **Assert anchor UNIQUENESS, not
+> presence.**
+> **Not done (deliberate):** SQLite. It would not fix this — a `.db` is the same
+> order of size and FTS5 adds 30–50%, while `sqflite` has no web support at all
+> (you ship `sqlite3.wasm` + OPFS/IndexedDB). At 38k rows query speed is a
+> non-issue. Revisit for FTS5-quality search, or when the index stops fitting; the
+> end state if the corpus outgrows a shippable index is SQLite over HTTP Range
+> (**HF does honour Range — verified 206**), which needs a custom Dart VFS.
+
 > **⚠️ PDMX OVERHAUL (2026-07-23) — copyright incident + composer_name fix + classical
 > recovery.** A title scan caught **25 in-copyright holiday songs** (White Christmas,
 > Frosty, Feliz Navidad, Mary Did You Know…) that slipped in via PDMX's self-attested

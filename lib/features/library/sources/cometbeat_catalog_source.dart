@@ -7,11 +7,27 @@
 // per item. It is shard-ready: the app reads a tiny `index.json` first, then
 // only the per-kind shard(s) it needs (soundfonts / instruments / samples), so
 // it scales to a large registry without downloading everything or standing up a
-// query server. HF's CDN serves each file gzipped on the wire.
+// query server.
+//
+// ⚠️ CORRECTION (measured 2026-07-30): this header used to claim "HF's CDN serves
+// each file gzipped on the wire". IT DOES NOT — requesting the score shard with
+// and without `Accept-Encoding: gzip` returns the identical byte count. That
+// wrong assumption is why the score shard was downloaded as 36.5 MB of raw JSON
+// on EVERY cold start (the in-process cache does not survive a launch). So:
+//   * the publisher now emits a `.json.gz` twin and advertises it as `urlGz`
+//     (36.5 MB -> 3.71 MB, 8x), which we prefer and inflate here;
+//   * shard bytes are persisted keyed by the catalog `version`, so a cold start
+//     costs one ~1 KB index fetch instead of the whole shard.
+// If you are tempted to trust a transport-level claim again, measure it first.
 
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
+// A generic key->bytes store that already solves files-on-native /
+// IndexedDB-on-web. TTS-named for historical reasons — the API is just
+// has/read/write/delete, nothing speech-specific.
+import 'package:comet_beat/core/audio/tts/tts_asset_cache.dart';
 import 'package:comet_beat/features/library/content_source.dart';
 
 /// Thrown when the catalog index/shard comes back unreadable (a changed layout,
@@ -36,7 +52,9 @@ class CometbeatCatalogSource implements ContentSource {
     this._http, {
     this.kinds = const {'soundfont', 'instrument', 'sample'},
     String indexUrl = _kIndexUrl,
-  }) : _indexUrl = indexUrl;
+    TtsAssetCache? cache,
+  })  : _indexUrl = indexUrl,
+        _cache = cache;
 
   /// The playable sound library (SoundFonts + SFZ instruments + samples).
   factory CometbeatCatalogSource.sounds(HttpGet http) =>
@@ -61,6 +79,11 @@ class CometbeatCatalogSource implements ContentSource {
       CometbeatCatalogSource(http, kinds: const {'score'});
 
   final HttpGet _http;
+
+  /// Persists shard bytes across launches. Created lazily so a caller that never
+  /// browses never touches the filesystem; injectable so tests can supply an
+  /// in-memory store (or a throwing one, to prove cache failure is survivable).
+  TtsAssetCache? _cache;
   final Set<String> kinds;
   final String _indexUrl;
 
@@ -103,10 +126,49 @@ class CometbeatCatalogSource implements ContentSource {
 
   Map<String, dynamic> _json(Uint8List bytes, String what) {
     try {
-      final v = jsonDecode(utf8.decode(bytes));
+      // Sniff the gzip magic rather than trusting the URL: the publisher may
+      // serve either, and a `.gz` that arrived already-inflated by some proxy
+      // must still parse.
+      final raw = (bytes.length > 2 && bytes[0] == 0x1f && bytes[1] == 0x8b)
+          ? Uint8List.fromList(const GZipDecoder().decodeBytes(bytes))
+          : bytes;
+      final v = jsonDecode(utf8.decode(raw));
       if (v is Map<String, dynamic>) return v;
     } catch (_) {}
     throw CometbeatCatalogUnavailable('unreadable $what');
+  }
+
+  /// Shard bytes for [shard], from the on-disk cache when the cached copy was
+  /// written for this catalog [version], else fetched and then cached.
+  ///
+  /// Cache failure is never fatal — a browse that cannot persist is still a
+  /// working browse, so every cache call degrades to the network path.
+  Future<Uint8List> _shardBytes(
+    Map<String, dynamic> shard,
+    String baseUrl,
+    String version,
+  ) async {
+    final kind = shard['kind'] as String? ?? 'shard';
+    final gz = shard['urlGz'] as String?;
+    final url = gz ?? shard['url'] as String;
+    final key = 'catalog/$kind-$version${gz != null ? '.json.gz' : '.json'}';
+
+    final cache = _cache ??= createTtsAssetCache();
+    try {
+      final hit = await cache.read(key);
+      if (hit != null && hit.isNotEmpty) return hit;
+    } catch (_) {/* unreadable cache — fall through to the network */}
+
+    final bytes = await _http(Uri.parse(baseUrl + url));
+    try {
+      // Drop other versions of THIS kind first, so the cache holds one copy per
+      // shard rather than growing by a few MB on every catalog publish.
+      for (final k in await cache.keys()) {
+        if (k.startsWith('catalog/$kind-') && k != key) await cache.delete(k);
+      }
+      await cache.write(key, bytes);
+    } catch (_) {/* cache is a nicety, not a requirement */}
+    return bytes;
   }
 
   Future<List<LibraryItem>> _load() async {
@@ -117,13 +179,16 @@ class CometbeatCatalogSource implements ContentSource {
     }
     final index = _json(await _http(Uri.parse(_indexUrl)), 'catalog index');
     final baseUrl = (index['baseUrl'] as String?) ?? '';
+    // The index is the ~1 KB file we always fetch; its `version` is what decides
+    // whether a persisted shard is still current.
+    final version = (index['version'] as String?) ?? 'unversioned';
     final shards = (index['shards'] as List? ?? const [])
         .whereType<Map<String, dynamic>>()
         .where((s) => kinds.contains(s['kind']));
     final items = <LibraryItem>[];
     for (final shard in shards) {
       final data = _json(
-        await _http(Uri.parse(baseUrl + (shard['url'] as String))),
+        await _shardBytes(shard, baseUrl, version),
         'catalog shard ${shard['kind']}',
       );
       for (final raw in (data['items'] as List? ?? const [])) {
