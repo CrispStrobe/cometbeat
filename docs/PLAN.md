@@ -172,12 +172,22 @@ is recorded in [HISTORY.md](HISTORY.md).
     — its `endIndex` being out of range there — never closed, swallowing the rest
     of the layer. Inner voices got no spans at all. MusicXML was already routed
     via `tupletsForVoice`; those two never were.
-  - ⚠️ **Any text field written into a line- or delimiter-terminated format needs
-    escaping, or third-party prose becomes NOTES.** A kern `!!!` record ends at a
-    newline, and a four-line CPDL lyricist field left a bare `C1` in the spine —
-    a phantom C3 whole note. An ABC annotation ends at `"`, and a hymn lyric
-    quoting speech gained six phantom notes. Invisible to every existing test
-    because our own writers never emit metadata with a newline or a quote.
+  - ⚠️ **ONE bug in FOUR codecs, and the most transferable thing here: any text
+    field written into a line- or delimiter-terminated format needs escaping, or
+    third-party prose becomes NOTES.** kern `!!!` records end at a newline (a
+    four-line CPDL lyricist field left a bare `C1` in the spine → a phantom C3
+    whole note) · ABC annotations end at `"` (a hymn lyric quoting speech gained
+    six phantom notes) · ABC `w:` lyric lines end at a newline (a NIFC kern file
+    gained a whole extra bar) · LilyPond strings end at an unescaped `"`, and the
+    lexer honoured `\"` but not `\\`, so a syllable ending in a backslash ran
+    past its own closing quote. All four were invisible to every existing test
+    because **our own writers never emit metadata containing a newline, a quote
+    or a backslash** — only third-party CONTENT reaches them.
+  - ⚠️ **Measurement trap, cost me a wrong conclusion: never compare element IDS
+    across a round trip.** Every reader regenerates them and numbers RESTS too,
+    so one rest before a syllable shifts every id after it and an exact round
+    trip reads as ~50% corrupt. Compare by note POSITION. I filed the LilyPond
+    lyric round-trip as an open defect on that basis and had to retract it.
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
@@ -186,7 +196,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     `/mnt/volume1/crisp_notation`). `--chain` runs all 6×6 ordered format pairs,
     not just the 6 direct hops. **Direct-hop corpus failures 98 → 0 on every file
     traced**, and the permutation matrix went 34/48 → 73/84 perfect cells with
-    every survivor traced and fixed afterwards. Core suite **1997**, green.
+    every survivor traced and fixed afterwards. Core suite **2006**, green.
 
 - **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
   extension** (the cheap win listed inside `BB-X2`). Branch
