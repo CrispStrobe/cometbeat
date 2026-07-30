@@ -177,9 +177,9 @@ repos below. Reachable, but dev/test only.
 The direct answer to "what have we covered / what could we still safely add."
 Every line here is a *licence/coverage* statement; detail per source follows.
 
-> **▶ Live DB snapshot (2026-07-30): `db.json` = 46,341 rows** — 45,942 scores +
+> **▶ Live DB snapshot (2026-07-30): `db.json` = 46,339 rows** — 45,940 scores +
 > 399 playback assets (232 instruments · 166 modules · 1 soundfont). The app-facing
-> **HF catalog ships 38,902 items** (score 38,433 · instrument 232 · module 139 ·
+> **HF catalog ships 38,900 items** (score 38,431 · instrument 232 · module 139 ·
 > sample 97 · soundfont 1) — verified live and unauthenticated. Scores by source:
 > GregoBase 18,684 · **PDMX 10,799** (74 is_original + 3,352 classical MXL
 > shippable; see below) · NIFC Polish 8,181 · **CPDL 2,546** · OpenScore Lieder
@@ -1113,9 +1113,17 @@ regardless of licence.** Tooling: `tool/music_db_content_screen.py` →
   are repertoire, not songs a child is invited to sing, and removing Verdi's
   Anvil Chorus protects nobody. The held set is the folk/minstrel material a
   child *would* be asked to sing.
-- **Net: 16 rows held** (13 mine + 3 antisemitic 18th-century dance titles a
+- **Read the text before judging by the title — twice this reversed the call.**
+  *"They Made It Twice as Nice as Paradise and They Called It Dixieland"* (1916)
+  and the vocal *"Swanee"* (Gershwin/Caesar 1919) both look like mild Tin Pan
+  Alley pop; both invoke the **Mammy** stereotype and cite works already held
+  (*Old Black Joe*, *Old Folks at Home*), so both are held. The **untexted**
+  piano-solo arrangement of *Swanee* and an untexted *Dixie Tune* are **kept** —
+  the tune is not the problem, the words are, which is the same reasoning that
+  kept the untexted *Gypsy Dance*.
+- **Net: 18 rows held** (15 mine + 3 antisemitic 18th-century dance titles a
   parallel agent had already pulled from the TradArchiv manuscripts), **8
-  exempt**, live catalog **38,433 score items**.
+  exempt**, live catalog **38,431 score items**.
 - **Holds are reversible and the files stay.** Each row keeps its complete
   manifest entry in `content-held.json` and its file on disk — precisely so the
   corpus remembers what not to publish again.
