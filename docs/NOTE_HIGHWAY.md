@@ -322,6 +322,14 @@ Three tiles — **Note Highway** (keyboard), **String Runway** (guitar),
   separates voices by lightness for colour-blind and high-contrast use).
 * `highway_strip.dart` — the optional reading strip: scrolling **tab** (string
   lines + fret digits) for fretted/bowed, **note names** for keys/pads.
+* Wired into the app's SHARED systems, not just its own: the transport key
+  comes from `shared/keymap` (`AppIntent.transportToggle` — "the one binding
+  every surface should have", Space by default, and a user's rebinding reaches
+  here because the table is read rather than hard-coded), and the note keys come
+  from `shared/keyboard_notes.dart`, lifted out of the Tracker so the two cannot
+  disagree about which key plays a D♯. **Verified web-safe by an actual
+  `flutter build web`** — record-and-review included, since `flutter test` runs
+  on the VM and cannot catch a `dart:io` leak.
 * Wired into the app's learning systems like any other game: a **primer** on
   each tile (shown the first time it opens, reopenable from "?"), star scoring
   through `kStarThresholds`/`ProgressService`, a curriculum placement, and

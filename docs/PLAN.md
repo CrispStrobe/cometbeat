@@ -149,6 +149,23 @@ is recorded in [HISTORY.md](HISTORY.md).
     Reverted (`git rm --cached`); the file is back to untracked, unchanged, still
     on disk. **Stage named files** — the board is right about this.
 
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — the highway honours the
+  APP-WIDE transport binding, and is verified web-safe.** Two findings from
+  auditing my own tiles against the infrastructure that already exists (the same
+  audit that turned up the curriculum orphan, the missing primer and the missing
+  SRI — it keeps paying):
+  - `intents.dart` calls `AppIntent.transportToggle` "the one binding every
+    surface should have" and this screen did not have it: you could play a piece
+    with the number keys but had to reach for the mouse to START it. It now
+    resolves transport through `KeymapService`, so Space works and a user's
+    rebinding reaches the highway too. ⚠️ A `Focus` without `autofocus: true`
+    never holds focus and every binding on it is silently unreachable — my first
+    version had exactly that bug and the test caught it.
+  - **`flutter build web` passes**, record-and-review included. Worth doing
+    deliberately: `flutter test` runs on the VM, so it cannot catch a `dart:io`
+    import that would break the web build, and this arc added a recorder and a
+    transcriber call. (Only warnings are `flutter_tts`'s own wasm-lint notes.)
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — RECORD AND REVIEW: the only
   mode that grades a chord, or two hands, by ear.** Play the whole piece; the
   recording is transcribed afterwards and matched to the score. ⚠️ **I had told

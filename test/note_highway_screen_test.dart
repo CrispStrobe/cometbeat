@@ -449,6 +449,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('space starts and stops the run, via the app-wide binding',
+      (tester) async {
+    // AppIntent.transportToggle is described in intents.dart as 'the one
+    // binding every surface should have', and this screen did not have it: you
+    // could play with the number keys but had to reach for the mouse to start.
+    await tester.pumpWidget(
+      _app(const NoteHighwayScreen(gameId: 'note_highway_piano')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(HighwayView), findsNothing);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(
+      find.byType(HighwayView),
+      findsOneWidget,
+      reason: 'the run started from the keyboard',
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(HighwayView), findsNothing, reason: 'and stopped');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('every instrument × skin × projection paints', (tester) async {
     for (final instrument in HighwayInstrument.values) {
       final profile = HighwayInstrumentProfile.of(instrument);

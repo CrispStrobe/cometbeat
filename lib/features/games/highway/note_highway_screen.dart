@@ -62,6 +62,9 @@ import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/keyboard_notes.dart';
+import 'package:comet_beat/shared/keymap/intents.dart' show AppIntent;
+import 'package:comet_beat/shared/keymap/keymap.dart' show chordOf;
+import 'package:comet_beat/shared/keymap/keymap_service.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Score;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -168,6 +171,13 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   /// case. Pitched instruments keep the letter row for a later slice; the pads
   /// are what needed it.
   final FocusNode _keyFocus = FocusNode(debugLabel: 'highway-keys');
+
+  /// The app's shared bindings. Transport is the one binding every surface is
+  /// supposed to have (`AppIntent.transportToggle`, Space by default) and this
+  /// screen did not have it: you could play a piece with the number keys but
+  /// had to reach for the mouse to start it. Reading the table rather than
+  /// hard-coding Space also means a user's rebinding reaches here.
+  final KeymapService _keymapService = KeymapService()..load();
 
   // --- microphone ------------------------------------------------------------
   final MicrophonePitchService _mic = MicrophonePitchService();
@@ -679,6 +689,24 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     // Only key DOWN: a repeat would machine-gun the lane, and a key-up would
     // double every hit.
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    // Transport first: it is resolved through the shared keymap, and it has to
+    // win over note entry or the binding would be unreachable on a surface
+    // where most keys play something.
+    final intent = _keymapService.keymap.intentFor(
+      chordOf(event.logicalKey, HardwareKeyboard.instance),
+    );
+    switch (intent) {
+      case AppIntent.transportToggle:
+        _running ? _stop() : _start();
+        return KeyEventResult.handled;
+      case AppIntent.transportStop:
+        if (_running) _stop();
+        return KeyEventResult.handled;
+      default:
+        break;
+    }
+
     final laneMap = _laneMap;
     if (!_running || laneMap == null || _mode == HighwayMode.watch) {
       return KeyEventResult.ignored;
@@ -789,8 +817,17 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
         ],
       );
     }
-    if (!_running) return _setup(context, l);
-    return _playing(context, l);
+    // One Focus around whichever half is showing, so the shared transport
+    // binding works before a run as well as during one.
+    return Focus(
+      focusNode: _keyFocus,
+      onKeyEvent: _onKey,
+      // Without this the node never holds focus and every binding here is
+      // unreachable — including the transport key that has to work before a
+      // run has started.
+      autofocus: true,
+      child: _running ? _playing(context, l) : _setup(context, l),
+    );
   }
 
   /// What to work on next. Stars say how it went; this says what to DO about
@@ -1123,8 +1160,6 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
         if (e.lane != null) e.lane!,
     };
 
-    // The keyboard only reaches the game while it is the focused thing.
-    _keyFocus.requestFocus();
     return Column(
       children: [
         if (_showStrip)
@@ -1144,10 +1179,8 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
             noteNameOf: noteName,
           ),
         Expanded(
-          child: Focus(
-            focusNode: _keyFocus,
-            onKeyEvent: _onKey,
-            child: HighwayView(
+          child: Builder(
+            builder: (context) => HighwayView(
               chart: chart,
               laneMap: laneMap,
               notes: grader.notes,
