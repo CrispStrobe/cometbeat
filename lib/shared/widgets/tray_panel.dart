@@ -197,6 +197,20 @@ class _TrayChip extends StatelessWidget {
       ),
     );
 
+    // An INSTRUMENT has no document to drop, so it is placed by tapping only.
+    // Making it draggable would offer a gesture that must then be refused at
+    // the target, or worse, land as a silent empty clip.
+    final payload = item.payload;
+    final draggable = payload == null
+        ? (place == null
+            ? body
+            : InkWell(
+                onTap: () => place(item),
+                borderRadius: BorderRadius.circular(8),
+                child: body,
+              ))
+        : null;
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -208,21 +222,24 @@ class _TrayChip extends StatelessWidget {
         // is exactly what makes the four drop targets WS-X2 already shipped
         // accept a clipboard item without a line of change to any of them —
         // which was the point of building this rather than a fifth target.
-        Draggable<MusicDragPayload>(
-          data: item.payload,
-          feedback: Material(
-            color: Colors.transparent,
-            child: Opacity(opacity: 0.9, child: body),
+        if (draggable != null)
+          draggable
+        else
+          Draggable<MusicDragPayload>(
+            data: payload!,
+            feedback: Material(
+              color: Colors.transparent,
+              child: Opacity(opacity: 0.9, child: body),
+            ),
+            childWhenDragging: Opacity(opacity: 0.3, child: body),
+            child: place == null
+                ? body
+                : InkWell(
+                    onTap: () => place(item),
+                    borderRadius: BorderRadius.circular(8),
+                    child: body,
+                  ),
           ),
-          childWhenDragging: Opacity(opacity: 0.3, child: body),
-          child: place == null
-              ? body
-              : InkWell(
-                  onTap: () => place(item),
-                  borderRadius: BorderRadius.circular(8),
-                  child: body,
-                ),
-        ),
         Positioned(
           top: -6,
           right: -6,

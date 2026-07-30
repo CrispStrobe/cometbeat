@@ -224,6 +224,9 @@ abstract interface class LoopMixerTester {
 
   /// WS-X6 — put the whole groove on the shared clipboard.
   void putGrooveOnTray();
+
+  /// WS-X6 — put one track's voice on the clipboard. False when it has none.
+  bool putVoiceOnTray(String trackId);
   bool openProjectTrack(String trackId);
   bool get hasLiveProjectLink;
   bool writeBackToProject();
@@ -753,8 +756,64 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     if (!_trayOpen) setState(() => _trayOpen = true);
   }
 
-  /// Tap-to-place: the same path a drop takes, so the two cannot diverge.
-  void _placeFromTray(TrayItem item) => unawaited(_dropHere(item.payload));
+  /// Tap-to-place.
+  ///
+  /// A DOCUMENT takes the same path a drop takes, so the two cannot diverge. An
+  /// INSTRUMENT cannot: "play this with that" needs to know which track, so it
+  /// asks — silently applying it to a guessed track would be a change the player
+  /// did not ask for, on a track they may not be looking at.
+  void _placeFromTray(TrayItem item) {
+    final payload = item.payload;
+    if (payload != null) {
+      unawaited(_dropHere(payload));
+      return;
+    }
+    final instrument = item.instrument;
+    if (instrument != null) unawaited(_askWhichTrackFor(item, instrument));
+  }
+
+  /// Asks which track should play [instrument], then sets its voice.
+  Future<void> _askWhichTrackFor(
+    TrayItem item,
+    TrackerInstrument instrument,
+  ) async {
+    // Only pitched tracks: a drum row has no voice to set, and offering one
+    // would be an action that silently does nothing.
+    final targets = [
+      for (final id in _engine.enabled)
+        if (trackIsPitched(id)) id,
+    ]..sort();
+    if (targets.isEmpty) return;
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(item.label),
+        children: [
+          for (final id in targets)
+            SimpleDialogOption(
+              key: Key('tray-voice-target-$id'),
+              onPressed: () => Navigator.pop(ctx, id),
+              child: Text(_trackLabel(AppLocalizations.of(ctx)!, id)),
+            ),
+        ],
+      ),
+    );
+    if (!mounted || chosen == null) return;
+    _setTrackVoice(chosen, instrument);
+  }
+
+  /// Puts a track's voice on the clipboard, to play something else with it.
+  @override
+  bool putVoiceOnTray(String trackId) {
+    final voice = _engine.trackVoice(trackId);
+    if (voice == null) return false;
+    _tray.addInstrument(
+      label: voice.id.isEmpty ? trackId : voice.id,
+      instrument: voice,
+    );
+    if (!_trayOpen) setState(() => _trayOpen = true);
+    return true;
+  }
 
   void _onHistoryChanged() {
     if (mounted) setState(() {});

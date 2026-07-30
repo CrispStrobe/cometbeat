@@ -28,6 +28,8 @@
 // PURE DART, no Flutter: the whole model is testable headlessly, and the panel
 // that draws it is a separate file.
 
+import 'package:comet_beat/core/audio/tracker_engine.dart'
+    show TrackerInstrument;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/interop/drag_payload.dart';
 
@@ -37,8 +39,9 @@ class TrayItem {
     required this.id,
     required this.kind,
     required this.label,
-    required this.document,
     required this.addedAtMs,
+    this.document,
+    this.instrument,
     this.libraryName,
   });
 
@@ -55,20 +58,40 @@ class TrayItem {
   /// know whether this is "Drums" or "the bit before the chorus".
   final String label;
 
-  /// The document itself, for the symbolic kinds.
-  final Object document;
+  /// The document itself, for the symbolic kinds. Null for an instrument item.
+  final Object? document;
 
-  /// Reserved for slice 3: the name of an `InstrumentLibraryStore` entry, for
-  /// items too heavy to hold by value. Null for everything today.
+  /// An INSTRUMENT rather than a document — a voice to play a track with.
+  ///
+  /// ⚠️ Holding one here does NOT copy its samples, which corrects how this
+  /// file described the problem in slice 1. Dart hands out object references,
+  /// so a sample-backed instrument on the clipboard is the SAME object the
+  /// engine already holds; nothing is duplicated. The by-reference question is
+  /// real only at PERSISTENCE time, where the PCM would have to be written
+  /// somewhere — which is what [libraryName] is for.
+  final TrackerInstrument? instrument;
+
+  /// The name of an `InstrumentLibraryStore` entry this came from, when it came
+  /// from one. Not needed to USE the item — [instrument] is right there — but it
+  /// is what lets a future save record "the library's Rhodes" instead of
+  /// megabytes of PCM.
   final String? libraryName;
+
+  /// Instrument items are placed rather than dropped: they answer "play this
+  /// track with this", which is not what a drop target does with a document.
+  bool get isInstrument => instrument != null;
 
   final int addedAtMs;
 
   /// What a drag or a tap hands to a drop target — the SAME payload the four
   /// existing targets already accept, which is why they need no change to
   /// receive from here.
-  MusicDragPayload get payload =>
-      MusicDragPayload(kind: kind, document: document, label: label);
+  ///
+  /// Null for an instrument: there is no document to drop, and inventing one
+  /// would make an instrument land as a silent, empty clip.
+  MusicDragPayload? get payload => isInstrument || document == null
+      ? null
+      : MusicDragPayload(kind: kind, document: document!, label: label);
 }
 
 /// The clipboard. One instance, provided app-wide.
@@ -102,15 +125,41 @@ class TrayService {
     required Object document,
     String? libraryName,
     int? nowMs,
-  }) {
-    final item = TrayItem(
-      id: 'tray-${_nextId++}',
-      kind: kind,
-      label: label,
-      document: document,
-      libraryName: libraryName,
-      addedAtMs: nowMs ?? DateTime.now().millisecondsSinceEpoch,
-    );
+  }) =>
+      _insert(
+        TrayItem(
+          id: 'tray-${_nextId++}',
+          kind: kind,
+          label: label,
+          document: document,
+          libraryName: libraryName,
+          addedAtMs: nowMs ?? DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+
+  /// Puts an INSTRUMENT on the clipboard — a voice, not a document.
+  ///
+  /// [kind] is the surface it came from, used only for the chip's icon; an
+  /// instrument is not a document of any mode.
+  TrayItem addInstrument({
+    required String label,
+    required TrackerInstrument instrument,
+    AppMode kind = AppMode.loop,
+    String? libraryName,
+    int? nowMs,
+  }) =>
+      _insert(
+        TrayItem(
+          id: 'tray-${_nextId++}',
+          kind: kind,
+          label: label,
+          instrument: instrument,
+          libraryName: libraryName,
+          addedAtMs: nowMs ?? DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+
+  TrayItem _insert(TrayItem item) {
     _items.insert(0, item);
     if (_items.length > maxItems) _items.removeLast();
     _notify();

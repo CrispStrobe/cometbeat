@@ -479,10 +479,17 @@ class _DawScreenState extends State<DawScreen>
   /// Tap-to-place, for a finger that should not have to aim: the same path a
   /// drop takes. Onto the selected lane when there is one, else the first —
   /// never "wherever the last drop went", which is invisible state.
-  void _placeFromTray(TrayItem item) => _dropOnLane(
-        item.payload,
-        _selectedTracks.isEmpty ? 0 : _selectedTracks.reduce(math.min),
-      );
+  void _placeFromTray(TrayItem item) {
+    // An INSTRUMENT is a voice, and a lane holds clips: there is nothing here
+    // for it to become. Ignored rather than turned into an empty clip, which
+    // would look like it worked.
+    final payload = item.payload;
+    if (payload == null) return;
+    _dropOnLane(
+      payload,
+      _selectedTracks.isEmpty ? 0 : _selectedTracks.reduce(math.min),
+    );
+  }
 
   @override
   @override

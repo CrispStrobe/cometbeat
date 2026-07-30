@@ -11,7 +11,11 @@
 // and the surface, and you would be able to look at your samples and never drag
 // one onto anything.
 
+import 'dart:typed_data';
+
 import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/tracker_engine.dart'
+    show SampleInstrument, TrackerInstrument;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
@@ -32,6 +36,9 @@ TrayItem _put(TrayService tray, String label, {int? at}) => tray.add(
       document: const GrooveSpec(enabled: {'bass'}),
       nowMs: at,
     );
+
+/// A sample-backed voice, the heavy kind the clipboard was worried about.
+TrackerInstrument _voice() => SampleInstrument('Rhodes', Float64List(64));
 
 LoopMixerTester _game(WidgetTester tester) =>
     tester.state<State<LoopMixerScreen>>(find.byType(LoopMixerScreen))
@@ -115,9 +122,10 @@ void main() {
     test('an item hands over the SAME payload the drop targets accept', () {
       final tray = TrayService();
       final item = _put(tray, 'x');
-      expect(item.payload, isA<MusicDragPayload>());
-      expect(item.payload.kind, AppMode.loop);
-      expect(item.payload.document, item.document);
+      final payload = item.payload;
+      expect(payload, isA<MusicDragPayload>());
+      expect(payload!.kind, AppMode.loop);
+      expect(payload.document, item.document);
     });
   });
 
@@ -166,6 +174,88 @@ void main() {
       await tester.tap(find.text('Drums'));
       await tester.pump();
       expect(placed, ['Drums']);
+    });
+  });
+
+  group('instruments — a voice, not a document', () {
+    test('an instrument item has no payload, because it is not droppable', () {
+      // Inventing one would make it land as a silent, empty clip.
+      final tray = TrayService()
+        ..addInstrument(label: 'Rhodes', instrument: _voice());
+      final item = tray.items.single;
+      expect(item.isInstrument, isTrue);
+      expect(item.payload, isNull);
+      expect(item.instrument, isNotNull);
+    });
+
+    test('putting one on the clipboard does NOT copy its samples', () {
+      // Corrects how slice 1 described this: Dart hands out references, so the
+      // clipboard holds the very same object the engine does. The by-reference
+      // question is real only at persistence time.
+      final voice = _voice();
+      final tray = TrayService()
+        ..addInstrument(label: 'Rhodes', instrument: voice);
+      expect(identical(tray.items.single.instrument, voice), isTrue);
+    });
+
+    testWidgets('its chip is tappable but NOT draggable', (tester) async {
+      final tray = TrayService()
+        ..addInstrument(label: 'Rhodes', instrument: _voice());
+      final placed = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TrayPanel(
+              tray: tray,
+              onPlace: (i) => placed.add(i.label),
+            ),
+          ),
+        ),
+      );
+      expect(
+        find.byType(Draggable<MusicDragPayload>),
+        findsNothing,
+        reason: 'no document to drop — offering the gesture would lie',
+      );
+      await tester.tap(find.text('Rhodes'));
+      await tester.pump();
+      expect(placed, ['Rhodes']);
+    });
+
+    testWidgets(
+        'Loop Studio can put a track voice on it and play another '
+        'track with it', (tester) async {
+      final shared = TrayService();
+      final (game, _) = await _open(tester, tray: shared);
+      // A fresh screen has nothing enabled, so there would be no track to
+      // offer — the picker correctly shows nothing rather than inventing one.
+      game
+        ..toggleTrack('bass')
+        ..toggleTrack('chords');
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // A track with no voice cannot contribute one.
+      expect(game.putVoiceOnTray('bass'), isFalse);
+
+      game.debugSetTrackVoice('bass', _voice());
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.putVoiceOnTray('bass'), isTrue);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(shared.items.single.isInstrument, isTrue);
+
+      // Placing it ASKS which track — applying it to a guessed one would be a
+      // change the player did not make, on a track they may not be looking at.
+      // Explicit pumps, not `pumpAndSettle`: this screen runs a loop clock and
+      // never reaches a quiescent frame.
+      await tester.tap(find.text('Rhodes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const Key('tray-voice-target-chords')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('tray-voice-target-chords')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(game.voiceIdOf('chords'), 'Rhodes');
     });
   });
 
