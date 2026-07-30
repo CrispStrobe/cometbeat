@@ -135,6 +135,12 @@ jobs:
       - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
+          # Pinned, like every other workflow here: unpinned `channel: stable`
+          # tracks whatever Flutter ships next, so this would break on a
+          # Flutter release rather than on a code change — and because this
+          # workflow only fires on native/** paths, the red would land on
+          # whoever next touched the C, not on the release that caused it.
+          flutter-version: 3.44.4
           channel: stable
           cache: true
       - name: Linux desktop build deps
