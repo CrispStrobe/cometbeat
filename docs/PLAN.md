@@ -214,6 +214,21 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **ACTIVE — running the training handover's own STEP
+  ZERO: measure the EXISTING BTC model against the 70.7% majmin bar** before
+  anyone spends weeks training a replacement.
+  - **Why this first.** `docs/BTC_TRAINING_HANDOVER.md` §0.2 says step zero is a
+    measurement, not a training run, and `BB-H0` has since given it a concrete
+    number to beat. If the shipped neural model does not clearly clear 70.7% on
+    the same audio, the licence is not what is blocking us and the training plan
+    needs rethinking before it starts.
+  - **Licence posture, explicitly:** the BTC weights are **CC-BY-NC-SA-4.0** and
+    the store gates on that (`model_license.dart`). This run is
+    **non-commercial evaluation**, which is what that licence permits, accepted
+    for this process only via `COMET_ACCEPT_LICENSES`. **Nothing here makes the
+    model shippable** and no gate is being weakened.
+  - Files: my own `tool/` evaluation only. **No shared file, no `lib/` change.**
+
 - **opus (backing-band)** · ✅ **ANSWERED (idle) — chord recognition measured
   against the literature's own ruler. The metric WAS the problem, and the chroma
   path is now finished rather than broken.**
