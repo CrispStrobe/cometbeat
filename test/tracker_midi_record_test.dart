@@ -55,6 +55,33 @@ Future<void> _playing(WidgetTester tester) async {
   }
 }
 
+/// Whether [midi] is anywhere in the pattern.
+///
+/// ⚠️ This exists instead of comparing `noteCount`, and the difference is the
+/// whole reason the count-in pair used to be flaky. The screen's playhead runs
+/// on a REAL `Stopwatch` (it is the clock the transport follows), while
+/// `tester.pump(duration)` only advances FAKE time — so the row a note records
+/// to is a function of how long the widget build actually took in wall-clock,
+/// modulo the pattern length. Measured on one machine it was row 22 with a cold
+/// build and row 2 with a warm one, and on CI it landed on row 0.
+///
+/// Row 0 is where these tests seed their reference note, and a record there
+/// OVERWRITES rather than adds (`copyWith` on the existing cell, deliberately),
+/// so `noteCount` stayed 1 and the "kept" test failed `Expected: <2>`. The
+/// mirror bug was worse: the count-in test asserts the count is UNCHANGED,
+/// which a wrong write to the cursor cell also satisfies — a silent false pass.
+///
+/// Asking whether the PITCH is present answers what both tests actually mean,
+/// and does not care which row the wall-clock picked.
+bool _hasNote(AdvancedTrackerTester game, int midi) {
+  for (var c = 0; c < game.channelCount; c++) {
+    for (var r = 0; r < game.rows; r++) {
+      if (game.noteAt(c, r) == midi) return true;
+    }
+  }
+  return false;
+}
+
 void main() {
   testWidgets('a played note reaches the pattern', (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());
@@ -239,7 +266,12 @@ void main() {
     }
     game.stop();
     await tester.pump();
-    expect(game.noteCount, greaterThan(afterSetup), reason: 'it recorded');
+    // Same wall-clock hazard as the count-in pair (see `_hasNote`): if the
+    // playhead happened to sit on row 0 these would overwrite the seeded note
+    // instead of adding cells, and a count-based assertion would go red for a
+    // reason that has nothing to do with undo. The last note played is the one
+    // nothing can overwrite — a release never writes over a note.
+    expect(_hasNote(game, 65), isTrue, reason: 'it recorded');
 
     game.undo();
     await tester.pump();
@@ -265,7 +297,6 @@ void main() {
       );
       final game = _game(tester);
       game.setNote(0, 0, 48);
-      final before = game.noteCount;
       game.togglePlay();
       game.toggleRecord();
       await _playing(tester);
@@ -273,7 +304,7 @@ void main() {
 
       _noteOn(game, 60);
       await _settle(tester);
-      expect(game.noteCount, before, reason: 'heard, but not kept');
+      expect(_hasNote(game, 60), isFalse, reason: 'heard, but not kept');
       game.stop();
       await tester.pump();
     });
@@ -290,7 +321,6 @@ void main() {
       );
       final game = _game(tester);
       game.setNote(0, 0, 48);
-      final before = game.noteCount;
       game.togglePlay();
       game.toggleRecord();
       await _playing(tester);
@@ -298,7 +328,7 @@ void main() {
 
       _noteOn(game, 60);
       await _settle(tester);
-      expect(game.noteCount, before + 1);
+      expect(_hasNote(game, 60), isTrue, reason: 'no count-in gates it');
       game.stop();
       await tester.pump();
     });
