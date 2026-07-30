@@ -410,11 +410,35 @@ def _lyric_words_impl(raw):
                 if i >= len(f):
                     continue
                 tok = f[i]
-                if tok[:1] in (".", "*", "=", "!", "-") or not tok.strip():
+                # ⚠️ Do NOT drop tokens starting with "-". Kern hyphenates on
+                # BOTH sides — "JE-" "-ſu" "ex-" "-au-" "-di" is "Jesu exaudi" —
+                # so a leading hyphen marks a CONTINUATION syllable, and
+                # filtering those left only word-openings ("JEexvo…") for 415
+                # NIFC rows. Structure tokens (. * = !) are still dropped.
+                if tok[:1] in (".", "*", "=", "!") or not tok.strip():
                     continue
                 percol[i].append(tok)
-        joined = "  ".join(" ".join(percol[i]) for i in sorted(percol))
-        joined = re.sub(r"(\w)-\s+(\w)", r"\1\2", joined)   # syllable continuation
+        # A kern **text token marks syllable continuation with a TRAILING
+        # hyphen; a token WITHOUT one closes the word. Joining pairs with a
+        # regex never closed anything, so "Ie-su ex-au-di vo-cem" mashed into
+        # "JEexvoexex…" — 415 NIFC rows were searchable but unreadable. Same
+        # rule as MusicXML <syllabic>, so build words the same way.
+        def _words(toks):
+            """Rejoin kern syllables: a leading "-" continues the previous word,
+            a trailing "-" means this one continues."""
+            out, cur = [], ""
+            for t in toks:
+                cont = t.endswith("-")
+                body = t.strip("-")
+                cur += body
+                if not cont:
+                    out.append(cur)
+                    cur = ""
+            if cur:
+                out.append(cur)
+            return " ".join(w for w in out if w)
+
+        joined = "  ".join(_words(percol[i]) for i in sorted(percol))
         return (re.sub(r"\s+", " ", joined).strip())
 
     # LilyPond: only \addlyrics / \lyricmode bodies. The rest is notation, and a
