@@ -15,6 +15,7 @@ import 'package:comet_beat/core/services/transcription_config_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/tts_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
+import 'package:comet_beat/core/tray/tray.dart';
 import 'package:comet_beat/features/games/composition/tab_document_codec.dart';
 import 'package:comet_beat/features/games/game_registry.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
@@ -98,6 +99,17 @@ class CometBeatApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => UndoService(),
+        ),
+        // WS-X6 — the clipboard, and it has to live HERE. Every surface falls
+        // back to a private one when none is in scope, which is right for a
+        // screen mounted bare by the games registry and wrong for the app: with
+        // no shared instance above the navigator, "one shelf across every
+        // editor" is false and closing a screen loses what you put on it.
+        // Plain `Provider`, not `ChangeNotifierProvider`: `TrayService` is
+        // deliberately Flutter-free so the model tests need no binding, and the
+        // panel subscribes to it directly.
+        Provider(
+          create: (_) => TrayService(),
         ),
         ChangeNotifierProvider(
           create: (context) {

@@ -59,6 +59,7 @@ import 'package:comet_beat/core/services/beat_bridge.dart' show SharedBeat;
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
+import 'package:comet_beat/core/tray/tray.dart';
 import 'package:comet_beat/features/games/composition/automation_curve_editor.dart';
 import 'package:comet_beat/features/games/composition/daw_help_sheet.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart'
@@ -96,6 +97,7 @@ import 'package:comet_beat/shared/music_io/music_export.dart'
 import 'package:comet_beat/shared/undo/undo_history_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart' show OpenInMenu;
+import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         Clef,
@@ -456,6 +458,23 @@ class _DawScreenState extends State<DawScreen>
   final VoiceClipRecorder _recorder = VoiceClipRecorder();
   bool _recording = false;
 
+  /// WS-X6 — whether the clipboard band is showing.
+  bool _trayOpen = false;
+
+  /// The shared clipboard, or a private one when this screen is mounted bare.
+  final TrayService _ownTray = TrayService();
+  TrayService? _sharedTray;
+  TrayService get _tray => _sharedTray ?? _ownTray;
+
+  /// Tap-to-place, for a finger that should not have to aim: the same path a
+  /// drop takes. Onto the selected lane when there is one, else the first —
+  /// never "wherever the last drop went", which is invisible state.
+  void _placeFromTray(TrayItem item) => _dropOnLane(
+        item.payload,
+        _selectedTracks.isEmpty ? 0 : _selectedTracks.reduce(math.min),
+      );
+
+  @override
   @override
   void initState() {
     super.initState();
@@ -486,6 +505,11 @@ class _DawScreenState extends State<DawScreen>
       }
     } on ProviderNotFoundException {
       _transport = null;
+    }
+    try {
+      _sharedTray = Provider.of<TrayService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _sharedTray = null;
     }
   }
 
@@ -5402,6 +5426,15 @@ class _DawScreenState extends State<DawScreen>
       // narrow window — so adding here cannot overflow the app bar by
       // construction.
       (
+        // NOT `content_paste` — this screen already uses that icon for
+        // "paste clips", and two identical icons in one toolbar is a
+        // coin toss for the person pressing one.
+        icon: Icons.inventory_2_outlined,
+        label: l10n.trayTitle,
+        onPressed: () => setState(() => _trayOpen = !_trayOpen),
+        active: _trayOpen,
+      ),
+      (
         icon: Icons.history,
         label: l10n.dawEditHistory,
         onPressed: () => showUndoHistorySheet(context, history: daw.history),
@@ -5472,6 +5505,17 @@ class _DawScreenState extends State<DawScreen>
         body: SafeArea(
           child: Column(
             children: [
+              // WS-X6 — the clipboard band, INLINE so a chip and the lanes below
+              // are in one tree: that is what lets a groove put on in Loop Studio
+              // be dragged straight onto a lane here, through the drop target
+              // this screen already had.
+              if (_trayOpen)
+                TrayPanel(
+                  tray: _tray,
+                  title: l10n.trayTitle,
+                  emptyHint: l10n.trayEmpty,
+                  onPlace: _placeFromTray,
+                ),
               // A DAW look from the first frame: the lanes/ruler are always shown
               // (even empty), with a gentle hint banner until the first clip lands.
               if (daw.clipCount == 0)

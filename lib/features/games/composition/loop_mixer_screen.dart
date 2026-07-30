@@ -6019,7 +6019,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                   key: const Key('loop-tray-toggle'),
                   tooltip: l10n.trayTitle,
                   isSelected: _trayOpen,
-                  icon: const Icon(Icons.content_paste),
+                  // Same icon in every host; `content_paste` is taken by the
+                  // Audio Editor's paste-clips action.
+                  icon: const Icon(Icons.inventory_2_outlined),
                   onPressed: () => setState(() => _trayOpen = !_trayOpen),
                 ),
               ],

@@ -14,7 +14,9 @@
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/interop/drag_payload.dart';
+import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/tray/tray.dart';
+import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
 import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:flutter/material.dart';
@@ -164,6 +166,55 @@ void main() {
       await tester.tap(find.text('Drums'));
       await tester.pump();
       expect(placed, ['Drums']);
+    });
+  });
+
+  group('across editors — the actual promise', () {
+    testWidgets(
+        'a groove put on in Loop Studio is on the band in the Audio Editor, '
+        'and lands on a lane', (tester) async {
+      // The maintainer's own second example: "From Loop Studio, we can copy a
+      // guitar riff or a drum beat, to implement them then in Audio Editor."
+      // One shared service, two screens, and the Audio Editor's timeline needs
+      // no change — it already accepted this payload.
+      final shared = TrayService();
+      final (game, _) = await _open(tester, tray: shared);
+      game.putGrooveOnTray();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(shared.length, 1);
+
+      // Now the other editor, with the SAME clipboard.
+      final daw = DawService();
+      await pumpGame(
+        tester,
+        const DawScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<DawService>.value(value: daw),
+          Provider<TrayService>.value(value: shared),
+        ],
+      );
+      await tester.pumpAndSettle();
+      expect(daw.clipCount, 0);
+
+      // Open the band here and place the groove.
+      final toggle = find.byIcon(Icons.inventory_2_outlined);
+      if (toggle.evaluate().isEmpty) {
+        await tester.tap(find.byIcon(Icons.more_vert).first);
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.byIcon(Icons.inventory_2_outlined).first);
+      await tester.pumpAndSettle();
+      expect(find.byType(TrayPanel), findsOneWidget);
+
+      // By key, not by text: the Audio Editor has its own "BPM" readout, and
+      // a text finder matches both it and the chip.
+      await tester.tap(find.byKey(Key('tray-chip-${shared.items.single.id}')));
+      await tester.pumpAndSettle();
+      expect(
+        daw.clipCount,
+        1,
+        reason: 'the groove became a clip on a lane in the other editor',
+      );
     });
   });
 

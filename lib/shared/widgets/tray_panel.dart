@@ -103,7 +103,11 @@ class _TrayPanelState extends State<TrayPanel> {
           children: [
             Row(
               children: [
-                Icon(Icons.content_paste, size: 16, color: scheme.primary),
+                Icon(
+                  Icons.inventory_2_outlined,
+                  size: 16,
+                  color: scheme.primary,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   widget.title,
