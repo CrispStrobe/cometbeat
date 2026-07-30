@@ -2998,21 +2998,35 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-W3's hosting for my two surfaces**
-  (Audio Editor · Tracker) — now honest, because they accept transport commands
-  as of the entry below. **Loop Studio's stays blocked** until its lane takes the
-  same ~15 lines; hosting a bar there today would still be an inert control.
-  ✅ **A clash I suspected in my own step 2 and CHECKED rather than assumed:** a
-  transport-driven stop versus the Audio Editor's documented "rest at the seek
-  marker". Probed it — surface and transport both read 1200 ms — because the
-  screen's `stop()` **pauses** and re-`syncTo`s rather than stopping. No bug,
-  and now known rather than feared.
-  Scope: REPLACE each surface's own play/undo/redo controls with the shared bar
-  (the card's point is killing three divergent transports, not adding a fourth
-  row), and retire what that frees on the ARB side if it is clean to do.
-  ⚠️ `daw_toolbar_test` asserts exactly one `Icons.play_arrow`, so replacement —
-  not addition — is also what keeps that green; if I end up with two play icons
-  I have done it wrong.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-W3: the Audio Editor HOSTS the
+  shared transport bar, replacing its own play/undo/redo.** Only honest since the
+  step-2 entry below; the bar is now a real control there, not a readout.
+  ⚠️ **A bug in the shared WIDGET, found by hosting it and fixed there:**
+  `TransportBar` **overflowed a phone by 51 px**. Its `compactWidth` collapses
+  the READOUTS but not the button set, so any host passing undo/redo + record
+  overflowed. I first trimmed the metronome host-side, which got it to **2.8 px**
+  — a number that says the approach was wrong: I would have been guessing which
+  control matters least. **The bar now SCROLLS horizontally instead of
+  overflowing**, keeps its spread when there is room (`ConstrainedBox(minWidth)`)
+  and gives it up when there is not. Every host benefits, including
+  @workstation-parity's mixer console — its suite is green.
+  ⚠️ **Two knock-ons worth knowing before hosting it elsewhere:** the bar brings a
+  **second `TextField`** (its tempo), so `find.byType(TextField)` stops naming
+  anything on a hosting screen — I keyed the marker dialog's field and pointed
+  that test at it rather than weakening the assertion. And a screen that hosts it
+  needs a transport **even when mounted bare**, so this screen now keeps a
+  PRIVATE `TransportService` when none is provided — the same rule as the undo
+  fold-in, and the reason a bare mount kept its play button instead of losing it.
+  📌 **The bare-mount regression was caught by @workstation-parity's own
+  `daw_toolbar_test`** (it asserts exactly one `Icons.play_arrow`): my first cut
+  removed the AppBar's play and rendered the bar only when a shared transport
+  existed, so the bare screen had NO play button at all. That test earned its
+  keep.
+  ⬜ **The Tracker's hosting is NOT done** — its toolbar is a different shape and
+  I stopped rather than force it late; ⬜ Loop Studio's still waits on its lane
+  taking step 2. ⬜ The six duplicate redo ARB keys can be retired only once all
+  three host it.
+  Suites: 74 green across DAW/toolbar/bar/mixer-console/transport.
 
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-W2 step 2, the play/stop half:
   the transport can now DRIVE the Audio Editor and the Tracker, not only mirror

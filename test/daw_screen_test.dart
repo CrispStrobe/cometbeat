@@ -1395,7 +1395,12 @@ void main() {
     await tester.tap(find.text('Add marker'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), 'chorus');
+    // By KEY: the screen hosts the shared transport bar now, which has a tempo
+    // field, so `byType(TextField)` names two things.
+    await tester.enterText(
+      find.byKey(const ValueKey('daw-marker-name')),
+      'chorus',
+    );
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
 

@@ -97,6 +97,7 @@ import 'package:comet_beat/shared/music_io/music_export.dart'
 import 'package:comet_beat/shared/undo/undo_history_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart' show OpenInMenu;
+import 'package:comet_beat/shared/widgets/transport_bar.dart';
 import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -452,7 +453,16 @@ class _DawScreenState extends State<DawScreen>
   /// The app-wide transport, when one is provided. Null when the screen is
   /// mounted without a provider tree, so every use is null-safe rather than
   /// forcing existing tests to grow one.
-  TransportService? _transport;
+  /// The transport this screen plays against.
+  ///
+  /// ⚠️ Shared when one is provided, PRIVATE otherwise — the same rule the undo
+  /// fold-in follows, and for the same reason: the games registry and most of
+  /// this screen's own tests mount it bare, and a surface whose transport bar
+  /// disappears depending on how it was reached is worse than one that never
+  /// had it. One code path either way.
+  TransportService get _transport => _sharedTransport ?? _ownTransport;
+  final _ownTransport = TransportService();
+  TransportService? _sharedTransport;
 
   /// O14 — the app's one mic-facing capture path, shared with the Tracker.
   final VoiceClipRecorder _recorder = VoiceClipRecorder();
@@ -487,7 +497,7 @@ class _DawScreenState extends State<DawScreen>
 
   @override
   void dispose() {
-    _transport?.removeListener(_onTransportCommand);
+    _transport.removeListener(_onTransportCommand);
     _keyFocus.dispose();
     _ticker.dispose();
     _positionMs.dispose();
@@ -498,13 +508,14 @@ class _DawScreenState extends State<DawScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     try {
-      final transport = Provider.of<TransportService>(context, listen: false);
-      if (!identical(transport, _transport)) {
-        _transport?.removeListener(_onTransportCommand);
-        _transport = transport..addListener(_onTransportCommand);
+      final shared = Provider.of<TransportService>(context, listen: false);
+      if (!identical(shared, _sharedTransport)) {
+        _transport.removeListener(_onTransportCommand);
+        _sharedTransport = shared;
+        _transport.addListener(_onTransportCommand);
       }
     } on ProviderNotFoundException {
-      _transport = null;
+      _sharedTransport = null; // keeps the private one — see [_transport]
     }
     try {
       _sharedTray = Provider.of<TrayService>(context, listen: false);
@@ -606,7 +617,7 @@ class _DawScreenState extends State<DawScreen>
     _positionMs.value = ms;
     // WS-W2 — publish into the SHARED transport so another surface can follow
     // this playhead. `syncTo`, because `ms` is an absolute read of the Ticker.
-    _transport?.syncTo(ms);
+    _transport.syncTo(ms);
   }
 
   AudioService get _audio => context.read<AudioService>();
@@ -1967,6 +1978,10 @@ class _DawScreenState extends State<DawScreen>
       builder: (ctx) => AlertDialog(
         title: Text(l10n.dawAddMarker),
         content: TextFormField(
+          // Keyed since the screen now hosts the shared transport bar, which
+          // carries a tempo field of its own: "the screen's only text field" is
+          // no longer a way to name this one.
+          key: const ValueKey('daw-marker-name'),
           autofocus: true,
           decoration: InputDecoration(labelText: l10n.dawMarkerName),
           onChanged: (v) => text = v,
@@ -3641,7 +3656,7 @@ class _DawScreenState extends State<DawScreen>
       ..stop()
       ..start(); // elapsed restarts at 0; _onTick adds _seekMs
     _transport
-      ?..syncTo(_seekMs)
+      ..syncTo(_seekMs)
       ..play();
     setState(() => _playing = true);
   }
@@ -3663,7 +3678,7 @@ class _DawScreenState extends State<DawScreen>
 
   void _onTransportCommand() {
     final transport = _transport;
-    if (transport == null || _applyingTransport || !mounted) return;
+    if (_applyingTransport || !mounted) return;
     if (transport.isPlaying == _playing) return;
     _applyingTransport = true;
     try {
@@ -3685,7 +3700,7 @@ class _DawScreenState extends State<DawScreen>
     // pause, not stop: the shared transport's stop() would rewind to 0 or the
     // loop start, and this transport rests at the seek marker by design.
     _transport
-      ?..pause()
+      ..pause()
       ..syncTo(_seekMs);
     setState(() => _playing = false);
   }
@@ -3695,7 +3710,7 @@ class _DawScreenState extends State<DawScreen>
   void seekTo(double ms) {
     _seekMs = ms < 0 ? 0 : ms;
     _positionMs.value = _seekMs;
-    _transport?.syncTo(_seekMs);
+    _transport.syncTo(_seekMs);
     if (_playing) play(); // restart from the new point
   }
 
@@ -5350,21 +5365,10 @@ class _DawScreenState extends State<DawScreen>
         tooltip: l10n.dawHelpTooltip,
         onPressed: () => showDawHelpSheet(context),
       ),
-      IconButton(
-        icon: const Icon(Icons.undo),
-        tooltip: l10n.dawUndo,
-        onPressed: daw.canUndo ? undo : null,
-      ),
-      IconButton(
-        icon: const Icon(Icons.redo),
-        tooltip: l10n.dawRedo,
-        onPressed: daw.canRedo ? redo : null,
-      ),
-      IconButton(
-        icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
-        tooltip: _playing ? l10n.songStop : l10n.myMelodyPlay,
-        onPressed: _playing ? stop : play,
-      ),
+      // ⚠️ Undo, redo and play USED to be here. They are the shared
+      // `TransportBar`'s now (WS-W3) — the card's point is killing divergent
+      // transports, not adding a fourth row, so this is a REPLACEMENT. Two play
+      // buttons would also be the honest signal that I had done it wrong.
     ];
 
     // Secondary actions: shown as icons when wide, folded into a menu when
@@ -5505,6 +5509,22 @@ class _DawScreenState extends State<DawScreen>
         body: SafeArea(
           child: Column(
             children: [
+              // WS-W3 — the shared transport, hosted for real.
+              //
+              // Only honest since WS-W2 step 2: until this screen ACCEPTED
+              // play/stop from the transport, a bar that calls
+              // `transport.togglePlay` would have moved a readout and sounded
+              // nothing. Undo/redo are passed in because the bar cannot know
+              // whose history it is showing — and since the W4 fold-in, ours is
+              // the shared one, so these buttons act on the same stack the
+              // history sheet lists.
+              TransportBar(
+                transport: _transport,
+                onUndo: undo,
+                onRedo: redo,
+                canUndo: daw.canUndo,
+                canRedo: daw.canRedo,
+              ),
               // WS-X6 — the clipboard band, INLINE so a chip and the lanes below
               // are in one tree: that is what lets a groove put on in Loop Studio
               // be dragged straight onto a lane here, through the drop target

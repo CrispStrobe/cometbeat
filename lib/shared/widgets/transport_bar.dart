@@ -88,6 +88,37 @@ class TransportBar extends StatelessWidget {
       color: scheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        // ⚠️ SCROLLS rather than overflows. `compactWidth` collapses the
+        // READOUTS but not the button set, so a host that passes undo/redo and
+        // a record button still overflowed a phone — by 51 px in the Audio
+        // Editor, and by 2.8 px even after dropping the metronome. A shared bar
+        // that overflows on a phone is a bug in the WIDGET, not in whichever
+        // host happened to find it, and dropping controls until it fits would
+        // make the fix a guess about which one matters least.
+        //
+        // `Spacer` cannot live in a scrollable Row (it needs bounded width), so
+        // the layout keeps its spread when there is room and gives it up when
+        // there is not.
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: _row(context, l10n, scheme, compact: compact),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _row(
+    BuildContext context,
+    AppLocalizations l10n,
+    ColorScheme scheme, {
+    required bool compact,
+  }) =>
+      IntrinsicWidth(
         child: Row(
           children: [
             _playPause(l10n, scheme),
@@ -115,9 +146,7 @@ class TransportBar extends StatelessWidget {
             ...trailing,
           ],
         ),
-      ),
-    );
-  }
+      );
 
   // --------------------------------------------------------------- controls
 

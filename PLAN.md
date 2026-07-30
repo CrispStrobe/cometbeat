@@ -1021,8 +1021,16 @@ prefix.
     cannot label itself `dawRedo`. Worth knowing what this replaces: the ARBs
     carry **six** redo keys (`daw`/`loopMixer`/`perform`/`tab`/`workshop`/
     `voiceLab`) for one button. Hosting the bar is what lets those be retired.
-  - ⬜ **Not hosted in any screen yet** — same discipline as `WS-W2`. Hosting
-    belongs with each surface's clock migration, one commit per surface.
+  - 🔶 **Hosted by the AUDIO EDITOR, 2026-07-30** (opus, daw-suite) — replacing
+    its own play/undo/redo, and only honest because WS-W2 step 2 landed first.
+    ⚠️ **Hosting it exposed a bug in the widget: it overflowed a phone by 51 px**
+    (its `compactWidth` collapses readouts, not buttons). Fixed IN the bar — it
+    scrolls horizontally rather than overflowing — so every host benefits.
+    ⚠️ It brings a second `TextField` (tempo), so `find.byType(TextField)` stops
+    naming anything on a hosting screen; and a host needs a transport even when
+    mounted bare, so the Audio Editor keeps a private one.
+    ⬜ Tracker and Loop Studio still to host; the six duplicate redo ARB keys can
+    be retired once all three do.
 
   **WS-W3 — the original card, for reference (NOT a task):**
   - **Goal.** Kill three divergent transport implementations.
