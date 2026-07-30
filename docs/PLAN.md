@@ -2567,6 +2567,40 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **TAB WORKSHOP — PASS 3: the grid is LAZY, which was
+  the last and biggest item.** ~3000 cells (≈15–20k widgets) for a 512-column
+  six-string import used to be materialised on **every** rebuild, including a
+  single arrow-key press.
+  ⚠️ **It had to be turned on its side, and that is the interesting part.**
+  Row-major (one `Row` per string) **cannot** be made lazy: six independent
+  horizontal lists would need one shared scroll offset, and a shared
+  `ScrollController` across several scrollables is exactly what Flutter refuses.
+  Column-major gives **one** scrollable — a horizontal `ListView` whose items are
+  COLUMNS — so alignment is by construction and only visible columns exist. A
+  fixed `itemExtent` keeps scrolling O(1) (the list never measures what it has
+  not built). The cost of the shape is explicit row heights, because the gutter
+  and the lazily-built columns no longer have a `Row` to align them.
+  📌 **The risk I boarded did not materialise: all 50 `tab_workshop_test` widget
+  tests pass UNCHANGED.** I expected finders to stop finding off-screen cells;
+  in practice those tests work near column 0, which is always built. So the
+  "rework the finders first" caveat I left was over-cautious — worth recording,
+  because being wrong in the safe direction still costs a pass.
+  **Proven by counting, not claimed:** every cell now carries
+  `tab-cell-<col>-<string>`, and the tests assert a 200-column document builds
+  **fewer than a quarter** of its possible cells, that a far column is absent
+  until scrolled to, and that the start is **discarded** once scrolled past —
+  otherwise laziness degrades into the eager version with extra steps.
+  ⚠️ My scroll assertion was off by one (2100 px / 34 = 61.7, so column 60 is
+  *just* off the left edge). The test told me; the debug print told me which
+  columns were live. Fixed, not weakened.
+  Tests: `tab_workshop_perf_test` 6→8; tab suites green (329).
+  ⇒ **The optimisation arc is DONE.** What remains in the file is small and
+  boarded: `toScore`'s two O(n²) shapes (`nextNoteful` per slide/hammer, the
+  hairpin pass) and `barCapacity` as an allocating getter read inside loops —
+  all of which the profile says are **not** worth it (`toScore` is 0.58 ms at 512
+  columns and now runs once per change, not per build). Anyone tempted should
+  measure first, on an idle machine.
+
 - **opus (daw-suite)** · ✅ **TAB WORKSHOP optimised — PASS 2 (deeper), and it
   turned into a library win plus two reds cleared off other lanes' work.**
   * ✅ **`crisp_notation` `2ae3a59`: `TabStaffView` engraves once per CHANGE.**

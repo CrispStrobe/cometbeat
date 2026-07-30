@@ -2702,76 +2702,77 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   }
 
   /// The editable string×step grid.
+  ///
+  /// ⚠️ **PERF: laid out COLUMN-major and built LAZILY, and both halves of that
+  /// matter.**
+  ///
+  /// It used to be row-major — one `Row` per string, every cell of every column
+  /// inside it — in a plain `SingleChildScrollView`. Nothing was lazy, so a
+  /// 512-column six-string import materialised ~3000 cells (≈15–20k widgets)
+  /// on **every** rebuild, including a single arrow-key press.
+  ///
+  /// Row-major cannot be made lazy without linked scrolling: six independent
+  /// horizontal lists would need one shared offset, and a shared
+  /// `ScrollController` across several scrollables is exactly what Flutter
+  /// refuses. Turned on its side there is **one** scrollable — a horizontal
+  /// `ListView` whose items are COLUMNS — so alignment is by construction and
+  /// only the visible columns exist. The fixed `itemExtent` keeps scrolling O(1)
+  /// (the list never measures the items it has not built).
+  ///
+  /// The cost of the shape: the heights are now explicit ([_kBarreRowHeight] and
+  /// friends) because the gutter and the columns have to agree without a `Row`
+  /// to align them.
   Widget _grid() {
     final n = _doc.stringCount;
-    final grid = SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    final scheme = Theme.of(context).colorScheme;
+    // One scan for the whole grid rather than one per column.
+    final anyBarre = _doc.columns.any((c) => c.barreFret != null);
+    final height =
+        (anyBarre ? _kBarreRowHeight : 0) + _kChordRowHeight + n * _kCellHeight;
+
+    final grid = Padding(
       padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // The barre row, above the chord names — where an engraver puts it.
-          // Shown ONLY when something in this track has a barre, so a tab that
-          // never barres does not carry an empty band down the page.
-          if (_doc.columns.any((c) => c.barreFret != null))
-            Row(
-              children: [
-                const SizedBox(width: 40),
-                for (int c = 0; c < _doc.columns.length; c++)
-                  SizedBox(
-                    width: 34,
-                    child: Text(
-                      // The SAME printed form the engraver uses — TabBarre owns
-                      // it, so the grid and the staff can never disagree.
-                      _doc.columns[c].barreFret == null
-                          ? ''
-                          : 'C${TabBarre('', _doc.columns[c].barreFret!).roman}',
-                      key: ValueKey<String>('tab-barre-$c'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.tertiary,
+      child: SizedBox(
+        height: height,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // The fixed gutter: string letters, aligned with the cell rows.
+            SizedBox(
+              width: 40,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (anyBarre) const SizedBox(height: _kBarreRowHeight),
+                  const SizedBox(height: _kChordRowHeight),
+                  for (int s = 0; s < n; s++)
+                    SizedBox(
+                      height: _kCellHeight,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _doc.tuning.strings[s].toString().toUpperCase(),
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          // Chord-name header aligned above the columns.
-          Row(
-            children: [
-              const SizedBox(width: 40),
-              for (int c = 0; c < _doc.columns.length; c++)
-                SizedBox(
-                  width: 34,
-                  child: Text(
-                    _doc.columns[c].chord?.name ?? '',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          for (int s = 0; s < n; s++)
-            Row(
-              children: [
-                SizedBox(
-                  width: 40,
-                  child: Text(
-                    _doc.tuning.strings[s].toString().toUpperCase(),
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                for (int c = 0; c < _doc.columns.length; c++) _cell(c, s),
-              ],
+            Expanded(
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemExtent: _kColumnWidth,
+                itemCount: _doc.columns.length,
+                itemBuilder: (context, c) =>
+                    _columnWidget(c, n, scheme, anyBarre: anyBarre),
+              ),
             ),
-        ],
+          ],
+        ),
       ),
     );
     // 🔍 On desktop, the corner card shows the hovered cell's note + column
@@ -2864,11 +2865,65 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   int? _cachedFor;
   int? _cachedCapo;
 
+  /// Grid geometry, explicit because the gutter and the lazily-built columns
+  /// have to agree without a `Row` to align them (see [_grid]).
+  static const double _kCellHeight = 32; // 30 + 1px margin top and bottom
+  static const double _kColumnWidth = 34; // 32 + 1px margin each side
+  static const double _kChordRowHeight = 22;
+  static const double _kBarreRowHeight = 16;
+
   /// Rebuild count, for the perf guard (see `TabWorkshopTester.debugBuildCount`).
   int _buildCount = 0;
 
   /// Per-column string→finger maps, valid for ONE build (see [_fingerAt]).
   final _fingerCache = <int, Map<int, int>>{};
+
+  /// One grid column: its barre numeral, its chord name, then a cell per string.
+  ///
+  /// Built on demand by the grid's `ListView`, so a long piece costs only the
+  /// columns you can see.
+  Widget _columnWidget(
+    int c,
+    int strings,
+    ColorScheme scheme, {
+    required bool anyBarre,
+  }) {
+    final column = _doc.columns[c];
+    return Column(
+      children: [
+        if (anyBarre)
+          SizedBox(
+            height: _kBarreRowHeight,
+            child: Text(
+              // The SAME printed form the engraver uses — TabBarre owns it, so
+              // the grid and the staff can never disagree.
+              column.barreFret == null
+                  ? ''
+                  : 'C${TabBarre('', column.barreFret!).roman}',
+              key: ValueKey<String>('tab-barre-$c'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: scheme.tertiary,
+              ),
+            ),
+          ),
+        SizedBox(
+          height: _kChordRowHeight,
+          child: Text(
+            column.chord?.name ?? '',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: scheme.primary,
+            ),
+          ),
+        ),
+        for (int s = 0; s < strings; s++) _cell(c, s),
+      ],
+    );
+  }
 
   Widget _cell(int col, int string) {
     final fret = _doc.columns[col].frets[string];
@@ -2882,6 +2937,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     return MouseRegion(
       onEnter: _inspect ? (_) => _onCellHover(col, string) : null, // 🔍 desktop
       child: GestureDetector(
+        // Keyed so a test can count what actually got BUILT — the only way to
+        // prove the grid is lazy, since a lazy grid and an eager one look
+        // identical on screen.
+        key: ValueKey<String>('tab-cell-$col-$string'),
         onTap: () => _onCellTap(col, string),
         child: Container(
           width: 32,
