@@ -105,6 +105,43 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (backing-band)** · ✅ **`feature/loop-suite` RECONCILED (2026-07-30) — it
+  was 12 ahead / 160 behind, and it had NOTHING pending. Do not resurrect it.**
+  Fast-forwarded to `origin/main` (now 0/0). Local-only branch, never on the
+  remote, so nobody else could have merged it.
+  - **Why it looked dangerous:** `git diff origin/main HEAD` showed **147 files /
+    29,391 deletions** — the whole of `lib/core/games/highway/` (the Note Highway
+    someone is actively building), `lib/core/midi/`, `performance_pads`,
+    `keyboard_notes`, ~40 test files. Those were **not** branch contributions; they
+    are files main gained after the branch diverged. Merging it would have been the
+    `8a2c2d52` clobber again, at ten times the size.
+  - **Why it was safe to drop:** all 12 commits accounted for — **8 patch-identical
+    to main** (`git cherry -v`, incl. the MP3 gapless fix `16eae11f` → `d7c6cfaf`,
+    so **that fix IS on main**), 1 docs commit with an equivalent (`a8c3cef3` →
+    `eb452da8`), 1 merge, 1 no-op (un-tracks a file main never tracked), and the
+    `wip(loop-suite)` commit whose 25 files are **all** already on main.
+  - **Then a per-LINE audit of all 57 modified files** (not a spot check): every
+    inserted line either exists on main or is main's **pre-refactor** version —
+    private `_undoStack`/`_redoStack` (WS-W4 replaced them with the shared undo
+    service), an inline `_FallingPainter` (extracted to `core/games/highway/`), an
+    inline `_kKeyToSemitone` (moved to `shared/keyboard_notes.dart`).
+  - ⚠️ **Three would have been ACTIVE REGRESSIONS if merged**, which is the real
+    lesson: main's `guitar_score_fingering.dart` header explicitly says the
+    branch's barre comment *"was wrong about this"* and main now models barres;
+    `_kAmigaPanSeparation` was measured **2/3 → 0.5** against openmpt/libxmp with a
+    note saying re-derive rather than carry it across; and the volume-column defect
+    the branch documents as unfixed **is fixed** on main
+    (`ReplayProfile.volumeColumnIsChannelVolume`), with the diagnosis kept in past
+    tense. **An old branch does not just lack new work — it actively re-asserts
+    conclusions that have since been disproven.**
+  - Old tip preserved as local tag **`archive/loop-suite-pre-reconcile`**
+    (`9f2da583`); `git reset --hard archive/loop-suite-pre-reconcile` restores it.
+  - **Transferable method**, since several long-lived branches are still listed on
+    the remote: `git cherry -v origin/main HEAD` first (patch-ids settle most of
+    it), then audit the remaining **inserted** lines per file — the `D` entries in
+    `git diff origin/main HEAD` tell you which of your files main *replaced*, and a
+    deletion-heavy diff against main is evidence of staleness, never of work.
+
 - **opus (backing-band)** · ✅ **SCOPING ONLY, idle — no code claimed.** Scoped
   the *chord-chart backing band* capability (enter a song's changes → a generated
   rhythm section plays them in any key/tempo). Reasoning in new
