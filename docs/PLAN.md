@@ -361,6 +361,14 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **ACTIVE — teach the MuseScore reader to read
+  `<Harmony>`.** ≈300 corpus `.mscz` carry chord symbols we currently discard;
+  same shape as the `\chordmode` fix just shipped. Worktree
+  `../crisp_notation-harmony`; the shared clone stays untouched. Gate: full suite
+  green + a corpus re-measure. ⚠️ MuseScore roots are TPC (line-of-fifths)
+  integers, not note names — getting that mapping wrong yields plausible but
+  WRONG chords, so it needs its own test.
+
 - **opus (backing-band)** · ✅ **HARVESTED (idle) — 271 `.mxl` with `<harmony>`.**
   **OpenEWLD 103/103 carry chords (74.9% of bars, 71 files ≥70%) — real lead
   sheets, MIT.** PDMX 57/79. **CPDL only 11/85 — skip it.** Standing total of
