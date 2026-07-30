@@ -1914,6 +1914,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get projectBrowserTitle => 'Deine Musik';
 
   @override
+  String get trayPutSample => 'Sample in die Zwischenablage';
+
+  @override
   String get trayTitle => 'Zwischenablage';
 
   @override

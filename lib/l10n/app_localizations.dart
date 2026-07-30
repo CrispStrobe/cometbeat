@@ -3542,6 +3542,12 @@ abstract class AppLocalizations {
   /// **'Your music'**
   String get projectBrowserTitle;
 
+  /// No description provided for @trayPutSample.
+  ///
+  /// In en, this message translates to:
+  /// **'Put sample on clipboard'**
+  String get trayPutSample;
+
   /// No description provided for @trayTitle.
   ///
   /// In en, this message translates to:

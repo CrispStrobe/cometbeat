@@ -13,6 +13,7 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument, TrackerInstrument;
@@ -260,6 +261,59 @@ void main() {
   });
 
   group('across editors — the actual promise', () {
+    testWidgets(
+        'a SAMPLE taken in the Audio Editor plays a track in Loop Studio',
+        (tester) async {
+      // The maintainer's first example, end to end: "we can put from Audio
+      // Editor a few samples there, use them again as Instruments e.g. in Loop
+      // Studio."
+      final shared = TrayService();
+      final daw = DawService()
+        ..addClip(SampleSource(Float64List(4410)))
+        ..renameTrack(0, 'Snare');
+      await pumpGame(
+        tester,
+        const DawScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<DawService>.value(value: daw),
+          Provider<TrayService>.value(value: shared),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      // Open the clip and put its audio on the clipboard.
+      await tester.tap(find.byKey(const Key('daw-clip-0-0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('daw-clip-to-tray')));
+      await tester.pumpAndSettle();
+
+      expect(shared.length, 1);
+      expect(
+        shared.items.single.isInstrument,
+        isTrue,
+        reason: 'a voice, not a document that would only land back on a lane',
+      );
+      expect(shared.items.single.label, 'Snare');
+
+      // Now Loop Studio, same clipboard: play a track with it.
+      final (game, _) = await _open(tester, tray: shared);
+      game
+        ..toggleTrack('bass')
+        ..toggleTrack('chords');
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.byKey(const Key('loop-tray-toggle')));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await tester.tap(find.text('Snare'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byKey(const Key('tray-voice-target-bass')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(game.voiceIdOf('bass'), 'Snare');
+    });
+
     testWidgets(
         'a groove put on in Loop Studio is on the band in the Audio Editor, '
         'and lands on a lane', (tester) async {

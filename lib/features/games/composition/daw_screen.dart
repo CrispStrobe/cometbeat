@@ -45,7 +45,7 @@ import 'package:comet_beat/core/audio/loudness_advice.dart';
 import 'package:comet_beat/core/audio/synth.dart'
     show Drum, kSampleRate, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
-    show TrackerInstrument;
+    show SampleInstrument, TrackerInstrument;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/audio/transcription/transcription_service.dart'
     show transcribePcmToScore;
@@ -479,6 +479,20 @@ class _DawScreenState extends State<DawScreen>
   /// Tap-to-place, for a finger that should not have to aim: the same path a
   /// drop takes. Onto the selected lane when there is one, else the first —
   /// never "wherever the last drop went", which is invisible state.
+  /// This clip's audio as a playable voice, or null when it has none.
+  ///
+  /// Only a real audio source qualifies. A groove or score clip is a DOCUMENT
+  /// that happens to live on a lane; rendering it to a sample here would put a
+  /// frozen bounce on the clipboard under a name that suggests otherwise.
+  SampleInstrument? _sampleInstrumentFor(int track, int index) {
+    if (index >= _daw.timeline.tracks[track].clips.length) return null;
+    final source = _daw.timeline.tracks[track].clips[index].source;
+    if (source is! SampleSource) return null;
+    if (source.pcm.isEmpty) return null;
+    final name = _daw.trackName(track);
+    return SampleInstrument(name.isEmpty ? 'Sample' : name, source.pcm);
+  }
+
   void _placeFromTray(TrayItem item) {
     // An INSTRUMENT is a voice, and a lane holds clips: there is nothing here
     // for it to become. Ignored rather than turned into an empty clip, which
@@ -4731,6 +4745,28 @@ class _DawScreenState extends State<DawScreen>
                             },
                             icon: const Icon(Icons.open_in_new),
                             label: Text(l10n.dawOpenInEditor),
+                          ),
+                        // WS-X6 — put this clip's audio on the clipboard AS AN
+                        // INSTRUMENT, which is the maintainer's own first
+                        // example: a few samples taken here, played as voices in
+                        // Loop Studio. Not as a document — a document would only
+                        // ever land back on a lane, which is where it already is.
+                        if (_sampleInstrumentFor(track, index) case final inst?)
+                          TextButton.icon(
+                            key: const Key('daw-clip-to-tray'),
+                            onPressed: () {
+                              Navigator.of(sheetCtx).pop();
+                              _tray.addInstrument(
+                                label: _daw.trackName(track).isEmpty
+                                    ? 'Sample'
+                                    : _daw.trackName(track),
+                                instrument: inst,
+                                kind: AppMode.audio,
+                              );
+                              setState(() => _trayOpen = true);
+                            },
+                            icon: const Icon(Icons.inventory_2_outlined),
+                            label: Text(l10n.trayPutSample),
                           ),
                         // The cross-mode door: a COPY, converted, with its
                         // cost named before it runs. Null for a clip whose

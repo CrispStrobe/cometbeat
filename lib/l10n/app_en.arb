@@ -803,6 +803,7 @@
   "projectTemplateBand": "Whole band",
   "projectTemplateSlowBand": "Whole band, slower",
   "projectBrowserTitle": "Your music",
+  "trayPutSample": "Put sample on clipboard",
   "trayTitle": "Clipboard",
   "trayEmpty": "Nothing here yet. Put something on it from any editor.",
   "trayPutGroove": "Put groove on clipboard",
