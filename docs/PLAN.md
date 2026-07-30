@@ -159,9 +159,28 @@ is recorded in [HISTORY.md](HISTORY.md).
     tuplet mark on a REST, losing any group that opens on one; MEI and kern both
     lacked 128th-and-shorter (MEI emitted no `@dur`, kern the literal `"null"`).
     Detail + the corpus signature to look for are in `CLAUDE.md`.
+  - ⚠️ **Second batch, and three of them share a root cause worth knowing:
+    VOICE IDENTITY WAS INFERRED FROM ORDER RATHER THAN READ FROM THE FILE.** The
+    MusicXML reader rebuilt its voice order per MEASURE, so a bar where voice 1
+    is silent put the inner part into voice 1 and back again; MEI *names* its
+    layers (`<layer n="4">`) but the reader went by position; a MuseScore
+    `<voice>` carries no number at all, so an empty one that is skipped moves
+    every later voice up a slot. Check that first in any new codec.
+  - ⚠️ **MEI and MuseScore handed voice 1 the WHOLE tuplet list.** A `TupletSpan`
+    addresses ONE voice, so an inner voice's triplet was stamped onto voice 1 and
+    — its `endIndex` being out of range there — never closed, swallowing the rest
+    of the layer. Inner voices got no spans at all. MusicXML was already routed
+    via `tupletsForVoice`; those two never were.
+  - ⚠️ **Any text field written into a line- or delimiter-terminated format needs
+    escaping, or third-party prose becomes NOTES.** A kern `!!!` record ends at a
+    newline, and a four-line CPDL lyricist field left a bare `C1` in the spine —
+    a phantom C3 whole note. An ABC annotation ends at `"`, and a hymn lyric
+    quoting speech gained six phantom notes. Invisible to every existing test
+    because our own writers never emit metadata with a newline or a quote.
   - Sweep runs on the VPS at `/mnt/volume1/xrt` (own pubspec, path dep on
     `/mnt/volume1/crisp_notation`). `--chain` runs all 6×6 ordered format pairs,
-    not just the 6 direct hops. Core suite 1977, green.
+    not just the 6 direct hops. **Direct-hop corpus failures 98 → 0 on every file
+    traced.** Core suite **1995**, green.
 
 - **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
   extension** (the cheap win listed inside `BB-X2`). Branch
