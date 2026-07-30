@@ -348,6 +348,18 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 📊 **Censused chord symbols + tab across ALL corpus
+  formats (idle).** 🔴 **The free win was hiding in plain sight: ~575 `.mxl` files
+  carry `<harmony>`, and `musicxml_reader` has parsed it into
+  `Score.chordSymbols` all along** — zero code needed, nobody looked. That
+  outranks the 285 `.ly` files that need a reader change. `.mscx` (8,445) and
+  `.krn` (43,465) carry **no** chord symbols at all, so those routes are dead.
+  **Tab:** `db.json` has exactly **12** tab rows (EGSet12, CC-BY) — and that is
+  fine, because `arrangeTab` generates string/fret for **any** of the 46,335
+  score rows, so the shippable tab corpus IS the score corpus. classclef/gptabs/
+  OLGA/ClassTab (1.6 GB total) stay controls. Addable clean tab: GuitarSet 360 +
+  IMSLP Marieh 235 CC0 tab PDFs (needs OMR). Card: root `PLAN.md` → `BB-X1b`.
+
 - **opus (backing-band)** · 🟡 **SCOPED, not yet built (idle) — surface
   `\chordmode` into `Score.chordSymbols`.** ❌ **First I had to correct my own
   numbers:** the ABC half of the "corpus already has chords" table was a regex

@@ -3399,6 +3399,50 @@ failed:**
     — 238 melodies with their own chords is exactly the evaluation set it needs,
     with no annotation work.
 
+- 📊 **BB-X1b — CHORD-SYMBOL AND TAB CENSUS across every corpus format
+  (2026-07-30).** Asked "what about `.gp*` and xml?" and measured it rather than
+  guessing, which changed the ranking again.
+
+  **Where chord symbols actually live:**
+
+  | format | corpus files | carry chord symbols | readable TODAY? |
+  |---|---|---|---|
+  | `.mxl` | 38,367 | 3 of 200 sampled (~1.5%, **≈575**) | ✅ **YES** — `<harmony>` already parses into `Score.chordSymbols` |
+  | `.ly` | ~854 | **285** | ❌ reader skips `\chordmode` |
+  | `.mscx` | 8,445 | **0 of 200** | — |
+  | `.krn` | 43,465 | **0 of 200** | — |
+  | `.abc` | ~1,700 | **2** | — |
+
+  - 🔴 **The reordering: ~575 MusicXML files already work with ZERO code.**
+    `musicxml_reader.dart` has parsed `<harmony>` into `Score.chordSymbols` all
+    along. Nobody has looked. That beats the 285 LilyPond files which need a
+    reader change — **do the free ones first.**
+  - `.mscx` and `.krn` are the two biggest formats in the corpus and carry **no**
+    chord symbols at all, so the Humdrum `**harm` route and the MuseScore
+    `<Harmony>` route are both dead here.
+
+  **And the tab picture, since it was asked in the same breath:**
+
+  | holding | size | status |
+  |---|---|---|
+  | `db.json` tab rows | **12** (EGSet12 `.gp`) | ✅ shippable, CC-BY, both axes clean |
+  | classclef `.gpx` | 60 MB (~1,313) | ❌ control only — licence unclear |
+  | `/mnt/storage/gptabs` | 889 MB (~94k) | ❌ control only |
+  | OLGA ascii tab | 666 MB (~8k) | ❌ control only |
+  | ClassTab | 14 MB (2,216) | ❌ control only |
+
+  - ⇒ **The DB contains 12 tab files, and that is fine, because we do not need
+    third-party tab.** `arrangeTab` (crisp_notation_core, the same Viterbi
+    optimum-path shape as the bowed and comping arrangers) generates string/fret
+    for **any** of the **46,335** score rows — already recorded in
+    `CORPUS_LICENSING.md`: *"the shippable tab corpus IS this score corpus, no
+    third-party tab licensing."* Generated tab is also strictly better than a
+    scraped file: it adapts to tuning, capo and skill level.
+  - **Real tab we could still add, both axes clean:** GuitarSet 360 takes
+    (CC BY, string/fret, JAMS already held) · IMSLP "Marieh" **235 CC0 tab PDFs**
+    (PD works, but PDF → needs the OMR/vision route). Everything else found is
+    licence-unclear and stays a control.
+
 - 📊 **BB-H9 — SYMBOLIC notes → chords: what we have and how good it is.
   Measured 2026-07-30, `tool/symbolic_chord_eval.dart`.** Same GuitarSet takes,
   same segments, same duration-weighted metric as the audio evaluations, but fed
