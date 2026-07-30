@@ -92,6 +92,7 @@ import 'package:comet_beat/shared/music_io/export_sheet.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart'
     show showMusicExportSheet;
 import 'package:comet_beat/shared/undo/undo_history_sheet.dart';
+import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart' show OpenInMenu;
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -840,6 +841,20 @@ class _DawScreenState extends State<DawScreen>
       Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // WS-W6 — saved chains, beside the clipboard actions because they are
+          // the same idea with a longer memory: the clipboard holds one chain
+          // until you copy the next, this holds the ones worth keeping.
+          IconButton(
+            key: const ValueKey('daw-fx-presets'),
+            tooltip: 'Saved chains',
+            icon: const Icon(Icons.bookmarks_outlined),
+            onPressed: () async {
+              final picked = await showFxPresetSheet(context, current: effects);
+              if (picked == null) return;
+              onReplace(picked);
+              if (_playing) play();
+            },
+          ),
           IconButton(
             tooltip: 'Copy chain',
             icon: const Icon(Icons.content_copy),

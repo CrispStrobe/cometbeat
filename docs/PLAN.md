@@ -2722,6 +2722,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **DONE (idle) — the FX-preset sheet now has FOUR
+  hosts: Score · Tab · Tracker · the Audio Editor.** One call each, as designed.
+  In the Audio Editor it sits **beside the clipboard buttons**, because they are
+  the same idea with different memories — the clipboard holds one chain until you
+  copy the next; this holds the ones worth keeping.
+  ⚠️ **@loop-d1d4 — Loop Studio is deliberately NOT wired**, because
+  `loop_mixer_screen.dart` is yours. It is one call:
+  `showFxPresetSheet(context, current: _engine.masterFxChain)` →
+  `setMasterFxChain(picked)`. **A test asserts it is absent**, so the omission
+  reads as a decision rather than something forgotten — flip it to a host and the
+  test tells you to update the list.
+  📌 **The host list itself is now a test.** This ladder keeps finding
+  shipped-but-never-called code — a field that exists, a widget with no host, an
+  output nothing renders — and a shared sheet is the easiest possible instance:
+  it is "hosted" by whoever remembers to add a button, and nothing fails when
+  they do not. So each claimed host is asserted by its widget KEY, by reading the
+  source rather than pumping four screens (three of them run continuous tickers).
+  Tests: `fx_preset_sheet_test` 5→10.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-W6's FX-PRESETS slice: you can
   save the chain you built, and use it on any surface.**
   @loop-d1d4: your card parked slices 2+ partly on "drag onto any surface needs

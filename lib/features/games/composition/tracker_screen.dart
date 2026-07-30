@@ -49,6 +49,7 @@ import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
     show showMyInstrumentsSheet;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:file_selector/file_selector.dart';
@@ -1602,6 +1603,27 @@ class _TrackerScreenState extends State<TrackerScreen>
                             child: Text(l10n.trackerFxCustomise),
                           ),
                         ],
+                        // WS-W6 — saved chains, the third host of the shared
+                        // sheet. A chain built on a tracker channel is worth
+                        // having on a score part or a tab track.
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            key: const ValueKey('tracker-fx-presets'),
+                            icon:
+                                const Icon(Icons.bookmarks_outlined, size: 18),
+                            label: Text(l10n.fxPresetsTitle),
+                            onPressed: () async {
+                              final picked = await showFxPresetSheet(
+                                context,
+                                current: fxChain,
+                              );
+                              if (picked == null) return;
+                              setChannelFxChain(picked);
+                              setSheetState(() {});
+                            },
+                          ),
+                        ),
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxHeight: 360),
                           child: SingleChildScrollView(

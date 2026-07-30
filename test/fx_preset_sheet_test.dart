@@ -9,6 +9,7 @@
 // pumped all the way through its exit animation here, deliberately.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:comet_beat/core/audio/fx/fx_chain_codec.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
@@ -140,5 +141,48 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('fx-preset-lossy')), findsNothing);
+  });
+
+  group('every host that claims the sheet actually reaches it', () {
+    // ⚠️ This ladder keeps finding shipped-but-never-called code — a field that
+    // exists, a widget with no host, an output nothing renders. A shared sheet
+    // is the easiest possible instance of that shape: it is "hosted" by whoever
+    // remembers to add a button, and nothing fails when they do not. So the
+    // hosts are asserted by their KEYS, in the same file as the sheet.
+    //
+    // Widget keys rather than pumping four screens: three of them run continuous
+    // tickers, which makes them slow and awkward to pump, and what is being
+    // checked here is that the wiring exists at all.
+    const hosts = {
+      'lib/features/workshop/screens/composition_workshop_screen.dart':
+          'workshop-fx-presets',
+      'lib/features/games/composition/tab_workshop_screen.dart':
+          'tab-fx-presets',
+      'lib/features/games/composition/tracker_screen.dart':
+          'tracker-fx-presets',
+      'lib/features/games/composition/daw_screen.dart': 'daw-fx-presets',
+    };
+
+    for (final entry in hosts.entries) {
+      test(entry.key.split('/').last, () {
+        final source = File(entry.key).readAsStringSync();
+        expect(
+          source,
+          contains('showFxPresetSheet'),
+          reason:
+              'this host is claimed on the card but does not open the sheet',
+        );
+        expect(source, contains(entry.value), reason: 'and it is keyed');
+      });
+    }
+
+    test('Loop Studio is deliberately NOT a host yet', () {
+      // Its file belongs to another lane and was not mine to edit. Recorded as a
+      // test so the omission is a decision rather than something forgotten.
+      final source = File(
+        'lib/features/games/composition/loop_mixer_screen.dart',
+      ).readAsStringSync();
+      expect(source, isNot(contains('showFxPresetSheet')));
+    });
   });
 }
