@@ -416,7 +416,7 @@ is recorded in [HISTORY.md](HISTORY.md).
   +125 de.wikipedia `<score>` melodies at **Tier C, local only** (2 more
   harvested then held on CONTENT grounds — see below) (wiki text is
   CC BY-SA; axis 2 recorded UNASSESSED, not guessed). `db.json` **46,199 →
-  46,357**, 0 dangling; HF catalog **38,917 items**, payloads-then-catalog,
+  46,341**, 0 dangling; HF catalog **38,902 items**, payloads-then-catalog,
   verified live unauthenticated. 160/160 MIDI and 127/127 `.ly` parse. ⚠ **2 `.ly` held on CONTENT, not rights**
   (*Erika*, *Westerwaldlied* — Herms Niel d.1954, so axis 2 clears them and the
   rights pipeline had no reason to stop them; NS-era marching songs are a
@@ -424,7 +424,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   Coverage vs `de.wikipedia Kategorie:Volkslied`: **241/428; the 187 we lack have
   no notation on their page**, so they need sourcing/writing, not scraping
   (`docs/data/wp-volkslied-gap.json`).
-  Shared files touched: `docs/CORPUS_LICENSING.md`, `docs/PLAN.md`, `tool/`.
+  **CONTENT SCREEN (2026-07-30, maintainer) — a THIRD axis beyond the two rights
+  axes.** Swept all 45,958 score rows, reading file bodies not just titles:
+  **16 held** (racial slurs, NS/Wehrmacht repertoire, blackface-minstrel works),
+  **8 canonical art-song/opera rows exempted** by maintainer decision (Wolf,
+  Kinkel, Paderewski ×3, Dvořák, Verdi, an untexted Gypsy Dance — repertoire, not
+  songs a child is invited to sing). *"Run, Nigger, Run (1867)"* was **live in the
+  shipped catalog**, having passed every rights gate. Held payloads deleted from
+  HF, not merely de-listed; `emit_catalog.py` now carries a **denylist gate**
+  (backup taken, `ast.parse`-checked) so re-running an ingest cannot republish —
+  verified by injecting a held row and confirming the count did not move.
+  Ledgers: `content-{screen,held,hold-manual,hold-exempt}.json`.
+  Shared files touched: `docs/CORPUS_LICENSING.md`, `docs/PLAN.md`, `tool/`,
+  and one-word-scope edits to VPS `bin/emit_catalog.py`.
   crisp_notation: merged + pushed `dab9479` (ABC titles, unmetered fallback,
   `\transpose` two args) and `abb4b9e` (`\transpose` with a command body — the
   unbraced spelling stranded its music outside every staff, so two-staff scores

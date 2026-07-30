@@ -177,9 +177,9 @@ repos below. Reachable, but dev/test only.
 The direct answer to "what have we covered / what could we still safely add."
 Every line here is a *licence/coverage* statement; detail per source follows.
 
-> **▶ Live DB snapshot (2026-07-30): `db.json` = 46,357 rows** — 45,958 scores +
+> **▶ Live DB snapshot (2026-07-30): `db.json` = 46,341 rows** — 45,942 scores +
 > 399 playback assets (232 instruments · 166 modules · 1 soundfont). The app-facing
-> **HF catalog ships 38,917 items** (score 38,448 · instrument 232 · module 139 ·
+> **HF catalog ships 38,902 items** (score 38,433 · instrument 232 · module 139 ·
 > sample 97 · soundfont 1) — verified live and unauthenticated. Scores by source:
 > GregoBase 18,684 · **PDMX 10,799** (74 is_original + 3,352 classical MXL
 > shippable; see below) · NIFC Polish 8,181 · **CPDL 2,546** · OpenScore Lieder
@@ -1068,6 +1068,68 @@ path-truncation defect; append reads the live db.json so it preserves concurrent
 score additions. **db.json = 18,484, 0 dangling.** VSCO 2 CE skipped as largely
 subsumed by VCSL (Versilian call it "the broader expansion to the VSCO 2 CE
 sample set").
+
+**⚠️ CONTENT POLICY — the THIRD axis: appropriateness (maintainer, 2026-07-30).**
+Every other gate in this document answers *who owns it*. None answers *should a
+child see it*, and the two come apart in both directions. **Herms Niel died in
+1954, so a Wehrmacht marching song clears axis 2 cleanly. A minstrel song from
+1867 is spotless public domain and has a slur in its title** — *"Run, Nigger,
+Run (1867)"* was live in the shipped catalog, having passed every rights gate we
+have. So: **Wehrmacht/NS repertoire and material carrying racial slurs are held,
+regardless of licence.** Tooling: `tool/music_db_content_screen.py` →
+`tool/music_db_apply_content_hold.py`.
+
+- **It reads the FILE, not the row.** A clean title routinely hides a slur in
+  verse 3. Text formats directly, `.mxl`/`.mscz` unzipped in memory, MIDI decoded
+  latin-1 so lyric and track meta events are searched too. 45,958 score rows.
+- **Two tiers, and the split is the whole design.** `hold` = terms that are slurs
+  in any context, applied automatically. `review` = context-dependent terms,
+  **listed only, never auto-applied**. That is not caution for its own sake:
+  **every single `Mohr` hit was Joseph Mohr, the lyricist of *Stille Nacht***.
+  Auto-holding the review tier would have deleted *Silent Night* from four
+  sources on a surname.
+- **A term shorter than ~5 characters is not safe against this corpus.**
+  `\bwog\b` and `\bcoons?\b` produced 7 hits and all 7 were false, for three
+  independent reasons worth remembering: **lyrics are syllabified** (a vocal
+  score stores `wog-nia` as its own syllable, so a word-boundary anchor matches a
+  fragment that is not a word); German has the ordinary word *wog* (it caught
+  Schumann's *Mondnacht*); and latin-1-decoded MIDI bytes can spell any short
+  sequence (a 1915 Sousa march matched `WOG`). Both patterns were removed.
+- **A keyword screen cannot see what a work IS**, and that gap is larger than it
+  looks. *My Old Kentucky Home* was caught only because `darky` survived into one
+  particular printing; *Massa's in the Cold Ground* only via a review-tier term.
+  Five siblings from the same repertoire stayed shipped — Foster and Emmett wrote
+  the dialect into words no slur list contains (*Gwine*, *De*, *ribber*) — and a
+  second edition of the Kentucky song, under its full original title, slipped
+  through even after that. Closed by naming the **works** in
+  `content-hold-manual.json`; the work names are now also in the review tier so
+  a future ingest surfaces them.
+- **Exemptions are part of the policy, not an escape hatch.** "Contains a slur"
+  and "inappropriate to ship" are different questions. **8 canonical art
+  song/opera rows were restored** (`content-hold-exempt.json`): Wolf's
+  *Die Zigeunerin*, Kinkel's *Die Zigeuner*, Paderewski's *Manru* ×3, Dvořák's
+  op.55, Verdi's *Coro di Zingari*, and an untexted *Gypsy Dance*. The exonym is
+  a slur in present-day German usage — the keyword fired correctly — but these
+  are repertoire, not songs a child is invited to sing, and removing Verdi's
+  Anvil Chorus protects nobody. The held set is the folk/minstrel material a
+  child *would* be asked to sing.
+- **Net: 16 rows held** (13 mine + 3 antisemitic 18th-century dance titles a
+  parallel agent had already pulled from the TradArchiv manuscripts), **8
+  exempt**, live catalog **38,433 score items**.
+- **Holds are reversible and the files stay.** Each row keeps its complete
+  manifest entry in `content-held.json` and its file on disk — precisely so the
+  corpus remembers what not to publish again.
+- **A catalog re-emit is not enough.** The catalog stops advertising a held row,
+  but the payload keeps serving at its old path, so `tool/music_db_hf_purge_paths.py`
+  deletes it from the dataset. ⚠️ That removes it from `main` only — HF keeps
+  detached commits reachable by SHA. A full purge is delete_repo + re-upload
+  (`../hf_ops.md` §7); proportionate for a licence violation, ask before spending
+  it on a content hold.
+- **Durable guard in `emit_catalog.py`:** every ingest APPENDS from a manifest,
+  so re-running one would put a held row straight back and republish it. The
+  emitter now drops any id present in `content-held.json` before anything else —
+  **verified by injecting a held row into `db.json` and confirming the catalog
+  count did not move.**
 
 **⚠️ CONTENT POLICY — music is SYMBOLIC; audio only as sample payloads
 (maintainer, 2026-07-22).** The registry admits **rendered audio (mp3/ogg/wav/
