@@ -241,6 +241,16 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🟡 **Option C tried (idle) — the hybrid BEATS BTC on
+  both axes, but the knob was tuned on the test set.** BTC root + chroma quality,
+  with a simplicity prior: majmin **95.8%** and full quality **80.2%** vs BTC's
+  89.7% / 77.0% — and it can express `m7b5`/`dim7`/`6`/`m6`/`sus4`/`maj7`, which
+  BTC's 25-class head cannot. ⚠️ **The prior was selected on the same 69 segments
+  it is scored on**, so the direction is established and the number is not. The
+  durable finding for `BB-H7`: a good root is worth ~25pp, and a richer head must
+  be **class-balanced toward plain triads** or it over-predicts colour exactly as
+  chroma does. Card: root `PLAN.md` → `BB-H8`. Files: my own `tool/` only.
+
 - **opus (backing-band)** · ✅ **DONE (idle) — STEP ZERO ANSWERED: the neural path
   beats chroma by 19 points, so the licence IS the blocker and `BB-H7` is
   justified.** Same audio, same MIREX majmin metric: chroma **70.7%** / root

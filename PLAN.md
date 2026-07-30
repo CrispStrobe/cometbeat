@@ -3213,6 +3213,51 @@ failed:**
   - ⚠️ Same caveat as everything else on this set: 69 maj/min segments, 278 s,
     solo guitar.
 
+- 🟡 **BB-H8 — Option C, the hybrid: BTC's root + chroma's quality. PROMISING,
+  NOT VALIDATED. Measured 2026-07-30, `tool/hybrid_chord_eval.dart`.**
+
+  **The premise held.** The two paths fail in opposite places — BTC gets the root
+  right 95.8% of the time but its 25-class head can never say anything but
+  maj/min; chroma can express `m7b5`/`maj7`/`6` but its dominant failure is ROOT
+  confusion (a fifth, a relative minor). Taking the root from BTC and letting
+  chroma choose the quality among only the templates rooted there deletes that
+  entire error class by construction.
+
+  | config | root | majmin | full quality |
+  |---|---|---|---|
+  | chroma alone | 70.5% | 69.2% | 18.2% |
+  | BTC alone | 95.8% | 89.7% | 77.0% |
+  | hybrid, no prior | 95.8% | 93.2% | **26.0%** |
+  | hybrid + simplicity 0.1 | 95.8% | **95.8%** | 74.8% |
+  | hybrid + simplicity 0.2 | 95.8% | 93.6% | **80.2%** |
+
+  - ⚠️ **The naive hybrid is WORSE where it was supposed to be better**: full
+    quality collapses to 26.0% against BTC's 77.0%. Chroma badly over-predicts
+    extensions — it calls a plain major a major seventh — and since the reference
+    is mostly plain triads (44 of 72 segments), that is a large loss. **The
+    capability the hybrid was built for is exactly where it first failed.**
+  - ✅ **A simplicity prior fixes it and then some.** Requiring a richer template
+    to beat the plainest one on the same root by a margin, the hybrid beats BTC
+    alone **on both axes**: at 0.2, majmin +3.9pp and full quality +3.2pp — while
+    also being able to express `m7b5`, `dim7`, `6`, `m6`, `sus4` and `maj7`, none
+    of which BTC can say at all.
+  - 🛑 **NOT VALIDATED, and the reason is important: the prior was selected on the
+    same 69 segments it is scored on.** Four values swept, best reported — that
+    is overfitting, and at n=69 the specific number is not established. What IS
+    established is the direction, because the effect is enormous (26% → 80%
+    across the sweep): **chroma needs a strong bias toward plain triads, and
+    without one a correct root does not help.**
+  - 📌 **This is a design finding that survives whatever weights we end up
+    owning, which is its real value.** A hybrid on BTC inherits BTC's
+    CC-BY-NC-SA and is not shippable. But it tells `BB-H7` two things: **a good
+    root is worth ~25pp**, and **a richer head needs class balancing toward plain
+    triads**, because real music is mostly plain triads and a model trained on
+    balanced synthetic data will over-predict colour exactly as chroma does.
+  - **To make this a result rather than a hint:** hold out a disjoint set of
+    GuitarSet takes (the fetch is 39 range requests for 18 MB), pick the prior on
+    one half, report on the other. Until then it is a promising lead, not a
+    number to build on.
+
 - 🛑 **BB-H0 — WHERE CHORD RECOGNITION ACTUALLY STANDS, and why to stop tuning
   the chroma path. Measured 2026-07-30. Read before pulling any `BB-H` card.**
 
