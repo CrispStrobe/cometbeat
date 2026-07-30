@@ -23,7 +23,12 @@ import 'package:crisp_notation_core/crisp_notation_core.dart';
 ///
 /// Emits `{path: {…}}` JSON so a merge step can attach it to rows by `path`.
 ///
-/// Usage: `dart run tool/music_db_extract_features.dart <dir> <out.json>`
+/// Usage:
+/// `dart run tool/music_db_extract_features.dart <dir> <out.json> [list.txt]`
+///
+/// With a path list, only those paths (relative to the directory) are read,
+/// which is how the full-corpus backfill processes just the rows that still
+/// lack features.
 String _text(File f) {
   final bytes = f.readAsBytesSync();
   if (bytes.length >= 2) {
@@ -66,6 +71,14 @@ MultiPartScore? _read(File f) {
       return multiPartScoreFromKern(_text(f));
     case 'mei':
       return multiPartScoreFromMei(_text(f));
+    case 'gabc':
+      // The largest format in the corpus by far (18,684 chants). Single-voice
+      // by nature, so there is no multi-part reader.
+      return MultiPartScore([scoreFromGabc(_text(f))]);
+    case 'gp':
+      return MultiPartScore([
+        scoreFromGpif(readGpifFromGp(f.readAsBytesSync())),
+      ]);
     case 'mid':
     case 'midi':
       return MultiPartScore([scoreFromMidi(f.readAsBytesSync())]);
@@ -73,6 +86,15 @@ MultiPartScore? _read(File f) {
       return null;
   }
 }
+
+/// Whether a key estimate is meaningful for this file.
+///
+/// Krumhansl–Schmuckler matches duration-weighted pitch classes against
+/// MAJOR and MINOR profiles, so it always returns one of those — which is
+/// actively wrong for Gregorian chant, where the organising concept is the
+/// church mode and the corpus already records it in a `mode` field. Reporting
+/// "D major" for a Mode 1 antiphon would be worse than reporting nothing.
+bool _keyIsMeaningful(String path) => !path.toLowerCase().endsWith('.gabc');
 
 const _stepNames = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
@@ -86,7 +108,7 @@ String _keyName(Key k) {
   return '${_stepNames[t.step.index]}$alter ${k.isMajor ? 'major' : 'minor'}';
 }
 
-Map<String, Object?>? _features(MultiPartScore mp) {
+Map<String, Object?>? _features(MultiPartScore mp, {bool withKey = true}) {
   final all = <Pitch>[];
   final weights = <double>[];
   var notes = 0, bars = 0;
@@ -142,7 +164,7 @@ Map<String, Object?>? _features(MultiPartScore mp) {
   }
   incipit = incipit.take(16).toList();
 
-  final key = keyOf(all, durations: weights);
+  final key = withKey ? keyOf(all, durations: weights) : null;
   final meter = mp.parts.first.timeSignature;
 
   return {
@@ -179,12 +201,37 @@ void main(List<String> args) {
   }
 
   final out = <String, Object?>{};
-  var ok = 0, empty = 0, failed = 0, skipped = 0;
-  final files = dir.listSync(recursive: true).whereType<File>().toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  var ok = 0, empty = 0, failed = 0, skipped = 0, missing = 0;
+
+  // With a path list, do exactly those files. A full-corpus backfill wants to
+  // process only the rows that still lack features, and walking the tree would
+  // also drag in the sample/soundfont payloads.
+  final List<File> files;
+  if (args.length > 2) {
+    files = [];
+    for (final line in File(args[2]).readAsLinesSync()) {
+      final rel = line.trim();
+      if (rel.isEmpty) continue;
+      final f = File('${dir.path}/$rel');
+      if (f.existsSync()) {
+        files.add(f);
+      } else {
+        missing++;
+      }
+    }
+  } else {
+    files = dir.listSync(recursive: true).whereType<File>().toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+  }
+
+  final total = files.length;
+  var done = 0;
 
   for (final f in files) {
     final rel = f.path.substring(dir.path.length + 1);
+    if (++done % 2000 == 0) {
+      stdout.writeln('  $done/$total  ok=$ok fail=$failed empty=$empty');
+    }
     MultiPartScore? mp;
     try {
       mp = _read(f);
@@ -196,7 +243,7 @@ void main(List<String> args) {
       skipped++;
       continue;
     }
-    final feat = _features(mp);
+    final feat = _features(mp, withKey: _keyIsMeaningful(f.path));
     if (feat == null) {
       empty++;
       continue;
@@ -207,6 +254,6 @@ void main(List<String> args) {
 
   File(args[1])
       .writeAsStringSync(const JsonEncoder.withIndent(' ').convert(out));
-  stdout.writeln('features=$ok empty=$empty fail=$failed skipped=$skipped '
-      '-> ${args[1]}');
+  stdout.writeln('DONE features=$ok empty=$empty fail=$failed '
+      'skipped=$skipped missing=$missing -> ${args[1]}');
 }
