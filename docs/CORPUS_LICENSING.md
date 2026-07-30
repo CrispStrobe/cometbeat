@@ -177,7 +177,7 @@ repos below. Reachable, but dev/test only.
 The direct answer to "what have we covered / what could we still safely add."
 Every line here is a *licence/coverage* statement; detail per source follows.
 
-> **▶ Live DB snapshot (2026-07-30): `db.json` = 46,359 rows** — 45,960 scores +
+> **▶ Live DB snapshot (2026-07-30): `db.json` = 46,357 rows** — 45,958 scores +
 > 399 playback assets (232 instruments · 166 modules · 1 soundfont). The app-facing
 > **HF catalog ships 38,917 items** (score 38,448 · instrument 232 · module 139 ·
 > sample 97 · soundfont 1) — verified live and unauthenticated. Scores by source:
@@ -186,7 +186,7 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > 1,350 · **Wikimedia Commons (Gerloff) 1,088** (1,073 CC0/A + 15 CC-BY/B) ·
 > Tanzsammlung Dahlhoff 672 · NIFC Chopin 512 · Mutopia 510 · DCML Bach Chorales
 > 361 · Ebersberger 235 · Dreysser 1720 168 · **Wikimedia Commons (MIDI) 160** ·
-> Kinder wollen singen 154 · **Wikipedia (de) `<score>` 127 (Tier C, not shipped)**
+> Kinder wollen singen 154 · **Wikipedia (de) `<score>` 125 (Tier C, not shipped)**
 > · OpenScore SQ 122 · OpenEWLD 103 · Arendsee 68 · Musikpiraten Season Songs 51 ·
 > Internet Jukebox 31 · Pete Mac 15 · EGSet12 12. Assets: VCSL 183 · ModArchive 166
 > · FreePats 39 · Shortcircuit XT 9 · Salamander Grand Piano V3 1 · FluidR3 1.
@@ -291,6 +291,12 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > its body a *sibling* of the command, so a variable assignment bound the name to a
 > transpose with no music. Single-staff sources hid it; two-staff scores read as
 > silence. Fixed in crisp_notation `abb4b9e`. **All 127 now parse, 0 empty.**
+> **2 held on CONTENT, not rights** (`commons-wp-ly-held.json`, out of `db.json`
+> → **125 rows**): *Erika* and *Westerwaldlied*, both Herms Niel (d.1954). Axis 2
+> clears them — that is exactly the point. The licence tiers encode who owns a
+> work, not whether a NS-era Wehrmacht marching song belongs in a children's
+> music-education corpus, so nothing in the rights pipeline would ever have
+> stopped them. Restoring is a maintainer call.
 
 > **📊 Coverage measured against `de.wikipedia Kategorie:Volkslied` (2026-07-30).**
 > A category listing is a decent external yardstick for German folk-song coverage,

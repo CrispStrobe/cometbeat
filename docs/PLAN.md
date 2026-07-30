@@ -413,10 +413,14 @@ is recorded in [HISTORY.md](HISTORY.md).
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Wikimedia Commons pass shipped
   (2026-07-30).** +160 Commons PD MIDI (Tier A, axis 1 from Structured Data
   `P6216`/`P275`, axis 2 by four rules; 87 skipped as Gerloff duplicates) and
-  +127 de.wikipedia `<score>` melodies at **Tier C, local only** (wiki text is
+  +125 de.wikipedia `<score>` melodies at **Tier C, local only** (2 more
+  harvested then held on CONTENT grounds — see below) (wiki text is
   CC BY-SA; axis 2 recorded UNASSESSED, not guessed). `db.json` **46,199 →
-  46,359**, 0 dangling; HF catalog **38,917 items**, payloads-then-catalog,
-  verified live unauthenticated. 160/160 MIDI and 127/127 `.ly` parse.
+  46,357**, 0 dangling; HF catalog **38,917 items**, payloads-then-catalog,
+  verified live unauthenticated. 160/160 MIDI and 127/127 `.ly` parse. ⚠ **2 `.ly` held on CONTENT, not rights**
+  (*Erika*, *Westerwaldlied* — Herms Niel d.1954, so axis 2 clears them and the
+  rights pipeline had no reason to stop them; NS-era marching songs are a
+  separate judgement the licence tiers do not encode).
   Coverage vs `de.wikipedia Kategorie:Volkslied`: **241/428; the 187 we lack have
   no notation on their page**, so they need sourcing/writing, not scraping
   (`docs/data/wp-volkslied-gap.json`).
