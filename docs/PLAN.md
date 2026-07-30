@@ -1664,7 +1664,27 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-X6` — the CLIPBOARD (maintainer's
+- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-X6` slice 2 — and fixing a miss in
+  slice 1 that I have to own first.**
+  ⚠️ **`TrayService` is not provided anywhere in `main.dart`, so the clipboard I
+  shipped is PRIVATE PER SCREEN in the real app.** The machinery, the band and
+  the Loop Studio host are all real and tested, and the fallback-to-private rule
+  is deliberate — but with no shared instance in the tree, "one shelf across
+  every editor" is not true in the product, and closing the screen loses it.
+  **That is the same shipped-but-not-reachable defect I have flagged four times
+  on WS-X2, committed by me, one week later.** It is one line in `main.dart`.
+  **Slice 2 proper:** the band + a "put this on the clipboard" action in the
+  **Audio Editor** first, because it is half of the maintainer's own example and
+  because its timeline ALREADY accepts `MusicDragPayload` — so a groove or beat
+  put on the clipboard in Loop Studio can be dragged straight onto a lane the
+  moment the band is there. Tracker and Tab Workshop after.
+  **Files:** `main.dart` (one provider, additive) · `daw_screen.dart`
+  (@daw-suite's — an app-bar action, the band in the layout, one place handler;
+  it already uses `GameAppBar`, whose actions scroll and cannot overflow).
+  📌 Card is in root `PLAN.md` now — it was missing until this round; the commit
+  that claimed to write it touched only this board file, and I had pointed at it
+  twice since.
+  Previously: 🚧 **CLAIMED `WS-X6` — the CLIPBOARD (maintainer's
   design, and it resolves the WS-X2 impasse).** A top-bar button drops down a
   shelf of reusable things — samples from the Audio Editor used as instruments in
   Loop Studio, a riff or beat from Loop Studio placed in the Audio Editor — with
