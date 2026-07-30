@@ -1479,13 +1479,30 @@ prefix.
     slice 2 for the first half and slice 3 for the second. ⚠️ Three other lanes'
     hot files; each host is small (an app-bar action, the band in the layout, one
     "put on" call) but it is THEIR file.
-  - ⬜ **Slice 3 — heavy items by REFERENCE, and persistence.** "All the samples
-    of a drum kit" is megabytes of PCM: copying it would double the memory of
-    the thing it came from and could never be persisted. Samples and instruments
-    already live in `InstrumentLibraryStore`, so a tray item names one —
-    `TrayItem.libraryName` is reserved for it already, so existing items do not
-    change shape. Persistence can then reuse `project_codec`'s kind → codec
-    registry for the symbolic items.
+  - ✅ **Slice 3a — INSTRUMENTS on the clipboard.** `1c245cd3`, tray_test 18 → 21.
+    A voice can be put on the clipboard from one track and used to play another,
+    in this or another editor.
+    ⚠️ **This corrects what slices 1 and 2 said about weight, including on this
+    card.** The claim was that a sample-backed instrument could not go on the
+    clipboard because a drum kit is megabytes of PCM. That is wrong: **Dart hands
+    out object references**, so an instrument on the clipboard is the SAME object
+    the engine already holds and nothing is duplicated (a test pins the
+    identity). The by-reference question is real only at PERSISTENCE time, where
+    the PCM would actually have to be written somewhere.
+    * **An instrument is not a document, and the difference is load-bearing.**
+      `payload` is null for one, so it is tap-to-place only — making it draggable
+      would offer a gesture the target must refuse, or worse land it as a silent
+      empty clip. Placing one ASKS which track should play it (a document just
+      lands; "play this with that" needs a target, and guessing changes a track
+      the player may not be looking at), and only PITCHED tracks are offered,
+      since a drum row has no voice to set.
+    * The Audio Editor ignores instrument items: a lane holds clips.
+  - ⬜ **Slice 3b — PERSISTENCE**, which is where `libraryName` finally earns its
+    place: a saved clipboard records "the library's Rhodes" rather than its PCM.
+    Symbolic items can reuse `project_codec`'s kind → codec registry.
+  - ⬜ **Slice 2 remainder — the Tracker and the Tab Workshop as hosts.** Both
+    other lanes' files; each host is an app-bar action, the band in the layout,
+    and one place handler.
   - **Acceptance.** An item put on the clipboard in one editor is present in
     another after navigating there, can be dragged or tapped onto that editor's
     surface, lands through `dropDecisionFor` with its conversion cost stated, and
