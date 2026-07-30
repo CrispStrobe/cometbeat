@@ -224,6 +224,26 @@ is recorded in [HISTORY.md](HISTORY.md).
     (`import` · `library_import_formats` · `export_sheet` ·
     `composition_workshop` · `interop_notation_carry` · `grand_staff_from_score`
     · `mid_score_change` · `github_abc_source` · `library_music_info`) pass.
+  - 🛑 **A CRASH, and the most serious defect in this arc — `crisp_notation`
+    `fba3d00`.** `Measure.voices` is a **compacting view** (it drops empty
+    voices) while `effectiveDurationAt` and `TupletSpan.voice` take the
+    **absolute** voice number. `_layoutMultiVoiceMeasure` indexed one by the
+    other, so a score with an empty voice 2 and notes in voice 3 threw a
+    RangeError — **it did not render at all.** Codecs produce that shape (MEI
+    names its layers, so `<layer n="4">` can arrive with no layer 3). If you
+    index `measure.voices` by anything that came from a voice NUMBER, it is
+    wrong — `voiceAt(v)` is the absolute accessor.
+  - **Six codecs now, not five**, on the empty-voice slot: LilyPond `\\`
+    branches and ABC `&` overlays are positional too, so skipping an empty voice
+    moved every later one up. Both write the gap now, up to the last voice with
+    content.
+  - ⚠️ **Why our property matrix missed all of this, worth knowing if you rely on
+    it:** `roundtrip_property_test` compared an order-independent multiset
+    **merged across voices**, using **written** durations — so a note changing
+    voice compares equal, and a dropped tuplet ratio compares equal — and it
+    never generated a voice 3 or 4 at all. It now also asserts a per-voice
+    SOUNDING sequence and generates all four voices. Suite 2006 → 2018 (2034
+    merged with the analysis work).
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
