@@ -322,6 +322,13 @@ is recorded in [HISTORY.md](HISTORY.md).
     literal hyphen `\-`. The matrix also pins what is legitimately lossy — kern
     and ABC collapse any whitespace run inside a syllable, and four codecs carry
     no annotations — so a regression still shows.
+  - 📣 **Heads-up for whoever claimed MuseScore `<Harmony>` reading:** I have
+    edited `musescore_reader.dart` + `musescore_writer.dart` (inner-voice tuplet
+    routing, empty voice slots) and everything is already merged to
+    `crisp_notation@main` and pushed — pull before you start and we will not
+    collide. The `<Harmony>` work lands as an annotation, so
+    `hostile_text_matrix_test.dart` will cover it for free once MuseScore joins
+    the `carriesAnnotations` set there.
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
