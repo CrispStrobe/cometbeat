@@ -890,9 +890,15 @@ prefix.
     `Project` with no owner). **Before ticking any remaining card, grep for a
     caller.** Passing tests are not reachability.
 
-- ✅ **WS-W2 — `TransportService`: one clock.** `M` · **SHIPPED 2026-07-28**
+- 🔶 **WS-W2 — `TransportService`: one clock.** `M` · **SHIPPED 2026-07-28**
   (opus, workstation-parity). `lib/core/services/transport_service.dart`, 28
-  tests. **The card below is the ORIGINAL, kept because its warnings still bind
+  tests. **Step 2's PLAY/STOP half landed 2026-07-30** (opus, daw-suite): the
+  transport can now DRIVE the Audio Editor and the Tracker, not only mirror
+  them, and record-arm is two-way on the Tracker. Position authority stays with
+  each surface's own clock, which is what `syncTo` requires for a pre-rendered
+  loop. ⬜ Loop Studio is the third surface (its lane, ~15 lines) and the shared
+  count-in is still unreachable — a decision about where count-in lives, not
+  code. **The card below is the ORIGINAL, kept because its warnings still bind
   WS-W3 and the three migrations.** One decision it did not anticipate:
   - **The service does NOT own a clock — it is *advanced*.** `advance(deltaMs)`
     takes the elapsed ms from whoever is ticking. Forced by the code, not
@@ -998,9 +1004,16 @@ prefix.
     commit, with that surface's tests green before the next. A big-bang clock
     swap is how playback regressions arrive invisibly.
 
-- ✅ **WS-W3 — one transport bar widget.** `S` · **SHIPPED 2026-07-28**
+- 🔶 **WS-W3 — one transport bar widget.** `S` · **SHIPPED 2026-07-28**
   (opus, workstation-parity). `lib/shared/widgets/transport_bar.dart`, 18 widget
-  tests. Play/pause · stop · record-arm · loop · bar.beat readout · tempo field ·
+  tests. **HOSTED by the Audio Editor 2026-07-30** (opus, daw-suite), replacing
+  its own play/undo/redo — only honest once WS-W2 step 2 let a surface be driven.
+  ⚠️ Hosting it found that the bar **overflowed a phone by 51 px**; it scrolls
+  now rather than overflowing, which fixes it for every host. ⛔ **The Tracker is
+  a considered NO** — its row is not a divergent copy (the overlap is play/stop
+  only) and the bar's tempo/loop mean different things there. ⬜ Loop Studio
+  waits on its lane taking step 2; the six duplicate redo ARB keys stay until
+  the picture settles. Play/pause · stop · record-arm · loop · bar.beat readout · tempo field ·
   undo/redo · metronome, all driven by `TransportService`; per-surface extras go
   in `trailing`. **The card below is the ORIGINAL.** Four things it did not say:
   - **The bar owns NO state**, so there is no `TransportBarState` — everything
@@ -1061,10 +1074,13 @@ prefix.
   - The mixer passes `showRecord: false`: arming a record here would imply a
     capture path this screen does not have.
 
-- ✅ **WS-W4 — one undo history.** `M` · **SERVICE SHIPPED 2026-07-28**
-  (opus, workstation-parity); **TWO SURFACES FOLDED IN AND THE ACCEPTANCE
-  DISCHARGED 2026-07-29** (Audio Editor: opus, daw-suite · Loop Studio: opus,
-  loop-d1d4). `lib/core/services/
+- ✅ **WS-W4 — one undo history. COMPLETE 2026-07-30 — ALL THREE surfaces**
+  (Audio Editor · Loop Studio · Tracker). Service shipped 2026-07-28 (opus,
+  workstation-parity); the Audio Editor and Loop Studio folded in 2026-07-29;
+  **the Tracker's block history folded in 2026-07-30** (opus, daw-suite), taking
+  the dispose trap and the private-service rule the card warned about rather
+  than rediscovering them, with all 84 of that screen's tests passing
+  unchanged. `lib/core/services/
   undo_service.dart`, 17 tests. **PHASE 1 IS NOW COMPLETE as services** — W1
   Project · W2 TransportService · W3 transport bar · W4 undo history all exist.
   What shipped, and what it deliberately does not do:
@@ -1435,7 +1451,13 @@ prefix.
 
 - 🔶 **WS-X6 — the CLIPBOARD: one shelf of things you keep, across every
   editor.** `L` · **maintainer's design · SLICE 1 SHIPPED 2026-07-30**
-  (opus, loop-d1d4), `b90ad72c`, 16 tests.
+  (opus, loop-d1d4), `b90ad72c`, 16 tests. **The Tracker, the Tab Workshop and
+  the SCORE WORKSHOP are hosts as of 2026-07-30** (opus, daw-suite), so the
+  cross-EDITOR clause is proven in both directions — a tracker song put on lands
+  in the Tab Workshop, a tab lands in the Tracker. Each place handler REUSES the
+  drop path, so a tap and a drag cannot report different costs. ⬜ The
+  `main.dart` provider line (without it every screen has a private shelf in the
+  real app) is @loop-d1d4's, with the Audio Editor's "put on" action.
   ⚠️ **This card should have been written on 2026-07-30 BEFORE slice 1 and was
   not** — the commit that said it recorded the card touched only `docs/PLAN.md`,
   and two later commit messages and a report to the maintainer pointed at a card
@@ -1527,8 +1549,18 @@ prefix.
     editor", which needs slice 2.*
 
 - ✅ **WS-X2 — drag between surfaces. COMPLETE 2026-07-30** — the protocol plus
-  **all four** drop targets (Audio Editor · Loop Studio · Tracker · Tab
-  Workshop).
+  **all FIVE** drop targets (Audio Editor · Loop Studio · Tracker · Tab
+  Workshop · **Score Workshop**, added 2026-07-30 after an interop-matrix audit
+  showed Score as the one surface that could neither receive music nor put its
+  own on the shelf).
+  ⚠️ **The protocol gained one rule after shipping, from probing rather than
+  reading it: a CONTAINER also accepts what can BECOME what it holds.** A tab
+  could not be dropped on the Audio Editor's timeline at all — it fell through
+  to `convert(tab → audio)`, correctly unsupported since a bounce is one-way, so
+  the one mode that could put nothing on the timeline was the one most likely to
+  want to. The order of `acceptsDirectly` is now the caller's stated preference
+  (score before tracker, because score keeps a tab's pitches and voicings), and
+  a test flips the order to prove it is a promise rather than a coincidence.
   📌 **The lesson the four targets share:** every single one broke an invariant
   its own callers had always satisfied — a container that is not a mode, one
   `AppMode` carrying two document shapes, a grid-length assert, a row-count
@@ -1718,7 +1750,11 @@ prefix.
       honours. A silent mix does **not** enter the playing state, because a stop
       button on silence is a lie.
   - ⬜ **FX inserts and sends** are not here — they belong with `WS-X3`.
-- 🔶 **WS-W6 — the browser.** `M` · **SLICE 1 (projects) SHIPPED 2026-07-28**
+- 🔶 **WS-W6 — the browser.** `M` · **SLICE 1 (projects) SHIPPED 2026-07-28**;
+  **the FX-PRESETS tab shipped 2026-07-30** (opus, daw-suite) — a store in the
+  `ProjectStore` shape holding chain STRINGS, a shared sheet on the
+  `keymap_sheet` pattern, and **all five racks host it**. Until then five
+  surfaces had an FX rack and none could keep a chain.
   (opus, loop-d1d4) — `ProjectStore` + a browser sheet, 21 tests.
   Depends WS-W1.
   One panel: projects · templates · instruments (shared Sound Library) ·

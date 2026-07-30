@@ -8,6 +8,51 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## Workstation ladder — the daw-suite lane, day three (2026-07-30)
+
+**One-line status:** three long-running cards CLOSED — **WS-X1** (live links,
+all five surfaces), **WS-X2** (drag between surfaces, all five targets) and
+**WS-W4** (one undo history, all three fold-ins) — plus a measured optimisation
+pass on the Tab Workshop and the last surfaces brought to interop parity.
+
+**The pattern that produced most of it:** *check the card's premise before
+building to it, and audit with a matrix rather than a list.*
+
+- **WS-X3 (FX rack in Score)** shipped only after the premise failed twice —
+  MusicXML `<miscellaneous-field>` was neither read nor written in the library,
+  and `multiPartToMusicXml` discarded metadata outright, so the field the
+  maintainer's chosen route asked for would have been a no-op end to end. Both
+  closed first (crisp_notation `ee7dbc9`).
+- **WS-T7 (record into a pattern)** turned out to be *mostly already built*;
+  the real delta was that `PerformancePads` had no host anywhere, the transport
+  drove nothing, and three defects made a jam unusable (a chord collapsed into
+  one cell, live record was silent, every note cost a full-pattern undo
+  snapshot).
+- **WS-X1's last surface** shipped because a *"this is impossible"* note had
+  expired: the same lane's later `WS-W1c` gave audio a project codec, making the
+  timeline the document. **A note that says something is impossible is the least
+  re-read line in a plan.**
+- **Full interop parity** came from building a five-surface × four-axis matrix,
+  which showed the Score Workshop could neither receive music from another mode
+  nor put its own on the shelf — the mode built for writing music.
+
+**Also shipped:** the FX-preset store + sheet (five racks could not keep a
+chain); the clipboard hosted by three more editors; the transport driving two
+surfaces; the shared bar hosted and its phone overflow fixed in the widget; a
+live crash in `TabDocument` (a fret on a string the tuning lacks threw out of
+`build`); and a Tab Workshop performance pass — FX-slider drags and the playhead
+no longer rebuild the screen, the score is derived once per change, undo
+snapshots share immutable columns, and the grid builds only the columns you can
+see.
+
+**Corrections I made against my own work, recorded because they are the useful
+part:** a stale-cache bug my own revision counter missed (a cascade hides from
+the obvious grep); an optimisation I *reverted* because I could not measure it,
+and a benchmark verdict I had to retract after finding I had measured on a
+contended CPU; a false pass another lane caught in my tracker tests (asserting a
+count that a wrong write also satisfies); and a shared-tray field I added but
+never looked up.
+
 ## Workstation ladder — the daw-suite lane (2026-07-28 … 07-29)
 
 **One-line status:** after the Audio Editor's own ladder finished, this lane
