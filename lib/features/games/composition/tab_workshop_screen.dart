@@ -16,6 +16,7 @@ import 'package:comet_beat/core/audio/transcription/engine_config.dart'
     show Backend, TranscriptionStep;
 import 'package:comet_beat/core/audio/wav_io.dart'
     show readWavPcm16, wavToMonoFloat;
+import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/notation/guitar_score_fingering.dart'
     show barresFor, fingerFrettings;
@@ -172,6 +173,23 @@ abstract class TabWorkshopTester {
   void setCountIn(bool on);
   bool get isCountingIn;
   Set<String> get highlightedIds;
+
+  /// WS-X2 test seam: drop [payload] on the grid, skipping the confirmation
+  /// (the dialog is the shape the other three targets already proved). Returns
+  /// whether anything landed.
+  bool debugDrop(MusicDragPayload payload);
+
+  /// WS-X2 test seam: what a drop would warn about — empty when it costs
+  /// nothing, which is when no dialog should appear.
+  List<String> debugDropWarnings(MusicDragPayload payload);
+
+  /// Set the tuning, as the settings sheet's picker does.
+  ///
+  /// A seam because the tuning decides what a fret SOUNDS, so it is part of
+  /// several things worth testing: the derived-score cache key, the drop
+  /// warnings, and the crash that used to happen when frets outlived their
+  /// strings.
+  void setTuning(Tuning tuning);
 
   /// Set the capo, as the settings sheet's stepper does.
   ///
@@ -803,6 +821,19 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   int get debugBuildCount => _buildCount;
   @override
   int get debugScoreBuilds => _scoreBuilds;
+  @override
+  void setTuning(Tuning tuning) => setState(() => _doc.tuning = tuning);
+  @override
+  bool debugDrop(MusicDragPayload payload) {
+    final plan = _dropPlan(payload);
+    if (plan == null) return false;
+    _commitDrop(plan.columns);
+    return true;
+  }
+
+  @override
+  List<String> debugDropWarnings(MusicDragPayload payload) =>
+      _dropPlan(payload)?.warnings ?? const [];
   @override
   void debugSetCapo(int frets) => setState(() => _capo = frets.clamp(0, 12));
   @override
@@ -2776,6 +2807,40 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         ),
       ),
     );
+    // WS-X2 — the fourth and last drop target. A dragged document lands in the
+    // pattern on screen; see [_dropHere] for why it lands rather than replaces.
+    final droppable = DragTarget<MusicDragPayload>(
+      onWillAcceptWithDetails: (d) => _dropDecision(d.data).canDrop,
+      onAcceptWithDetails: (d) => unawaited(_dropHere(d.data)),
+      builder: (context, candidate, rejected) => Stack(
+        children: [
+          grid,
+          if (candidate.isNotEmpty && candidate.first != null)
+            Positioned(
+              left: 12,
+              top: 8,
+              child: Material(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  // Say what a release would do, while the finger is down.
+                  child: Text(
+                    dropSummary(_dropDecision(candidate.first!)),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: scheme.onPrimaryContainer,
+                        ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+
     // 🔍 On desktop, the corner card shows the hovered cell's note + column
     // chord; leaving the grid clears it. No-op on touch.
     return MouseRegion(
@@ -2786,7 +2851,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
           : null,
       child: Stack(
         children: [
-          grid,
+          droppable,
           if (_inspect && _hoverInfo != null)
             Positioned(top: 8, right: 8, child: _hoverInspectCard()),
         ],
@@ -2878,6 +2943,111 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   /// Per-column string→finger maps, valid for ONE build (see [_fingerAt]).
   final _fingerCache = <int, Map<int, int>>{};
+
+  /// WS-X2 — what dropping [payload] on the tab grid would do.
+  ///
+  /// No `acceptsDirectly`: this surface is a MODE, not a container — it has no
+  /// cell type that holds a foreign document as-is.
+  DropDecision _dropDecision(MusicDragPayload payload) =>
+      dropDecisionFor(payload, AppMode.tab);
+
+  /// Land a dragged document in the tab on screen.
+  ///
+  /// ⚠️ **It lands in the CURRENT document rather than replacing it** — the same
+  /// call as the Tracker's, and for the same reason: this screen's adopt path
+  /// (`_tracks[_active].doc = …`) calls `_clearHistory()`, so a replacing drop
+  /// would be **unrecoverable**. Landing the columns through `replaceColumns`
+  /// makes it one undoable edit. What that costs is stated in the dialog rather
+  /// than hidden.
+  ///
+  /// Everything converting INTO tab yields a `TabDocument` (score/tracker/loop →
+  /// tab) and same-kind carries one too, so there is exactly one document shape
+  /// here — no switch-on-type, unlike Loop Studio's target.
+  Future<bool> _dropHere(MusicDragPayload payload) async {
+    final plan = _dropPlan(payload);
+    if (plan == null) return false;
+    if (plan.decision.needsConfirmation || plan.warnings.isNotEmpty) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(AppLocalizations.of(ctx)!.trackerDropLossyTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [for (final line in plan.warnings) Text(line)],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(AppLocalizations.of(ctx)!.trackerDropAnyway),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) return false;
+    }
+    _commitDrop(plan.columns);
+    return true;
+  }
+
+  /// What a drop would do and what it would cost, before anything is committed.
+  ///
+  /// Split from the commit so the WARNINGS can be asserted without pumping a
+  /// dialog: what a particular drop loses is this surface's own arithmetic, and
+  /// that is where a mistake would hide.
+  ({DropDecision decision, List<TabColumn> columns, List<String> warnings})?
+      _dropPlan(MusicDragPayload payload) {
+    final decision = _dropDecision(payload);
+    final document = decision.document;
+    if (!decision.canDrop || document is! TabDocument) return null;
+
+    // ⚠️ Losses the bridge's report CANNOT know about, because they are about
+    // the instrument this tab is FOR, not about the conversion:
+    //   * frets land on OUR strings. A six-string part dropped on a bass keeps
+    //     its frets (nothing is deleted) but the top two strings cannot sound
+    //     here — "you will not hear this" rather than "this is gone", because
+    //     the two have different remedies;
+    //   * a fret number only means a pitch together with a tuning, so a document
+    //     tuned differently sounds different here even when every string exists;
+    //   * a second voice and the dropped meter stay behind, because only the
+    //     columns land.
+    final silent = fretsOutsideTuning(document.columns, _doc.stringCount);
+    return (
+      decision: decision,
+      columns: document.columns,
+      warnings: <String>[
+        if (decision.report case final report?) ...[
+          for (final lost in report.lost) '• $lost',
+          for (final near in report.approximated) '~ $near',
+        ],
+        if (silent > 0)
+          '• $silent frets sit on strings this instrument does not have — '
+              'they are kept, but you will not hear them',
+        if (document.tuning != _doc.tuning)
+          '~ the frets will sound against YOUR tuning, not the one they '
+              'were written for',
+        if (document.voice2.isNotEmpty)
+          '• the second voice stays behind — only the columns land',
+        if (document.timeSignature != _doc.timeSignature)
+          '~ your time signature is kept (${_doc.timeSignature.beats}/'
+              '${_doc.timeSignature.beatUnit})',
+      ],
+    );
+  }
+
+  /// Write dropped columns in, as ONE undoable edit.
+  void _commitDrop(List<TabColumn> columns) {
+    _snapshot();
+    setState(() {
+      _doc.replaceColumns([for (final c in columns) c.copy()]);
+      _selCol = 0;
+      _selString = 0;
+    });
+  }
 
   /// One grid column: its barre numeral, its chord name, then a cell per string.
   ///

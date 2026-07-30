@@ -2637,6 +2637,29 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-X2's FOURTH drop target: the Tab
+  Workshop. All four surfaces now accept a drop; the card is COMPLETE.**
+  Same shape as the Tracker's (plan → warn → commit as one undoable edit) and
+  the same call about WHERE it lands: this screen's adopt path calls
+  `_clearHistory()`, so a replacing drop would be unrecoverable — the columns
+  land in the current document through `replaceColumns` instead, and the dialog
+  states what that costs.
+  ⚠️ **A constraint none of the other three had: a fret number is not a pitch.**
+  It only means a pitch together with a tuning, so the same columns genuinely
+  sound different here, and frets on strings this instrument does not have
+  cannot sound at all. That case **used to crash** (see the entry below) and is
+  now a warning that distinguishes *"you will not hear them"* from *"they are
+  gone"* — the two have different remedies, and only one is fixed by changing
+  the tuning. Dropped columns are `copy()`d: sharing structure with the source
+  is a surprise waiting for the first refactor.
+  📌 **Tally across the four targets, for whoever writes the fifth:** every one
+  of them broke an invariant its own callers had always satisfied — the Audio
+  Editor's container-vs-mode gap, Loop Studio's two-shapes-per-kind and its
+  grid-length assert, the Tracker's row-count assert, and now the Tab's
+  unchecked string index. **The protocol was right every time; what it cannot
+  carry is the target's own constraints.**
+  Tests: `tab_drop_target_test` (8); tab + protocol suites green (357).
+
 - **opus (daw-suite)** · 🔴 **FIXED A LIVE CRASH IN SHIPPED CODE, found while
   scoping WS-X2's last drop target — anyone in the Tab Workshop should know.**
   `TabDocument` indexed `tuning.strings[stringIndex]` **unchecked** in three

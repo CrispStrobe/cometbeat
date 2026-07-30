@@ -1405,8 +1405,15 @@ prefix.
     **Worth checking on the other three surfaces**: the same two halves are easy
     to leave out, and neither shows up in a passing unit test of the linker.
 
-- 🔶 **WS-X2 — drag between surfaces.** **Step 1 (the protocol) SHIPPED; the
-  four drop TARGETS are not done and are deliberately left.**
+- ✅ **WS-X2 — drag between surfaces. COMPLETE 2026-07-30** — the protocol plus
+  **all four** drop targets (Audio Editor · Loop Studio · Tracker · Tab
+  Workshop).
+  📌 **The lesson the four targets share:** every single one broke an invariant
+  its own callers had always satisfied — a container that is not a mode, one
+  `AppMode` carrying two document shapes, a grid-length assert, a row-count
+  assert, and an unchecked string index that CRASHED. The protocol was right
+  each time; what a protocol cannot carry is the target's own constraints, and
+  only wiring a real surface finds them.
   * ✅ `core/interop/drag_payload.dart` — `MusicDragPayload (kind, document,
     label, trackId)`, `DropDecision`, `dropDecisionFor`, `dropSummary`. Pure
     Dart, no widgets, so the decision is testable without pumping a surface.

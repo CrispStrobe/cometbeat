@@ -35,6 +35,25 @@ enum TabTechnique { hammer, slide, bend, vibrato, dead, ghost, harmonic }
 /// (passing an explicit `null`) as distinct from *left unchanged* (not passed).
 const Object _unset = Object();
 
+/// How many frets in [columns] sit on strings a [stringCount]-string instrument
+/// does not have — i.e. how much of a foreign tab would be SILENT here.
+///
+/// For the WS-X2 drop, which lands another surface's columns in the document on
+/// screen and has to say what that costs. The frets are not deleted (see
+/// `TabDocument.soundingFrets`), so this is "how much you will not hear", not
+/// "how much was thrown away" — a distinction worth getting right in a warning,
+/// because the two have different remedies: one is fixed by changing the tuning,
+/// the other is not fixable at all.
+int fretsOutsideTuning(Iterable<TabColumn> columns, int stringCount) {
+  var count = 0;
+  for (final column in columns) {
+    for (final string in column.frets.keys) {
+      if (string < 0 || string >= stringCount) count++;
+    }
+  }
+  return count;
+}
+
 /// One time-step in a [TabDocument]: a map of string index → fret (a chord when
 /// more than one), the played [duration], and any [techniques]. String index
 /// 0 = the top tab line (highest-sounding string), matching [Tuning].
