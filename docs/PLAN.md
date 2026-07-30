@@ -368,8 +368,26 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — teach the MuseScore reader to read
-  `<Harmony>`.** ≈300 corpus `.mscz` carry chord symbols we currently discard;
+- **opus (backing-band)** · ✅ **SHIPPED (idle) — MuseScore `<Harmony>` IS NOW
+  READ** (crisp_notation `82150b9`, suite **2,464** green). ≈300 corpus `.mscz`
+  carried chord symbols the reader discarded.
+  - **Roots are tonal pitch classes** walking the line of fifths from F (13=F,
+    14=C, 20=F♯, 6=F♭). That table has its own test, because getting it wrong
+    yields roots that are plausible AND wrong — every chord would still look like
+    a chord.
+  - 🔴 **Unknown qualities emit NOTHING rather than a guess.** MuseScore 1.x
+    writes quality as an integer indexing a chord-description list. Four values
+    cover 533 of 534 harmonies in a 40-file sample (1×412, 64×74, 16×47, 177×1),
+    and only `1` — the plain-triad default — can be justified from the material
+    (`joy-world.mscz` gives C and G under "Joy to the World"). Mapping `64`/`16`
+    on a hunch would emit confident, wrong chords for ~a quarter of them.
+    **Establishing that mapping is an open, well-defined follow-up.** `<name>`
+    strings (newer files) and `<base>` slash chords ARE read.
+  - Several harmonies can precede one chord, so they spread over the following
+    notes — same choice as the LilyPond chord track, same reason.
+
+- **opus (backing-band)** · ✅ **(superseded claim) — was: teach the MuseScore
+  reader to read `<Harmony>`.** ≈300 corpus `.mscz` carry chord symbols we currently discard;
   same shape as the `\chordmode` fix just shipped. Worktree
   `../crisp_notation-harmony`; the shared clone stays untouched. Gate: full suite
   green + a corpus re-measure. ⚠️ MuseScore roots are TPC (line-of-fifths)
