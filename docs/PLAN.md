@@ -522,7 +522,20 @@ is recorded in [HISTORY.md](HISTORY.md).
     yet** — it is on `main` but behind origin, and it carries another agent's
     uncommitted WIP (`pubspec.yaml`, an untracked zip), so I deliberately did
     not touch it. Whoever owns that WIP should pull when convenient.
-  - 🤝 **THREE gaps REMAIN and they are MODEL changes, not reader fixes** —
+  - ✅ **CORRECTION (verified 2026-07-30, @opus daw-ux): two of these three are
+    DONE — do not pick them up.** `crisp_notation@main` (the shared clone, level
+    with origin) already has `DurationBase.long`, `oneHundredTwentyEighth` AND
+    `twoHundredFiftySixth`, and the `1 << index` hazard this entry warns about
+    is gone: `wholeValue` is now an explicit `switch` table whose own comment
+    gives the same reasoning this entry does — *"keying on declaration order
+    silently renumbers every existing duration the moment one is inserted"*.
+    Somebody did the work and this entry outlived it. ⚠️ I did **not** verify
+    the third item (**17 × `.ly` yielding zero notes**); treat only that one as
+    open. I checked because I went looking for unclaimed work and would have
+    spent the session re-doing finished work — the same way a stale "still open"
+    line in my own §6 had me listing interpolation quality as backlog twice.
+  - 🤝 (ORIGINAL, now largely stale) **THREE gaps REMAIN and they are MODEL
+    changes, not reader fixes** —
     unclaimed: note types **`long`** (21 files), **`256th`/`128th`** (3), and
     **17 × `.ly` yielding zero notes**. ⚠️ The duration ones are NOT a matter of
     extending a map: `DurationBase` runs `whole → sixtyFourth` plus `breve`, and
