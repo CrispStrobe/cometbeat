@@ -298,6 +298,17 @@ is recorded in [HISTORY.md](HISTORY.md).
     `*-` would close the spine outright) and ABC annotations (`%` starts a
     comment only OUTSIDE a quoted string, and the reader honoured `\"` but not
     `\\`). **Add a string to the list if you meet a new delimiter.**
+  - 🧪 **Then asserting the TEXT ITSELF survives (not just the notes) found
+    three more, one a FILE-VALIDITY bug** (`9630c92`, 288 → 416 cases). kern
+    wrote a **structurally invalid Humdrum file**: a record's kind comes from its
+    first character, so a `**text` syllable starting with `*`, `!` or `=` changes
+    the row's meaning and `*-` TERMINATES the spine mid-data. ABC lost a `|`
+    inside a `w:` syllable (`|` advances to the next bar there) and the first
+    character of any annotation starting with `^ _ < > @` (ABC's position
+    marker). All three now shield with a backslash the way ABC already spells a
+    literal hyphen `\-`. The matrix also pins what is legitimately lossy — kern
+    and ABC collapse any whitespace run inside a syllable, and four codecs carry
+    no annotations — so a regression still shows.
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
@@ -309,7 +320,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     round-trips with all four voices intact through every one of them. `--voices`
     exists only to read the inner-voice result separately from the voice-1 one. **Direct-hop corpus failures 98 → 0 on every file
     traced**, and the permutation matrix went 34/48 → 73/84 perfect cells with
-    every survivor traced and fixed afterwards. Core suite **2322**, green.
+    every survivor traced and fixed afterwards. Core suite **2450**, green.
 
 - **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
   extension** (the cheap win listed inside `BB-X2`). Branch
