@@ -1357,7 +1357,35 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING two things (maintainer-directed).**
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — both maintainer-directed items,
+  +21 tests, plus a pre-existing red on main. AND MY LANE IS NOW EMPTY: every
+  WS card I own is done, delegated, or waiting on a decision. Details below.**
+  1. **The Audio Editor's lane drag is pinned** (`6c24528e`) — the answer to
+  "can we drag between rows" is yes, and now verified rather than read: 8 gesture
+  tests where there were 8 method tests and nothing driving the gesture.
+  2. **WS-W6 slice 2 — templates** (`b1d24383`), so the browser stops opening on
+  an empty list. Its tests also caught that the sheet heading "Projects" had
+  become a duplicate of the tab under it.
+  3. **A red on main that was NOT mine** (`360eb26c`) — verified pre-existing in a
+  clean worktree at `origin/main`. ⚠️ **It reads exactly like a licensing
+  compliance bug and is not one**: CC-BY samples ARE credited; the samples
+  section had been pushed below the fold by the standing credits added in
+  `29b0213d`, and a `ListView` only builds what it can show, so the finder saw
+  nothing. I chased it through the store as data loss first — the round trip is
+  clean — before a rendered-text dump showed the section was merely unbuilt.
+  **The assertion stopped being true, not the screen.**
+  📌 **I also audited MY OWN shipped seams for the inert-seam defect** after
+  finding WS-X2 had it: `PerformancePads`, the undo history sheet, the project
+  browser, templates, `AudioPattern`, `addAudioTrack`, `copyPattern` — all have
+  real hosts in `lib/`, and the tracker adopted `PerformancePads` for WS-T7 as
+  intended. No inert seams of mine.
+  ⬜ **WS-L2 recommended for CLOSURE, not ticked** — see the card. The
+  arrangement work shipped since its re-audit already built a *sectional*
+  timeline (8 slots, reorderable `_chainOrder`, per-section repeats); what is
+  left is a proportional zoomable ruler, which the Audio Editor already is and
+  which Loop Studio already hands off to. Closing it is a scope call, so it is
+  the maintainer's, not mine.
+  Previously: 🚧 **CLAIMED two things (maintainer-directed).**
   **(1) Pin the Audio Editor's lane drag.** The maintainer asked whether one can
   drag a clip between rows; the answer is yes — long-press then vertical drag,
   applied on release via `moveClipToTrack`, plus a "move to track" menu fallback

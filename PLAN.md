@@ -1747,7 +1747,36 @@ prefix.
     Doing either here would pre-empt that design.
   *(original card kept below for its reasoning)*
 
-- ⬜ **WS-L2 — a timeline VIEW for Loop Studio, then zoom it.** `M`→`L` —
+- 🔶 **WS-L2 — a timeline VIEW for Loop Studio, then zoom it.** `M`→`L` ·
+  **RECOMMENDED FOR CLOSURE, satisfied in substance — 2026-07-30 (loop-d1d4).
+  Not ticking it myself: what remains is a scope call, not an implementation.**
+  The 2026-07-28 re-audit below said Loop Studio had no timeline at all. That was
+  true when written and is no longer, because the arrangement work shipped since
+  built one — a SECTIONAL one:
+  - **8 section slots** (`kLoopSectionSlots`) holding scene snapshots, an
+    **explicit reorderable order** (`_chainOrder`, whose own comment records this
+    card: "the order used to be IMPLICIT … making the arrangement strip an editor
+    means the order has to be a thing that exists before it can be a thing you
+    drag"), **per-section repeats** (`_sceneRepeats`), and one definition of the
+    song (`_songSlots`) that both the screen and the export walk.
+  - So "arrange sections in time, change the order, say how many times each
+    plays" — the thing this card wanted — **exists and is tested.**
+  **What is genuinely still missing is a PROPORTIONAL, zoomable time ruler, and
+  building that here would duplicate the Audio Editor.** It already has exactly
+  that (`zoomIn`/`zoomOut`/`zoomToFit` over `_pxPerSecond`), and Loop Studio
+  already hands off to it (`sendToDaw`). Adding a second one would also
+  contradict this surface's stated design — the Loop Mixer deliberately has no
+  step editor because the Tracker is the grid editor; by the same logic the
+  Audio Editor is the timeline.
+  ⇒ **Recommendation: close as done-by-another-route**, with proportional zoom
+  delegated to the Audio Editor. The product decision the re-audit flagged
+  ("does the session matrix become a timeline, or sit beside one?") is then
+  answered without building anything: it sits beside one, and the one it sits
+  beside is a different surface.
+  📌 **If the maintainer instead wants zoom HERE**, the honest scope is not a
+  ruler — it is deciding what a Loop Studio bar looks like when sections have
+  different lengths and repeat counts, which is a design question this card never
+  contained. Say so before pulling it. Original re-audit, kept:
   **re-audited 2026-07-28 (loop-d1d4): the card assumed a ruler that does not
   exist.** Zoom is still 0 hits, but so is the thing it would zoom: Loop Studio
   has **no timeline** — one incidental `timeline` match in the whole
