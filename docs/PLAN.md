@@ -105,8 +105,52 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (backing-band)** · 🚧 **CLAIMING — `BB-A1` (the voicing arranger), both
-  slices: A1a candidates, A1b the voice-leading path.** Branch
+- **opus (backing-band)** · ✅ **SHIPPED (idle) — `BB-A1`, both slices.**
+  `lib/core/harmony/comp_arranger.dart` + `test/comp_arranger_test.dart`.
+  **58 tests green (240 with BB-D1), analyze clean, 0 existing files modified.**
+  Chord → playable voicing, voice-led across a progression by an optimum path.
+  Presets: `piano` · `pianoRootless` · `guitar` · `pad`. Shapes: close · drop2 ·
+  drop3 · shell · rootless A/B · guide tones · injected grip.
+  - 🔴 **The card's ≤2-semitone gate found a MISSING GENERATOR, not a bad weight.**
+    Without inversions a shape can only sit at octaves of the root, so the notes
+    available on top are quantised 12 apart — measured on the ii-V-I in C, Dm7
+    could offer only 60/72/84 and G7 only 65/77, making the smallest possible
+    top-voice move **5** semitones. No cost tuning could ever have reached ≤2.
+    Rotating each shape through its inversions is how a comper controls the top
+    line, and it is what makes a guide-tone line possible at all. **If that gate
+    had been written as "≤5" to match the output, the generator would still be
+    missing.**
+  - 🔴 **A wrong-chord bug reached the test run, and the 12-key gate passed it.**
+    The octave-placement loop stepped by 12 from the window bottom without
+    aligning to the root's pitch class, so `Dm7` came out **C-E♭-G-B♭**. Motion
+    and parallels both looked flawless, because a *consistently* wrong answer
+    voice-leads perfectly. **Lesson worth keeping: a test that measures only
+    relationships between outputs cannot see an error shared by all of them.**
+    There is now an invariant that a voicing spells its chord.
+  - **Two more real defects the tests caught:** `maxVoices` was not honoured when
+    it was smaller than the mandatory tone set (a 2-voice role got 3 notes), and
+    the rootless trim dropped only the fifth instead of looping.
+  - ⚠️ **`C13` was being voiced as a three-note shell** — a fine voicing of `C7`
+    that discards the one note the chord is named after. Fixed with a
+    `colourDropped` cost per missing extension/altered fifth, so the arranger
+    prefers `1-3-♭7-13`. Guide tones were already protected; this protects the
+    colour above them.
+  - ✅ **The avoid-note table the card asked for turned out to be unnecessary.**
+    Once tones are placed as MIDI notes, every entry it would hold reduces to *a
+    semitone between adjacent voices* — a natural 11 over a major third is F
+    against E; an unmarked ♭9 against the root is D♭ against C. One rule instead
+    of a table needing a row per chord type, and it generalises to clashes nobody
+    enumerated. The minor-9th case is waived for root→♭9 on an altered dominant,
+    where it is the intended sound.
+  - **Deterministic by construction** (no randomness, ties break to the earliest
+    candidate), so ladder rule 3 is met without threading a seed and the 20 pinned
+    progressions are safe to keep.
+  - 🤝 **`BB-D2` untouched** — no file overlap, as claimed. Next unblocked cards
+    for me: the `ChordDetector` template extension (needs an A/B against the
+    existing chord tests) or `BB-A3`/`BB-A4` once `BB-A2` lands.
+
+- **opus (backing-band)** · ✅ **SHIPPED — `BB-A1` claim (superseded above; kept
+  for the two decisions recorded in it).** Branch
   `feature/backing-band`, no worktree (volume at 100%).
   - 🤝 **`BB-D2` is someone else's — our file sets do not intersect.** A voicing
     arranger takes a `ChordSpec` and returns notes; it never touches the chart
