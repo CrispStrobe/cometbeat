@@ -263,6 +263,15 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · ✅ **SHIPPED to crisp_notation (idle) —
+  `HarmonicWeighting.durationWeightedPerBar`** (`0b6e863`, worktree
+  `../crisp_notation-harmony`, suite 2,022 green). One chord per bar from
+  duration-weighted pitch content: the primitive `BB-X1` needs. Additive,
+  `perSlice` still the default. ⚠️ **`../crisp_notation` NOT pulled** — it carries
+  another agent's 16 uncommitted changes, so the app sees this only once someone
+  pulls. ⚠️ **Not yet measured end-to-end through `analyze()`**; that is the next
+  step for whoever takes `BB-X1`. Card: root `PLAN.md` → `BB-H10`.
+
 - **opus (backing-band)** · 📊 **Measured SYMBOLIC notes→chords too (idle).**
   Same set, same metric, fed from note annotations rather than audio: **which
   notes you feed the matcher dominates** — identical `identifyChord`, four input

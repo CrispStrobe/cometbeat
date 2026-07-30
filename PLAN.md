@@ -3265,6 +3265,42 @@ failed:**
     one half, report on the other. Until then it is a promising lead, not a
     number to build on.
 
+- ✅ **BB-H10 — duration-weighted per-bar harmonic analysis. SHIPPED to
+  crisp_notation `main` (`0b6e863`), worktree `../crisp_notation-harmony`.**
+  - **What.** `analyze(score, weighting: HarmonicWeighting.durationWeightedPerBar)`
+    reads ONE chord per bar from the bar's duration-weighted pitch content. That
+    is the mode a lead sheet wants — one symbol per bar — so it is the primitive
+    `BB-X1` needs to derive charts from the 46k-score corpus. `perSlice` stays the
+    default and every existing caller sees identical output.
+  - **Why.** `BB-H9` measured that WHICH NOTES the identifier sees matters far
+    more than the identifier does — a 32-point spread from the selection rule
+    alone — and `analyze()` was using the weakest shape.
+  - 🔴 **The design detail worth keeping, because a test forced it.** The rule is
+    a threshold **relative to the strongest tone**, not a fixed top-N. Top-N
+    sounds equivalent and is not: on a held C-E-G decorated with three
+    sixteenths, top-4 admits one arbitrary passing note, and `analyze`'s existing
+    one-non-chord-tone recovery then discards a REAL chord tone to make the
+    intruder fit — **the bar read as `C#dim`, having dropped its own root.** A
+    relative threshold excludes decoration by construction; the search widens to
+    every significant tone and then to the whole bar only if the confident set
+    names nothing.
+  - **Ties resolve by pitch class**, so the reading is deterministic rather than
+    dependent on map iteration order.
+  - Additive: new enum, two optional parameters, default unchanged. 6 new tests,
+    **full core suite green at 2,022**.
+  - ⚠️ **The app cannot see this yet.** `../crisp_notation` (the shared path-dep
+    clone) is on `main` but **behind origin and carrying another agent's 16
+    uncommitted changes**, so I did not pull it — that is their tree. The change
+    lands app-side the moment someone pulls it.
+  - 📌 **Not yet measured end-to-end.** `BB-H9`'s 34%→66% was measured with a
+    standalone selection rule, not through `analyze()`. Re-running
+    `tool/symbolic_chord_eval.dart` against the new mode — once the clone is
+    pulled — is the confirmation, and is the obvious next step for whoever takes
+    `BB-X1`.
+  - Bonus: the commit also corrected pre-existing `dart format` drift in
+    `analysis_test.dart`, which CI enforces (`--set-exit-if-changed` on
+    `packages/*/test`).
+
 - 📊 **BB-H9 — SYMBOLIC notes → chords: what we have and how good it is.
   Measured 2026-07-30, `tool/symbolic_chord_eval.dart`.** Same GuitarSet takes,
   same segments, same duration-weighted metric as the audio evaluations, but fed
