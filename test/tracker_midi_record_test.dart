@@ -82,6 +82,19 @@ bool _hasNote(AdvancedTrackerTester game, int midi) {
   return false;
 }
 
+/// Every note in the pattern, whatever row or channel it landed on.
+///
+/// ⚠️ The wall-clock lesson: the Tracker's playhead runs on a REAL `Stopwatch`
+/// while `tester.pump(duration)` moves only FAKE time, so the row a recorded
+/// note lands on is whatever the build happened to take. Asserting on the
+/// PITCH holds regardless; asserting on a row — or on a count that an
+/// overwrite also satisfies — does not.
+List<int> _notesIn(AdvancedTrackerTester game) => [
+      for (var channel = 0; channel < game.channelCount; channel++)
+        for (var row = 0; row < game.rows; row++)
+          if (game.noteAt(channel, row) case final midi?) midi,
+    ];
+
 void main() {
   testWidgets('a played note reaches the pattern', (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());
@@ -157,6 +170,12 @@ void main() {
     await _settle(tester);
 
     expect(game.noteCount, before);
+    // ⚠️ And the PITCHES, not only the count. A count that stays put is also
+    // satisfied by a wrong write that OVERWRITES an occupied cell — the false
+    // pass @daw-ux found in the sibling test here. Naming the notes says what
+    // is meant and cannot be satisfied by an accident.
+    expect(_notesIn(game), isNot(contains(60)));
+    expect(_notesIn(game), isNot(contains(62)));
   });
 
   group('how long a note was held', () {
@@ -242,8 +261,12 @@ void main() {
       _noteOff(game, 60);
       await _settle(tester);
       expect(game.noteCount, before);
-      for (var r = 0; r < game.rows; r++) {
-        expect(game.isNoteCutAt(0, r), isFalse);
+      // The specific thing this is about: no key-off was written anywhere, on
+      // any channel — a cut on a channel nobody looked at is still a cut.
+      for (var channel = 0; channel < game.channelCount; channel++) {
+        for (var r = 0; r < game.rows; r++) {
+          expect(game.isNoteCutAt(channel, r), isFalse, reason: '$channel/$r');
+        }
       }
     });
   });
