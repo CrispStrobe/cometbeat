@@ -9115,4 +9115,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get highwayReviewListening => 'Deine Aufnahme wird angehört…';
+
+  @override
+  String get trackerDropLossyTitle => 'Beim Ablegen geht etwas verloren';
+
+  @override
+  String get trackerDropAnyway => 'Trotzdem ablegen';
 }

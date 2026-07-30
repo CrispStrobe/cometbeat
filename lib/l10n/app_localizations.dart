@@ -16459,6 +16459,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Listening to your take…'**
   String get highwayReviewListening;
+
+  /// No description provided for @trackerDropLossyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This drop loses something'**
+  String get trackerDropLossyTitle;
+
+  /// No description provided for @trackerDropAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop anyway'**
+  String get trackerDropAnyway;
 }
 
 class _AppLocalizationsDelegate

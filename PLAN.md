@@ -1418,6 +1418,22 @@ prefix.
     drop the timeline handles natively. `acceptsDirectly` names the kinds a
     container holds; empty by default, so pure mode targets are unchanged. It
     is a whitelist, not a bypass — an unlisted kind is still refused.
+  * ✅ **the third drop target is wired: the TRACKER** (2026-07-30, daw-suite).
+    A drag onto the pattern grid shows what a release would do, warns when it
+    costs something, and lands as ONE undoable edit.
+    ⚠️ **It lands in the CURRENT PATTERN rather than replacing the song, and
+    that is the opposite call to Loop Studio's — for a concrete reason.** The
+    Tracker's replace path (`_replaceSong`) calls `_clearUndo()`, because a
+    snapshot history cannot survive a change of channel/row shape; a replacing
+    drop would therefore be unrecoverable. The dialog states the cost of the
+    choice: a dropped song's other patterns stay behind.
+    ⚠️ **`setChannelCells` asserts the row count** — the third invariant in this
+    arc that only a foreign document could break. `tracker_pattern_fit.dart`
+    (pure) cuts or pads to the target's shape and reports **notes** lost, not
+    rows trimmed: a 32-row song using its first four rows loses nothing in a
+    16-row pattern, and a warning people learn to dismiss is worse than none.
+    ➕ Simpler than the Loop target in one way: everything converting into
+    tracker yields a `TrackerSong`, so there is one document shape, not two.
   * ✅ **the second drop target is wired: LOOP STUDIO** (2026-07-29, loop-d1d4).
     A drag onto the mixer surface shows what a release would do, confirms when
     it costs something, and lands as one undoable edit.

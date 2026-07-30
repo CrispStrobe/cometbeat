@@ -9063,4 +9063,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get highwayReviewListening => 'Listening to your take…';
+
+  @override
+  String get trackerDropLossyTitle => 'This drop loses something';
+
+  @override
+  String get trackerDropAnyway => 'Drop anyway';
 }

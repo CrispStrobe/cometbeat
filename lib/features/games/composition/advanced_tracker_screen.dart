@@ -55,6 +55,7 @@ import 'package:comet_beat/core/audio/sample_pitch.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_native_command.dart';
+import 'package:comet_beat/core/audio/tracker_pattern_fit.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show
         RowTiming,
@@ -75,6 +76,7 @@ import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/audio/wav_io.dart'
     show readWavPcm16, wavToMonoFloat;
+import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/midi/midi_input.dart';
@@ -644,6 +646,15 @@ abstract interface class AdvancedTrackerTester {
   /// and driving them through a modal sheet on a screen whose Ticker never
   /// settles would test the sheet instead.
   ManualMidiInput get debugMidiInput;
+
+  /// WS-X2 test seam: drop [payload] on the pattern grid, skipping the
+  /// confirmation (the dialog is the shared shape Loop Studio's target already
+  /// proved). Returns whether anything landed.
+  bool debugDrop(MusicDragPayload payload);
+
+  /// WS-X2 test seam: what a drop of [payload] would warn about — empty when it
+  /// costs nothing, which is when no dialog should appear.
+  List<String> debugDropWarnings(MusicDragPayload payload);
 
   /// Whether the cell at [channel]/[row] is a key-off (a recorded release).
   bool isNoteCutAt(int channel, int row);
@@ -3669,6 +3680,17 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   int? noteAt(int channel, int row) => _song.engine.cellAt(channel, row).midi;
   @override
   ManualMidiInput get debugMidiInput => _midi;
+  @override
+  bool debugDrop(MusicDragPayload payload) {
+    final plan = _dropPlan(payload);
+    if (plan == null) return false;
+    _commitDrop(plan.fitted);
+    return true;
+  }
+
+  @override
+  List<String> debugDropWarnings(MusicDragPayload payload) =>
+      _dropPlan(payload)?.warnings ?? const [];
   @override
   bool isNoteCutAt(int channel, int row) =>
       _song.engine.cellAt(channel, row).isNoteCut;
@@ -6790,14 +6812,153 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               if (_hoverInfo != null) setState(() => _hoverInfo = null);
             }
           : null,
-      child: Stack(
-        children: [
-          grid,
-          if (_inspect && _hoverInfo != null)
-            Positioned(top: 8, right: 8, child: _hoverInspectCard()),
-        ],
+      child: DragTarget<MusicDragPayload>(
+        onWillAcceptWithDetails: (d) => _dropDecision(d.data).canDrop,
+        onAcceptWithDetails: (d) => unawaited(_dropHere(d.data)),
+        builder: (context, candidate, rejected) => Stack(
+          children: [
+            grid,
+            if (_inspect && _hoverInfo != null)
+              Positioned(top: 8, right: 8, child: _hoverInspectCard()),
+            if (candidate.isNotEmpty && candidate.first != null)
+              Positioned(
+                left: 12,
+                top: 8,
+                child: Material(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    // Say what a release would do, while the finger is down.
+                    child: Text(
+                      dropSummary(_dropDecision(candidate.first!)),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: scheme.onPrimaryContainer,
+                          ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  /// WS-X2 — what dropping [payload] on the pattern grid would do.
+  ///
+  /// No `acceptsDirectly`: unlike the Audio Editor's timeline, this surface is a
+  /// MODE, not a container — it has no cell type that holds a foreign document
+  /// as-is, so every non-tracker kind must convert or be refused.
+  DropDecision _dropDecision(MusicDragPayload payload) =>
+      dropDecisionFor(payload, AppMode.tracker);
+
+  /// Land a dragged document in the pattern on screen.
+  ///
+  /// ⚠️ **It lands in the CURRENT PATTERN, and does not replace the song — the
+  /// opposite call to Loop Studio's, for a concrete reason.** A drop there could
+  /// replace the whole band because every path goes through `_syncPlayback`, so
+  /// it was one undoable edit. Here the equivalent path is `_replaceSong`, which
+  /// calls `_clearUndo()`: a snapshot history cannot survive a change of
+  /// channel/row shape. A drop that replaced the song would therefore be
+  /// **unrecoverable**, and an unrecoverable drop is worse than a partial one.
+  /// The cost of that choice is real and is stated below: a dropped song's own
+  /// pattern list, order and tempo do not come with it. The menu's Import is
+  /// still there for whoever wants the whole document.
+  ///
+  /// Everything that converts INTO tracker yields a `TrackerSong`
+  /// (score/tab/loop → tracker) and same-kind carries one too, so unlike the
+  /// Loop target there is exactly one document shape to handle here.
+  Future<bool> _dropHere(MusicDragPayload payload) async {
+    final plan = _dropPlan(payload);
+    if (plan == null) return false;
+
+    if (plan.decision.needsConfirmation || plan.warnings.isNotEmpty) {
+      // Only a drop that COSTS something asks. Making people dismiss a dialog
+      // on every drop is how they learn to dismiss the one that mattered.
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(AppLocalizations.of(ctx)!.trackerDropLossyTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [for (final line in plan.warnings) Text(line)],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(AppLocalizations.of(ctx)!.trackerDropAnyway),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) return false;
+    }
+    _commitDrop(plan.fitted);
+    return true;
+  }
+
+  /// What a drop would do, and what it would cost — worked out before anything
+  /// is committed or shown.
+  ///
+  /// Split out from the commit so the WARNINGS can be asserted without pumping a
+  /// dialog: the dialog itself is the same shape Loop Studio's target already
+  /// proved, but the list of what a particular drop loses is this surface's own
+  /// arithmetic and is where a mistake would hide.
+  ({DropDecision decision, FittedPattern fitted, List<String> warnings})?
+      _dropPlan(MusicDragPayload payload) {
+    final decision = _dropDecision(payload);
+    final document = decision.document;
+    if (!decision.canDrop || document is! TrackerSong) return null;
+
+    // ⚠️ A loss the bridge's report CANNOT know about, because it happens after
+    // the conversion: the pattern on screen has its own shape, and a wider or
+    // longer grid has to be cut to land. The bridge answered honestly for the
+    // conversion it did; the trim is ours, and hiding it would be exactly the
+    // "lossy drop that did not ask" the protocol exists to prevent.
+    final fitted = fitCellsToPattern(
+      document.engine.exportCells(),
+      channels: _song.channelCount,
+      rows: _song.rows,
+    );
+    return (
+      decision: decision,
+      fitted: fitted,
+      warnings: <String>[
+        if (decision.report case final report?) ...[
+          for (final lost in report.lost) '• $lost',
+          for (final near in report.approximated) '~ $near',
+        ],
+        if (fitted.droppedNotes > 0)
+          '• ${fitted.droppedNotes} notes do not fit this pattern '
+              '(${_song.channelCount} channels × ${_song.rows} rows)',
+        if (document.patterns.length > 1)
+          '• only the current pattern lands — the other '
+              '${document.patterns.length - 1} stay behind',
+      ],
+    );
+  }
+
+  /// Write a fitted grid in, as ONE undoable edit.
+  ///
+  /// Through the ordinary edit path deliberately: that is what makes overwriting
+  /// the pattern an acceptable thing for a drop to do at all.
+  void _commitDrop(FittedPattern fitted) {
+    _pushUndo();
+    setState(() {
+      for (var channel = 0; channel < fitted.cells.length; channel++) {
+        _song.engine.setChannelCells(channel, fitted.cells[channel]);
+      }
+    });
+    _syncPlayback();
   }
 
   /// The desktop hover card (Inspect mode), pinned to the grid corner.

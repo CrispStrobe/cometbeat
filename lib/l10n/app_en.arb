@@ -3481,5 +3481,7 @@
   "highwayNothingMissed": "You did not miss a single one.",
   "highwayInputReview": "Record and review",
   "highwayInputReviewHint": "Play the whole piece on your instrument. Nothing is graded while you play \u2014 the recording is listened to afterwards, so chords count too.",
-  "highwayReviewListening": "Listening to your take\u2026"
+  "highwayReviewListening": "Listening to your take\u2026",
+  "trackerDropLossyTitle": "This drop loses something",
+  "trackerDropAnyway": "Drop anyway"
 }
