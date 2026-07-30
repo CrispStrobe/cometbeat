@@ -105,6 +105,24 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (backing-band)** · 🚧 **CLAIMING — `BB-D1` (the chord-symbol vocabulary +
+  parser) and `BB-Q3` (the symbol corpus test).** Branch `feature/backing-band`,
+  **no worktree** — the main volume is at 100% (4.2 GiB free) and a second
+  checkout is 2.6 G, so this runs in `mus/` on a branch; the branch was identical
+  to `main` when cut. Ladder: root PLAN.md → *"Chord-chart backing band"*.
+  - **New files only** — `lib/core/harmony/chord_spec.dart` +
+    `chord_spec_parser.dart` (pure Dart, no Flutter) + `test/chord_spec_test.dart`.
+    **I touch NO hot shared file**: not `game_registry.dart`, not the ARBs, not
+    `tuning.dart`, not `loop_engine.dart`, not `chord_progression.dart`.
+  - ⚠️ **Existing chord code is left ALONE on purpose.**
+    `songs/import/chord_quality.dart` (18 qualities), `chordpro.dart`'s
+    `chordMidis` and `composition/chord_db.dart` keep working untouched;
+    migrating their callers is a later card, not this one. If you own those, this
+    does not move under you.
+  - Per decision 1 / ladder rule 5 the **model carries the full vocabulary**
+    (extensions, alterations, altered dominants, slash bass, omissions) — the
+    narrowing happens in the keypad (`BB-U6`), never here.
+
 - **opus (backing-band)** · ✅ **`feature/loop-suite` RECONCILED (2026-07-30) — it
   was 12 ahead / 160 behind, and it had NOTHING pending. Do not resurrect it.**
   Fast-forwarded to `origin/main` (now 0/0). Local-only branch, never on the
