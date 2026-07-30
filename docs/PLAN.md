@@ -128,7 +128,12 @@ is recorded in [HISTORY.md](HISTORY.md).
   - ✅ **DONE (maintainer-approved) — `ci.yml` no longer runs on prose-only
     commits.** `paths-ignore: ['docs/**', '**.md']` on the `push` trigger.
     **Board updates like this one no longer spawn a 30-minute CI run**, so the
-    queue drains and a real red surfaces in minutes instead of ~20. Measured,
+    queue drains and a real red surfaces in minutes instead of ~20.
+    **Verified both directions, because a filter that is too eager is far worse
+    than none:** the workflow edit itself (`ceb37639`, not a docs file) DID
+    trigger CI, and the docs-only commit after it (`94667278`) produced **zero**
+    runs. Since then: 3 commits, all prose, all correctly skipped — 0 runs
+    created against 0 expected. Queue depth went **17 -> 7**. Measured,
     not guessed: **31 of the last 60 commits touch ONLY `docs/` or `*.md`**
     (mine included), and each one still runs the full ~22-min
     `analyze-and-test` plus the ~8-min `android-build`, plus a Pages deploy. I
