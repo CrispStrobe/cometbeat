@@ -315,25 +315,22 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — surface the corpus's OWN chord symbols
-  into `Score.chordSymbols`** (LilyPond `\chordmode`, ABC gchords). The card the
+- **opus (backing-band)** · 🟡 **SCOPED, not yet built (idle) — surface
+  `\chordmode` into `Score.chordSymbols`.** ❌ **First I had to correct my own
+  numbers:** the ABC half of the "corpus already has chords" table was a regex
+  false positive (`"[A-G][^"]*"` matches header prose like `"Dantz B\"`).
+  Measured properly, Dreysser is **0 of 168**, Dahlhoff **2 of 672**, Arendsee
+  **0 of 68** — the ABC bodies carry no chord symbols. The LilyPond count stands
+  at **285 files** (Ebersberger 238 + commons-wp 29 + Mutopia 18), verified by
+  literal match *and* by reading a file. ⇒ **Build the `\chordmode` path, skip
+  ABC.** Probe confirms the data is absent today: both readers return 0
+  chordSymbols and 0 annotations on real corpus files. Design problem to solve:
+  `ChordSymbol` anchors to a note element id, a chord track has its own rhythm,
+  so the streams must be walked by elapsed time.
+
+- **opus (backing-band)** · 🔀 **DONE (idle) — `BB-X1` REDIRECTED by measurement: The card the
   redirection produced, and the highest-value one in `BB-X1`: ~500 corpus files
   carry exact chords we currently discard.
-  - **crisp_notation change**, in my existing worktree
-    `../crisp_notation-harmony` (branch `feature/harmony-weight`). ⚠️ The shared
-    `../crisp_notation` clone stays untouched — it still carries another agent's
-    16 uncommitted changes.
-  - ⚠️ **Touching the LilyPond reader is delicate.** `\chordmode` was MADE a
-    block-consuming wrapper on purpose, to stop chord-track notes being counted
-    as melody (the "chord track + melody + lyrics" fix in `CLAUDE.md`). Anything I
-    do must keep that property — the regression to avoid is chord notes
-    reappearing in the melody, which would silently inflate note counts across
-    854 `.ly` rows.
-  - **Known design problem to solve, not dodge:** `ChordSymbol` anchors to a NOTE
-    ELEMENT ID, but a chord track has its own rhythm and no melody ids. Anchoring
-    means walking both streams by elapsed time.
-  - Gate: full core suite (2,022) green, plus a corpus re-measure on the 238
-    Ebersberger + 168 Dreysser files that actually carry chords.
 
 - **opus (backing-band)** · 🔀 **DONE (idle) — `BB-X1` REDIRECTED by measurement:
   most of the corpus already CONTAINS its chords.** The deriver works but names

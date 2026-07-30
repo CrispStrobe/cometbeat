@@ -3352,18 +3352,28 @@ failed:**
 
   **But the chords are already there.** Counted across the corpus:
 
-  | source | files carrying their own chord symbols |
-  |---|---|
-  | Ebersberger `.ly` | **238 of 238** (`\chordmode`) |
-  | Dreysser `.abc` | **168 of 168** (gchords) |
-  | commons-wp `.ly` | 29 of 127 |
-  | Mutopia `.ly` | 18 of 442 |
-  | Dahlhoff `.abc` | 37 of 672 |
-  | Arendsee `.abc` | 7 of 68 |
+  ❌ **CORRECTION (same day, before anything was built on it): the ABC half of
+  this table was WRONG and is now measured properly.** The first count used
+  `"[A-G][^"]*"`, which matches any quoted text beginning with A–G — and Dreysser's
+  files are full of header prose like `"Dantz B\"` and `", geschrieben von "`.
+  Their music bodies contain **no chord symbols at all**. Counting only a quoted
+  chord immediately preceding a note, in the body:
 
-  ⇒ **~500 files where a chart is exact data to READ, not harmony to approximate.**
-  That is a completely different quality of result from a 66%-accurate inference,
-  and it is available today.
+  | source | first claim | **actually** |
+  |---|---|---|
+  | Ebersberger `.ly` (`\chordmode`) | 238 of 238 | **238 of 238** ✅ |
+  | commons-wp `.ly` | 29 of 127 | **29** ✅ |
+  | Mutopia `.ly` | 18 of 442 | **18** ✅ |
+  | Dreysser `.abc` (gchords) | ~~168 of 168~~ | **0 of 168** ❌ |
+  | Dahlhoff `.abc` | ~~37 of 672~~ | **2 of 672** ❌ |
+  | Arendsee `.abc` | ~~7 of 68~~ | **0 of 68** ❌ |
+
+  ⇒ **The prize is ~285 LilyPond files, not ~500 across both formats.** Still
+  worth having — 238 Ebersberger songs with exact chords beats any inference — but
+  **the ABC path is not worth building for two files.** The LilyPond count was
+  verified by literal string match *and* by reading a file
+  (`akkorde = \chordmode { \germanChords f4 c:7 f4. c8 … }`); the ABC count was
+  not, and that is the difference.
 
   - 🔴 **The blocker is that our own reader throws this away.** `scoreFromLilyPond`
     makes `\chordmode` a **block-consuming wrapper** — deliberately, to stop
@@ -3371,9 +3381,15 @@ failed:**
     for the "chord track + melody + lyrics" sheet layout). It skips exactly the
     data a chart wants. Same question for ABC gchords.
   - **Next card, and it is now the highest-value one in `BB-X1`:** surface chord
-    symbols from `\chordmode` and from ABC gchords as `Score.chordSymbols`
-    (the type already exists and already round-trips through MusicXML
-    `<harmony>`). Exact, no inference, no confidence gate needed.
+    symbols from **`\chordmode` only** as `Score.chordSymbols` (the type already
+    exists and already round-trips through MusicXML `<harmony>`). Exact, no
+    inference, no confidence gate needed. **Skip ABC gchords** — two files.
+  - 📌 **Anchoring is the real design problem**, verified: `ChordSymbol` binds to a
+    NOTE ELEMENT ID, but a chord track has its own rhythm and no melody ids, so
+    the two streams must be walked by elapsed time. And a probe confirms the data
+    is genuinely absent today — `scoreFromLilyPond` on `maikaefer_flieg.ly`
+    returns **0 chordSymbols and 0 annotations**, as does `scoreFromAbc` on a
+    Dreysser file.
   - **Harmonisation-from-melody remains the harder, later job** for the files with
     no chord track — Dahlhoff's dances, most of Mutopia. The right shape there is
     a best-fit diatonic triad per bar scored against the bar's duration-weighted
