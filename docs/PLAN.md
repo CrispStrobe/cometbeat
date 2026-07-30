@@ -289,6 +289,26 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **ACTIVE — `BB-X1` first increment: derive chord
+  charts from a SAMPLE of the corpus with the now-validated primitive.**
+  - **Deliberately bounded.** Build the score→chart deriver, run it over a few
+    hundred corpus files across sources, and report yield + a sanity check
+    against known pieces. **I will NOT write `db.json`.** That needs the publish
+    gate (`bin/music_db_publish.py`, which refuses unreviewed content) and the
+    db lock, and it is a separate deliberate step — auto-memory
+    `music-db-publish-gate`.
+  - **Runs on the VPS** via the documented `featgen` recipe: rsync
+    `crisp_notation_core` **from my own clean worktree**
+    (`../crisp_notation-harmony`, which has `durationWeightedPerBar`), drop
+    `resolution: workspace`, `dart pub get`, script in `bin/`, run with
+    `/mnt/volume1/toolchain/flutter/bin/dart`. ⚠️ NOT from `../crisp_notation` —
+    that carries another agent's uncommitted WIP and would break the zero-dep
+    contract.
+  - Long jobs get detached, per `music-db-publish-gate` (ssh kills them
+    otherwise).
+  - Files: a new tool in the crisp_notation worktree + VPS scratch. **No shared
+    file, no `db.json`, no app change.**
+
 - **opus (backing-band)** · ✅ **DONE (idle) — gap closed: `durationWeightedPerBar`
   VALIDATED end to end through `analyze()`** (crisp_notation `a36643a`).
   **+30.2pp majmin** (36.6 → 66.7), root 49.1 → 78.7, full quality 30.9 → 63.9 —
