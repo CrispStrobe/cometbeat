@@ -368,7 +368,21 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · ✅ **SHIPPED (idle) — MuseScore `<Harmony>` IS NOW
+- **opus (backing-band)** · ✅ **~500 EXACT CHARTS NOW READABLE (idle).**
+  Ebersberger 238 (`\chordmode`) + OpenEWLD 103 + MuseScore 122 of 132 + PDMX ~34
+  ≈ **497**, all of it discarded at read time this morning. Three readers shipped:
+  crisp_notation `0aaaf43`, `82150b9`, `5d02482`. 🔬 The MuseScore 1.x integer
+  chord ids were **inferred from the music** — over 132 files, the interval the
+  melody plays above each harmony's root separates 1/64/16 into major / dominant
+  7th / minor with no overlap — and corroborated twice, most tellingly by *Stille
+  Nacht* now reading `| C | C | Dm | C | F | C | F | C |` where the Dm is a
+  correct ii that only the inferred mapping produces. Documented AS an inference.
+  📌 **Display already works** (`layout_annotations` places `chordSymbols`), so
+  **pulling `../crisp_notation` is the only step left before the user sees any of
+  it** — I have not pulled it, it carries another agent's uncommitted work.
+  Card: root `PLAN.md` → `BB-X1d`.
+
+- **opus (backing-band)** · ✅ **(superseded) — MuseScore `<Harmony>` IS NOW
   READ** (crisp_notation `82150b9`, suite **2,464** green). ≈300 corpus `.mscz`
   carried chord symbols the reader discarded.
   - **Roots are tonal pitch classes** walking the line of fifths from F (13=F,

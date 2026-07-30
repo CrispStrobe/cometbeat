@@ -3508,6 +3508,44 @@ failed:**
   leads are the ~300 `.mscz` above and, for tab specifically, GuitarSet's 360 takes
   and IMSLP's 235 CC0 tab PDFs.
 
+- ✅ **BB-X1d — ~500 EXACT CHARTS NOW READABLE. Running total (2026-07-30).**
+
+  | source | format | files with exact charts | bars named |
+  |---|---|---|---|
+  | Ebersberger | `.ly` `\chordmode` | **238** | 37 of 40 sampled, 28 ≥90% |
+  | OpenEWLD | `.mxl` `<harmony>` | **103** | 74.9% |
+  | MuseScore corpus | `.mscz` `<Harmony>` | **122** of 132 | 64.7%, 43 ≥90% |
+  | PDMX | `.mxl` | ~34 usable | 45.6% |
+  | | | **≈497** | |
+
+  All three readers shipped today (crisp_notation `0aaaf43`, `82150b9`,
+  `5d02482`); before this, **every one of these was discarded at read time.**
+
+  🔬 **The MuseScore 1.x chord ids were INFERRED FROM THE MUSIC, and the method
+  generalises.** 1.x writes quality as an integer indexing a list we cannot
+  resolve. Over 132 files, taking only bars with exactly one harmony so
+  attribution is unambiguous, the interval the melody plays above each harmony's
+  own root separates them cleanly:
+
+  | ext | n | top intervals | reading |
+  |---|---|---|---|
+  | 1 | 1920 | 1 · 5 · **3** (25.4%), no ♭3 in top six | major |
+  | 64 | 356 | 5 · 1 · **♭7** (17.4%) · 3 | dominant 7th |
+  | 16 | 138 | 1 · 5 · **♭3** (23.2%), no major 3 in top six | minor |
+
+  Corroborated twice independently: `joy-world.mscz` gives C and G under "Joy to
+  the World"; and *Stille Nacht* now reads `| C | C | Dm | C | F | C | F | C |`,
+  where the **Dm is a correct ii in C major and appears only because of the
+  inferred mapping**. Values outside the table still emit nothing.
+  ⚠️ It remains an INFERENCE — documented as such in the code and in a test, so
+  anyone meeting real documentation replaces the table rather than extending it
+  by pattern-matching.
+
+  📌 **Display is already handled** — `layout_annotations.dart` places
+  `score.chordSymbols`, so the app renders all ~497 the moment
+  `../crisp_notation` is pulled. **That pull is the only thing standing between
+  this work and the user seeing it.**
+
 - 📊 **BB-H9 — SYMBOLIC notes → chords: what we have and how good it is.
   Measured 2026-07-30, `tool/symbolic_chord_eval.dart`.** Same GuitarSet takes,
   same segments, same duration-weighted metric as the audio evaluations, but fed
