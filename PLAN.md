@@ -1413,6 +1413,65 @@ prefix.
     **Worth checking on the other three surfaces**: the same two halves are easy
     to leave out, and neither shows up in a passing unit test of the linker.
 
+- 🔶 **WS-X6 — the CLIPBOARD: one shelf of things you keep, across every
+  editor.** `L` · **maintainer's design · SLICE 1 SHIPPED 2026-07-30**
+  (opus, loop-d1d4), `b90ad72c`, 16 tests.
+  ⚠️ **This card should have been written on 2026-07-30 BEFORE slice 1 and was
+  not** — the commit that said it recorded the card touched only `docs/PLAN.md`,
+  and two later commit messages and a report to the maintainer pointed at a card
+  that did not exist. Recorded here late, and noted rather than quietly fixed,
+  because "the card says…" is only worth anything if the card is really there.
+  - **Goal, in the maintainer's words.** A button in the top bar drops down an
+    area showing tiny thumbnails/icons of things worth reusing. Put a few samples
+    there from the Audio Editor and use them as instruments in Loop Studio; copy
+    a guitar riff or a drum beat out of Loop Studio and place it in the Audio
+    Editor. Items carry an (X). It must hold MANY — every instrument of a tracker
+    track, every sample of a drum kit.
+  - ⭐ **Why it beats both options WS-X2 was choosing between.** The band is
+    INLINE, not an overlay, so source and target share one widget tree and one
+    frame: it needs neither a split view nor a wide window and **works on a
+    phone**. And it is the drag SOURCE the protocol never had — a chip lands on
+    the drop targets WS-X2 already shipped **with not one line changed in them**,
+    which is the whole reason to build this rather than a fifth target. A menu or
+    a bottom sheet would have failed here: either puts a barrier between the chip
+    and the surface, so you could look at your samples and never drag one onto
+    anything.
+  - ✅ **Slice 1 — the model, the band, one host.** `lib/core/tray/tray.dart`
+    (pure Dart) + `lib/shared/widgets/tray_panel.dart` + Loop Studio. Drag AND
+    tap-to-place, both through the existing `dropDecisionFor`; (X) per chip;
+    holds 60, dropping the OLDEST; a private clipboard when no shared one is in
+    scope, the rule the undo history already follows.
+    * The button is in the APP BAR, whose actions scroll, **not** the toolbar
+      below it — that Row has five fixed icon buttons and has overflowed twice.
+    * ⚠️ It drags `MusicDragPayload` ITSELF. A draft wrapped it in a carrier
+      type, which would have defeated the entire point: `Draggable<T>` and
+      `DragTarget<T>` match on T, so a wrapper means the four existing targets
+      do **not** accept it.
+    * ⚠️ **Naming, since both obvious ones are taken.** Flutter's `Clipboard` is
+      imported by the Audio Editor and four surfaces keep private per-screen
+      clipboards (a different feature — "copy this clip, paste it two bars
+      later"); `Shelf` is EQ terminology across the DSP files. Hence `Tray` in
+      code, which occurs nowhere in `lib/` except inside "stray" and "betrayed".
+      The UI says "Clipboard", the word a player thinks in.
+  - ⬜ **Slice 2 — the other hosts.** The band plus a "put this on the clipboard"
+    action in the Audio Editor, the Tracker and the Tab Workshop. The maintainer's
+    own example (samples out of the Audio Editor, used in Loop Studio) needs
+    slice 2 for the first half and slice 3 for the second. ⚠️ Three other lanes'
+    hot files; each host is small (an app-bar action, the band in the layout, one
+    "put on" call) but it is THEIR file.
+  - ⬜ **Slice 3 — heavy items by REFERENCE, and persistence.** "All the samples
+    of a drum kit" is megabytes of PCM: copying it would double the memory of
+    the thing it came from and could never be persisted. Samples and instruments
+    already live in `InstrumentLibraryStore`, so a tray item names one —
+    `TrayItem.libraryName` is reserved for it already, so existing items do not
+    change shape. Persistence can then reuse `project_codec`'s kind → codec
+    registry for the symbolic items.
+  - **Acceptance.** An item put on the clipboard in one editor is present in
+    another after navigating there, can be dragged or tapped onto that editor's
+    surface, lands through `dropDecisionFor` with its conversion cost stated, and
+    can be removed with (X). *Slice 1 discharges all of it except "in another
+    editor", which needs slice 2.*
+
 - ✅ **WS-X2 — drag between surfaces. COMPLETE 2026-07-30** — the protocol plus
   **all four** drop targets (Audio Editor · Loop Studio · Tracker · Tab
   Workshop).
