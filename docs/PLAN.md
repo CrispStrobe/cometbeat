@@ -105,8 +105,47 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (backing-band)** · 🚧 **CLAIMING — `BB-D1` (the chord-symbol vocabulary +
-  parser) and `BB-Q3` (the symbol corpus test).** Branch `feature/backing-band`,
+- **opus (backing-band)** · ✅ **SHIPPED (idle) — `BB-D1` + `BB-Q3`.**
+  `lib/core/harmony/chord_spec.dart` + `chord_spec_parser.dart` +
+  `test/chord_spec_test.dart`. **182 tests green, `flutter analyze` clean on both,
+  0 tracked files modified** (three new files, nothing else touched — the
+  existing `chord_quality.dart` / `chordMidis` / `chord_db.dart` are untouched and
+  their callers unaffected).
+  - **What it does.** A chord is modelled COMPOSITIONALLY — triad core · seventh ·
+    stack height · alterations · adds · omissions · slash bass — so `C7#11`,
+    `Bb7alt`, `C6/9` and `Cmaj13` can be *said*, which none of the app's three
+    existing 15-to-18-entry flat quality lists can do. Reads 5 spellings of a
+    major seventh, 5 of a half-diminished, unicode (`F♯m7♭5`, `C∆9`, `Cø`, `C°7`),
+    loose parens (`C7(b9, #11)`), old-style `+5`/`-9`, and opt-in German `H`/`B`.
+    Prints in plain / jazz-glyph / German conventions. Transposes with correct
+    SPELLING (BB-T4 sits on this).
+  - **It never throws.** Unreadable text returns an `UnreadableCell` holding the
+    string VERBATIM plus a best-guess triad, so one odd symbol cannot stop a chart
+    loading — the adoption gate decision 3 cares about. `N.C.` and `%`/empty are
+    distinct cell kinds.
+  - 🔎 **The round-trip property test earned its keep immediately: it found a real
+    printer bug I would have shipped.** `format()` emitted `Cb5` for "C with a flat
+    five", which every reader on earth (including ours, correctly) reads as a C♭
+    power chord — cf. `Bb5`. The reader was right; the printer now brackets a
+    suffix that would fuse with the root (`C(b5)`), and parens are stripped only
+    AFTER the root is read, which is load-bearing ordering. A hand-picked example
+    list would never have generated that pair.
+  - 📌 **Four combinations are deliberately non-representable, each a naming fact
+    rather than a gap** — a diminished seventh only sits on a diminished triad; a
+    diminished triad with a minor seventh IS `m7b5` (a minor core with a flat
+    five); a stack height needs a seventh under it (`C9` vs `Cadd9`); and `alt`
+    names the altered DOMINANT so it implies one (`Calt` reads as `C7alt`). All
+    four are pinned by a test that states them, so nobody "fixes" one later.
+  - ⚠️ **Two conventions are baked into `intervals` and both are real practice, not
+    shortcuts:** a 13th chord omits the 11th (it clashes with the third), and an
+    11th chord KEEPS its third — dropping it is a voicing choice and belongs to
+    BB-A1, not to what the symbol asserts.
+  - **Next on the critical path:** `BB-D2` (the chart document), then `BB-D4a`
+    (paste a text grid) and `BB-A0` (project a chart onto the existing groove
+    engine) — the two cheap cards that make a real chart audible before Phase 2.
+
+- **opus (backing-band)** · ✅ **SHIPPED — `BB-D1` claim (superseded by the entry
+  above; kept for the file list).** Branch `feature/backing-band`,
   **no worktree** — the main volume is at 100% (4.2 GiB free) and a second
   checkout is 2.6 G, so this runs in `mus/` on a branch; the branch was identical
   to `main` when cut. Ladder: root PLAN.md → *"Chord-chart backing band"*.
