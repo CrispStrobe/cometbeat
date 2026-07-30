@@ -184,7 +184,16 @@ void main(List<String> rawArgs) {
   final examples = <String, String>{};
   var sources = 0;
 
+  // A full-corpus run is hours long and writes nothing until the end, which
+  // makes it indistinguishable from a hang. One line per 2,000 files is enough
+  // to see it moving and to spot a pair going bad early.
+  var seen = 0;
   for (final f in files) {
+    if (++seen % 2000 == 0) {
+      final ok = passed.values.fold(0, (a, b) => a + b);
+      final n = tried.values.fold(0, (a, b) => a + b);
+      stdout.writeln('… $seen/${files.length} files, $ok/$n round trips');
+    }
     Score? src;
     try {
       src = _load(f);

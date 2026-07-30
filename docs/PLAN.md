@@ -213,6 +213,12 @@ is recorded in [HISTORY.md](HISTORY.md).
     so one rest before a syllable shifts every id after it and an exact round
     trip reads as ~50% corrupt. Compare by note POSITION. I filed the LilyPond
     lyric round-trip as an open defect on that basis and had to retract it.
+  - 🚧 **Full-corpus pass RUNNING** on the VPS (`/mnt/volume1/xrt/pass2.log`,
+    progress line every 2,000 files). Every readable file in `music-db` through
+    all 6 writer/reader pairs — the matrix below was a 200-per-extension sample.
+    ⚠️ I killed a first attempt one third of the way in: it predated four fixes
+    that change note content, so its failure list would have needed per-file
+    triage anyway. Restart on current code beat triaging a stale one.
   - ✅ **PERMUTATION MATRIX CLEAN: 59,136 / 59,136 = 100%, all 84 cells** (the 6
     direct hops + every one of the 36 ordered format pairs, over 1,408 real
     corpus files, judging SOUNDING duration). It started this arc at 34/48 cells
