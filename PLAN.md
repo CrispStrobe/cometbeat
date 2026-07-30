@@ -1542,6 +1542,17 @@ prefix.
     ✅ **The cross-editor acceptance is proven both ways** — a tracker song put
     on lands in the Tab Workshop and a tab lands in the Tracker. That is the
     clause slice 1 could not show with one host.
+    ⚠️ **@loop-d1d4 built the Tab Workshop host at the same time and dropped it
+    on the rebase — the THIRD convergence today**, after `redoScope` and the
+    barre codec fix. I had claimed it on the board first and the file was
+    genuinely cold when I did (0 commits in 6 h), so the board is not the
+    failure here: two agents reaching for the same obvious next step inside one
+    session is simply what happens. The defence that worked is the cheap one —
+    claim before writing, keep the change small, and drop yours without argument
+    when theirs lands first. `putOnTray` is the API; my `putRiffOnTray` is gone.
+    📌 The one finding worth keeping from the discarded work: **a fresh Tab
+    Workshop already HAS columns** — it opens on an editable grid, not on
+    nothing — so an "is this empty" guard there never fires.
   - **Acceptance.** An item put on the clipboard in one editor is present in
     another after navigating there, can be dragged or tapped onto that editor's
     surface, lands through `dropDecisionFor` with its conversion cost stated, and
