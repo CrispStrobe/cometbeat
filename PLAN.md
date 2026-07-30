@@ -436,6 +436,24 @@ mental models over one shared project/document model, not five unrelated apps:
 > *preview bus* alongside the offline renderer). **The executable tasks live
 > below** → *"Workstation parity — the executable ladder"*.
 
+> **Backing band (scoped 2026-07-30) → [docs/BACKING_BAND.md](docs/BACKING_BAND.md).**
+> The maintainer ask is that the app become a serious offering in the
+> *chord-chart backing-band* class: enter a song's changes, pick a feel, and a
+> generated rhythm section plays them in any key at any tempo. That doc is the
+> scoping — the same "engines ahead of the product" finding, except here the
+> **document** is behind both: there is no chart type, comping is authored rather
+> than generated from chord symbols, and 4/4 is a compile-time constant. It also
+> **The executable tasks live below** → *"Chord-chart backing band — the executable
+> ladder"*.
+>
+> ✅ **All seven scoping decisions were taken 2026-07-30** (BACKING_BAND.md §0 and
+> the block at the top of the ladder). The one that matters for **this** section:
+> **the chart is NOT a sixth top-level mode.** It is a document in `Project`
+> (WS-W1) reached from the library, reusing Loop Studio's mixer, transport and
+> groove engine. **The five-mode architecture above stands unchanged.** Promotion
+> to a sixth mode is possible later and is gated on the WS shell landing first
+> (`BB-U5`).
+
 ### Loop Studio UX contract
 
 Loop Studio opens directly into an audible, editable project. The first screen
@@ -2078,6 +2096,734 @@ prefix.
 
 *(WS-L3, WS-L4 and WS-L7 were on this list and all three shipped in the D1–D4
 arc — which is the argument for the list.)*
+
+## Chord-chart backing band — the executable ladder (scoped 2026-07-30)
+
+The task breakdown of **[docs/BACKING_BAND.md](docs/BACKING_BAND.md)**. That doc
+holds the *reasoning* — what the capability class is, the five structural gaps,
+the non-goals, and the one rights decision that is the maintainer's. This holds
+the *work*. **Read it once before pulling a card**; several cards below only make
+sense against the gap they close.
+
+**The capability, in one line:** enter a song's changes, pick a feel, and a
+generated rhythm section plays them in any key at any tempo, looping — so a
+player can practise over real changes. **No product names**, here or anywhere.
+
+**Scoped by reading the code, 2026-07-30.** Standing state: **0 shipped · 37
+open · 1 closed on a decision.** Nothing here is claimed. Take one, put your name
+on the `docs/PLAN.md` board, and push the claim before you touch a shared file.
+
+> ### ✅ The seven scoping decisions are TAKEN (maintainer, 2026-07-30) — do not re-litigate
+>
+> `docs/BACKING_BAND.md` raised seven. All seven are answered. Every card below is
+> already written against these answers; if a card seems to contradict one, the
+> decision wins and the card is stale.
+>
+> 1. **Audience — one engine, a beginner↔expert dial.** The *model* carries the
+>    full vocabulary (altered dominants, extensions, any meter, 32-bar forms); the
+>    *surface* is gated (**BB-U6**). This is the whole reason `BB-D1` is `M` and
+>    not `S`. See rule 5.
+> 2. **Placement — a document in the library, NOT a sixth top-level mode**, with
+>    a prominent front door (home tile + a "play with band" action in Song Book /
+>    the library browser) and **maximum reuse of Loop Studio** — its mixer strips,
+>    its transport, its share-token pattern, its capture paths, and its groove
+>    engine (**BB-A0**, the immediate-synergy card). Revisit "sixth mode" only
+>    once the WS shell lands and this has earned a top level.
+> 3. **Chart supply — import first, entry second, derived third.** Paste-a-text-grid
+>    ships with the first playable increment (**BB-D4a**), the keypad after
+>    (**BB-U2**), corpus derivation last and sized against the *usable* subset
+>    (**BB-X1** — read its caveat, the row count is misleading).
+> 4. **Sharing — local by default + hand-to-hand token/file. No hosted index,
+>    ever.** **BB-X10 is CLOSED**; the token half is `BB-D4`. We compete on the
+>    arranger and on listening, not on a chart catalogue we cannot legally own.
+> 5. **Render — windowed offline render, queued into SoLoud. D-RT stays closed
+>    for this arc.** Do not open a real-time bus for this feature; **BB-T1**
+>    records why the practice modes do not need one.
+> 6. **Styles — six done properly, then widen.** `BB-A7` is `M`, not `L`.
+> 7. **Chord anchoring — synthesise an anchor note app-side now**; a
+>    measure-anchored chord symbol goes into crisp_notation only if a second
+>    consumer appears. Recorded on **BB-D3**.
+
+⚠️ **IDs are `BB-`-prefixed on purpose.** This file already uses `WS-` for the
+workstation ladder, `L1`–`L6`/`A1`–`A4`/`D1`–`D4` for Loop Studio, and
+`AUDIO_EDITOR_SUITE.md` uses `A1`–`A7`/`C1`–`C7`. **`BB-A2` and `A2` are not the
+same task.** Grep with the prefix.
+
+**How to read a card:** **Goal · Depends · Files · Build · Acceptance · Size**.
+Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
+
+**Four rules that apply to every card here, without exception.**
+1. **The byte-identical guard.** Any card touching a render path ships a test
+   proving a project *not* using the new feature renders byte-for-byte as before.
+   Same discipline that carried polymeter and automation.
+2. **It is a document in `Project`, not a mode with its own everything.** No new
+   clock (use `TransportService`), no new mixer, no new undo stack. Re-read
+   `docs/WORKSTATION_PARITY.md` §S1 before adding one.
+3. **Deterministic from a seed.** Every generative choice — voicing, fill,
+   humanisation, solo-chorus variation — is a pure function of
+   `(chart, style, seed)`. A shared chart must sound the same on two devices, and
+   an acceptance test cannot assert on a coin flip.
+4. **Clean-room.** Style banks and arranging rules come from published theory and
+   method-book practice. No format is reverse-engineered, no style bank is
+   transcribed from a product, no sample comes from outside the Tier A/B
+   registry. Auto-memory `cleanroom-gpl-port-process`.
+5. **The MODEL is never scoped down; the SURFACE is.** Decision 1. Every ⛔ in
+   `docs/BACKING_BAND.md` §2 is a model that was narrowed for a good reason and
+   is now the blocker — `Progression` asserts *exactly four chords in C*,
+   `ChordDegree` has *six diatonic degrees*, `LoopTiming.beatsPerBar` is a
+   `static const 4`. So: if a card is tempted to leave a quality, a meter or a
+   form out of a **type**, it does not. It leaves it out of the **keypad**
+   (BB-U6). Narrowing a surface is a one-line change; narrowing a model costs
+   what those three cost.
+
+### Phase 1 — the document (fixes G1; everything after is cheaper)
+
+- ⬜ **BB-D1 — the chord-symbol vocabulary and its parser.** `M`
+  - **Goal.** One type that can represent any chord a chart needs, parse it from
+    what a musician types, and print it back.
+  - **Depends.** Nothing. *Do this first.*
+  - **Files.** New `lib/core/harmony/chord_spec.dart` (pure Dart, no Flutter) +
+    `chord_spec_parser.dart`. Reads, does not yet modify:
+    `features/games/songs/import/chord_quality.dart` (the 18-quality table),
+    crisp_notation `theory/chord_analysis.dart`, `model/element.dart:1542`.
+  - **Build.** `ChordSpec { Pitch root, ChordCore core, Set<Extension>,
+    Set<Alteration>, List<AddedTone>, Set<int> omitted, Pitch? bass }` →
+    `pitchClasses`, `guideTones`, `voicingCandidates`. Parser accepts the ugly
+    real-world set: `Cmaj7` `CM7` `C∆` `C-7` `Cmi7` `F#m7b5` `F♯m7♭5` `Cø`
+    `Bb7alt` `A7#11/E` `C6/9` `Dsus` `G7sus4` `Ealt` `C/G` `N.C.` `%` (repeat
+    previous) and the German `H`/`B` convention the app already honours
+    elsewhere. Formatter is **convention-parameterised** (jazz `∆`/`ø` vs pop
+    `maj7`/`m7b5`, `♭`/`♯` vs `b`/`#`) — a display choice, never stored.
+  - **Acceptance.** A table-driven test of ≥150 real symbol strings → expected
+    pitch-class set + expected canonical print. `parse(print(x)) == x` for every
+    representable spec. **An unparseable symbol is preserved verbatim as text and
+    voiced as its best-guess triad — it never fails to load a chart** (the
+    existing `intervalsForSuffix` fallback ethos).
+  - ⚠️ **Do not** extend `ChordSymbolKind` (crisp_notation `element.dart:1542`)
+    to carry extensions. It is a 15-value MusicXML `<kind>` mapping and belongs to
+    the *notation* layer; a chart needs a richer type that can *narrow* to it.
+    BB-D3 owns that narrowing, with its loss report.
+
+- ⬜ **BB-D2 — the chart document.** `M`
+  - **Goal.** A serializable chart: bars, chords in bars, sections, repeats,
+    form. The thing every other card reads.
+  - **Depends.** BB-D1.
+  - **Files.** New `lib/core/harmony/chart.dart` + `chart_codec.dart` (pure
+    Dart). Reads: `core/project/project.dart`, `project_codec.dart` (register a
+    codec — the registry exists, see WS-W1).
+  - **Build.** `Chart { title, composer, key, TimeSignature, tempoBpm, styleId,
+    List<ChartSection> }`; `ChartSection { label, List<ChartBar> bars,
+    repeatCount, feel?, tempoScale?, intensity? }`; `ChartBar { List<ChartBeatChord>
+    chords, TimeSignature? meterChange, BarLine barline, endingNumber? }` where a
+    chord carries its **beat offset and duration in beats**, so a split bar
+    (`| Dm7 G7 |`) and a 3-beat + 1-beat bar are the same mechanism. Repeat
+    vocabulary: `|:` `:|` `1.` `2.` `D.C.` `D.S.` `𝄋` `𝄌` `Fine`, plus a pickup.
+    Version the codec from day one.
+  - **Acceptance.** Round-trip through the codec with every construct present.
+    An unknown section/repeat token in a stored file is **preserved verbatim**
+    (same rule as `ProjectTrack.unreadable` — an older build must not delete a
+    newer file's structure on the second save). `Chart` opens as a
+    `ProjectTrack`, and a project without one behaves exactly as today.
+  - ⚠️ Do **not** reuse `ChordChart` (`core/audio/chord_progression.dart:46`) as
+    the document — it is a flat beat-list built for *scoring a player*, and it
+    should stay that. BB-T5 makes it a projection of `Chart`.
+
+- ⬜ **BB-D3 — chart ↔ score bridge (with a loss report).** `M`
+  - **Goal.** A chart prints, engraves and exports as a lead sheet; a score with
+    chord symbols imports as a chart.
+  - **Depends.** BB-D2.
+  - **Files.** New `lib/core/harmony/chart_score_bridge.dart`. Reads
+    crisp_notation `musicxml_reader.dart:877` / `musicxml_writer.dart:673`
+    (`<harmony>` both ways, already there), `model/element.dart:1603`.
+  - **Build.** Chart → `MultiPartScore` with slash-notation bars carrying
+    `ChordSymbol`s; score → chart by collecting `score.chordSymbols` per measure.
+    Emit a per-edge **loss report** in the `ProjectBridge` style: extensions
+    `ChordSymbolKind` cannot express, repeats the target format flattens.
+  - **Acceptance.** A chart → MusicXML → chart round-trip keeps every chord that
+    is representable and *reports* every one that is not. A real corpus
+    `.mxl`/`.mscz` carrying `<harmony>` imports as a chart with the right chord
+    per bar.
+  - ✅ **DECIDED (decision 7) — synthesise the anchor app-side.** `ChordSymbol` is
+    anchored to a **note element id** and a chart bar has chords and no notes. The
+    bridge therefore emits a slash/rhythm note per chord and anchors to that,
+    entirely inside this app: it needs no crisp_notation API change, and it is
+    *also* what makes the bar print. A measure-anchored chord symbol goes into the
+    library **only if a second consumer appears** — do not add public API to a
+    library for one caller. BB-U1 and BB-X7 can both assume the anchor exists.
+
+- ⬜ **BB-D4 — text in, text out.** `M` — **split: `BB-D4a` first, and early.**
+  - ✅ **Decision 3 makes this the chart supply, not a convenience.** **`BB-D4a`
+    is just the plain-text bar grid** (`S`) and it ships **with the first playable
+    increment**, ahead of the keypad: a musician already stores changes as text, so
+    paste-a-grid is the cheapest possible path from "nothing" to "a real tune
+    playing". `BB-D4b` is everything else in this card and follows at leisure.
+  - **Goal.** Getting changes *into* the app is the adoption gate. Support the
+    ways musicians already have them.
+  - **Depends.** BB-D2.
+  - **Files.** New `lib/core/harmony/chart_text_codec.dart`; extend
+    `features/games/songs/import/jams.dart` (already reads **and writes** chord
+    annotations in 5 dialects — a genuine head start).
+  - **Build.** Import + export: the plain-text bar grid (`| Cm7 | F7 | Bbmaj7 . |`
+    with `%`, section headers, `x4`), ChordPro **with** section directives (the
+    existing `chordpro.dart` reads only lyric lines), Nashville numbers, MusicXML
+    `<harmony>` (via BB-D3), JAMS chord namespaces. Plus a compact **share
+    token** — `CB1.` + base64 of the chart JSON, exactly the `KU1.` `GrooveSpec`
+    precedent — and a deep link that opens it.
+  - **Acceptance.** A hand-written text grid, a ChordPro file and a JAMS
+    annotation each import to the same `Chart` for the same tune. Token
+    round-trips. A malformed grid reports *which line* it could not read and
+    imports the rest.
+
+- ⬜ **BB-D5 — meter beyond 4/4.** `M`
+  - **Goal.** Waltz, 6/8, 5/4, 12/8 and a mid-chart meter change.
+  - **Depends.** BB-D2.
+  - **Files.** `core/audio/loop_engine.dart:81-84` (`LoopTiming`) — **hot shared
+    file, claim it on the board**; new `lib/core/harmony/chart_clock.dart`.
+  - **Build.** `LoopTiming.beatsPerBar` is `static const 4` and `stepsPerBar`
+    derives from it, so 4/4 is compiled in and `kPatternSteps` (16) is two 4/4
+    bars. The chart clock does **not** try to generalise `LoopTiming` in place —
+    it owns its own bar→step→sample mapping, taking meter and
+    subdivision (8ths, triplet-8ths for a 12/8 or swung feel) per bar.
+  - **Acceptance.** A 3/4, a 6/8 and a 5/4 chart each render with the right bar
+    length and the right number of beats. **A 4/4 chart renders byte-identically
+    to before this card.** Every existing loop/tracker/groove test stays green —
+    if `LoopTiming` must change at all, the change is additive.
+  - ⚠️ Sample-integrality: the loop engine's seam is click-free because 75/100/120
+    BPM keep an eighth-step integral in **both** ms and samples. An arbitrary
+    chart tempo does not. Accumulate fractional sample offsets with **error
+    diffusion** across the bar rather than rounding per step, or a long chart
+    drifts audibly against its own click.
+
+### Phase 2 — the arranger (fixes G2; this is the product)
+
+- ⬜ **BB-A0 — drive the EXISTING groove engine from a `Chart`.** `S` ⭐ *pull this
+  second, right after BB-D2 — it is the whole vertical slice in one session.*
+  - **Goal.** Make a real chart audible **before any of BB-A1–A6 exists**, by
+    feeding it to the arranger we already ship. Decision 2 asks for Loop Studio
+    synergies immediately; this is the one that pays the same week.
+  - **Depends.** BB-D1, BB-D2. **Blocks nothing** — it is a throwaway-able bridge,
+    and that is the point.
+  - **Files.** New `lib/core/harmony/chart_to_groove.dart`. Reads, does not
+    modify: `core/audio/loop_engine.dart` (`ChordDegree:335`, `Progression:356`,
+    `ChordBar:439`, `ChordFollower:471`).
+  - **Build.** A `Chart` that happens to fit the existing engine's constraints —
+    4/4, four bars, chords reducible to the six diatonic triads of a key —
+    projects onto a `Progression`, and the existing `ChordFollower` path renders
+    it with the existing three styles. Chords outside that envelope **reduce
+    honestly and say so** (a `Cmaj7` sounds as `C`, a `Bb7` in C major is
+    reported as unrepresentable) — a reduction report, never a silent lie.
+  - **Acceptance.** A four-bar I–vi–IV–V chart entered as text (BB-D4a) plays
+    through the current Loop Studio band, in a headless render test. Every chord
+    the projection cannot represent appears in the report. **The existing loop
+    engine is not modified** — byte-identical guard on the groove render path.
+  - **Why it earns its place despite being provisional.** It validates BB-D2's
+    document shape against a *real renderer* before Phase 2 commits to it; it
+    gives the UI cards (BB-U1/U2) something audible to build against; and it
+    tells us early whether `Chart` → `Progression` reduction is a useful
+    permanent fallback for the beginner surface (BB-U6) or a scaffold to delete.
+    Decide that at the end of Phase 2, not now.
+
+- ⬜ **BB-A1 — the voicing arranger.** `L` — *split it: candidates, then path.*
+  - **Goal.** Chord symbol → an actually playable voicing per instrument role,
+    voice-led into the next chord.
+  - **Depends.** BB-D1.
+  - **Files.** New `lib/core/harmony/comp_arranger.dart`. **Read
+    `lib/core/notation/bowed_arranger.dart` and the tab arranger first** — this
+    is the same Sayegh/Viterbi optimum-path shape with a different state and a
+    different cost, and it should be recognisably the same code.
+  - **Build.** State = a candidate voicing (register-bounded pitch list). Cost =
+    voice-leading distance + `checkVoiceLeading` violations (crisp_notation
+    `theory/voice_leading.dart:80`) + register/spread/hand-span penalties + an
+    avoid-note table (natural 11 over a major triad, ♭9 where unmarked…).
+    Candidate generators per role: **piano** close/drop-2/shell/rootless-A-and-B,
+    **guitar** from the bundled MIT chords-db grips
+    (`composition/chord_db.dart` — real multi-position shapes, already loaded),
+    **pad/horns** guide-tone lines.
+  - **Acceptance.** Over a ii–V–I in all 12 keys the top voice moves by ≤2
+    semitones per change and no parallel fifths/octaves are reported. A rootless
+    voicing never doubles the bass's root in the same octave. Golden voicing sets
+    for 20 named progressions, pinned.
+
+- ⬜ **BB-A2 — the style model.** `M`
+  - **Goal.** A style is *data*, so adding one is content work, not code work.
+  - **Depends.** BB-D5.
+  - **Files.** New `lib/core/harmony/style_spec.dart` + `style_library.dart`.
+  - **Build.** `StyleSpec { id, feel, swingAmount, meters, tempoRange,
+    Map<Role, RolePattern> }` per **intensity level** (0..3), where `Role` is
+    drums · bass · comp1 · comp2 · pad · perc. A `RolePattern` is a cell list on
+    the chart clock's subdivision, expressed *relative to the harmony*
+    (attack points + which voicing slot + accent), never absolute pitches.
+    Bass modes as an enum: root · root-5 · 2-feel · 4-feel walking · pedal ·
+    arpeggiated · tumbao · alberti. Plus per-style default kit and default
+    instrument per role, from the registry.
+  - **Acceptance.** A validator rejects a malformed style (cells overrunning the
+    bar, an intensity level missing a role, a meter the pattern can't fill) with
+    the offending field named. The 3 existing `kGrooveStyles`
+    (`loop_engine.dart:1598`) are expressible in the new model, proving it is a
+    superset — **but leave them running on the old path** (rule 1).
+
+- ⬜ **BB-A3 — the bass line generator.** `M`
+  - **Goal.** A bass line that walks *into* the next chord instead of restating
+    this one.
+  - **Depends.** BB-A2. **Files.** New `lib/core/harmony/bass_generator.dart`.
+  - **Build.** Given (this chord, next chord, beats available, mode, register):
+    chord-tone skeleton on strong beats, **approach note** into the next root
+    (chromatic below/above, scalar, dominant-5th), 2-feel ↔ 4-feel by intensity,
+    repeated-chord variation so eight bars of one chord are not eight identical
+    bars, register continuity (no octave leaps between bars unless the range
+    forces it), open-string/low-limit awareness per instrument.
+  - **Acceptance.** Over a 12-bar blues and a 32-bar AABA: every bar-final note
+    is a semitone, a whole tone or a fifth from the next bar's root; no note
+    leaves the instrument's range; two consecutive identical bars occur only
+    where the seed says so. Render → `dart run bin/listen.dart --wav` and assert
+    the detected pitches match the generated line (the proven acceptance pattern).
+
+- ⬜ **BB-A4 — the drum generator.** `M`
+  - **Goal.** A kit that plays the feel, marks the form, and fills into it.
+  - **Depends.** BB-A2. **Files.** New `lib/core/harmony/drum_generator.dart`;
+    `core/audio/synth.dart:412` (`enum Drum`) — **append only**.
+  - **Build.** Groove per style × intensity; **fills** at 2/4/8-bar phrase ends
+    and every section boundary; a count-in; an ending. Section intensity comes
+    from the chart (`ChartSection.intensity`), so the last chorus lifts.
+  - ⚠️ **Three real constraints, verified — record them, don't rediscover them:**
+    (a) `enum Drum` has 12 values and is an **order-locked ordinal palette**
+    (`interop/drum_tracker.dart` uses the ordinal *as* a MIDI note) — new voices
+    (shaker, tambourine, congas, clave, timbale, sticks, brush snare, ride bell)
+    must be **appended**. (b) The SFZ loader parses no `group`/`off_by`, so
+    **there is no hi-hat choke** — an open hat is not cut by the closed hat that
+    follows it; either accept it or shorten the open-hat sample per style.
+    (c) `midi_render.dart` **sums every zone** covering a key+velocity, so a
+    round-robin kit stacks into an N×-louder comb-filtered hit — emit exactly one
+    region per (key, velocity) window. All three are in `CLAUDE.md` in full.
+  - **Acceptance.** A fill lands in the last bar of every 8-bar phrase and nowhere
+    else at a given seed. Rendered kit hits are within ±1 sample of the chart
+    clock's grid. Byte-identical guard on the existing groove render path.
+
+- ⬜ **BB-A5 — form realisation.** `M`
+  - **Goal.** Chart + repeats + form → the flat bar timeline everything renders
+    from.
+  - **Depends.** BB-D2, BB-A2. **Files.** New
+    `lib/core/harmony/form_realizer.dart`.
+  - **Build.** Expand `|: :|`, endings, `D.C.`/`D.S. al Coda`, chorus counts and
+    a solo section into `List<RealizedBar { chords, meter, intensity, roleVariant,
+    isFill, sectionLabel, choruseIndex }>`. Generate an intro (count-in · vamp on
+    the first chord · turnaround into bar 1) and an ending (last-bar hold ·
+    ritardando · button). **Vary each chorus** from the seed so eight passes are
+    not eight identical passes.
+  - **Acceptance.** A chart with two endings, a `D.S. al Coda` and `x4` realises
+    to exactly the bar sequence a musician would play — a table-driven test with
+    hand-written expected bar lists for six pathological forms. Same seed → same
+    realisation, byte-identical.
+
+- ⬜ **BB-A6 — humanisation.** `S`
+  - **Goal.** The difference between "a band" and "a sequencer".
+  - **Depends.** BB-A5. **Files.** New `lib/core/harmony/humanize.dart`.
+  - **Build.** Per-role micro-timing (a drummer's hat slightly early, a bassist
+    slightly behind, a comp pushed), swing as a *continuous* ratio not a
+    triplet-only switch, velocity shaping by metric position and phrase arc,
+    per-note timing jitter bounded by role. All from one seed.
+  - **Acceptance.** Offsets are bounded (no note moves more than a configured
+    fraction of a subdivision), the seed reproduces exactly, and humanisation
+    **off** renders byte-identically to the pre-card output.
+
+- ⬜ **BB-A7 — the starter style pack: SIX, done properly.** `M` — *content.*
+  - ✅ **Decision 6: depth before breadth, and this card is `M` not `L`.** A
+    shallow style is *immediately* audible as fake, and "does the band sound real"
+    is the entire product. Six also keeps the BB-Q2 fingerprints meaningful.
+  - **Goal.** Six feels that stand up to a musician, authored as data.
+  - **Depends.** BB-A2..A6. **Files.** `assets/styles/*.json` + registry entry.
+  - **Build.** **Swing · blues shuffle · rock 8ths · bossa · ballad · waltz.**
+    Chosen because between them they exercise every mechanism Phase 2 must prove:
+    4/4, 12/8 and 3/4; straight and swung; a latin clave feel; a two-feel and a
+    four-feel bass; and a half-time intensity floor. Each with 4 intensity levels,
+    fills, intro and ending, and default instruments.
+  - **Then widen, as pure data behind the validator** — samba, funk, pop 16ths,
+    country two-beat, reggae one-drop, gospel, folk strum, latin montuno, up-tempo
+    swing, jazz ballad. No new code should be needed for any of them; if one *does*
+    need code, BB-A2's model is short a mechanism and that is the finding.
+  - **Acceptance.** Every style passes the BB-A2 validator, renders at the low,
+    middle and high end of its tempo range without drift, and has a pinned audio
+    fingerprint at a fixed seed (BB-Q2). A per-style provenance note stating the
+    published-theory basis — clean-room rule 4.
+
+### Phase 3 — transport and practice (fixes G4)
+
+- ⬜ **BB-T1 — windowed render + cache.** `L`
+  - **Goal.** A 96-bar chart starts playing in well under a second, and an edit
+    re-renders only what it touched.
+  - **Depends.** BB-A5. **Files.** New
+    `lib/core/harmony/chart_render_cache.dart`. Reads
+    `features/games/composition/loop_mixer_screen.dart` (the isolate-render
+    pattern), `core/services/gapless_loop_player.dart`.
+  - **Build.** Render N-bar windows in an isolate, keyed by
+    `(realizedBarRange, style, intensity, seed, mix)`; play back-to-back through
+    the existing gapless player; prefetch ahead of the playhead; invalidate by
+    key on edit. The **in-phase buffer swap** the player already does is what
+    makes a mid-playback change land on a beat.
+  - ✅ **DECIDED (decision 5) — this card is the answer, and D-RT stays CLOSED for
+    this arc.** Do not open a real-time preview bus for the backing band. The
+    reasoning, so nobody re-derives it: the practice modes that *look* like they
+    need real-time do not. Tempo ramp, key cycling and drop-out bars are **known
+    in advance per pass**, so they pre-render per chorus. Per-role mute / level /
+    solo is a **mix of already-rendered stems** and needs no re-render at all — so
+    render windows **as stems**, not pre-mixed, and that one choice removes most of
+    the apparent need. A style change lands at the next bar line, which is a bar of
+    render headroom. What remains is covered; and keeping the offline path is what
+    keeps BB-Q2 and BB-Q4 possible at all.
+  - **Acceptance.** Time-to-first-sound on a 96-bar chart under a stated budget
+    on a mid device. A one-chord edit in bar 40 re-renders one window, asserted by
+    a cache-hit counter. Window boundaries are click-free — assert continuity at
+    the seam sample, not by ear.
+
+- ⬜ **BB-T2 — the transport a player actually needs.** `M`
+  - **Goal.** Count-in, loop a section, jump, mute a role — all *during*
+    playback.
+  - **Depends.** BB-T1. **Files.** New
+    `lib/features/harmony/chart_transport.dart`; reads
+    `core/services/transport_service.dart` (**do not add a second clock**).
+  - **Build.** Count-in (1 or 2 bars, click or kit); loop any bar range or a
+    tapped section; jump to a section on the next bar line; repeat-N; tempo change
+    while playing; per-role mute/solo/level; click on / off / first-beat-only.
+  - **Acceptance.** A headless test drives play → loop wrap → jump → tempo change
+    → stop through `TransportService.advance(elapsedMs)` with no wall clock (the
+    reason that API is shaped that way). A jump lands on a bar line, never mid-bar.
+
+- ⬜ **BB-T3 — the practice trainer.** `M`
+  - **Goal.** The pedagogical reason to open this instead of a metronome.
+  - **Depends.** BB-T2. **Files.** New `lib/features/harmony/practice_modes.dart`.
+  - **Build.** Tempo **ramp** per pass (+N BPM each chorus, or ramp to a target
+    over K passes); **key cycling** (the chart in all 12 keys, or round the circle
+    of fifths, or a random new key each chorus); **harmony fade** (progressively
+    drop the comp so the changes must be heard, then the bass, then all but the
+    click); **drop-out bars** (silence a seeded subset — keep time yourself);
+    **density taper**. Each is a config over BB-A5's realisation, not a new
+    render path — and per decision 5, each resolves to a **per-pass pre-render**,
+    because every one of them is known before the pass begins. If a practice mode
+    is proposed that genuinely cannot be known a pass ahead, that is the one thing
+    that would reopen D-RT, so say so on the board rather than building it.
+  - **Acceptance.** A 12-key cycle transposes every chord correctly, including
+    enharmonic spelling appropriate to each key (not 12 sharps). A drop-out
+    schedule at a given seed is reproducible. Every mode composes with looping.
+
+- ⬜ **BB-T4 — transposition, playback vs. display.** `S`
+  - **Goal.** A horn player reads B♭ while the band plays concert pitch.
+  - **Depends.** BB-D2. **Files.** `lib/core/harmony/chart.dart`; reads
+    crisp_notation `theory/transposition.dart`.
+  - **Build.** Two independent transpositions: **sounding** key (what plays) and
+    **display** key (what is printed — concert / B♭ / E♭ / F / capo-relative).
+    Spelling follows the target key signature.
+  - **Acceptance.** Sounding B♭ + display for a B♭ instrument prints C. A capo-3
+    display on a chart in E♭ prints C shapes. Transposing twice by inverse
+    intervals returns the original spelling.
+
+- ⬜ **BB-T5 — make the existing scorer a projection.** `S`
+  - **Goal.** Don't keep two chart types.
+  - **Depends.** BB-A5. **Files.**
+    `core/audio/chord_progression.dart` (**hot — it backs a shipped game**).
+  - **Build.** Add `ChordChart.fromRealizedBars(...)` so `ChordProgressionEngine`
+    grades a player against a *real* chart. `TargetChord` stays as-is.
+  - **Acceptance.** The existing `chord_progression_test` and the chord
+    play-along game are untouched in behaviour; a chart projects to the same
+    beat-list a hand-written `ChordChart` would.
+
+### Phase 4 — the surface (fixes G5/G6)
+
+- ⬜ **BB-U1 — the chart view.** `L`
+  - **Goal.** Readable at a music stand, at arm's length, in a dim room.
+  - **Depends.** BB-D2, BB-T2. **Files.** New
+    `lib/features/harmony/chart_screen.dart` + `chart_grid_view.dart`.
+  - **Build.** Bar grid (4 bars/line, 2 on a phone in portrait), section labels
+    and colour bands, repeat/ending/coda marks, split bars, current-bar highlight
+    + next-section preview, autoscroll that never scrolls during a bar, landscape
+    and tablet layouts, a high-contrast stage theme, and **no accidental edits
+    while playing**.
+  - **Acceptance.** A headless layout audit at phone-portrait, phone-landscape and
+    tablet with no overflow (`../testing_dart.md` methodology). Chord type stays
+    above a stated minimum size at every breakpoint. Playhead tracks the transport
+    in a widget test driven by `advance`.
+
+- ⬜ **BB-U2 — chord entry fast enough to be used.** `M`
+  - **Goal.** A 32-bar tune entered in a couple of minutes, or nobody enters one.
+  - **Depends.** BB-U1. **Files.** New
+    `lib/features/harmony/chord_keypad.dart`.
+  - **Build.** Tap a bar → a root ring + quality grid + extension/alteration
+    chips + slash-bass picker; hold a bar to split it; paste a text grid (BB-D4);
+    drag-copy a bar or a whole section; long-press a section to repeat it; undo
+    through the shared undo service. Recently-used chords surface first.
+  - **Acceptance.** A scripted widget test enters a named 32-bar form in a bounded
+    number of taps (assert the count — it is the actual product metric). Every
+    quality BB-D1 can parse is reachable from the keypad in ≤3 taps.
+
+- ⬜ **BB-U3 — band controls, live (and they are Loop Studio's).** `S`
+  - **Goal.** Change the feel without stopping.
+  - **Depends.** BB-T1, BB-A7. **Files.** `chart_screen.dart`; reuse
+    `composition/mixer_console_screen.dart` strips rather than new ones.
+  - **Build.** Style picker, intensity dial, swing, per-role instrument from the
+    registry, per-role level/mute/solo/pan — all reachable during playback, all
+    landing at the next bar line.
+  - ✅ **Decision 2 — reuse, do not re-create.** This card writes **no new mixer
+    widget**. The strips come from `mixer_console_screen.dart`, the clock from
+    `TransportService`, the playback from `gapless_loop_player.dart`, mute/level
+    from the stem mix BB-T1 already produces. If you find yourself building a
+    second mixer, stop: that is `WORKSTATION_PARITY` §S1 repeating itself, and the
+    whole reason this feature is not a sixth mode.
+  - **Acceptance.** A style change mid-playback lands on a bar line with no click
+    (assert the seam sample). Role mute is instant and does not re-render.
+
+- ⬜ **BB-U4 — charts and setlists.** `M`
+  - **Depends.** BB-D2, BB-D4, and the §6 rights decision for the *sharing* half.
+  - **Files.** New `lib/features/harmony/chart_library.dart` + `setlist.dart`;
+    reuse `songs/user_songs_service.dart` persistence patterns.
+  - **Build.** A chart list searchable by key, tempo, style, form and tag;
+    favourites and recently played. **Setlists**: an ordered set where the
+    per-song key/tempo override lives **in the setlist, not in the chart** (so
+    the same chart sits in two sets at two keys). Gig mode: auto-advance, big
+    type, edits locked, screen kept awake.
+  - **Acceptance.** A chart in two setlists at two keys plays at each set's key
+    and the chart file is unchanged. Setlist export/import round-trips.
+  - ✅ **DECIDED (decision 4) — build all of it. Nothing here is blocked.**
+    Charts are local by default; a user hands one to someone as a `CB1.` token or
+    a file (BB-D4). There is **no hosted index and there never will be**, so this
+    card has no "phase 2" waiting behind it. Two rules that follow: a user's chart
+    **never** enters `db.json` or the HF catalog, and a chart *we* ship carries the
+    same per-file provenance every other asset row carries.
+
+- ⬜ **BB-U5 — the front door (DECIDED: library document, not a sixth mode).** `S`
+  - ✅ **Decision 2 is made — this card implements it, it does not re-ask it.**
+    A chart is a `ProjectTrack` document reached from where the music already
+    lives. **No sixth top-level mode.** `Project` + its codec registry already
+    shipped (WS-W1), which is exactly what makes a first-class document possible
+    without a new mode — that is the dividend the workstation arc bought.
+  - **Depends.** BB-U1. **Files.** `features/games/game_registry.dart` (**hot**),
+    `features/games/songs/songbook_screen.dart`,
+    `features/library/library_browser_screen.dart`,
+    `core/curriculum/concept_map.dart`, `app_en.arb`/`app_de.arb` (append-only),
+    `core/tuning.dart` if it scores.
+  - **Build.** Three entry points, no more: (a) a **home tile** — the feature must
+    not be buried under 157 others; (b) a **"play with band" action** on a Song
+    Book / library item, which is also the hook BB-X8 grows into; (c) **Loop
+    Studio**, where an open chart appears as a band you can drive, per decision 2's
+    synergy ask (BB-A0 is the cheap version of this and comes far earlier).
+  - **Acceptance.** `curriculum_coverage_test` green (a tile without a concept-map
+    placement is an orphan and that test catches it — auto-memory
+    `new-game-tile-gate`). Localised de/en. A library item with no derived chart
+    shows no dead "play with band" affordance.
+  - 🔁 **Revisit condition, written down so it is not forgotten:** promote to a
+    top-level mode only once the WS shell (`WS-W2`/`W5`) has landed *and* usage
+    says this earned it. Deciding not to add a mode is reversible; adding one is
+    not.
+
+- ⬜ **BB-U6 — the beginner↔expert dial.** `S`
+  - ✅ **This card IS decision 1's other half.** Rule 5 says the model stays full
+    and the surface gets gated; without this card the gating never happens and the
+    feature silently becomes an adults-only one.
+  - **Depends.** BB-U2. **Files.** `chord_keypad.dart`, `chart_screen.dart`;
+    **read `composition/score_analysis_view.dart` first — the app already has this
+    exact kids↔expert granularity dial and this should look like it.**
+  - **Build.** One setting, several surfaces: which chord qualities the keypad
+    offers (triads + 7ths → the full altered vocabulary), whether roman numerals /
+    function labels show (BB-X6), how many styles and intensity levels are listed,
+    whether repeats/codas are editable or only readable, and the print convention
+    (`m7b5` vs `ø`). **It never gates the model, the codec or playback** — a chart
+    entered on an expert device opens, plays and prints correctly on a beginner one.
+  - **Acceptance.** A chart containing altered dominants, a `D.S. al Coda` and 5/4
+    loads and plays identically at every dial setting; only the *editing
+    affordances and labels* differ. Assert that explicitly — it is the invariant
+    that keeps rule 5 true.
+
+### Phase 5 — the differentiators (why this beats parity)
+
+- ⬜ **BB-X1 — thousands of charts, derived and rights-clean.** `L` — **third in
+  the supply order (decision 3), and read the caveat before sizing it.**
+  - ⚠️ **The row count is misleading — size this against the USABLE subset.**
+    18,684 corpus rows are Gregorian chant (unmetred, key deliberately suppressed —
+    a backing track over an antiphon is meaningless), and much of the remainder is
+    classical polyphony. The genuinely backing-band-usable slice is the
+    **folk / dance / hymn / kids** repertoire: the 1720 and Arendsee manuscripts,
+    Dahlhoff's 672 dances, the German song collections, the tune books. That is
+    still thousands of charts and a real product for a folk or school player — but
+    it is **not** the standards-and-pop repertoire someone practising changes
+    usually wants, and the modern popular slice of the corpus is precisely the
+    slice that fails the rights gate. Full reasoning in
+    `docs/BACKING_BAND.md` §5.3.
+  - **Goal.** Ship a large chart library without entering a single chart by hand.
+  - **Depends.** BB-D2. **Files.** New `tool/music_db_derive_charts.dart`; the
+    VPS `music-db` pipeline (`bin/merge_features.py` precedent — **assert the
+    write is additive**); `bin/emit_catalog.py` gate.
+  - **Build.** Run crisp_notation `analyze()` (`theory/analysis.dart:142`) +
+    `detectForm()` (`:431`) over the corpus → a `chords` object per row beside
+    the existing `music` object: per-bar chord, roman numeral, function, form
+    letters, plus a **confidence**. Promote only above a confidence floor; hold
+    the rest in a probation ledger, exactly like every other ingest.
+  - **Acceptance.** Spot-check against hand-known anchors (a Bach chorale's
+    cadences, a blues's I–IV–V, a standard's ii–V chain). The 14,486 one-octave
+    pieces and the 38,431 public catalog items get charts where confidence
+    allows; **0 held rows reach the catalog** (the content gate re-verified after
+    publishing, per `../hf_ops.md`). The derived chart plays through BB-A5.
+  - 📌 This doubles as a **corpus-wide harmony invariant check**, the way the
+    feature index surfaced 14 impossible-pitch rows. Re-run it after any
+    reader change.
+
+- ⬜ **BB-X2 — a chart from a recording.** `M`
+  - **Depends.** BB-D2. **Files.** `bin/transcribe_chords.dart` (exists),
+    `core/audio/chroma_analysis.dart`, `features/games/transcribe/`.
+  - **Build.** Chord detection + beat/downbeat tracking → bars → `Chart`. Present
+    it as a **draft to correct**, never as truth.
+  - ⚠️ `ChordDetector` ships **9 chord templates** — enough for a triad quiz, not
+    for a jazz chart. Extending the template set (maj7/m7/7/m7♭5/dim7/6/9/13/sus)
+    is part of this card, and it must be measured, not assumed: A/B the extended
+    set against the existing chord tests before adopting it.
+  - **Acceptance.** Synthesise a known chart → render → detect → compare, and
+    report per-chord accuracy (the synth→detector→classifier roundtrip pattern
+    `beat_capture_test` established). A real recording produces a plausible chart
+    with the wrong bars visibly flagged low-confidence.
+
+- ⬜ **BB-X3 — a chart from a photo.** `M`
+  - **Depends.** BB-D2. **Files.** `features/games/songs/import/omr_import*.dart`.
+  - **Build.** A printed chart or lead sheet → `Chart`. Follow auto-memory
+    `vision-read-not-omr`: **read the page, do not build a staff-detection
+    pipeline.** A chord chart is mostly text in a grid, which is the easiest case
+    this route has.
+  - **Acceptance.** A fixture set of photographed charts (ours, PD, or generated
+    by our own printer) → correct chords per bar, with a stated recall floor and
+    the failures listed rather than averaged away.
+
+- ⬜ **BB-X4 — a chart from playing or singing it.** `S`
+  - **Depends.** BB-X2. **Files.** reuse `core/audio/groove_capture.dart` +
+    `chroma_analysis.dart`.
+  - **Build.** Strum or play the changes to a click → detected chords quantised
+    to bars → `Chart`. The `groove_capture` sing→cells path is the precedent.
+  - **Acceptance.** A synthesised strum of a known 8-bar progression recovers it
+    exactly at 3 tempi; a real strum recovers it with the ambiguous bars flagged.
+
+- ⬜ **BB-X5 — the backing band that hears you.** `M` ⭐ *the one nothing else does*
+  - **Goal.** Live feedback on note choice and timing against the sounding chord.
+  - **Depends.** BB-T2. **Files.** reuse `core/audio/loop_reference.dart`
+    (`LoopReferenceScheduler`), `microphone_pitch_service.dart`, the native AEC
+    path; new `lib/features/harmony/chart_jam_grade.dart`.
+  - **Build.** Push the rendered backing as the AEC **reference** (already built
+    for exactly this), detect the player over it, and classify each note against
+    the bar's chord — `LoopEngine.jamFit` (`loop_engine.dart:3387`) already
+    returns chord-tone / scale-tone / outside; generalise it from `ChordDegree`
+    to `ChordSpec`. Live indicator + a post-session report (per-chord accuracy,
+    timing bias, which changes you rushed).
+  - **Acceptance.** Offline, headless: feed a synthesised solo + the backing
+    through the offline AEC path and assert the grade matches the known input.
+    A false-positive rate stated on silence and on backing-only input (the
+    reference must not grade the band as the player).
+
+- ⬜ **BB-X6 — the chart explains itself.** `M`
+  - **Depends.** BB-D2. **Files.** reuse
+    `composition/score_analysis_view.dart` (the kids↔expert dial),
+    crisp_notation `theory/analysis.dart`, `roman_numeral.dart`.
+  - **Build.** Per bar: roman numeral, function, key-of-the-moment; per phrase:
+    ii–V chains, turnarounds, cadence type, modulation. Per chord: scale/mode
+    suggestions for soloing, guide-tone line, common reharmonisations (tritone
+    sub, relative ii–V, diminished passing). All at the existing kids↔expert
+    granularity dial.
+  - **Acceptance.** A table of known progressions → expected roman numerals and
+    expected ii–V detections. A secondary dominant reads as dominant, not as a
+    key change (`functionOf` already does this — assert it end-to-end).
+
+- ⬜ **BB-X7 — a chart leaves as a project, not a bounce.** `M`
+  - **Depends.** BB-A5, BB-D3. **Files.** `core/interop/project_bridge.dart`
+    (**hot**), `shared/music_io/`.
+  - **Build.** Chart → MIDI (per-role tracks), WAV/MP3 **stems**, notated lead
+    sheet PDF, tracker song, DAW timeline, tab part — every one of those bridges
+    already exists; this card wires the realised chart into them with a per-edge
+    loss report.
+  - **Acceptance.** Each export opens in its own mode and plays the same changes.
+    Round-trip where the format allows; report the loss where it does not.
+
+- ⬜ **BB-X8 — a rhythm section under any piece in the library.** `M`
+  - **Depends.** BB-X1, BB-A5. **Files.** `features/games/songs/song_screen.dart`,
+    `library_browser_screen.dart`.
+  - **Build.** Open a Song Book or catalog piece → its derived chart → a band
+    plays underneath while the notated melody plays, is muted for the student to
+    play, or is graded (BB-X5). This is the bridge that turns 38k library items
+    into 38k play-alongs.
+  - **Acceptance.** A piece with a derived chart plays melody + band in sync
+    (assert alignment at the sample level, not by ear). Muting the melody leaves
+    the band untouched.
+
+- ⬜ **BB-X9 — real instruments per role.** `S`
+  - **Depends.** BB-A7. **Files.** `core/audio/sound_library.dart`,
+    `features/library/instrument_installer.dart`.
+  - **Build.** Per-role instrument from the 232-entry registry with a sensible
+    per-style default and download-on-demand for the big ones. The category's
+    floor is a GM sound set; ours is velocity-layered recorded kits.
+  - ⚠️ **Do not ship MP3 sample payloads until a release carrying the gapless
+    fix (`16eae11f`) has drained.** An MP3 sample on an older build plays 23 ms
+    late and flams against WAV voices. WAV stays the format of record.
+  - **Acceptance.** Every default instrument resolves offline or degrades to a
+    bundled voice with a visible notice — never to silence.
+
+- 🚫 **BB-X10 — CLOSED on decision 4 (2026-07-30). Do not reopen.**
+  - A server-hosted, title-searchable catalogue of user-entered charts is **not
+    being built**, now or later. It would mean operating a searchable index of
+    chord data for in-copyright songs — the exact exposure this repo's corpus
+    posture exists to prevent. The token/file sharing users actually need is
+    `BB-D4`, and it is unblocked.
+  - **The ID stays here, closed, rather than being deleted or reused** — so that a
+    future proposal for "a community chart library" finds this note instead of
+    looking like a gap nobody thought about. It was considered and declined.
+  - The strategic point, since it is easy to read this as caution: we are not
+    shipping a weaker version of a catalogue. **We compete on the arranger and on
+    listening** (BB-A1–A6, BB-X5, BB-X6) — capabilities a catalogue cannot copy —
+    rather than on content we cannot legally own.
+
+### Phase 6 — the gates
+
+- ⬜ **BB-Q1 — render → listen → assert.** `S`
+  - The repo's proven acceptance pattern, applied here: render a chart, run
+    `dart run bin/listen.dart --wav` / `bin/transcribe_chords.dart`, assert the
+    detected chords and bass notes are the generated ones. Runs headless in CI.
+
+- ⬜ **BB-Q2 — style regression fingerprints.** `S`
+  - A pinned audio fingerprint per style at a fixed seed, plus the byte-identical
+    guard (rule 1). A style edit that changes another style's output fails.
+
+- ⬜ **BB-Q3 — the symbol corpus test.** `S`
+  - ≥150 real-world chord strings → expected pitch sets and canonical prints,
+    including the ugly ones. Extend it from the corpus: every distinct
+    `<harmony>` and JAMS label we can reach becomes a row. **A symbol that fails
+    to parse is a test case, not a crash.**
+
+- ⬜ **BB-Q4 — timing invariants.** `S`
+  - Assert sample-integrality and drift bounds across the full tempo range and
+    every shipped meter: a 200-bar chart's last downbeat must land within a
+    stated sample tolerance of where the clock says it should, and every window
+    seam must be continuous. This is the card that catches G3's error-diffusion
+    going wrong.
+
+### Cheap wins — no phase, no dependency, pull any time
+
+**BB-D1** (the parser — everything needs it and it is pure and testable) ·
+**BB-T4** (display vs. sounding transposition) · **BB-Q3** (the symbol corpus
+test, which can precede the parser and define it) · the `ChordDetector` template
+extension inside **BB-X2** · appending the missing percussion voices to
+`enum Drum` for **BB-A4**.
+
+### The critical path, updated for the decisions (2026-07-30)
+
+**BB-D1 → BB-D2 → BB-D4a → BB-A0 → | BB-A2 → BB-A5 → BB-T1 → BB-U1.**
+
+The `|` is where the provisional stops and the product starts, and putting it
+there is what the decisions changed:
+
+- **The first four cards are `M · M · S · S` and end with a real chart audibly
+  playing** — because BB-D4a (paste a text grid) and BB-A0 (project onto the
+  groove engine we already ship) together produce an end-to-end slice *without any
+  of Phase 2*. That validates the document shape against a real renderer, and gives
+  every UI card something to build against, before the expensive work begins.
+- **After the bar it is the original path** — BB-A2 → BB-A5 → BB-T1 → BB-U1 — and
+  that is where the actual product is. BB-A0 is scaffolding; do not mistake it for
+  progress on the arranger, and do not let it become the shipped answer.
+
+**The one thing that is not optional:** Phase 2. Phase 1 + Phase 4 without
+BB-A1–A6 is a chord-sheet viewer with a playhead, and `chord_sheet_screen.dart`
+is nearly that today in 103 lines. The gap between "displays chords" and "a band
+plays your changes" is the entire feature.
 
 ## Cross-mode FX + interop consolidation (SHIPPED — all 12 items, `feature/fx-interop`)
 

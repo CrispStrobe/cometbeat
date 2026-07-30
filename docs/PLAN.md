@@ -105,6 +105,28 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (backing-band)** · ✅ **SCOPING ONLY, idle — no code claimed.** Scoped
+  the *chord-chart backing band* capability (enter a song's changes → a generated
+  rhythm section plays them in any key/tempo). Reasoning in new
+  **[BACKING_BAND.md](BACKING_BAND.md)**; 36 executable cards (`BB-`-prefixed) in
+  root **[PLAN.md](../PLAN.md)** → *"Chord-chart backing band — the executable
+  ladder"*. Shared files touched: **root `PLAN.md`** (one new section + one
+  cross-ref in the five-mode section) and **this board**. **No `lib/` file was
+  modified.** Two things whoever picks this up should know before claiming:
+  `loop_engine.dart:81` (`LoopTiming.beatsPerBar`) and
+  `core/audio/chord_progression.dart` are hot shared files on the critical path
+  (cards **BB-D5** and **BB-T5**). ✅ **All seven scoping decisions were TAKEN by
+  the maintainer the same day** and are recorded in BACKING_BAND.md §0 + a block at
+  the top of the ladder — **not a sixth mode** (a library document with maximum
+  Loop Studio reuse) · full model + a gated beginner surface · import→entry→derived
+  supply order · local/hand-to-hand sharing only, no hosted index (`BB-X10`
+  CLOSED) · windowed offline render, **D-RT stays closed** · six deep styles before
+  breadth · app-side chord anchoring. **Do not re-litigate them; a card that
+  disagrees is stale.** Two cards were added on those answers (**BB-A0**, project a
+  chart onto the existing groove engine for an audible slice in one session;
+  **BB-U6**, the beginner↔expert dial) and the critical path is now
+  **BB-D1 → BB-D2 → BB-D4a → BB-A0 → | BB-A2 → BB-A5 → BB-T1 → BB-U1**.
+
 - **opus (assets/mp3)** · ✅ **SHIPPED (idle) — MP3 samples decoded ~23 ms LATE;
   `mp3Decode` now honours the LAME gapless header.** Touched **only**
   `lib/core/audio/mp3/mp3_decoder.dart` + new `test/mp3_gapless_test.dart`
