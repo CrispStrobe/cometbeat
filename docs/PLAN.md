@@ -341,6 +341,25 @@ is recorded in [HISTORY.md](HISTORY.md).
     collide. The `<Harmony>` work lands as an annotation, so
     `hostile_text_matrix_test.dart` will cover it for free once MuseScore joins
     the `carriesAnnotations` set there.
+  - ✅ **Re-ran the sweep against CURRENT code (2,057 source files, 300/ext) to
+    find out whether the in-flight full-corpus run's failures were already
+    fixed. They were — only 2 imperfect cells of 48 survived, and BOTH are now
+    fixed** (`crisp_notation` `f812408`):
+    - 🛑 **MuseScore CRASHED the export on a 128th note.** `_durationXml` did
+      `_durationNames[base]!` and the table stopped at the 64th. Same gap I had
+      already fixed in MEI and kern — I missed MuseScore, where it is loudest. A
+      real PDMX file reaches it. ⚠️ A stale test pinned the OLD behaviour ("a
+      256th clamps instead of throwing") on a premise that died when the model
+      gained 128th–1024th, so the clamp had quietly become data loss.
+    - **A bar that was both a multi-rest and full of notes.** A corpus MuseScore
+      export declares `<multiple-rest>2</multiple-rest>` and then carries two
+      half notes. `Measure` ALREADY asserts `multiRest == null ||
+      elements.isEmpty`, so the reader was building a state the model forbids —
+      and **assertions are off under `dart run`**, so it was built happily and
+      the loss surfaced quietly later (ABC replaced the bar with `Z`; layout
+      would have drawn a multi-rest instead of the notes).
+    ⚠️ **`find` cannot see part of the corpus** — `pdmx/ship/mxl` is a SYMLINK,
+    which Dart's `listSync` follows and `find` does not. Use `find -L`.
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
@@ -352,7 +371,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     round-trips with all four voices intact through every one of them. `--voices`
     exists only to read the inner-voice result separately from the voice-1 one. **Direct-hop corpus failures 98 → 0 on every file
     traced**, and the permutation matrix went 34/48 → 73/84 perfect cells with
-    every survivor traced and fixed afterwards. Core suite **2450**, green.
+    every survivor traced and fixed afterwards. Core suite **2470**, green.
 
 - **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
   extension** (the cheap win listed inside `BB-X2`). Branch
