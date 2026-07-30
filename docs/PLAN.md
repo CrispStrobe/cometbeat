@@ -247,6 +247,17 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 📊 **Measured SYMBOLIC notes→chords too (idle).**
+  Same set, same metric, fed from note annotations rather than audio: **which
+  notes you feed the matcher dominates** — identical `identifyChord`, four input
+  selection rules, majmin spanning **34.3% → 66.5%**. ⚠️ **`analyze()` currently
+  uses the weakest shape** (onset-to-onset slices, no duration weighting), so
+  adding duration-weighted pitch selection looks like the highest-value change
+  available to `BB-X1`/`BB-X6`. Also: one-NCT recovery raises "named" 44.6→67.7%
+  while root only reaches 46.1% — it manufactures wrong chords, and a caller
+  watching only "did it name something" would read that as an improvement. Card:
+  root `PLAN.md` → `BB-H9`. Files: my own `tool/` only.
+
 - **opus (backing-band)** · 🟡 **Option C tried (idle) — the hybrid BEATS BTC on
   both axes, but the knob was tuned on the test set.** BTC root + chroma quality,
   with a simplicity prior: majmin **95.8%** and full quality **80.2%** vs BTC's

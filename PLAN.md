@@ -3258,6 +3258,46 @@ failed:**
     one half, report on the other. Until then it is a promising lead, not a
     number to build on.
 
+- 📊 **BB-H9 — SYMBOLIC notes → chords: what we have and how good it is.
+  Measured 2026-07-30, `tool/symbolic_chord_eval.dart`.** Same GuitarSet takes,
+  same segments, same duration-weighted metric as the audio evaluations, but fed
+  from the `note_midi` annotations instead of the waveform.
+
+  | strategy | named | root | majmin | full quality |
+  |---|---|---|---|---|
+  | all notes in the span | 44.6% | 38.6% | 34.3% | 25.8% |
+  | notes at the midpoint | 36.7% | 31.7% | 31.7% | 30.4% |
+  | **duration-weighted, top 4** | **79.9%** | **69.5%** | **66.5%** | **63.9%** |
+  | all + one-NCT recovery | 67.7% | 46.1% | 39.6% | 29.1% |
+
+  - 🔴 **The finding is that WHICH NOTES YOU FEED IT dominates, not the matcher.**
+    Identical `identifyChord`, four ways of choosing its input, and majmin ranges
+    from 34.3% to 66.5% — a 32-point spread from the selection rule alone.
+  - ⚠️ **`analyze()` currently uses the WEAKEST shape.** `_slicesOf` builds
+    onset-to-onset sonorities and identifies each slice; there is no
+    duration weighting of the pitch set across a harmonic span. That is
+    structurally the 34%-row, not the 66%-row. **Adding duration-weighted pitch
+    selection to `analyze()` looks like the single highest-value change available
+    to `BB-X1` (deriving charts from the corpus) and `BB-X6` (explaining them).**
+  - ⚠️ **One-NCT recovery is a trap worth naming: it raises "named" from 44.6% to
+    67.7% while root only reaches 46.1%.** Dropping a note until something matches
+    mostly manufactures a *wrong* chord. Recovering a match is not recovering the
+    right chord, and a caller reading only "did it name something" would think it
+    had improved.
+  - **Full quality 63.9% is the striking number** — far above audio chroma's
+    18.2% and approaching BTC's 77% — because symbolic input has exact pitches and
+    the extension/quality question is where audio methods drown.
+  - ⚠️ **Caveats.** GuitarSet's `note_midi` is transcribed from a hex pickup, so
+    it carries transcription noise, and these segments are comping with melody
+    mixed in. For `BB-X1` the input is a SCORE — perfect notes, no bleed — so the
+    real ceiling is **higher** than 66.5%. This measures the reader given
+    imperfect symbolic input, which is a lower bound for the corpus case.
+  - **Options not yet tried, in rough value order:** duration weighting inside
+    `analyze()` (above) · a chord-transition prior over spans (Viterbi, the same
+    shape as our three existing arrangers) · metric-position weighting (a chord
+    tone on a downbeat outranks a passing note) · learned symbolic models
+    (`BB-H6`: AugmentedNet / ChordGNN).
+
 - 🛑 **BB-H0 — WHERE CHORD RECOGNITION ACTUALLY STANDS, and why to stop tuning
   the chroma path. Measured 2026-07-30. Read before pulling any `BB-H` card.**
 
