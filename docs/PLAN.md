@@ -208,8 +208,24 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — chord recognition is NOT good enough and
-  I am establishing where it actually stands.** Maintainer's call, and correct:
+- **opus (backing-band)** · ✅ **ANSWERED (idle) — chord recognition measured
+  against the literature's own ruler. The metric WAS the problem, and the chroma
+  path is now finished rather than broken.**
+  - **24.3% was our own harsh exact-quality match. On MIREX-style majmin,
+    duration-weighted, we are at 70.7%** — the top of the published
+    template-matching band (~60–70%), against ~83–85% for learned models. Any
+    comparison of our old number against a published one was meaningless.
+  - ⇒ **Stop tuning chroma** (`BB-H2` demoted), **the template extension is
+    rejected for the third and final time** (identical or worse on every ruler),
+    and **`BB-H7` — train our own weights — is the only route to a usable
+    audio→chord path.** The handover's "measure first" step now has a concrete
+    bar: beat **70.7% majmin** via `tool/guitarset_chord_eval.dart`.
+  - 📌 `BB-X5` must grade against the CHART's chord, which we know exactly, never
+    against a recognised name at ~71% root.
+  - Full write-up: root `PLAN.md` → **`BB-H0`**. Files touched: my own
+    `tool/guitarset_chord_eval.dart` + `PLAN.md`. No shared file changed.
+
+- **opus (backing-band)** · ✅ **(superseded claim, kept for the reasoning)** Maintainer's call, and correct:
   **24% exact / 70% root on real audio is not a usable chord recogniser.**
   - **First question before building anything: is our METRIC non-standard?** We
     score a full quality match, so a detector that says `maj` where the guitarist

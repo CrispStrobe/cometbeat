@@ -3101,6 +3101,56 @@ failed:**
   - ⚠️ Still n=70 on solo guitar. The direction is unambiguous; the exact
     percentages are not load-bearing.
 
+- 🛑 **BB-H0 — WHERE CHORD RECOGNITION ACTUALLY STANDS, and why to stop tuning
+  the chroma path. Measured 2026-07-30. Read before pulling any `BB-H` card.**
+
+  **The metric was the problem.** We had been scoring a full quality match, so a
+  detector answering `C` where the guitarist played `Cmaj7` scored ZERO. The MIR
+  literature reports **majmin weighted chord symbol recall**: both sides reduced
+  to maj/min, weighted by segment DURATION, non-maj/min references excluded. On
+  the same audio and the same detector:
+
+  | ruler | number |
+  |---|---|
+  | our exact-quality match | 24.3% |
+  | **MIREX-style majmin, duration-weighted** | **70.7%** |
+
+  Those are not two views of one result — they are different questions. **Any
+  comparison of "24%" against a published "83%" was meaningless.**
+
+  **Best configuration found, and it is the method's ceiling:** shipped 8
+  templates + `meanChroma` smoothing → **70.7% majmin, 71.4% root** over 278 s of
+  annotated real guitar.
+
+  | | our best | published range |
+  |---|---|---|
+  | chroma template matching | **70.7%** | ~60–70% |
+  | learned models (transformer) | — | ~83–85% |
+
+  ⇒ **We are at the TOP of the template-matching band, not below it.** The path is
+  not broken; it is finished. The remaining ~13pp to a usable chart-from-audio
+  recogniser is the gap between a hand-built feature matcher and a learned model,
+  and **no amount of further chroma work closes it.**
+
+  **What this decides:**
+  - ✅ **STOP tuning the chroma path.** `BB-H2` (magnitude compression) now has
+    very little headroom and is demoted; it can only move a number already at the
+    method's ceiling.
+  - ❌ **The template extension is REJECTED for the third and final time**, now on
+    the literature's own metric: `modest +4` is *identical* to the shipped 8
+    (70.7%) and `full +9` is worse (64.1%). It buys nothing at any vocabulary
+    size, under any smoothing, on any ruler. Do not propose it again.
+  - ⬆️ **`BB-H7` (train our own weights) is promoted from "eventually" to the
+    only route to a usable audio→chord path.** And the training handover's §0.2
+    "measure BTC first" instruction now has a concrete bar to clear: **beat 70.7%
+    majmin on this set**, using `tool/guitarset_chord_eval.dart`.
+  - 📌 **`BB-X5` (live grading) must not depend on recognised chord NAMES.** At
+    ~71% root on favourable audio, grading should score the player against the
+    **chart's** chord — which we always know exactly — and use the detector only
+    for what the player produced, never for what the band is playing.
+  - ⚠️ n=70 segments / 278 s / solo guitar. Good enough to decide direction,
+    not to quote as a benchmark.
+
 - ⬜ **BB-H2 — magnitude compression before folding.** `S`
   - **Goal.** Blunt the harmonic bias: a note's 3rd harmonic is a fifth above and
     its 5th a major third, so one C already looks slightly like C major, biasing

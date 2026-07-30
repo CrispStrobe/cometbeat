@@ -83,6 +83,25 @@ String? _suffix(String quality) {
   };
 }
 
+/// The MIREX "majmin" reduction: a chord collapses to major, minor, or X.
+///
+/// 🔴 **This is the ruler the literature uses, and it is much more forgiving
+/// than a full quality match.** A detector that answers `C` where the guitarist
+/// played `Cmaj7` scores ZERO under exact-quality scoring and ONE here, because
+/// both reduce to C major. Published chord-recognition figures (~83-85% for
+/// transformer models, ~60-70% for template baselines) are weighted chord symbol
+/// recall under this reduction — so comparing our exact-match number against
+/// them is comparing two different questions.
+///
+/// Returns null for a chord that is neither major nor minor; MIREX EXCLUDES
+/// those reference segments rather than counting them wrong, since a maj/min
+/// vocabulary was never asked to name them.
+String? _majmin(String suffix) => switch (suffix) {
+      '' || 'maj7' || '6' || '7' || 'maj9' || '9' => 'maj',
+      'm' || 'm7' || 'm6' || 'm9' || 'mMaj7' => 'min',
+      _ => null, // dim, aug, sus, m7b5, dim7 — excluded, as MIREX does
+    };
+
 class _Pair {
   final _Tally instructed = _Tally();
   final _Tally performed = _Tally();
@@ -90,6 +109,11 @@ class _Pair {
 
 class _Tally {
   int n = 0, root = 0, exact = 0;
+  // MIREX weights by segment DURATION, not by segment count: a chord held for
+  // eight seconds should not count the same as one held for half a second.
+  double weighted = 0, weightedHit = 0, weightedRootHit = 0;
+  double get majminPct => weighted == 0 ? 0 : 100 * weightedHit / weighted;
+  double get wRootPct => weighted == 0 ? 0 : 100 * weightedRootHit / weighted;
   double get rootPct => n == 0 ? 0 : 100 * root / n;
   double get exactPct => n == 0 ? 0 : 100 * exact / n;
 }
@@ -237,12 +261,20 @@ void main(List<String> args) {
               out = smoother.add(entry.value.analyze(w));
             }
             final st = smoothed['${entry.key}|${sm.name}']!;
-            (annIndex == 0 ? st.instructed : st.performed).n++;
+            final t2 = annIndex == 0 ? st.instructed : st.performed;
+            t2.n++;
+            final refMm = _majmin(suffix);
+            if (refMm != null) t2.weighted += dur;
             if (out != null && out.hasChord) {
               final c = out.candidates.first;
-              final t2 = annIndex == 0 ? st.instructed : st.performed;
               if (c.rootPc == pc) t2.root++;
               if (c.rootPc == pc && c.suffix == suffix) t2.exact++;
+              if (refMm != null) {
+                if (c.rootPc == pc) t2.weightedRootHit += dur;
+                if (c.rootPc == pc && _majmin(c.suffix) == refMm) {
+                  t2.weightedHit += dur;
+                }
+              }
             }
           }
 
@@ -272,6 +304,16 @@ void main(List<String> args) {
           final gotSuffix = winner.split('|')[1];
           if (gotPc == pc) t.root++;
           if (gotPc == pc && gotSuffix == suffix) t.exact++;
+
+          // …and the same answer scored the way the literature scores it.
+          final refMm = _majmin(suffix);
+          if (refMm != null) {
+            t.weighted += dur;
+            if (gotPc == pc) t.weightedRootHit += dur;
+            if (gotPc == pc && _majmin(gotSuffix) == refMm) {
+              t.weightedHit += dur;
+            }
+          }
         }
       }
     }
@@ -297,14 +339,25 @@ void main(List<String> args) {
         'root ${t.rootPct.toStringAsFixed(1).padLeft(5)}%   (n=${t.n})');
   }
 
+  stdout.writeln('\n=== MIREX-style: majmin, DURATION-weighted, non-maj/min '
+      'references excluded (the ruler the literature uses) ===');
+  for (final k in sets.keys) {
+    final t = performedTallies[k]!;
+    stdout.writeln('  ${k.padRight(12)} '
+        'majmin ${t.majminPct.toStringAsFixed(1).padLeft(5)}%   '
+        'root ${t.wRootPct.toStringAsFixed(1).padLeft(5)}%   '
+        '(${t.weighted.toStringAsFixed(0)}s of audio)');
+  }
+
   stdout.writeln('\n=== SMOOTHING head to head '
       '(9 frames, scored against the performed annotation) ===');
   for (final k in sets.keys) {
     for (final sm in ChordSmoothing.values) {
       final t = smoothed['$k|${sm.name}']!.performed;
       stdout.writeln('  ${k.padRight(11)} ${sm.name.padRight(13)} '
+          'majmin ${t.majminPct.toStringAsFixed(1).padLeft(5)}%   '
           'exact ${t.exactPct.toStringAsFixed(1).padLeft(5)}%   '
-          'root ${t.rootPct.toStringAsFixed(1).padLeft(5)}%');
+          'root ${t.wRootPct.toStringAsFixed(1).padLeft(5)}%');
     }
   }
 
