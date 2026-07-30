@@ -105,6 +105,26 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (crossformat-xrt)** · 🚧 **ACTIVE — cross-format round-trips over the
+  real corpus.** Branch `feature/crossformat-xrt`; the only mus file I touch is
+  `tool/crisp_crossformat_roundtrip.dart`. **The fixes land in `crisp_notation`**
+  (worktree `../crisp_notation-utf16xml`, branch `feature/utf16-musicxml`, merged
+  to its `main` + pushed) — so if you pull `../crisp_notation` you get them.
+  - ⚠️ **If you have ever compared notation durations, re-check it.** The harness
+    compared the NOTATED value and ignored the `TupletSpan`, which cannot see a
+    dropped tuplet at all: the note stays, at the wrong length. Comparing
+    **sounding** duration (notated × normal/actual) turned 10 apparent failures
+    into 92 and every one was a real codec bug. **Six shipped**
+    (`57c85c8`, `73c8c92`): kern silently discarded any tuplet whose scaled value
+    was not an integer; ABC's bare `(p` re-timed every ratio but 3:2 and 6:4
+    (its default q is 2, not p−1) and also implied r = p; MusicXML wrote no
+    tuplet mark on a REST, losing any group that opens on one; MEI and kern both
+    lacked 128th-and-shorter (MEI emitted no `@dur`, kern the literal `"null"`).
+    Detail + the corpus signature to look for are in `CLAUDE.md`.
+  - Sweep runs on the VPS at `/mnt/volume1/xrt` (own pubspec, path dep on
+    `/mnt/volume1/crisp_notation`). `--chain` runs all 6×6 ordered format pairs,
+    not just the 6 direct hops. Core suite 1977, green.
+
 - **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
   extension** (the cheap win listed inside `BB-X2`). Branch
   `feature/backing-band`.

@@ -96,15 +96,54 @@ Score? _load(File f) {
 /// information, and formats legitimately serialise it differently (low-to-high
 /// vs high-to-low). Comparing it raw reports a reordering as data loss and
 /// buries the real failures.
-List<String> _content(Score s) => [
-      for (final m in s.measures)
-        for (final e in m.elements)
-          if (e is NoteElement)
-            '${(e.pitches.map((p) => p.midiNumber).toList()..sort()).join('.')}'
-                '@${e.duration.toFraction()}',
-    ];
+///
+/// The duration compared is the SOUNDING one — the notated value scaled by any
+/// tuplet the note is under. Comparing the notated value instead is wrong in
+/// both directions. It reports a false failure whenever a format cannot record
+/// the tuplet BRACKET and the reader has to respell it: `**kern` writes only a
+/// reciprocal, so a septuplet of eighths in the time of 8 comes back as the
+/// conventional 7:4 of quarters — a different spelling of an identical sound,
+/// and the only spelling kern can express. And it is blind in the other
+/// direction, because a genuinely wrong ratio leaves the notated value intact:
+/// reading 3:2 back as 5:4 changes what you hear and nothing this function used
+/// to look at. Sounding duration catches that and ignores the respelling.
+///
+/// Voices 2-4 are compared only under `--voices`. Several formats in the matrix
+/// carry a single voice by construction, so folding them in unconditionally
+/// would report that structural limit once per inner-voice note and drown the
+/// codec defects this harness exists to find.
+bool _allVoices = false;
 
-void main(List<String> args) {
+List<String> _content(Score s) {
+  final out = <String>[];
+  for (final m in s.measures) {
+    for (var v = 0; v < (_allVoices ? m.voices.length : 1); v++) {
+      // Ratio per element index, so a note can be scaled without searching the
+      // spans again for every one.
+      final scale = <int, Fraction>{};
+      for (final t in m.tuplets) {
+        if (t.voice != v) continue;
+        for (var i = t.startIndex; i <= t.endIndex; i++) {
+          scale[i] = Fraction(t.normal, t.actual);
+        }
+      }
+      final elements = m.voices[v];
+      for (var i = 0; i < elements.length; i++) {
+        final e = elements[i];
+        if (e is! NoteElement) continue;
+        final sounding = e.duration.toFraction() * (scale[i] ?? Fraction(1, 1));
+        final pitches = e.pitches.map((p) => p.midiNumber).toList()..sort();
+        out.add('${v == 0 ? '' : 'v$v:'}${pitches.join('.')}@$sounding');
+      }
+    }
+  }
+  return out;
+}
+
+void main(List<String> rawArgs) {
+  _allVoices = rawArgs.contains('--voices');
+  final chain = rawArgs.contains('--chain');
+  final args = rawArgs.where((a) => !a.startsWith('--')).toList();
   if (args.isEmpty) {
     stderr.writeln('Usage: crisp_crossformat_roundtrip.dart <dir> [out.json]');
     exitCode = 64;
@@ -153,25 +192,46 @@ void main(List<String> args) {
     if (want.isEmpty) continue;
     sources++;
 
-    for (final to in _formats) {
-      final pair = '${f.path.split('.').last.toLowerCase()} -> $to';
+    final name = f.path.split('/').last;
+    final ext = f.path.split('.').last.toLowerCase();
+
+    /// One hop: write [from] as [to] and read it back. Records the outcome
+    /// under [pair] and returns the score, or null if the hop lost or threw.
+    Score? hop(Score from, List<String> before, String to, String pair) {
       tried[pair] = (tried[pair] ?? 0) + 1;
       try {
-        final round = _readerFor(to)(_writerFor(to)(src));
+        final round = _readerFor(to)(_writerFor(to)(from));
         final got = _content(round);
-        if (_sameContent(want, got)) {
+        if (_sameContent(before, got)) {
           passed[pair] = (passed[pair] ?? 0) + 1;
-        } else {
-          examples.putIfAbsent(
-            pair,
-            () => '${f.path.split('/').last}: ${want.length} notes -> '
-                '${got.length}; first diff ${_firstDiff(want, got)}',
-          );
+          return round;
         }
+        examples.putIfAbsent(
+          pair,
+          () => '$name: ${before.length} notes -> ${got.length}; '
+              'first diff ${_firstDiff(before, got)}',
+        );
       } catch (e) {
         var m = e.toString().replaceAll('\n', ' ');
         if (m.length > 70) m = m.substring(0, 70);
-        examples.putIfAbsent(pair, () => '${f.path.split('/').last}: THREW $m');
+        examples.putIfAbsent(pair, () => '$name: THREW $m');
+      }
+      return null;
+    }
+
+    for (final to in _formats) {
+      final first = hop(src, want, to, '$ext -> $to');
+      if (!chain || first == null) continue;
+      // Every ORDERED pair of formats, so a chain through any two of them is
+      // covered rather than just the six single hops. The second hop is judged
+      // against what came out of the FIRST, not against the original file: if
+      // `to` already dropped something, blaming the next codec for its absence
+      // would smear one defect across five cells and hide whatever the second
+      // codec does on its own.
+      final mid = _content(first);
+      if (mid.isEmpty) continue;
+      for (final then in _formats) {
+        hop(first, mid, then, '  $to => $then');
       }
     }
   }
