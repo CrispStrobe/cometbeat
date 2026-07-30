@@ -127,6 +127,13 @@ class LibraryItem {
   /// Precomputed musical description, when the catalog supplies one.
   final MusicInfo? music;
 
+  /// The CORPUS this row came from — "GregoBase", "CPDL", "NIFC Polish Scores".
+  ///
+  /// Distinct from [sourceName], which is the CONNECTOR ("CometBeat Library")
+  /// and is therefore identical for every row of a curated catalog. Filtering by
+  /// provenance needs this; filtering by [sourceName] narrows nothing.
+  final String? corpusSource;
+
   const LibraryItem({
     required this.sourceId,
     required this.sourceName,
@@ -140,7 +147,77 @@ class LibraryItem {
     required this.downloadUrl,
     required this.format,
     this.music,
+    this.corpusSource,
   });
+}
+
+/// A set-membership filter over the facets a library row actually carries.
+///
+/// Deliberately built from `LibraryItem` fields that already exist — kind
+/// (`collection`), `format`, `declaredLicense`, `sourceName` — so no source has
+/// to grow a new field. Licence is matched as a case-insensitive SUBSTRING
+/// because the strings in the wild are prose ("CC0 1.0", "Public Domain",
+/// "CC BY 4.0", "MIT License"): a user picking "CC0" means "anything CC0", not
+/// one exact spelling.
+class LibraryFilter {
+  const LibraryFilter({
+    this.kinds = const {},
+    this.formats = const {},
+    this.licences = const {},
+    this.sources = const {},
+  });
+
+  final Set<String> kinds;
+  final Set<String> formats;
+  final Set<String> licences;
+  final Set<String> sources;
+
+  bool get isEmpty =>
+      kinds.isEmpty && formats.isEmpty && licences.isEmpty && sources.isEmpty;
+
+  bool matches(LibraryItem i) {
+    if (kinds.isNotEmpty && !kinds.contains(i.collection)) return false;
+    if (formats.isNotEmpty && !formats.contains(i.format)) return false;
+    // Prefer the corpus source; fall back to the connector name for sources
+    // that do not carry provenance per row.
+    if (sources.isNotEmpty &&
+        !sources.contains(i.corpusSource ?? i.sourceName)) {
+      return false;
+    }
+    if (licences.isNotEmpty) {
+      final lic = i.declaredLicense.toLowerCase();
+      if (!licences.any((l) => lic.contains(l.toLowerCase()))) return false;
+    }
+    return true;
+  }
+
+  LibraryFilter toggle(String facet, String value) {
+    Set<String> flip(Set<String> s) => s.contains(value)
+        ? (s.toSet()..remove(value))
+        : (s.toSet()..add(value));
+    return LibraryFilter(
+      kinds: facet == 'kind' ? flip(kinds) : kinds,
+      formats: facet == 'format' ? flip(formats) : formats,
+      licences: facet == 'licence' ? flip(licences) : licences,
+      sources: facet == 'source' ? flip(sources) : sources,
+    );
+  }
+}
+
+/// One page of results.
+///
+/// `total` is NULLABLE on purpose. A source that holds its whole catalog in
+/// memory can count exactly; a source that pages a remote API cannot, and
+/// inventing a number there would be a lie the UI then displays. `hasMore` is
+/// always knowable, so paging works either way.
+class LibraryPage {
+  const LibraryPage({required this.items, this.total, required this.hasMore});
+
+  final List<LibraryItem> items;
+
+  /// Exact number of matches, or null when the source cannot know.
+  final int? total;
+  final bool hasMore;
 }
 
 /// A browsable external open-music library. Implementations are thin adapters
@@ -164,6 +241,45 @@ abstract class ContentSource {
   /// against title/composer). Returns up to [limit] items.
   Future<List<LibraryItem>> browse({String query = '', int limit = 60});
 
+  /// Filtered, paged browse.
+  ///
+  /// ⚠️ Declared, not defaulted. Every source uses `implements ContentSource`,
+  /// and `implements` does NOT inherit a method body — a concrete default here
+  /// compiles but leaves all nine sources missing the member. So each source
+  /// delegates to [browsePageByFiltering] in one line, which keeps the logic in
+  /// one place while staying explicit about who implements what.
+  Future<LibraryPage> browsePage({
+    String query,
+    LibraryFilter filter,
+    int limit,
+    int offset,
+  });
+
   /// Downloads [item]'s bytes in its [LibraryItem.format].
   Future<Uint8List> fetch(LibraryItem item);
+}
+
+/// The default [ContentSource.browsePage]: ask [ContentSource.browse] for one
+/// more item than the page needs, filter what came back, and slice.
+///
+/// Asking for `offset + limit + 1` is what makes "load more" knowable without
+/// pretending to know a total. ⚠️ Filtering applies only to what `browse`
+/// returned, so a filter plus a deep offset can under-report on a source that
+/// pages a remote API — which is exactly why `total` is left null instead of
+/// guessed. A source holding its whole catalog in memory should implement
+/// `browsePage` itself and report an exact total.
+Future<LibraryPage> browsePageByFiltering(
+  ContentSource source, {
+  String query = '',
+  LibraryFilter filter = const LibraryFilter(),
+  int limit = 60,
+  int offset = 0,
+}) async {
+  final fetched = await source.browse(query: query, limit: offset + limit + 1);
+  final matched =
+      filter.isEmpty ? fetched : fetched.where(filter.matches).toList();
+  return LibraryPage(
+    items: matched.skip(offset).take(limit).toList(),
+    hasMore: matched.length > offset + limit,
+  );
 }

@@ -283,6 +283,21 @@ class FreepatsSource implements ContentSource {
   }
 
   @override
+  Future<LibraryPage> browsePage({
+    String query = '',
+    LibraryFilter filter = const LibraryFilter(),
+    int limit = 60,
+    int offset = 0,
+  }) =>
+      browsePageByFiltering(
+        this,
+        query: query,
+        filter: filter,
+        limit: limit,
+        offset: offset,
+      );
+
+  @override
   Future<List<LibraryItem>> browse({String query = '', int limit = 60}) async {
     final q = query.trim().toLowerCase();
     final pages = kFreepatsPages

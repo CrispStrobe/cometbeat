@@ -30,17 +30,29 @@
   "workshopPlayBelowRange": "{count,plural, =1{1 note below the range}other{{count} notes below the range}}",
   "@workshopPlayBelowRange": {
     "description": "Notes lower than the instrument's lowest string",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "workshopPlayAboveRange": "{count,plural, =1{1 note above the range}other{{count} notes above the range}}",
   "@workshopPlayAboveRange": {
     "description": "Notes above the instrument's practical top",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "workshopPlayOutOfReach": "{count,plural, =1{1 note beyond this level}other{{count} notes beyond this level}}",
   "@workshopPlayOutOfReach": {
     "description": "Notes needing a position/technique above the chosen skill",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "tabAddFingerings": "Add left-hand fingerings",
   "@tabAddFingerings": {
@@ -89,7 +101,11 @@
   "celloPositionRaised": "Position {n} raised",
   "@celloPositionRaised": {
     "description": "Spoken form of a raised cello position, e.g. raised 2nd. Cello positions are numbered by letter name; a chromatic step between two of them is the lower one raised.",
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "@@locale": "en",
   "appTitle": "CometBeat",
@@ -133,7 +149,11 @@
   "trickyNotesHint": "The skills you miss most — reading, rhythm, chords and more. Review practises these first.",
   "trickyMissed": "missed {count}×",
   "@trickyMissed": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "moduleProgressTitle": "Modules",
   "boxNew": "New",
@@ -238,10 +258,22 @@
   "audioExportEmpty": "Nothing to export yet",
   "audioExportStemsTitle": "Export stems",
   "audioExportStemsCount": "{count} tracks, one file each",
-  "@audioExportStemsCount": { "placeholders": { "count": { "type": "int" } } },
+  "@audioExportStemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "audioExportStemsSave": "Choose folder",
   "audioExportStemsSaved": "Saved {count} stems",
-  "@audioExportStemsSaved": { "placeholders": { "count": { "type": "int" } } },
+  "@audioExportStemsSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "audioExportFailed": "Export failed",
   "audioExportSavedTo": "Saved to {path}",
   "@audioExportSavedTo": {
@@ -385,7 +417,11 @@
   "noteNamingSolfege": "Solfège (Do Re Mi Fa Sol La Si)",
   "streakDays": "{count, plural, =1{1-day streak} other{{count}-day streak}}",
   "@streakDays": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "statsTitle": "Learning statistics",
   "statsTracked": "Tracked items",
@@ -447,7 +483,7 @@
   "primerTempoExplain": "Music can speed up (accelerando) or slow down (ritardando). Listen — the beats get closer, then further apart.",
   "primerTempoTry": "Listen. Is this speeding up or slowing down?",
   "primerArticulationExplain": "Notes can be smooth and connected (legato) or short and detached (staccato). Listen — smooth first, then short.",
-  "primerArticulationTry": "Listen. Is this smooth or short?",
+  "primerArticulationTry": "Now you try: dots over the notes mean…?",
   "gameStepSkip": "Step or Skip?",
   "gameStepSkipBass": "Step or Skip? (bass)",
   "gameStepSkipSubtitle": "Do the two notes step to a neighbour or skip a gap?",
@@ -663,13 +699,21 @@
   "loopMixerSave": "Save",
   "loopMixerSlotSaved": "Saved “{name}”",
   "@loopMixerSlotSaved": {
-    "placeholders": {"name": {"type": "String"}}
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "loopMixerNoSlots": "No saved grooves yet",
   "loopMixerComboFound": "Combo unlocked: {name}!",
   "@loopMixerComboFound": {
     "description": "Snackbar when a secret Loop Mixer combo is discovered.",
-    "placeholders": {"name": {"type": "String"}}
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "loopMixerCombosTip": "Secret combos found",
   "loopMixerComboRhythmSection": "Rhythm Section",
@@ -767,27 +811,47 @@
   "projectRenameFailed": "That name is already taken",
   "projectOpenConfirm": "Open “{name}”? What is loaded now will be replaced.",
   "@projectOpenConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "projectDeleteConfirm": "Delete “{name}”? This cannot be undone.",
   "@projectDeleteConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "projectOpenFailed": "We couldn't open “{name}”",
   "@projectOpenFailed": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "loopMixerCopyPattern": "Copy a pattern",
   "loopMixerCopyPatternHint": "tap to put this track's pattern onto another track",
   "loopMixerCopyPatternTo": "Copy {name} onto…",
   "@loopMixerCopyPatternTo": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "loopMixerCopiedPattern": "{from} copied onto {to}",
   "@loopMixerCopiedPattern": {
     "placeholders": {
-      "from": { "type": "String" },
-      "to": { "type": "String" }
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
     }
   },
   "loopMixerAddAudio": "Import a loop",
@@ -797,8 +861,12 @@
   "loopMixerAudioStretched": "{name} was stretched {percent}% to fit the groove",
   "@loopMixerAudioStretched": {
     "placeholders": {
-      "name": { "type": "String" },
-      "percent": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
     }
   },
   "loopMixerAddEmptyHint": "add a silent track and draw your own tune into it",
@@ -829,7 +897,9 @@
   "loopMixerFollowScore": "🎯 Melody match: {pct}%",
   "@loopMixerFollowScore": {
     "placeholders": {
-      "pct": { "type": "int" }
+      "pct": {
+        "type": "int"
+      }
     }
   },
   "loopMixerTempoChill": "Chill",
@@ -946,7 +1016,11 @@
   "dawInstrumentDefault": "Default sound",
   "dawInstrumentSet": "Voiced through {name}",
   "@dawInstrumentSet": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "dawEmpty": "Your tracks are ready — tap Add clip to drop in a beat, a tune, a sample or an effect, then press play.",
   "dawSend": "To Audio Editor",
@@ -971,7 +1045,11 @@
   "tuneLoaded": "Pasted the copied tune",
   "dawBpm": "{n} BPM",
   "@dawBpm": {
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "dawTempoUp": "Faster",
   "dawTempoDown": "Slower",
@@ -1035,7 +1113,13 @@
   "dawExportStemsAll": "All as stems",
   "dawExportStemsSelected": "Selected as stems",
   "dawExportTrackOnly": "Only: {track}",
-  "@dawExportTrackOnly": { "placeholders": { "track": { "type": "String" } } },
+  "@dawExportTrackOnly": {
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
   "dawSpectrogram": "Spectrum",
   "dawSpectrogramEmpty": "Nothing to show",
   "dawRecord": "Record",
@@ -1107,7 +1191,7 @@
   "tabImport": "Open a file",
   "tabRig": "Guitar rig",
   "tabRigNone": "Clean (no effects)",
-  "tabRigHint": "Effects for this track only \u2014 a rhythm part can crunch while the lead fuzzes.",
+  "tabRigHint": "Effects for this track only — a rhythm part can crunch while the lead fuzzes.",
   "tabMenu": "Tab editor menu",
   "tabTuning": "Tuning",
   "tabCapo": "Capo",
@@ -1134,7 +1218,11 @@
   "soundLabExportFailed": "Export failed",
   "soundLabSavedTo": "Saved to {path}",
   "@soundLabSavedTo": {
-    "placeholders": { "path": { "type": "String" } }
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
   },
   "soundLabSaveTitle": "Save…",
   "soundLabSaveRecipe": "Save recipe (My Sounds)",
@@ -1147,11 +1235,19 @@
   "soundLabDelete": "Delete",
   "soundLabDefaultName": "Sound {n}",
   "@soundLabDefaultName": {
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "soundLabSaved": "Saved “{name}”",
   "@soundLabSaved": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "soundLabMyEmpty": "No saved sounds yet. Make one, then tap the bookmark to keep it.",
   "soundLabSquare": "Square",
@@ -1192,7 +1288,11 @@
   "voiceLabExportFailed": "Export failed",
   "voiceLabSavedTo": "Saved to {path}",
   "@voiceLabSavedTo": {
-    "placeholders": { "path": { "type": "String" } }
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
   },
   "voiceLabSaveTitle": "Save to My Samples",
   "voiceLabMyTitle": "My Samples",
@@ -1202,7 +1302,11 @@
   "voiceLabDelete": "Delete",
   "voiceLabDefaultName": "Voice {n}",
   "@voiceLabDefaultName": {
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "voiceLabMyEmpty": "No saved samples yet. Shape a voice, then tap the bookmark to keep it.",
   "sampleExtractTitle": "Sample Extractor",
@@ -1210,17 +1314,29 @@
   "sampleExtractHint": "Open one or more tracker modules (.mod, .xm, .s3m, .it) to lift out their samples. You can preview each, export it as a WAV, or add it to My Samples.\n\nUse only files you have the right to reuse — the app makes no licensing claim about a module's samples.",
   "sampleExtractCount": "{n} samples",
   "@sampleExtractCount": {
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "sampleExtractLibrary": "My Samples: {n}",
   "@sampleExtractLibrary": {
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "sampleExtractMeta": "{module} · {secs}s",
   "@sampleExtractMeta": {
     "placeholders": {
-      "module": { "type": "String" },
-      "secs": { "type": "String" }
+      "module": {
+        "type": "String"
+      },
+      "secs": {
+        "type": "String"
+      }
     }
   },
   "sampleExtractBrowsePacks": "Browse free packs",
@@ -1241,7 +1357,13 @@
   "catalogInstallInstrument": "Install instrument",
   "catalogInstalling": "Downloading samples…",
   "catalogInstrumentInstalled": "Installed ({n} files)",
-  "@catalogInstrumentInstalled": {"placeholders": {"n": {"type": "int"}}},
+  "@catalogInstrumentInstalled": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "catalogInstallUnplayable": "Downloaded, but its samples aren't playable yet (FLAC support coming).",
   "catalogKindAll": "All",
   "catalogKindSoundFonts": "SoundFonts",
@@ -1258,7 +1380,13 @@
   "catalogOpenSource": "Source page",
   "catalogAdded": "Added to your library",
   "catalogItemCount": "{n} items",
-  "@catalogItemCount": {"placeholders": {"n": {"type": "int"}}},
+  "@catalogItemCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "soundLibraryTitle": "Sound Library",
   "soundLibraryAll": "All",
   "soundLibraryCatInstruments": "Instruments",
@@ -1272,7 +1400,13 @@
   "soundLibraryAttribution": "Credit required",
   "voiceLabSaveInstrument": "Save as instrument",
   "voiceLabInstrumentSaved": "Saved “{name}” to My Instruments",
-  "@voiceLabInstrumentSaved": { "placeholders": { "name": { "type": "String" } } },
+  "@voiceLabInstrumentSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "voiceLabMyInstruments": "My Instruments",
   "mySamplesEmpty": "No saved samples yet. Extract some from a module or pack, or save a voice.",
   "mySamplesCredits": "Credits",
@@ -1287,23 +1421,39 @@
   "sampleExtractSavedFolder": "Saved {n} WAVs to {dir}",
   "@sampleExtractSavedFolder": {
     "placeholders": {
-      "n": { "type": "int" },
-      "dir": { "type": "String" }
+      "n": {
+        "type": "int"
+      },
+      "dir": {
+        "type": "String"
+      }
     }
   },
   "sampleExtractAdd": "Add to My Samples",
   "sampleExtractAddAll": "Add all to My Samples",
   "sampleExtractAdded": "Added “{name}”",
   "@sampleExtractAdded": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "sampleExtractAddedAll": "Added {n} samples",
   "@sampleExtractAddedAll": {
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "sampleExtractFailed": "Could not read: {files}",
   "@sampleExtractFailed": {
-    "placeholders": { "files": { "type": "String" } }
+    "placeholders": {
+      "files": {
+        "type": "String"
+      }
+    }
   },
   "tabPasteAscii": "Paste ASCII tab",
   "tabPasteAsciiHint": "e|--0--3--|\nB|--1-----|\n...",
@@ -1311,7 +1461,11 @@
   "tabSaveSongBook": "Save to Song Book",
   "tabSaved": "Saved “{title}”",
   "@tabSaved": {
-    "placeholders": { "title": { "type": "String" } }
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "performTitle": "Live Looper",
   "performPrompt": "Tap a loop to start, then stack more on top. Mute or undo layers as you build your jam.",
@@ -1336,7 +1490,9 @@
   "performBars": "{count, plural, =1{1 bar} other{{count} bars}}",
   "@performBars": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "performSing": "Sing a part",
@@ -1345,7 +1501,9 @@
   "performCountIn": "Get ready… {count}",
   "@performCountIn": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "performSingNothing": "I didn't hear anything — try again",
@@ -1380,7 +1538,9 @@
   "performBounceDone": "{count, plural, =1{Saved to My Samples — open the Arranger to use it} other{Saved {count} clips to My Samples — open the Arranger to use them}}",
   "@performBounceDone": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "performSceneSave": "Save scene",
@@ -1389,8 +1549,12 @@
   "performSceneLabel": "Scene {number} · {active} on",
   "@performSceneLabel": {
     "placeholders": {
-      "number": { "type": "int" },
-      "active": { "type": "int" }
+      "number": {
+        "type": "int"
+      },
+      "active": {
+        "type": "int"
+      }
     }
   },
   "tabUndo": "Undo",
@@ -1456,7 +1620,11 @@
   "tabExportFailed": "Export failed",
   "tabSavedTo": "Saved to {path}",
   "@tabSavedTo": {
-    "placeholders": { "path": { "type": "String" } }
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
   },
   "tabImportFailed": "Couldn't open that file",
   "tabOpenRecording": "Recording → tab",
@@ -1466,13 +1634,25 @@
   "librarySaveToMy": "Save to My Samples",
   "librarySavedToMy": "Saved “{name}” to My Samples",
   "@librarySavedToMy": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "librarySearchHint": "Search by title or composer",
+  "libraryLoadMore": "Load more",
+  "@libraryLoadMore": {
+    "description": "Button that fetches the next page of library search results"
+  },
   "libraryImport": "Import",
   "libraryImported": "Imported “{title}”",
   "@libraryImported": {
-    "placeholders": { "title": { "type": "String" } }
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "libraryAlreadyImported": "Already in your Song Book",
   "libraryLicenseBlocked": "That work isn't openly licensed — skipped",
@@ -1485,12 +1665,30 @@
   "downloadsSubtitle": "Manage downloaded data & free space",
   "downloadsEmpty": "Nothing downloaded yet.",
   "downloadsTotal": "{size} total",
-  "@downloadsTotal": {"placeholders": {"size": {"type": "String"}}},
+  "@downloadsTotal": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "downloadsRemove": "Remove",
   "downloadsFiles": "{n} files",
-  "@downloadsFiles": {"placeholders": {"n": {"type": "int"}}},
+  "@downloadsFiles": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "downloadsRemoveConfirm": "Remove {label}? It re-downloads when next needed.",
-  "@downloadsRemoveConfirm": {"placeholders": {"label": {"type": "String"}}},
+  "@downloadsRemoveConfirm": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "downloadsWebNote": "Downloads are managed on device; nothing is cached on the web.",
   "libraryNoCredits": "Nothing imported from a library yet",
   "libraryCreditsSongs": "Scores & songs",
@@ -1532,7 +1730,6 @@
   "trackerBorrowSample": "Borrow instrument…",
   "trackerSaveSong": "Save to Song Book",
   "trackerImportScore": "Import score (MusicXML/ABC/MEI/kern/MIDI)…",
-  "trackerExportMidi": "Export MIDI…",
   "trackerExportXml": "Export MusicXML…",
   "trackerExportAbc": "Export ABC…",
   "trackerExportModule": "Export module (.mod/.xm/.s3m/.it)…",
@@ -1541,7 +1738,11 @@
   "trackerExportLossTitle": "Export limitations",
   "trackerExportLossBody": "The {format} format can’t represent everything in this song:",
   "@trackerExportLossBody": {
-    "placeholders": { "format": { "type": "String" } }
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
   },
   "trackerExportLossContinue": "Export anyway",
   "trackerFlowTimeline": "Flow timeline",
@@ -1549,39 +1750,71 @@
   "trackerFlowEntry": "Order {order} · pattern {pattern} · rows {first}–{last}",
   "@trackerFlowEntry": {
     "placeholders": {
-      "order": { "type": "int" },
-      "pattern": { "type": "int" },
-      "first": { "type": "int" },
-      "last": { "type": "int" }
+      "order": {
+        "type": "int"
+      },
+      "pattern": {
+        "type": "int"
+      },
+      "first": {
+        "type": "int"
+      },
+      "last": {
+        "type": "int"
+      }
     }
   },
   "trackerFlowTiming": "tempo {tempo} · speed {speed}",
   "@trackerFlowTiming": {
     "placeholders": {
-      "tempo": { "type": "int" },
-      "speed": { "type": "int" }
+      "tempo": {
+        "type": "int"
+      },
+      "speed": {
+        "type": "int"
+      }
     }
   },
   "trackerFlowJump": "→ jump to order {order}",
   "@trackerFlowJump": {
-    "placeholders": { "order": { "type": "int" } }
+    "placeholders": {
+      "order": {
+        "type": "int"
+      }
+    }
   },
   "trackerFlowBreak": "→ break to row {row}",
   "@trackerFlowBreak": {
-    "placeholders": { "row": { "type": "int" } }
+    "placeholders": {
+      "row": {
+        "type": "int"
+      }
+    }
   },
   "trackerFlowLoop": "pattern loop",
   "trackerFlowSetSpeed": "speed → {value}",
   "@trackerFlowSetSpeed": {
-    "placeholders": { "value": { "type": "int" } }
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
   },
   "trackerFlowSetTempo": "tempo → {value}",
   "@trackerFlowSetTempo": {
-    "placeholders": { "value": { "type": "int" } }
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
   },
   "trackerFlowEditTitle": "Edit flow · order {order}",
   "@trackerFlowEditTitle": {
-    "placeholders": { "order": { "type": "int" } }
+    "placeholders": {
+      "order": {
+        "type": "int"
+      }
+    }
   },
   "trackerFlowEditHint": "Author the order-command for this entry.",
   "trackerFlowEdit": "Edit flow",
@@ -1592,7 +1825,11 @@
   "trackerFlowSetLoop": "Loop pattern…",
   "trackerFlowRemove": "Remove {label}",
   "@trackerFlowRemove": {
-    "placeholders": { "label": { "type": "String" } }
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
   },
   "trackerFlowPickOrder": "Jump to which order?",
   "trackerFlowPickRow": "Break to which row?",
@@ -1609,7 +1846,7 @@
   "trackerBorrowEmpty": "That module has no samples to borrow.",
   "trackerFxAdvanced": "Advanced effects",
   "trackerFxCustomise": "Customise these",
-  "trackerFxCustomiseHint": "Turn the chosen effects into a full chain you can tweak, reorder and automate \u2014 the same effects the Audio Editor uses.",
+  "trackerFxCustomiseHint": "Turn the chosen effects into a full chain you can tweak, reorder and automate — the same effects the Audio Editor uses.",
   "trackerChangeEffect": "Channel effect",
   "trackerFxNone": "None",
   "trackerFxDelay": "Echo",
@@ -1661,7 +1898,6 @@
   "trackerRenamePattern": "Rename section",
   "trackerRenamePatternHint": "e.g. Intro, Verse, Chorus",
   "trackerTempo": "Tempo",
-  "trackerSwing": "Swing",
   "trackerSwingOff": "Off",
   "trackerSwingHelp": "Groove: delays every off-beat step for a shuffle feel (0 = straight)",
   "trackerCustomLength": "Custom…",
@@ -1937,45 +2173,63 @@
   "readingHintSame": "It's {name} — a landmark note!",
   "@readingHintSame": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "readingHintStepUp": "One step up from {name}",
   "@readingHintStepUp": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "readingHintStepDown": "One step down from {name}",
   "@readingHintStepDown": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "readingHintSkipUp": "A skip up from {name}",
   "@readingHintSkipUp": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "readingHintSkipDown": "A skip down from {name}",
   "@readingHintSkipDown": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "readingHintFarUp": "{count} steps up from {name}",
   "@readingHintFarUp": {
     "placeholders": {
-      "count": { "type": "int" },
-      "name": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
     }
   },
   "readingHintFarDown": "{count} steps down from {name}",
   "@readingHintFarDown": {
     "placeholders": {
-      "count": { "type": "int" },
-      "name": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
     }
   },
   "noteNameC": "C",
@@ -2090,7 +2344,9 @@
   "echoLength": "Length: {count}",
   "@echoLength": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "gameMajorMinorEar": "Major or Minor?",
@@ -2139,7 +2395,9 @@
   "singIntervalPrompt": "Sing the top note — a {interval} up!",
   "@singIntervalPrompt": {
     "placeholders": {
-      "interval": { "type": "String" }
+      "interval": {
+        "type": "String"
+      }
     }
   },
   "gameTriadBuilder": "Triad Builder",
@@ -2247,8 +2505,12 @@
   "recitalProgress": "{done} of {total} pieces performed",
   "@recitalProgress": {
     "placeholders": {
-      "done": { "type": "int" },
-      "total": { "type": "int" }
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "recitalCurtainCall": "Bravo!",
@@ -2284,7 +2546,9 @@
   "curReadiness": "{pct}% ready",
   "@curReadiness": {
     "placeholders": {
-      "pct": { "type": "int" }
+      "pct": {
+        "type": "int"
+      }
     }
   },
   "curPracticeLevel": "Practise this level",
@@ -2298,7 +2562,9 @@
   "chordBuilderPrompt": "Build a {chord} chord",
   "@chordBuilderPrompt": {
     "placeholders": {
-      "chord": { "type": "String" }
+      "chord": {
+        "type": "String"
+      }
     }
   },
   "chordBuilderHint": "Tap three notes onto the staff. Any octave or inversion works.",
@@ -2311,7 +2577,9 @@
   "concertPitchPrompt": "A {instrument} reads this note. What sounds?",
   "@concertPitchPrompt": {
     "placeholders": {
-      "instrument": { "type": "String" }
+      "instrument": {
+        "type": "String"
+      }
     }
   },
   "concertPitchHint": "A transposing instrument sounds a different note than written.",
@@ -2323,7 +2591,9 @@
   "transposeWritePrompt": "What note does a {instrument} read to sound this?",
   "@transposeWritePrompt": {
     "placeholders": {
-      "instrument": { "type": "String" }
+      "instrument": {
+        "type": "String"
+      }
     }
   },
   "transposeWriteHint": "A transposing instrument reads a different note than sounds.",
@@ -2424,7 +2694,9 @@
   "beatsCount": "{count, plural, =1{1 beat} other{{count} beats}}",
   "@beatsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "clefBass": "Bass clef",
@@ -2499,11 +2771,19 @@
   "keySigNone": "No sharps or flats",
   "keySigSharps": "{count, plural, =1{1 sharp} other{{count} sharps}}",
   "@keySigSharps": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "keySigFlats": "{count, plural, =1{1 flat} other{{count} flats}}",
   "@keySigFlats": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "gameConnectRoadmap": "Connect the Road Signs",
   "gameConnectRoadmapSubtitle": "Match each navigation sign to what it tells you to do",
@@ -2536,7 +2816,9 @@
   "keyMajorLabel": "{name} major",
   "@keyMajorLabel": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "gameBeatRunner": "Beat Runner",
@@ -2549,7 +2831,9 @@
   "fallingMultiplier": "×{mult}",
   "@fallingMultiplier": {
     "placeholders": {
-      "mult": { "type": "int" }
+      "mult": {
+        "type": "int"
+      }
     }
   },
   "lineSpacePrompt": "Swipe ← Line   or   Space →",
@@ -2563,7 +2847,9 @@
   "noteMemoryMoves": "{count, plural, =1{1 move} other{{count} moves}}",
   "@noteMemoryMoves": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "melodyDictationPrompt": "The first note is given — add the ones you hear",
@@ -2573,24 +2859,26 @@
   "countAlong": "Count along",
   "halfBeat": "½ beat",
   "quarterBeat": "¼ beat",
-  "beatsCount": "{count, plural, =1{1 beat} other{{count} beats}}",
-  "@beatsCount": {
-    "placeholders": {
-      "count": { "type": "int" }
-    }
-  },
   "symbolLength": "{name} lasts {length}",
   "@symbolLength": {
     "placeholders": {
-      "name": { "type": "String" },
-      "length": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "length": {
+        "type": "String"
+      }
     }
   },
   "symbolLengthRest": "{name}: {length} of silence",
   "@symbolLengthRest": {
     "placeholders": {
-      "name": { "type": "String" },
-      "length": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "length": {
+        "type": "String"
+      }
     }
   },
   "roundOf": "Round {current} of {total}",
@@ -2616,11 +2904,19 @@
   },
   "resultTime": "Your time: {time}",
   "@resultTime": {
-    "placeholders": { "time": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "resultBest": "Best: {time}",
   "@resultBest": {
-    "placeholders": { "time": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "resultNewBest": "New best time! 🎉",
   "showTimerLabel": "Show your time",
@@ -2714,7 +3010,7 @@
   "primerIntervalsCount": "The distance between two notes is an interval. Count the letters including both ends: C to E is C-D-E — a 3rd.",
   "primerIntervalsWide": "The wider the gap, the bigger the number. C up to G is a 5th: C-D-E-F-G.",
   "primerIntervalsEar": "Narrow intervals sound close and gentle; wide ones sound open and bold. Listen to a small gap, then a big one.",
-  "primerIntervalsSong": "You already know intervals from songs! A cuckoos call — \u201cKuck-uck\u201d — is a falling minor 3rd. \u201cAlle meine Entchen\u201d starts with a major 2nd going up.",
+  "primerIntervalsSong": "You already know intervals from songs! A cuckoos call — “Kuck-uck” — is a falling minor 3rd. “Alle meine Entchen” starts with a major 2nd going up.",
   "primerKeySigTitle": "Key signatures",
   "primerKeySigWhat": "Instead of marking every sharp, we write them once at the very start — a key signature. It applies to the whole piece. This is G major: one sharp, F♯.",
   "primerKeySigCompare": "C major has no sharps or flats at all. Listen to C major — every note is a plain white key.",
@@ -2758,7 +3054,6 @@
   "primerArticulationTitle": "How to play the note",
   "primerArticulationStaccato": "A dot above or below the notehead is staccato: play it short and detached, with air after it. (Careful — a dot BESIDE the note makes it longer instead!)",
   "primerArticulationAccent": "A wedge > is an accent: give that note an extra push so it stands out from its neighbours.",
-  "primerArticulationTry": "Now you try: dots over the notes mean…?",
   "primerBeamTitle": "Flags and beams",
   "primerBeamFlag": "A lone eighth note wears a flag on its stem. Here a rest splits the eighths apart, so each one keeps its own flag.",
   "primerBeamBeam": "When eighths share a beat they are joined by a BEAM instead of flags — the same sound, just tidier to read.",
@@ -3320,12 +3615,20 @@
   "trackerInitialSpeed": "Initial speed",
   "openInCannotTitle": "Cannot open in {mode}",
   "@openInCannotTitle": {
-    "placeholders": { "mode": { "type": "String" } }
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
   },
   "openInAudioNotNotes": "Audio is not notes yet — use Transcribe first.",
   "openInLossTitle": "Open in {mode}?",
   "@openInLossTitle": {
-    "placeholders": { "mode": { "type": "String" } }
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
   },
   "openInLossLost": "This will not come across:",
   "openInLossChanged": "This will change:",
@@ -3366,17 +3669,56 @@
   "reasonTabNotWholeBars": "the tab does not fill whole bars — the loop will not be a clean length",
   "reasonTuningAssumed": "tuning assumed — the song did not carry one",
   "reasonClampedToNut": "a note below string {string} open was clamped to the nut",
-  "@reasonClampedToNut": { "placeholders": { "string": { "type": "int" } } },
+  "@reasonClampedToNut": {
+    "placeholders": {
+      "string": {
+        "type": "int"
+      }
+    }
+  },
   "reasonOtherChannels": "the other {count} channels — a loop track is one voice",
-  "@reasonOtherChannels": { "placeholders": { "count": { "type": "int" } } },
+  "@reasonOtherChannels": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reasonChordsSpread": "chords spread across {count} channels — a channel plays one note at a time",
-  "@reasonChordsSpread": { "placeholders": { "count": { "type": "int" } } },
+  "@reasonChordsSpread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reasonFingeringChosenN": "fingering chosen for the {count} notes without a stored voicing",
-  "@reasonFingeringChosenN": { "placeholders": { "count": { "type": "int" } } },
+  "@reasonFingeringChosenN": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reasonPitchedChannels": "{count, plural, one{one pitched channel (a beat holds drums only)} other{{count} pitched channels (a beat holds drums only)}}",
-  "@reasonPitchedChannels": { "placeholders": { "count": { "type": "int" } } },
+  "@reasonPitchedChannels": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reasonChannelMismatch": "channel count ({count}) does not match the {strings}-string tuning",
-  "@reasonChannelMismatch": { "placeholders": { "count": { "type": "int" }, "strings": { "type": "int" } } },
+  "@reasonChannelMismatch": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "strings": {
+        "type": "int"
+      }
+    }
+  },
   "transportPlay": "Play",
   "transportPause": "Pause",
   "transportStop": "Stop",
@@ -3386,13 +3728,13 @@
   "transportRedo": "Redo",
   "transportMetronome": "Metronome",
   "transportCountIn": "Count-in",
-  "transportCountingIn": "Counting in\u2026",
+  "transportCountingIn": "Counting in…",
   "transportTempo": "Tempo (BPM)",
   "transportPosition": "Bar and beat",
   "openInLiveTrack": "Edits go back to the project track",
-  "openInMakesCopy": "Opens a copy \u2014 edits stay there",
+  "openInMakesCopy": "Opens a copy — edits stay there",
   "mixerConsoleTitle": "Mixer",
-  "mixerConsoleEmpty": "No tracks yet. Add one from the Tracker or the Tab editor with \u201cAdd to project\u201d, and it appears here.",
+  "mixerConsoleEmpty": "No tracks yet. Add one from the Tracker or the Tab editor with “Add to project”, and it appears here.",
   "mixerLevel": "Level",
   "mixerPan": "Pan",
   "mixerMute": "Mute",
@@ -3401,10 +3743,16 @@
   "mixerStop": "Stop",
   "mixerSkippedOne": "1 track has no sound yet",
   "mixerSkippedMany": "{count} tracks have no sound yet",
-  "@mixerSkippedMany": {"placeholders": {"count": {"type": "int"}}},
-  "mixerNothingToPlay": "Nothing to play \u2014 every track is muted or silent.",
+  "@mixerSkippedMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mixerNothingToPlay": "Nothing to play — every track is muted or silent.",
   "gameNoteHighway": "Note Highway",
-  "gameNoteHighwaySubtitle": "Notes fall onto the keys \u2014 play along",
+  "gameNoteHighwaySubtitle": "Notes fall onto the keys — play along",
   "gameNoteHighwayGuitar": "String Runway",
   "gameNoteHighwayGuitarSubtitle": "One lane per string, fret numbers on the blocks",
   "gameNoteHighwayCello": "Bow Runway",
@@ -3420,7 +3768,7 @@
   "highwayInstrumentCello": "Cello",
   "highwayInstrumentPads": "Pads",
   "highwayPiece": "Piece",
-  "highwayNoPieces": "No built-in piece for this instrument yet \u2014 open one from the Song Book.",
+  "highwayNoPieces": "No built-in piece for this instrument yet — open one from the Song Book.",
   "highwayMode": "Mode",
   "highwayModeWatch": "Watch",
   "highwayModePlay": "Play",
@@ -3444,50 +3792,68 @@
   "highwayHandsSecond": "Second part only",
   "highwayTempo": "Tempo",
   "highwayShowStrip": "Reading strip",
-  "highwayShowStripTab": "Tab above the highway \u2014 strings and fret numbers",
+  "highwayShowStripTab": "Tab above the highway — strings and fret numbers",
   "highwayShowStripNames": "Note names above the highway",
   "highwayBacking": "Backing track",
   "highwayBackingHint": "The piece plays along. Your taps are graded silently.",
   "highwayBackingWaits": "Not available while the highway waits for you.",
-  "highwayCountIn": "Get ready\u2026",
-  "highwayWaiting": "Waiting for you\u2026",
+  "highwayCountIn": "Get ready…",
+  "highwayWaiting": "Waiting for you…",
   "highwayHits": "Hit",
   "highwayStreak": "Streak",
   "projectAddTrack": "Add to project",
   "projectAdded": "Added to the project",
   "highwayLoop": "Practise a section",
   "highwayLoopWhole": "Whole piece",
-  "highwayLoopBars": "Bars {from}\u2013{to}",
-  "@highwayLoopBars": {"placeholders": {"from": {"type": "int"}, "to": {"type": "int"}}},
-  "highwayLoopHint": "The section repeats until you stop it. Practice isn\u2019t scored \u2014 eight bars twenty times isn\u2019t the piece.",
+  "highwayLoopBars": "Bars {from}–{to}",
+  "@highwayLoopBars": {
+    "placeholders": {
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      }
+    }
+  },
+  "highwayLoopHint": "The section repeats until you stop it. Practice isn’t scored — eight bars twenty times isn’t the piece.",
   "highwayInstrumentDrums": "Drums",
   "gameBeatHighway": "Beat Highway",
-  "gameBeatHighwaySubtitle": "Hits fall onto the kit \u2014 play the groove",
+  "gameBeatHighwaySubtitle": "Hits fall onto the kit — play the groove",
   "highwayInput": "How you play",
   "highwayInputTouch": "Tap the keys",
   "highwayInputMic": "Your instrument",
-  "highwayInputMicHint": "Play your real instrument \u2014 the app listens. It hears one note at a time, so a chord counts for the note it catches.",
+  "highwayInputMicHint": "Play your real instrument — the app listens. It hears one note at a time, so a chord counts for the note it catches.",
   "workshopPartFx": "Effects",
   "workshopPartFxHint": "Effects for this part only — a muted trumpet next to a clean piano. Saved with the part, so they travel with the score.",
   "primerHighwayTitle": "How the Note Highway works",
-  "primerHighwayFall": "The blocks fall onto the instrument at the bottom. A block lands on exactly the key, string or pad you have to play \u2014 that is the whole instruction.",
+  "primerHighwayFall": "The blocks fall onto the instrument at the bottom. A block lands on exactly the key, string or pad you have to play — that is the whole instruction.",
   "primerHighwayHit": "Play it when it reaches the bright line. A little early or late still counts; the higher difficulties just ask you to be closer.",
-  "primerHighwayWait": "On the easiest setting the music WAITS for you. Take as long as you like to find the note \u2014 the piece only moves when you play it.",
+  "primerHighwayWait": "On the easiest setting the music WAITS for you. Take as long as you like to find the note — the piece only moves when you play it.",
   "primerHighwayHands": "In a two-hand piece each hand has its own colour. You can take on one hand and let the other play itself.",
   "primerHighwayStrip": "The strip above shows the same music as notation or tab. Watch the blocks; glance at the strip; one day you will read the strip instead.",
   "primerBeatHighwayTitle": "How the Beat Highway works",
-  "primerBeatHighwayLanes": "One lane per drum: kick, snare, tom, hat, crash \u2014 left to right. The pad at the bottom lights up in the same colour as the hits falling toward it.",
-  "primerBeatHighwayKeys": "You can tap the pads, or use the number keys 1 to 5 \u2014 the number is written on each pad.",
+  "primerBeatHighwayLanes": "One lane per drum: kick, snare, tom, hat, crash — left to right. The pad at the bottom lights up in the same colour as the hits falling toward it.",
+  "primerBeatHighwayKeys": "You can tap the pads, or use the number keys 1 to 5 — the number is written on each pad.",
   "primerBeatHighwayLadder": "Start at the top of the list: kick and snare only, slowly. Hats do not appear until you have those two, and you can slow any groove down further.",
   "trackerPads": "Pads",
   "trackerPadsHint": "Play notes with your fingers. While live record is on they land at the playhead — a chord spreads across the next channels.",
   "highwayPractiseThese": "Worth practising",
-  "highwayMissedTimes": "{name} ({count}\u00d7)",
-  "@highwayMissedTimes": {"placeholders": {"name": {"type": "String"}, "count": {"type": "int"}}},
+  "highwayMissedTimes": "{name} ({count}×)",
+  "@highwayMissedTimes": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "highwayNothingMissed": "You did not miss a single one.",
   "highwayInputReview": "Record and review",
-  "highwayInputReviewHint": "Play the whole piece on your instrument. Nothing is graded while you play \u2014 the recording is listened to afterwards, so chords count too.",
-  "highwayReviewListening": "Listening to your take\u2026",
+  "highwayInputReviewHint": "Play the whole piece on your instrument. Nothing is graded while you play — the recording is listened to afterwards, so chords count too.",
+  "highwayReviewListening": "Listening to your take…",
   "trackerDropLossyTitle": "This drop loses something",
   "trackerDropAnyway": "Drop anyway"
 }

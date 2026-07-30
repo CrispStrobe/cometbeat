@@ -3715,6 +3715,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get librarySearchHint => 'Nach Titel oder Komponist suchen';
 
   @override
+  String get libraryLoadMore => 'Mehr laden';
+
+  @override
   String get libraryImport => 'Importieren';
 
   @override

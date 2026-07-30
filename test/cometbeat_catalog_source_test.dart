@@ -211,6 +211,7 @@ void main() {
   });
 
   group('gzip + cross-launch persistence', _gzMain);
+  group('filters + pagination', _pageMain);
 }
 
 // ── gzip + persistence (2026-07-30) ─────────────────────────────────────────
@@ -393,4 +394,182 @@ void _gzMain() {
     );
     expect((await src.browse()).single.title, 'FluidR3 GM');
   });
+}
+
+// ── filters + pagination (2026-07-30) ───────────────────────────────────────
+// browse() was a substring match over title+composer with a hard limit of 60 and
+// no paging, so a query matching thousands looked like a query matching sixty.
+// browsePage adds facet filters, an EXACT total where the source can count, and
+// "is there more" — the last of which is knowable even when a total is not.
+
+const _bigShard = '{"version":"t","baseUrl":"https://h/","kind":"score",'
+    '"items":[';
+
+String _mkShard(int n) {
+  final b = StringBuffer(_bigShard);
+  for (var i = 0; i < n; i++) {
+    if (i > 0) b.write(',');
+    b.write('{"id":"s$i","name":"Song $i","kind":"score",'
+        '"format":"${i.isEven ? 'mxl' : 'abc'}",'
+        '"license":"${i % 3 == 0 ? 'CC0 1.0' : 'CC BY 4.0'}",'
+        '"path":"p/$i.x"}');
+  }
+  b.write(']}');
+  return b.toString();
+}
+
+void _pageMain() {
+  const indexUrl = 'https://h/catalog/index.json';
+  const idx = '{"version":"t","baseUrl":"https://h/","count":150,"shards":['
+      '{"kind":"score","count":150,"url":"catalog/score.json"}'
+      '],"full":"catalog.json"}';
+
+  final wire = {indexUrl: idx, 'https://h/catalog/score.json': _mkShard(150)};
+  CometbeatCatalogSource make() => CometbeatCatalogSource(
+        _fakeHttp(wire),
+        kinds: const {'score'},
+        indexUrl: indexUrl,
+        cache: _MemCache(),
+      );
+
+  test('reports an EXACT total and pages through it', () async {
+    final src = make();
+    final p1 = await src.browsePage();
+    expect(p1.items, hasLength(60));
+    // this source holds everything, so it can count exactly
+    expect(p1.total, 150);
+    expect(p1.hasMore, isTrue);
+
+    final p3 = await src.browsePage(offset: 120);
+    expect(p3.items, hasLength(30));
+    expect(p3.hasMore, isFalse, reason: 'last page');
+  });
+
+  test('a format filter narrows the total, not just the page', () async {
+    final page = await make().browsePage(
+      filter: const LibraryFilter(formats: {'abc'}),
+      limit: 10,
+    );
+    expect(page.total, 75); // the odd-indexed half
+    expect(page.items.every((i) => i.format == 'abc'), isTrue);
+  });
+
+  test('a licence filter matches by substring, not exact string', () async {
+    // real licence strings are prose: "CC0 1.0", "CC BY 4.0"
+    final page = await make().browsePage(
+      filter: const LibraryFilter(licences: {'cc0'}),
+      limit: 5,
+    );
+    expect(page.total, 50); // every third
+    expect(page.items.every((i) => i.declaredLicense.contains('CC0')), isTrue);
+  });
+
+  test('filters compose with the text query', () async {
+    final page = await make().browsePage(
+      query: 'Song 1',
+      filter: const LibraryFilter(formats: {'mxl'}),
+      limit: 100,
+    );
+    // "Song 1", "Song 1x", "Song 1xx" … all contain the query; only even ones
+    // are mxl, and the intersection must be non-empty and consistent.
+    expect(page.total, greaterThan(0));
+    expect(
+      page.items.every((i) => i.title.contains('Song 1') && i.format == 'mxl'),
+      isTrue,
+    );
+  });
+
+  test('facets offer only values that are present', () async {
+    final f = await make().facets();
+    expect(f['format'], containsAll(<String>['mxl', 'abc']));
+    expect(f['kind'], contains('score'));
+  });
+
+  test('the source facet uses the CORPUS source, not the connector name',
+      () async {
+    // sourceName is "CometBeat Library" for every row, so filtering on it
+    // narrows nothing; provenance has to come from the catalog's `source`.
+    const idx2 = '{"version":"t","baseUrl":"https://h/","count":2,"shards":['
+        '{"kind":"score","count":2,"url":"catalog/score.json"}]}';
+    const shard2 = '{"version":"t","baseUrl":"https://h/","kind":"score",'
+        '"items":['
+        '{"id":"g","name":"Kyrie","kind":"score","format":"gabc",'
+        '"license":"CC0 1.0","source":"GregoBase","path":"a.gabc"},'
+        '{"id":"c","name":"Motet","kind":"score","format":"mxl",'
+        '"license":"CC0 1.0","source":"CPDL","path":"b.mxl"}]}';
+    final src = CometbeatCatalogSource(
+      _fakeHttp({indexUrl: idx2, 'https://h/catalog/score.json': shard2}),
+      kinds: const {'score'},
+      indexUrl: indexUrl,
+      cache: _MemCache(),
+    );
+    final facets = await src.facets();
+    expect(facets['source'], containsAll(<String>['GregoBase', 'CPDL']));
+    final only = await src.browsePage(
+      filter: const LibraryFilter(sources: {'CPDL'}),
+    );
+    expect(only.total, 1);
+    expect(only.items.single.title, 'Motet');
+  });
+
+  test('a source that cannot count leaves total null but still pages',
+      () async {
+    // The default browsePage over a plain browse(): no total, but hasMore works.
+    final src = _CountlessSource(150);
+    final p1 = await src.browsePage();
+    expect(p1.items, hasLength(60));
+    expect(p1.total, isNull, reason: 'never invent a total');
+    expect(p1.hasMore, isTrue);
+    final p3 = await src.browsePage(offset: 120);
+    expect(p3.items, hasLength(30));
+    expect(p3.hasMore, isFalse);
+  });
+}
+
+/// A source with no idea how many rows it has — exercises the shared default.
+class _CountlessSource implements ContentSource {
+  _CountlessSource(this.n);
+  final int n;
+
+  @override
+  Future<LibraryPage> browsePage({
+    String query = '',
+    LibraryFilter filter = const LibraryFilter(),
+    int limit = 60,
+    int offset = 0,
+  }) =>
+      browsePageByFiltering(
+        this,
+        query: query,
+        filter: filter,
+        limit: limit,
+        offset: offset,
+      );
+
+  @override
+  Future<List<LibraryItem>> browse({String query = '', int limit = 60}) async =>
+      [
+        for (var i = 0; i < n && i < limit; i++)
+          LibraryItem(
+            sourceId: 'x',
+            sourceName: 'X',
+            id: '$i',
+            title: 'T$i',
+            composer: '',
+            declaredLicense: 'CC0',
+            downloadUrl: Uri.parse('https://h/$i'),
+            format: 'abc',
+          ),
+      ];
+
+  @override
+  Future<Uint8List> fetch(LibraryItem item) async => Uint8List(0);
+  @override
+  String get id => 'x';
+  @override
+  String get name => 'X';
+  @override
+  String get homepage => 'https://h';
+  @override
+  String get licenseSummary => 'CC0';
 }

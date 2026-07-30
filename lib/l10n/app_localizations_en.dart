@@ -3701,6 +3701,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get librarySearchHint => 'Search by title or composer';
 
   @override
+  String get libraryLoadMore => 'Load more';
+
+  @override
   String get libraryImport => 'Import';
 
   @override

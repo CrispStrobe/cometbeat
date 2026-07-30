@@ -64,8 +64,9 @@ class CometbeatCatalogSource implements ContentSource {
   factory CometbeatCatalogSource.modules(HttpGet http) =>
       CometbeatCatalogSource(http, kinds: const {'module'});
 
-  /// Every catalog kind — the capable browser filters client-side by kind
-  /// chip. This includes playable assets, tracker modules, and scores.
+  /// Every catalog kind. The browser filters client-side by facet chip (kind /
+  /// format / corpus source) — those chips exist as of 2026-07-30; this comment
+  /// previously claimed them while `library_browser_screen.dart` had none.
   factory CometbeatCatalogSource.all(HttpGet http) => CometbeatCatalogSource(
         http,
         kinds: const {'soundfont', 'instrument', 'sample', 'module', 'score'},
@@ -208,6 +209,7 @@ class CometbeatCatalogSource implements ContentSource {
             downloadUrl: _assetUrl(baseUrl, path),
             format: (raw['format'] as String?) ?? '',
             music: MusicInfo.fromJson(raw['music']),
+            corpusSource: raw['source'] as String?,
           ),
         );
       }
@@ -217,18 +219,74 @@ class CometbeatCatalogSource implements ContentSource {
   }
 
   @override
-  Future<List<LibraryItem>> browse({String query = '', int limit = 60}) async {
+
+  /// Exact filtering and an exact total — this source already holds every item
+  /// for the requested kinds in memory, so counting costs nothing and the UI can
+  /// honestly say "448 matches" instead of "60 shown, who knows".
+  @override
+  Future<LibraryPage> browsePage({
+    String query = '',
+    LibraryFilter filter = const LibraryFilter(),
+    int limit = 60,
+    int offset = 0,
+  }) async {
+    final matched = _match(await _load(), query, filter);
+    return LibraryPage(
+      items: matched.skip(offset).take(limit).toList(),
+      total: matched.length,
+      hasMore: matched.length > offset + limit,
+    );
+  }
+
+  /// The facet values actually present, for building filter chips that can never
+  /// offer a choice yielding zero results.
+  Future<Map<String, List<String>>> facets() async {
     final all = await _load();
+    Map<String, int> tally(String Function(LibraryItem) f) {
+      final c = <String, int>{};
+      for (final i in all) {
+        final k = f(i);
+        if (k.isNotEmpty) c[k] = (c[k] ?? 0) + 1;
+      }
+      return c;
+    }
+
+    List<String> ranked(Map<String, int> c, int top) =>
+        (c.entries.toList()..sort((a, b) => b.value.compareTo(a.value)))
+            .take(top)
+            .map((e) => e.key)
+            .toList();
+
+    return {
+      'kind': ranked(tally((i) => i.collection), 8),
+      'format': ranked(tally((i) => i.format), 12),
+      'source': ranked(tally((i) => i.corpusSource ?? ''), 20),
+    };
+  }
+
+  List<LibraryItem> _match(
+    List<LibraryItem> all,
+    String query,
+    LibraryFilter filter,
+  ) {
     final q = query.trim().toLowerCase();
-    final matched = q.isEmpty
-        ? all
-        : [
-            for (final i in all)
-              if (i.title.toLowerCase().contains(q) ||
-                  i.composer.toLowerCase().contains(q))
-                i,
-          ];
-    return matched.take(limit).toList();
+    return [
+      for (final i in all)
+        if ((q.isEmpty ||
+                i.title.toLowerCase().contains(q) ||
+                i.composer.toLowerCase().contains(q)) &&
+            (filter.isEmpty || filter.matches(i)))
+          i,
+    ];
+  }
+
+  @override
+  Future<List<LibraryItem>> browse({String query = '', int limit = 60}) async {
+    // One matcher for both entry points, so a filter can never disagree with a
+    // plain search about what "matches".
+    return _match(await _load(), query, const LibraryFilter())
+        .take(limit)
+        .toList();
   }
 
   @override

@@ -6872,6 +6872,12 @@ abstract class AppLocalizations {
   /// **'Search by title or composer'**
   String get librarySearchHint;
 
+  /// Button that fetches the next page of library search results
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get libraryLoadMore;
+
   /// No description provided for @libraryImport.
   ///
   /// In en, this message translates to:
