@@ -299,7 +299,21 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — `BB-X1` first increment: derive chord
+- **opus (backing-band)** · 🔀 **DONE (idle) — `BB-X1` REDIRECTED by measurement:
+  most of the corpus already CONTAINS its chords.** The deriver works but names
+  only 18.5% of bars, because the material is **monophonic folk melody** — zero
+  simultaneous notes, so there is no sonority to identify; that is harmonisation,
+  not recognition. **But ~500 corpus files carry chord symbols already**:
+  Ebersberger 238/238 (`\chordmode`), Dreysser 168/168 (ABC gchords), plus
+  commons-wp 29, Mutopia 18, Dahlhoff 37, Arendsee 7. ⇒ **Read them, don't infer
+  them** — exact data instead of a 66%-accurate guess. 🔴 Blocker: our own
+  `scoreFromLilyPond` makes `\chordmode` a block-consuming wrapper and skips it.
+  Next card: surface chord symbols into `Score.chordSymbols` (the type exists and
+  round-trips through MusicXML `<harmony>` already). Bonus: those 238 melodies
+  are ready-made ground truth for the later harmoniser. Full write-up: root
+  `PLAN.md` → `BB-X1 REDIRECTED`. **No `db.json` written**, per the publish gate.
+
+- **opus (backing-band)** · ✅ **(superseded claim) — was: `BB-X1` first increment: derive chord
   charts from a SAMPLE of the corpus with the now-validated primitive.**
   - **Deliberately bounded.** Build the score→chart deriver, run it over a few
     hundred corpus files across sources, and report yield + a sanity check

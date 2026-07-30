@@ -3338,6 +3338,51 @@ failed:**
     `analysis_test.dart`, which CI enforces (`--set-exit-if-changed` on
     `packages/*/test`).
 
+- 🔀 **BB-X1 REDIRECTED — most of the corpus already CONTAINS its chords. Read
+  them, do not infer them.** Measured 2026-07-30 (crisp_notation `25bb6e1`,
+  `tool/derive_chart.dart`, 180 files across 3 sources).
+
+  **The deriver works; the corpus is not what the card assumed.** Over the sample
+  it names only **18.5% of bars**, and the cause is a property of the material:
+  these are **monophonic folk melodies**. A sampled file has **zero**
+  simultaneous-note constructs, so there is never a sonority to identify. Exact
+  chord identification is the wrong tool for a single line — inferring harmony
+  *under* a melody is a different task, closer to harmonisation than recognition.
+  Per-file coverage: 162 of 180 files below 50% named.
+
+  **But the chords are already there.** Counted across the corpus:
+
+  | source | files carrying their own chord symbols |
+  |---|---|
+  | Ebersberger `.ly` | **238 of 238** (`\chordmode`) |
+  | Dreysser `.abc` | **168 of 168** (gchords) |
+  | commons-wp `.ly` | 29 of 127 |
+  | Mutopia `.ly` | 18 of 442 |
+  | Dahlhoff `.abc` | 37 of 672 |
+  | Arendsee `.abc` | 7 of 68 |
+
+  ⇒ **~500 files where a chart is exact data to READ, not harmony to approximate.**
+  That is a completely different quality of result from a 66%-accurate inference,
+  and it is available today.
+
+  - 🔴 **The blocker is that our own reader throws this away.** `scoreFromLilyPond`
+    makes `\chordmode` a **block-consuming wrapper** — deliberately, to stop
+    chord-track notes being counted as melody (the fix recorded in `CLAUDE.md`
+    for the "chord track + melody + lyrics" sheet layout). It skips exactly the
+    data a chart wants. Same question for ABC gchords.
+  - **Next card, and it is now the highest-value one in `BB-X1`:** surface chord
+    symbols from `\chordmode` and from ABC gchords as `Score.chordSymbols`
+    (the type already exists and already round-trips through MusicXML
+    `<harmony>`). Exact, no inference, no confidence gate needed.
+  - **Harmonisation-from-melody remains the harder, later job** for the files with
+    no chord track — Dahlhoff's dances, most of Mutopia. The right shape there is
+    a best-fit diatonic triad per bar scored against the bar's duration-weighted
+    content, which is how a human harmonises a folk tune; it is inference and
+    will need the confidence gate the deriver already reports.
+  - 📌 **And these chord tracks are ready-made GROUND TRUTH** for that harmoniser
+    — 238 melodies with their own chords is exactly the evaluation set it needs,
+    with no annotation work.
+
 - 📊 **BB-H9 — SYMBOLIC notes → chords: what we have and how good it is.
   Measured 2026-07-30, `tool/symbolic_chord_eval.dart`.** Same GuitarSet takes,
   same segments, same duration-weighted metric as the audio evaluations, but fed
