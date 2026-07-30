@@ -204,9 +204,47 @@ class _LibraryBrowserScreenState extends State<LibraryBrowserScreen> {
           if (item.composer.isNotEmpty) item.composer,
           item.declaredLicense,
         ].join(' · ');
+        // Key/metre/range answer "could we actually play this?" before the
+        // download, which is the whole point of indexing them in the catalog.
+        final music = item.music;
+        final musical = music == null
+            ? null
+            : [
+                if (music.key != null) music.key!,
+                if (music.meter != null) music.meter!,
+                if (music.ambitusLabel != null) music.ambitusLabel!,
+                if (music.bars != null) '${music.bars} bars',
+              ].join(' · ');
         return ListTile(
+          isThreeLine: musical != null && musical.isNotEmpty,
           title: Text(item.title),
-          subtitle: Text(subtitle),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(subtitle),
+              if (musical != null && musical.isNotEmpty)
+                Row(
+                  children: [
+                    if (music!.fitsOneOctave) ...[
+                      Icon(
+                        Icons.straighten,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Expanded(
+                      child: Text(
+                        musical,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
           trailing: IconButton(
             icon: const Icon(Icons.download),
             tooltip: l10n.libraryImport,

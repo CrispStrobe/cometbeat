@@ -142,6 +142,7 @@ class CometbeatCatalogSource implements ContentSource {
             sourceUrl: raw['sourceUrl'] as String?,
             downloadUrl: _assetUrl(baseUrl, path),
             format: (raw['format'] as String?) ?? '',
+            music: MusicInfo.fromJson(raw['music']),
           ),
         );
       }
