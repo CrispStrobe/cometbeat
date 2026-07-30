@@ -161,6 +161,8 @@ void main() {
       'lib/features/games/composition/tracker_screen.dart':
           'tracker-fx-presets',
       'lib/features/games/composition/daw_screen.dart': 'daw-fx-presets',
+      'lib/features/games/composition/loop_mixer_screen.dart':
+          'loop-fx-presets',
     };
 
     for (final entry in hosts.entries) {
@@ -175,14 +177,5 @@ void main() {
         expect(source, contains(entry.value), reason: 'and it is keyed');
       });
     }
-
-    test('Loop Studio is deliberately NOT a host yet', () {
-      // Its file belongs to another lane and was not mine to edit. Recorded as a
-      // test so the omission is a decision rather than something forgotten.
-      final source = File(
-        'lib/features/games/composition/loop_mixer_screen.dart',
-      ).readAsStringSync();
-      expect(source, isNot(contains('showFxPresetSheet')));
-    });
   });
 }

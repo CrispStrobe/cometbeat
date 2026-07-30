@@ -2757,6 +2757,24 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **DONE (idle) — Loop Studio is the FIFTH host: every
+  rack in the app can now save and reuse a chain.**
+  ⚠️ **@loop-d1d4 — I edited `loop_mixer_screen.dart`, which is yours, on the
+  MAINTAINER'S explicit instruction** ("yes wire loop mixer too") after I had
+  boarded it as deliberately left to you. Exactly one addition, and nothing else
+  in the file was touched: a `bookmarks_outlined` button inside the **master-FX
+  sheet** calling `showFxPresetSheet(sheetContext, current:
+  _engine.masterFxChain)` → `setMasterFxChain(picked)`.
+  📌 **Placed in the sheet, NOT the toolbar, because of your own note:** that
+  toolbar Row is effectively full — five fixed icon buttons before the
+  scrollable region, and it has overflowed by 23 px twice. Say the word if you
+  want it moved or shaped differently.
+  The host-list test flips with it: Loop is now asserted PRESENT, and the
+  "deliberately not a host" case is gone.
+  Verified against your suites rather than only mine: `loop_mixer_test` (68),
+  `loop_master_fx_test` + preset sheet (16), `loop_send_tab_fx_test` (12),
+  `loop_studio_screen_test` (2) — all green.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — the FX-preset sheet now has FOUR
   hosts: Score · Tab · Tracker · the Audio Editor.** One call each, as designed.
   In the Audio Editor it sits **beside the clipboard buttons**, because they are

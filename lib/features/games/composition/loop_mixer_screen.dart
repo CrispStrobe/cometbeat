@@ -102,6 +102,7 @@ import 'package:comet_beat/shared/tutorial/primers.dart' show loopMixerPrimer;
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart'
     show showTutorial;
 import 'package:comet_beat/shared/undo/undo_history_sheet.dart';
+import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/step_grid.dart';
 import 'package:crisp_notation/crisp_notation.dart'
@@ -3623,6 +3624,26 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
+                  // WS-W6 — saved chains, the fifth and last host of the shared
+                  // sheet. Inside the master-FX sheet, NOT the toolbar: this
+                  // screen's toolbar Row is full and has overflowed twice.
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: const ValueKey('loop-fx-presets'),
+                      icon: const Icon(Icons.bookmarks_outlined, size: 18),
+                      label: Text(l10n.fxPresetsTitle),
+                      onPressed: () async {
+                        final picked = await showFxPresetSheet(
+                          sheetContext,
+                          current: _engine.masterFxChain,
+                        );
+                        if (picked == null) return;
+                        setMasterFxChain(picked);
+                        setSheetState(() {});
+                      },
+                    ),
+                  ),
                   ConstrainedBox(
                     constraints: BoxConstraints(
                       maxHeight: MediaQuery.of(sheetContext).size.height * 0.5,

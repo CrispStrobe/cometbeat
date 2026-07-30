@@ -1615,7 +1615,9 @@ prefix.
   - ✅ **FX PRESETS tab — shipped 2026-07-30** (opus, daw-suite), unblocked by
     WS-X2 completing. `core/services/fx_preset_store.dart` (the `ProjectStore`
     shape; stores chain STRINGS) + `shared/widgets/fx_preset_sheet.dart` (the
-    `keymap_sheet` pattern), hosted by Score's part-FX sheet and the Tab rig.
+    `keymap_sheet` pattern), hosted by ALL FIVE racks — Score's part-FX sheet, the Tab rig, the Tracker
+    channel sheet, the Audio Editor (beside its chain clipboard buttons) and
+    Loop Studio's master-FX sheet.
     **The gap was real: five surfaces host a rack and none could keep a chain.**
     ⚠️ A chain string cannot carry per-param automation, so the sheet says so
     before saving an automated chain — and stays quiet for a plain one. 18 tests.
