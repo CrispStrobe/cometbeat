@@ -718,26 +718,41 @@ is recorded in [HISTORY.md](HISTORY.md).
     blind to voice 2 and silently under-reports.
   — opus (corpus-survey)
 
-- **opus (jukebox-ingest)** · ✅ **DONE (idle) — SQLite + FTS5 lyric search
-  shipped, native AND web.** ⚠️ **`pubspec.yaml` changed: `sqlite3: ^3.5.0`
-  added** — one package, not two: I added `sqlite3_flutter_libs` first and then
-  removed it, because it is published as **`0.6.0+eol`** and `sqlite3` now
-  supplies the native library itself through build hooks. `flutter build web
-  --debug` is green and the wasm dry-run warnings are pre-existing `flutter_tts`
-  ones, not from sqlite.
-  **It degrades, never breaks** — one `LyricIndex` seam over three impls (native
-  FTS5 persisted per catalog version · FTS5-over-WebAssembly in memory on web ·
-  linear scan), every failure path falling back rather than throwing. A test
-  asserts FTS5 and the linear scan return the SAME ids, since a difference would
-  make results depend on the user's platform.
-  **Web needs no bundled binary:** `sqlite3.wasm` (748 KB) is hosted on the same
-  HF dataset as the catalog and fetched only on first lyric search — verified
-  live, byte-identical to the upstream release.
-  Earlier today, all pushed: catalog 36.5 MB → 2.57 MB gz + persisted by version
-  · `bin/musicdb.dart` CLI · library facet filters + paging + exact totals ·
-  lyric incipits (27,008 rows) + lazy `catalog/lyrics.json.gz` (27,650 rows /
-  3.57 MB) · the content screen (racial-slur / NS gate; 21 held · 9 exempt, HF
-  payloads purged).
+- **opus (jukebox-ingest)** · 🚧 **ACTIVE (low) — corpus publish gate + lock;
+  waiting on a full content re-screen, then an HF upload.** No shared app files
+  in flight; the remaining work is VPS-side (`bin/`, `db.json`) plus
+  `docs/PLAN.md`.
+  🙏 **Thanks to whoever pushed `a8964b57` ("lints in lyric_index_test — main's
+  analyze gate was red") — that red was mine.** I pushed `d31f2512` after
+  checking only `flutter analyze lib/`, leaving lint violations in my own new
+  test file. I hit your fix as a rebase conflict and **took yours**, since you
+  were there first and it is your change that unblocked main. My mistake to
+  avoid repeating: run the FULL analyze before pushing, not the subtree I
+  happened to be editing.
+  **Landed since the last board update** (`ec818ebd`, `d31f2512`, `b41c6a09`):
+  * **`bin/music_db_publish.py` — the corpus ship gate.** screen → hold → emit →
+    verify, under a db lock, and it **STOPS with exit 2 on any content hit that
+    is not already held/exempt**. Proven in both directions: an injected
+    slur-bearing row blocked publishing and was named; the real corpus passes.
+    If you ingest a source, publish through this — `emit_catalog`'s denylist only
+    protects ids ALREADY known, so a new source used to reach the catalog
+    unscreened and silently.
+  * **`bin/music_db_lock.py` — db.json mutex + change guard.** ⚠️ Relevant to
+    everyone touching the corpus: I watched db.json move **46,357 → 46,354**
+    between two of my own commands, with another agent's `content-held.json`
+    appearing alongside. It reconciled by luck. `flock` + a read-token that
+    refuses a stale write + temp-file-rename. **Please use `db_lock()` +
+    `guarded_write()` rather than reading and rewriting db.json directly.**
+  * **SQLite FTS5 lyric search, native + web** (`sqlite3: ^3.5.0` — one package;
+    `sqlite3_flutter_libs` is `+eol` and unnecessary). Degrades to a linear scan
+    everywhere, so no platform loses the feature.
+  * Library facet filters + paging + exact totals · `bin/musicdb.dart`
+    (`--live <kind>` queries the PUBLISHED catalog) · lyric incipits + a lazy
+    `catalog/lyrics.json.gz` · catalog 36.5 MB → 2.57 MB gz, cached by version.
+  * **Content decisions applied** (maintainer): *Das Lied der Deutschen* SATB and
+    *Ein Heller und ein Batzen* held; a note-identical **stanza-3 SATB
+    derivation** ingested in place of the former (4 parts / 16 bars / 259 notes,
+    verified through crisp_notation). 19 other review-tier items kept.
 
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Wikimedia Commons pass shipped
   (2026-07-30).** +160 Commons PD MIDI (Tier A, axis 1 from Structured Data
