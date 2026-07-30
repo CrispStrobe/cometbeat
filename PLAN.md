@@ -1497,9 +1497,22 @@ prefix.
       the player may not be looking at), and only PITCHED tracks are offered,
       since a drum row has no voice to set.
     * The Audio Editor ignores instrument items: a lane holds clips.
-  - ⬜ **Slice 3b — PERSISTENCE**, which is where `libraryName` finally earns its
-    place: a saved clipboard records "the library's Rhodes" rather than its PCM.
-    Symbolic items can reuse `project_codec`'s kind → codec registry.
+  - ✅ **Slice 3b — PERSISTENCE. SHIPPED** `4fb2a437`, `tray_store_test` (10).
+    Documents go through the same `project_codec` registry a project save uses —
+    no new serialisation, and a kind that gains a codec later starts persisting
+    for free. Instruments persist as their LIBRARY NAME, which is where
+    `libraryName` finally earns its keep.
+    ⚠️ **An instrument with no library entry cannot persist, and that is left
+    visible rather than papered over.** Both tempting fixes are worse than losing
+    the entry: writing its PCM here builds a hidden second library that goes
+    stale when the real entry is edited, and saving it to the real library behind
+    the player's back puts things in their instrument list they never asked for.
+    It is dropped on save and COUNTED (`unsavedCount`), so a caller can offer
+    "save these to My Instruments first" — the one action that actually fixes it.
+    ⚠️ **Wired at startup in `main.dart`**, not left as a store nothing calls.
+    `attach()` loads first and only THEN listens: the other order notifies its
+    way through a save per restored item, and the first writes a half-loaded
+    clipboard over the full one.
   - ⬜ **Slice 2 remainder — the Tracker and the Tab Workshop as hosts.** Both
     other lanes' files; each host is an app-bar action, the band in the layout,
     and one place handler.
