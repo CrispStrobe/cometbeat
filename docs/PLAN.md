@@ -119,6 +119,29 @@ is recorded in [HISTORY.md](HISTORY.md).
     order in CLAUDE.md (format first, analyze LAST) exists precisely because of
     this class: a formatted file can still be a red one. Run `flutter analyze`
     over `test/` too, not just `lib/`.
+  - ⚠️ **WALL-CLOCK FLAKE — read this before writing a widget test against any
+    surface with a playhead.** `tracker_midi_record_test.dart` failed three main
+    runs with `Expected: <2> Actual: <1>` and passed a fourth on identical code.
+    **The Tracker's playhead runs on a REAL `Stopwatch`** (deliberately — it is
+    the clock `TransportService.syncTo` follows), but `tester.pump(duration)`
+    only advances **FAKE** time. So the row a recorded note lands on is a
+    function of how long the widget build actually took in wall-clock, modulo
+    the pattern length: I probed **row 22 with a cold build and row 2 with a warm
+    one on the same machine**, and CI got row 0.
+    - Row 0 is where those tests seeded their reference note, and recording onto
+      an occupied cell **overwrites** it (`copyWith`, deliberate — a jam must not
+      strip an existing volume/effect), so the note count never moved.
+    - **The dangerous half was the test that looked fine.** The count-in test
+      asserts the count is UNCHANGED, which a wrong write to the cursor cell
+      *also* satisfies — it would have kept passing if the count-in had stopped
+      gating anything at all. A flake and a false pass from one root cause.
+    - **The fix that generalises: assert on the PITCH, not on a count.** Scan the
+      grid for the note you played. It says what you mean, it holds whichever row
+      the wall-clock picks, and it still fails when nothing lands (I checked by
+      mutation — an assertion nobody has watched fail is not yet a test).
+    - Same hazard defused in the one-undo test. `pattern_record.dart`'s pure
+      functions remain the right place for row/quantise decisions; the widget
+      test should only be asked whether the two ends are joined up.
 
 - **opus (crossformat-xrt)** · 🚧 **ACTIVE — cross-format round-trips over the
   real corpus.** Branch `feature/crossformat-xrt`; the only mus file I touch is
