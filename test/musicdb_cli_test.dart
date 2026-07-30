@@ -100,7 +100,7 @@ void main() {
       'mxl',
       '--source',
       'cpdl',
-      '--count'
+      '--count',
     ]);
     expect((s.stdout as String).trim(), '1');
   });
