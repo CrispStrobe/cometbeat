@@ -3095,6 +3095,24 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · 🚧 **CLAIMING a gap in MY OWN WS-X2 container rule: a
+  TAB cannot be dropped on the Audio Editor's timeline at all.** Probed it —
+  `canDrop=false`, and the refusal even quotes the bounce message
+  ("Bounce to Audio from the mode's own export"), which is the wrong sentence for
+  the case.
+  **Why:** `acceptsDirectly` is a whitelist of kinds a container holds AS-IS
+  (`{score, tracker, loop}`), and anything else falls through to
+  `convert(kind → audio)`, which is correctly unsupported because a bounce is
+  one-way. So the one mode that cannot put anything on the timeline is Tab — and
+  it is the mode most likely to want to (a riff you tabbed, under a groove).
+  **Fix:** a container should accept any kind that can convert INTO one of the
+  kinds it holds, and say what that costs. Deterministic preference rather than
+  a search: for a tab, `score` keeps the pitches and the voicings while `tracker`
+  quantizes onto a grid, so a documented order beats a cleverer rule nobody can
+  predict.
+  Files: `core/interop/drag_payload.dart` (mine) + its tests; the Audio Editor's
+  target needs no change if the protocol answers correctly.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — record-arm is TWO-WAY on the Tracker,
   and a considered NO on hosting the bar there.**
   * ⚠️ **I fixed an asymmetry I introduced myself in WS-T7:** arming record on
