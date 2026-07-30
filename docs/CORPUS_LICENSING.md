@@ -393,6 +393,40 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 
 ### Covered now — assessed, licence-cleared, in hand
 
+- **Christmas ChordPro — 21 carols, both axes clean (acquired 2026-07-30).**
+  ChordPro sources with inline chords *and* `{define:}` fingerings. **Axis 1: MIT**
+  (© 2020 Cardinote Inc., LICENSE held beside the files). **Axis 2:** every title
+  is a long-PD traditional carol or hymn — the list was checked specifically for
+  the famous in-copyright ones (White Christmas, Rudolph, Winter Wonderland,
+  Have Yourself a Merry Little Christmas, Sleigh Ride) and **none is present.**
+  Verified through our own `parseChordPro`: **21 of 21 yield chords.** Small, but
+  it is exact chord data in a format we already read — no inference, no gate.
+
+- 🔎 **Chord-symbol harvest across the existing corpus (2026-07-30) — ~500 exact
+  charts that were previously discarded at read time.** Not new acquisitions:
+  material we already hold, whose chord symbols the readers threw away.
+  Ebersberger 238 (LilyPond `\chordmode`) · OpenEWLD 103 + PDMX ~34 (MusicXML
+  `<harmony>`, which the reader had always parsed — nobody had looked) ·
+  MuseScore 122 of 132 (`<Harmony>`). Measured per format: `.mscx` (8,445 files)
+  and `.krn` (43,465) carry **no** chord symbols at all, so those routes are dead;
+  ABC gchords amount to **2 files**, not the 168 an earlier bad regex suggested.
+
+### Assessed and NOT taken (annotated-harmony candidates, 2026-07-30)
+
+- **`DCMLab/frescobaldi_fiori_musicali`** — carries exactly the harmonic
+  annotations we lack, and is **CC BY-NC-SA 4.0** per its own README, not the CC0
+  it is sometimes described as. **Non-commercial → excluded**, same tier as the
+  other NC research assets. Worth re-checking whether any DCML corpus is genuinely
+  CC0, because annotations remain the one thing we have none of.
+- **`pathawks/Christmas-Songs`** — ~20 further PD carols in ChordPro, but the repo
+  declares **no licence**. "Public Domain Christmas songs" describes the SONGS,
+  not a grant on the transcriptions. **Held**, pending a grant.
+- **Open Hymnal Project** — PD hymns distributed as ABC. Plausible, but needs both
+  a licence check and a check that the ABC actually carries chord symbols; our own
+  corpus taught us not to assume the second.
+- **A 135,783-song chord/lyric scrape** (Kaggle, from a chord site) — **rejected on
+  both axes**: no licence, and in-copyright modern repertoire underneath.
+
 - **Unified shippable score corpus — 16,800 scores, 8 sources, both axes clean**
   (`music-db/db.json`): PDMX CC0-original 7,471 · NIFC Polish (life+70-filtered)
   6,720 · OpenScore Lieder (composer+poet death-checked) 1,350 · NIFC Chopin 512 ·
