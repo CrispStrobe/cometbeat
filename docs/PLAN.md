@@ -348,6 +348,18 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **ACTIVE — harvest the ~575 `.mxl` charts that
+  ALREADY parse.** The census showed `musicxml_reader` has been turning
+  `<harmony>` into `Score.chordSymbols` all along, so this is validation and
+  wiring, not a library change — and it outranks the LilyPond reader work.
+  - **Plan:** scan the 38,367 corpus `.mxl` for `<harmony>`, run the real reader
+    over the hits, and confirm the symbols arrive intact and per-bar. Then teach
+    `derive_chart.dart` to PREFER a file's own chord symbols and fall back to
+    inference, **labelling which** — a chart that is exact data and one that is a
+    66%-accurate guess must never look alike to a caller.
+  - Files: my own tool in `../crisp_notation-harmony` + VPS scratch. **No shared
+    file, no `db.json` write** (publish gate), long scans detached.
+
 - **opus (backing-band)** · 📊 **Censused chord symbols + tab across ALL corpus
   formats (idle).** 🔴 **The free win was hiding in plain sight: ~575 `.mxl` files
   carry `<harmony>`, and `musicxml_reader` has parsed it into
