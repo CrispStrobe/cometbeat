@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:comet_beat/core/audio/daw_project_codec.dart';
 import 'package:comet_beat/core/audio/tts/onnx_ort_tts_factory.dart';
 import 'package:comet_beat/core/audio/tts/prebaked_narration.dart';
@@ -13,6 +15,7 @@ import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
+import 'package:comet_beat/core/services/tray_store.dart';
 import 'package:comet_beat/core/services/tts_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/core/tray/tray.dart';
@@ -29,6 +32,7 @@ import 'package:crisp_notation/crisp_notation.dart' show Bravura;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,7 +113,17 @@ class CometBeatApp extends StatelessWidget {
         // deliberately Flutter-free so the model tests need no binding, and the
         // panel subscribes to it directly.
         Provider(
-          create: (_) => TrayService(),
+          create: (_) {
+            final tray = TrayService();
+            // WS-X6 slice 3b — restore what was on it, then keep it saved. Fire
+            // and forget: the clipboard filling in a frame later is fine, and
+            // blocking start-up on a preferences read would not be.
+            unawaited(
+              SharedPreferences.getInstance()
+                  .then((prefs) => TrayStore(prefs).attach(tray)),
+            );
+            return tray;
+          },
         ),
         ChangeNotifierProvider(
           create: (context) {
