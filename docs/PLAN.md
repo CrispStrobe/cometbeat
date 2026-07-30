@@ -3137,23 +3137,34 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING a gap in MY OWN WS-X2 container rule: a
-  TAB cannot be dropped on the Audio Editor's timeline at all.** Probed it —
-  `canDrop=false`, and the refusal even quotes the bounce message
-  ("Bounce to Audio from the mode's own export"), which is the wrong sentence for
-  the case.
-  **Why:** `acceptsDirectly` is a whitelist of kinds a container holds AS-IS
-  (`{score, tracker, loop}`), and anything else falls through to
-  `convert(kind → audio)`, which is correctly unsupported because a bounce is
-  one-way. So the one mode that cannot put anything on the timeline is Tab — and
-  it is the mode most likely to want to (a riff you tabbed, under a groove).
-  **Fix:** a container should accept any kind that can convert INTO one of the
-  kinds it holds, and say what that costs. Deterministic preference rather than
-  a search: for a tab, `score` keeps the pitches and the voicings while `tracker`
-  quantizes onto a grid, so a documented order beats a cleverer rule nobody can
-  predict.
-  Files: `core/interop/drag_payload.dart` (mine) + its tests; the Audio Editor's
-  target needs no change if the protocol answers correctly.
+- **opus (daw-suite)** · ✅ **DONE (idle) — a TAB can now be dropped on the Audio
+  Editor's timeline. It could not, and that was a gap in MY OWN container rule.**
+  `acceptsDirectly` listed the kinds the timeline holds AS-IS, so a tab fell
+  through to `convert(tab → audio)` — correctly unsupported, a bounce is one-way
+  — and the refusal even quoted the bounce message. **The one mode that could put
+  nothing on the timeline was the one most likely to want to** (a riff you
+  tabbed, under a groove). A container now also accepts a kind that can CONVERT
+  into one it holds, with the cost reported as usual.
+  * **The order of `acceptsDirectly` is the caller's stated preference**, not a
+    search: for a tab, `score` keeps the pitches and the string voicings where
+    `tracker` would quantize onto a grid. Trying every conversion to compare
+    costs would run several and throw all but one away; a documented order beats
+    a cleverer rule nobody can predict. A test flips the order and asserts the
+    landing changes, so the ordering is a promise rather than a coincidence.
+  * ⚠️ **Fixing the protocol immediately exposed @loop-d1d4's wrinkle in MY
+    target** — `payload.kind` does not determine the document's type. A converted
+    tab arrives as a `MultiPartScore`, so the Audio Editor's **kind-keyed**
+    switch matched nothing and the drop **vanished silently**. It dispatches on
+    the DOCUMENT now. Their note said this would happen to whoever came next; it
+    did, one protocol change later.
+  * ⚠️ **One of my own new tests was wrong and the code was right:** I asserted
+    that audio dropped on the timeline is refused. It is a SAME-KIND drop, so it
+    is held as-is and never consults the bridge — the rule that refuses audio is
+    about converting INTO it. Corrected the test and kept it, because the two are
+    easy to conflate.
+  Tests: `drag_payload_test` 17→23 · new `daw_tab_drop_test` (3), including that
+  the landed clip has real length rather than merely existing; 116 green across
+  the drop suites.
 
 - **opus (daw-suite)** · ✅ **DONE (idle) — record-arm is TWO-WAY on the Tracker,
   and a considered NO on hosting the bar there.**

@@ -16,6 +16,7 @@ import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
     show trackerSongFromMultiPart;
+import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         Clef,
@@ -25,7 +26,8 @@ import 'package:crisp_notation/crisp_notation.dart'
         NoteElement,
         Pitch,
         Score,
-        Step;
+        Step,
+        Tuning;
 import 'package:flutter_test/flutter_test.dart';
 
 const _quarter = NoteDuration.quarter;
@@ -42,6 +44,11 @@ MultiPartScore _score() => MultiPartScore([
         ],
       ),
     ]);
+
+TabDocument _tabDocument() =>
+    TabDocument.blank(Tuning.standardGuitar, initialColumns: 4)
+      ..setFret(0, 0, 3)
+      ..setFret(1, 1, 5);
 
 void main() {
   group('a same-kind drop does not convert at all', () {
@@ -246,6 +253,90 @@ void main() {
       );
       expect(decision.outcome, DropOutcome.exact);
       expect(identical(decision.document, song), isTrue);
+    });
+  });
+
+  group('a container also takes what can BECOME what it holds', () {
+    // The gap that made this necessary: a TAB could not be dropped on the Audio
+    // Editor's timeline at all. The timeline holds score/tracker/loop as-is,
+    // everything else fell through to `convert(kind → audio)` — correctly
+    // unsupported, a bounce is one-way — so the one mode that could put nothing
+    // on the timeline was the one most likely to want to.
+    const holds = {AppMode.score, AppMode.tracker, AppMode.loop};
+
+    test('a tab lands, converted, with the cost reported', () {
+      final decision = dropDecisionFor(
+        MusicDragPayload(kind: AppMode.tab, document: _tabDocument()),
+        AppMode.audio,
+        acceptsDirectly: holds,
+      );
+      expect(decision.canDrop, isTrue);
+      expect(decision.document, isNotNull);
+      expect(
+        decision.outcome,
+        anyOf(DropOutcome.converted, DropOutcome.lossy),
+      );
+      expect(decision.report, isNotNull, reason: 'a conversion ran');
+    });
+
+    test('it converts to the FIRST held kind that works', () {
+      // The order of `acceptsDirectly` is the caller's stated preference —
+      // score keeps a tab's pitches and voicings where tracker would quantize
+      // onto a grid — so the result must be a score, not "whatever matched".
+      final decision = dropDecisionFor(
+        MusicDragPayload(kind: AppMode.tab, document: _tabDocument()),
+        AppMode.audio,
+        acceptsDirectly: holds,
+      );
+      expect(decision.document, isA<MultiPartScore>());
+    });
+
+    test('a different order gives a different landing', () {
+      // Proves the order is honoured rather than a coincidence of the bridge.
+      final decision = dropDecisionFor(
+        MusicDragPayload(kind: AppMode.tab, document: _tabDocument()),
+        AppMode.audio,
+        acceptsDirectly: const {AppMode.tracker, AppMode.score},
+      );
+      expect(decision.document, isNot(isA<MultiPartScore>()));
+    });
+
+    test('⚠️ audio onto the timeline is SAME-KIND, and lands as itself', () {
+      // My first version of this test asserted a refusal, and was wrong: a
+      // bounce dropped back on the timeline is the same kind as the target, so
+      // it is held as-is and never consults the bridge at all. The rule that
+      // refuses audio is about CONVERTING into it, which is a different
+      // question — worth pinning, since the two are easy to conflate.
+      final decision = dropDecisionFor(
+        const MusicDragPayload(kind: AppMode.audio, document: 'pcm'),
+        AppMode.audio,
+        acceptsDirectly: holds,
+      );
+      expect(decision.outcome, DropOutcome.exact);
+      expect(decision.report, isNull, reason: 'nothing ran');
+    });
+
+    test('a container whose held kinds are unreachable refuses', () {
+      // The whitelist is still a whitelist. Audio cannot become a score, so a
+      // container that holds ONLY score has no route in for an audio payload —
+      // and the same-kind shortcut does not apply, because the target here is a
+      // mode this payload is not.
+      final decision = dropDecisionFor(
+        const MusicDragPayload(kind: AppMode.audio, document: 'pcm'),
+        AppMode.tracker,
+        acceptsDirectly: const {AppMode.score},
+      );
+      expect(decision.canDrop, isFalse);
+    });
+
+    test('a pure MODE target is unchanged by this', () {
+      // `acceptsDirectly` is empty for every mode target, so none of the above
+      // can alter what a Tracker or a Score screen answers.
+      final decision = dropDecisionFor(
+        MusicDragPayload(kind: AppMode.tab, document: _tabDocument()),
+        AppMode.audio,
+      );
+      expect(decision.canDrop, isFalse, reason: 'a bounce is still one-way');
     });
   });
 

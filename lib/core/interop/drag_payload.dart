@@ -123,6 +123,41 @@ DropDecision dropDecisionFor(
     );
   }
 
+  // ⚠️ A container should also take what can BECOME something it holds.
+  //
+  // Found by probing the case rather than by reading this file: a TAB could not
+  // be dropped on the Audio Editor's timeline at all. `acceptsDirectly` listed
+  // the kinds the timeline holds as-is (score/tracker/loop), everything else
+  // fell through to `convert(kind → audio)` — correctly unsupported, since a
+  // bounce is one-way — and the refusal even quoted the bounce message, which is
+  // the wrong sentence for the case. So the one mode that could put nothing on
+  // the timeline was the one most likely to want to.
+  //
+  // The order of [acceptsDirectly] is the preference, and it is the CALLER's to
+  // state: for a tab, `score` keeps the pitches and the string voicings while
+  // `tracker` quantizes onto a grid. A documented order beats a cleverer rule
+  // nobody can predict — and beats trying every conversion to compare costs,
+  // which would run several conversions to throw all but one away.
+  if (acceptsDirectly.isNotEmpty) {
+    for (final held in acceptsDirectly) {
+      if (held == payload.kind) continue;
+      final viaResult = ProjectBridge.convert(
+        from: payload.kind,
+        to: held,
+        document: payload.document,
+      );
+      if (viaResult.isUnsupported || viaResult.document == null) continue;
+      return DropDecision(
+        outcome: viaResult.report.lossless
+            ? DropOutcome.converted
+            : DropOutcome.lossy,
+        target: target,
+        document: viaResult.document,
+        report: viaResult.report,
+      );
+    }
+  }
+
   // Same kind: no conversion at all. This is the WS-X1 rule — a bridge round
   // trip on a same-kind drop would introduce loss that the drop did not need,
   // which is exactly the copy-instead-of-link bug in another shape.

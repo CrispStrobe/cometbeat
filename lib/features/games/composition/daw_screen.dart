@@ -166,6 +166,11 @@ abstract interface class DawTester {
   /// no project is provided.
   String? addToProject({String? name});
 
+  /// WS-X2 test seam: drop [payload] on lane [track], skipping the confirmation
+  /// (the dialog is the shape all four targets share). Returns whether a clip
+  /// landed.
+  Future<bool> debugDropOnLane(MusicDragPayload payload, int track);
+
   /// WS-X1 — open a project track LIVE, so edits go back to it rather than to a
   /// copy. False when there is no project, the track is not audio, or it cannot
   /// be read.
@@ -6456,7 +6461,7 @@ class _DawScreenState extends State<DawScreen>
       if (proceed != true || !mounted) return;
     }
 
-    final source = _sourceForDropped(payload.kind, decision.document!);
+    final source = _sourceForDropped(decision.document!);
     if (source == null) return;
     _daw.addClip(source, track: track);
     final index = _daw.timeline.tracks[track].clips.length - 1;
@@ -6464,14 +6469,33 @@ class _DawScreenState extends State<DawScreen>
     _daw.endCoalescedEdit();
   }
 
-  /// The clip a dropped document becomes. Null for a kind the timeline cannot
-  /// hold — which `kTimelineHolds` should already have refused, so this is the
-  /// belt to that braces.
-  ClipSource? _sourceForDropped(AppMode kind, Object document) =>
-      switch (kind) {
-        AppMode.score when document is MultiPartScore => ScoreSource(document),
-        AppMode.tracker when document is TrackerSong => TrackerSource(document),
-        AppMode.loop when document is GrooveSpec => GrooveSource(document),
+  @override
+  Future<bool> debugDropOnLane(MusicDragPayload payload, int track) async {
+    final decision = _dropDecision(payload);
+    final document = decision.document;
+    if (!decision.canDrop || document == null) return false;
+    final source = _sourceForDropped(document);
+    if (source == null) return false;
+    _daw.addClip(source, track: track);
+    return true;
+  }
+
+  /// The clip a dropped document becomes.
+  ///
+  /// ⚠️ Switches on the DOCUMENT's type, not on `payload.kind` — and that is not
+  /// tidiness, it is required. Since a container may accept a kind it does not
+  /// hold by CONVERTING it (a tab arrives as a `MultiPartScore`), the kind
+  /// describes where the document came from, not what it now is. Keying on the
+  /// kind meant a tab dropped here matched nothing and vanished silently: the
+  /// same trap @loop-d1d4 documented for Loop Studio's target, reaching mine as
+  /// soon as the protocol learned to convert into a held kind.
+  ///
+  /// Null for a document the timeline cannot hold — which the protocol should
+  /// already have refused, so this is the belt to that braces.
+  ClipSource? _sourceForDropped(Object document) => switch (document) {
+        final MultiPartScore score => ScoreSource(score),
+        final TrackerSong song => TrackerSource(song),
+        final GrooveSpec spec => GrooveSource(spec),
         _ => null,
       };
 
