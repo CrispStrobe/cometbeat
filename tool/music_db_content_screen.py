@@ -49,6 +49,16 @@ SLUR = {
         r"\bsambo\b", r"\bgypsy\b", r"\bgypsies\b", r"\bsquaw\w*",
         r"\bhalf-?breed\b", r"\bhottentot\w*",
     ],
+    # The corpus is not German and English. 8,181 Polish rows, plus Italian,
+    # French, Dutch and Czech — a two-language list was never going to be an
+    # answer to "is it clean". Cygan/cigány/cikán are the exact cognates of
+    # Zigeuner and belong at the same tier; the classical-repertoire question
+    # they raise is handled by the exemption ledger, not by a weaker pattern.
+    "other": [
+        r"\bcygan\w*", r"\bcyg[aá]n\w*", r"\bcik[aá]n\w*", r"\bcig[aá]ny\w*",
+        r"\bn[eè]gre\w*", r"\bn[eè]gresse\w*", r"\bnegerin\w*",
+        r"\bmoricaud\w*", r"\bnegrillon\w*",
+    ],
 }
 # ⚠️ TWO PATTERNS WERE REMOVED AFTER THE FIRST RUN, and the reason generalises
 # to any short term added later. `\bwog\b` and `\bcoons?\b` produced 7 hits and
@@ -76,6 +86,19 @@ NS = [
     r"\bunsere fahne flattert uns voran", r"\bvorw[äa]rts! vorw[äa]rts!",
     r"\bdenn heute geh[öo]rt uns deutschland",
     r"\berika\b(?=.*niel)", r"\bniel, herms", r"\bherms niel",
+    # A marching song is not identifiable by vocabulary, so the only reliable
+    # handle is WHO WROTE IT. These are the house composers of the NS song
+    # apparatus — Wehrmacht marches, HJ and BDM songbooks. Norbert Schultze is
+    # included knowingly: he also wrote Lili Marleen, which is not NS material,
+    # so anything of his that trips this needs reading before it is held.
+    r"\bhans baumann\b", r"\bheinrich spitta\b", r"\bgeorg blumensaat\b",
+    r"\bnorbert schultze\b", r"\bhans-?otto borgmann\b",
+    r"\bes ist so sch[öo]n soldat zu sein\b", r"\bpanzer rollen in afrika\b",
+    r"\bwir fahren gegen eng[e]?land\b", r"\bdie braune kompanie\b",
+    r"\bhitlerjugend\b", r"\bhitler-?jugend\b", r"\bbund deutscher m[äa]del\b",
+    r"\bblut und boden\b", r"\bheiliges vaterland\b(?=.*193[3-9]|.*194[0-5])",
+    r"\bnun lasst die fahnen fliegen\b", r"\bes pfeift von allen d[äa]chern\b",
+    r"\bvorw[äa]rts, vorw[äa]rts, schmettern die hellen fanfaren\b",
 ]
 # --- context-dependent: LIST ONLY, never auto-hold ----------------------------
 REVIEW = [
@@ -122,6 +145,99 @@ def combined():
             joined(REVIEW))
 
 
+# ⚠️ SYLLABIFICATION CUTS BOTH WAYS, and the second edge is the dangerous one.
+# A vocal score stores lyrics one syllable per note: "dark ey", "Mas sa",
+# "Zi geu ner". Earlier this produced false POSITIVES (a fragment matching a
+# short pattern). It also produces false NEGATIVES, which no amount of
+# reviewing the hit list can reveal — "Carry Me Back to Old Virginny" sailed
+# through a full-corpus scan carrying "this old dark ey's heart" because \b
+# split the word in two.
+#
+# So every body is ALSO searched with whitespace and hyphens removed, against
+# bare substrings (no \b — the anchors are meaningless once words are joined).
+# That over-matches by design; the hits land in a report a human reads, which
+# is the same bargain the review tier makes.
+# --- lyric reconstruction: the single most important part of this file --------
+#
+# A vocal score does not store "darkey"; it stores <text>dark</text> in one
+# <lyric> element and <text>ey's</text> in the NEXT ONE, roughly 200 characters
+# of XML markup apart. So no pattern with a \b anchor — and no amount of
+# whitespace collapsing — can see the word. A full-corpus scan therefore passed
+# "Carry Me Back to Old Virginny" as clean while it carried "this old dark ey's
+# heart", and would have passed anything else spelled across two notes.
+#
+# Reconstructing words is what makes the scan meaningful on vocal music, which
+# is most of this corpus. MusicXML/MuseScore state it exactly via <syllabic>
+# (begin/middle continue a word, end/single close it), so that path is precise.
+# The others mark continuation in the text itself: LilyPond `dark -- ey`, ABC
+# `w:dark-ey`, kern `dark-` in a **text spine.
+_LYRIC_BLOCK = re.compile(
+    r"<(?:lyric|Lyrics)\b([^>]*)>(.*?)</(?:lyric|Lyrics)>", re.S | re.I)
+_VERSE = re.compile(r'(?:number|no)\s*=\s*"?(\d+)', re.I)
+_SYLLABIC = re.compile(r"<syllabic>\s*(\w+)\s*</syllabic>", re.I)
+_TEXTEL = re.compile(r"<text>(.*?)</text>", re.S | re.I)
+_ENT = {"&apos;": "'", "&amp;": "&", "&quot;": '"', "&lt;": "<", "&gt;": ">"}
+
+
+def lyric_words(raw):
+    """The sung text with syllables rejoined into words, or '' if none found."""
+    blocks = _LYRIC_BLOCK.findall(raw)
+    if blocks:
+        # Verses are INTERLEAVED in the file — verse 1 and verse 2 of the same
+        # note sit next to each other — so reconstructing in document order
+        # welds syllables from different verses together ("BeauSounds tiof ful").
+        # Grouping by the verse number keeps each stanza's words intact, which
+        # both reduces garbage and stops a spurious cross-verse join from
+        # inventing a word nobody sang.
+        verses = defaultdict(list)
+        for attrs, b in blocks:
+            v = _VERSE.search(attrs)
+            verses[v.group(1) if v else "1"].append(b)
+        out = []
+        for v in sorted(verses):
+            cur = ""
+            for b in verses[v]:
+                syl = (_SYLLABIC.search(b).group(1).lower()
+                       if _SYLLABIC.search(b) else "single")
+                txt = "".join(_TEXTEL.findall(b))
+                for k, val in _ENT.items():
+                    txt = txt.replace(k, val)
+                txt = txt.strip()
+                if not txt:
+                    continue
+                cur += txt
+                if syl in ("end", "single"):
+                    out.append(cur)
+                    cur = ""
+            if cur:
+                out.append(cur)
+        return " ".join(out)
+    # Non-XML formats mark syllable continuation inline.
+    s = raw
+    s = re.sub(r"\s*--\s*", "", s)             # LilyPond
+    s = re.sub(r"(\w)-\s+(\w)", r"\1\2", s)    # kern "dark-" / ABC "dark- ey"
+    s = re.sub(r"(\w)-(\w)", r"\1\2", s)       # ABC "dark-ey"
+    return s
+
+
+COLLAPSED = [
+    "nigger", "nigga", "darkey", "darky", "darkie", "pickaninn", "sambo",
+    "hottentot", "gypsy", "gypsies", "squaw",
+    "neger", "zigeuner", "mohrenkopf", "kaffern",
+    "cygan", "cikan", "cigany", "negre", "negresse",
+    "horstwessel", "hakenkreuz", "siegheil", "judenblut",
+    "hitlerjugend", "blutundboden", "panzerlied",
+]
+_COLLAPSE_RX = re.compile("|".join(re.escape(t) for t in COLLAPSED), re.I)
+_WS = re.compile(r"[\s­\-]+")
+
+
+def collapsed_hit(hay):
+    """Match against a de-syllabified copy of the text. Returns the term or None."""
+    m = _COLLAPSE_RX.search(_WS.sub("", hay))
+    return m.group(0) if m else None
+
+
 def file_text(path):
     """Best-effort searchable text for any corpus file, or '' if unreadable."""
     ext = os.path.splitext(path)[1].lower()
@@ -151,10 +267,17 @@ def _scan(row):
     p = row[2]
     full = os.path.join(ROOT, p) if p else None
     body = file_text(full) if full and os.path.exists(full) else ""
+    # Three haystacks, in order of precision: the raw file, the reconstructed
+    # sung text (real words, so \b anchors mean something), and a crude
+    # whitespace-collapsed copy as a last wide net. The third over-matches
+    # across word boundaries by design — "Pois ambos nós" reads as `sambo`,
+    # "hath done great" as `negre` — which is why it must reach a human rather
+    # than be applied.
     hay = f"{title}\n{body}"
-    if _HOLD_RX.search(hay):
+    words = lyric_words(body)
+    if _HOLD_RX.search(hay) or _HOLD_RX.search(words):
         return "hold", row[0]
-    if _REVIEW_RX.search(hay):
+    if collapsed_hit(hay) or _REVIEW_RX.search(hay) or _REVIEW_RX.search(words):
         return "review", row[0]
     return None, row[0]
 
@@ -197,9 +320,10 @@ def main():
         full = os.path.join(ROOT, p) if p else None
         body = file_text(full) if full and os.path.exists(full) else ""
         hay = f"{title}\n{body}"
+        words = lyric_words(body)
         pats = (slur + ns) if tier == "hold" else review
         for rx, kind in pats:
-            m = rx.search(hay)
+            m = rx.search(hay) or rx.search(words)
             if m:
                 hits[tier].append({
                     "id": e.get("id"), "title": title, "source": e.get("source"),
@@ -208,6 +332,17 @@ def main():
                     "path": p})
                 stats[f"{tier}/{kind}"] += 1
                 break
+        else:
+            # Flagged only by the crude whitespace-collapsed net. Record it with
+            # that provenance rather than dropping it — a row that trips a
+            # matcher and then vanishes from the report is the worst outcome.
+            c = collapsed_hit(hay)
+            hits["review"].append({
+                "id": e.get("id"), "title": title, "source": e.get("source"),
+                "term": c or "(unattributed)", "kind": "collapsed-net",
+                "where": "whitespace-collapsed text — expect false positives",
+                "path": p})
+            stats["review/collapsed-net"] += 1
 
     json.dump(hits, open(f"{ROOT}/content-screen.json", "w"), indent=1,
               ensure_ascii=False)

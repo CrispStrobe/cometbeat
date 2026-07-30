@@ -1095,6 +1095,26 @@ regardless of licence.** Tooling: `tool/music_db_content_screen.py` →
   fragment that is not a word); German has the ordinary word *wog* (it caught
   Schumann's *Mondnacht*); and latin-1-decoded MIDI bytes can spell any short
   sequence (a 1915 Sousa march matched `WOG`). Both patterns were removed.
+- **⚠️ THE BIG ONE — syllabification also causes false NEGATIVES, and those are
+  invisible.** A vocal score does not store `darkey`; it stores
+  `<text>dark</text>` in one `<lyric>` element and `<text>ey's</text>` in the
+  NEXT one, ~200 characters of XML apart. No `\b`-anchored pattern and no amount
+  of whitespace-collapsing can join them. A full-corpus scan therefore passed
+  *"Carry Me Back to Old Virginny"* as clean while it carried *"this old **dark
+  ey**'s heart"* and *"for old **Mas sa**"* — and vocal music is most of this
+  corpus, so the same hole applied to every pattern, in every language. Found by
+  sweeping **composers** rather than words, which is the only reason it surfaced
+  at all. Fixed by reconstructing words from the lyric stream: MusicXML and
+  MuseScore state continuation exactly via `<syllabic>` (begin/middle continue,
+  end/single close), LilyPond/ABC/kern mark it inline (`dark -- ey`, `w:dark-ey`,
+  `dark-`). ⚠️ Verses are **interleaved** in the file, so reconstruction must
+  group by verse number or it welds stanzas together (`BeauSounds tiof ful`) and
+  can invent a word nobody sang.
+- **A third, crude net exists and must never auto-apply.** Whitespace-collapsed
+  substring matching catches what the other two miss but over-matches across
+  word boundaries: *"Pois **ambos** nós"* reads as `sambo`, *"hath done **gre**at
+  things"* (Billings) as `negre`, *"**Dark Ey**es"* as `darkey`. 3 of its 4 hits
+  were false, so it feeds the review tier only.
 - **A keyword screen cannot see what a work IS**, and that gap is larger than it
   looks. *My Old Kentucky Home* was caught only because `darky` survived into one
   particular printing; *Massa's in the Cold Ground* only via a review-tier term.
