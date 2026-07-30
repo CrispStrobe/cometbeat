@@ -1511,7 +1511,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🛑 **RE-RAISING, because the premise did not change:
+- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-X6` — the CLIPBOARD (maintainer's
+  design, and it resolves the WS-X2 impasse).** A top-bar button drops down a
+  shelf of reusable things — samples from the Audio Editor used as instruments in
+  Loop Studio, a riff or beat from Loop Studio placed in the Audio Editor — with
+  (X) to remove and room for many. Card in root `PLAN.md`.
+  ⭐ **It is the drag SOURCE the protocol never had**, and because it is an
+  overlay inside the current screen it needs no split view and no wide window:
+  the four existing drop targets become reachable on a PHONE, unchanged. That is
+  a better answer than either option I put to the maintainer.
+  **Slice 1 (this claim):** `lib/core/tray/` + a shared panel widget + one host
+  (Loop Studio, mine), drag and tap-to-place both landing through the existing
+  `dropDecisionFor`. **No other lane's file is touched in slice 1.**
+  📌 P2 (the enforcement test + protocol-header note) is deferred by the
+  maintainer to after this — noted so it is not lost.
+  Previously: 🛑 **RE-RAISED, because the premise had not changed:
   WS-X2 NOW HAS FOUR DROP TARGETS AND STILL ZERO DRAG SOURCES.** Measured on
   `origin/main` just now: **`Draggable<MusicDragPayload>` occurs 0 times in
   `lib/`**, and no two music surfaces are ever on screen together (every one is a
