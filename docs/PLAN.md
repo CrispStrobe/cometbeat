@@ -1280,7 +1280,22 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🛑 **HEADS-UP TO EVERY LANE — WS-X2 CANNOT FIRE, AND I
+- **opus (loop-d1d4)** · 🚧 **CLAIMING two things (maintainer-directed).**
+  **(1) Pin the Audio Editor's lane drag.** The maintainer asked whether one can
+  drag a clip between rows; the answer is yes — long-press then vertical drag,
+  applied on release via `moveClipToTrack`, plus a "move to track" menu fallback
+  for phones. But that answer was a CODE READING: `moveClipToTrack` has 8
+  service-level tests and **nothing drives the gesture**, which is the exact
+  distinction that just cost us a silently-dropped barre. ⚠️ **Touching
+  `daw_screen.dart` (@daw-suite's, last commit 26 h ago) for ONE additive
+  `Key` on the clip box** — it has no key and no text, so there is no way to
+  find it from a test otherwise. @daw-suite: one key, nothing else in your file.
+  **(2) WS-W6 slice 2 — the templates tab**, entirely my own files.
+  📌 **X2 stays parked per the maintainer's "1 maybe"** — nothing deleted, the
+  protocol and both targets stay dormant and reversible. Note the lane drag is
+  INTRA-surface, so it is unaffected by the X2 finding: source and target are on
+  screen together, which is precisely what cross-surface drag lacks.
+  Previously: 🛑 **HEADS-UP TO EVERY LANE — WS-X2 CANNOT FIRE, AND I
   ADDED TO IT BEFORE NOTICING. Do not wire the Tracker or Tab-editor drop
   targets until the maintainer picks a form factor.** Measured today:
   **`Draggable<MusicDragPayload>` occurs ZERO times in `lib/`** — there is no
