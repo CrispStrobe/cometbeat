@@ -29,7 +29,9 @@ CompositionWorkshopTester _workshop(WidgetTester tester) =>
 
 MultiPartScore _twoParts() => MultiPartScore([
       Score.simple(
-          timeSignature: TimeSignature.fourFour, notes: 'c4:q d4 e4 f4'),
+        timeSignature: TimeSignature.fourFour,
+        notes: 'c4:q d4 e4 f4',
+      ),
       Score.simple(timeSignature: TimeSignature.fourFour, notes: 'g3:h a3'),
     ]);
 
