@@ -62,6 +62,43 @@ class Row {
       [id, title, source, attribution, licence, path].join(' ').toLowerCase();
 }
 
+/// Fetches a published shard by kind, so the CLI can ask about what is LIVE
+/// without anyone first remembering to download it — the state that actually
+/// matters when the question is "can a user see this?".
+Future<List<int>> _fetch(String url) async {
+  final client = HttpClient();
+  try {
+    var uri = Uri.parse(url);
+    for (var hop = 0; hop < 5; hop++) {
+      final req = await client.getUrl(uri);
+      final res = await req.close();
+      final loc = res.headers.value('location');
+      if (res.statusCode >= 300 && res.statusCode < 400 && loc != null) {
+        // HF serves payloads via a redirect to its CDN.
+        uri = uri.resolve(loc);
+        await res.drain<void>();
+        continue;
+      }
+      if (res.statusCode != 200) {
+        stderr.writeln('HTTP ${res.statusCode} for $uri');
+        exit(2);
+      }
+      final b = <int>[];
+      await for (final c in res) {
+        b.addAll(c);
+      }
+      return b;
+    }
+    stderr.writeln('too many redirects for $url');
+    exit(2);
+  } finally {
+    client.close();
+  }
+}
+
+const _kBase =
+    'https://huggingface.co/datasets/cstr/cometbeat-assets/resolve/main/catalog';
+
 /// Reads a `db.json` list or a catalog shard map, gzipped or not.
 ({List<Row> rows, bool catalog, String note}) load(String path) {
   final f = File(path);
@@ -69,7 +106,14 @@ class Row {
     stderr.writeln('no such file: $path');
     exit(2);
   }
-  var bytes = f.readAsBytesSync();
+  return parse(f.readAsBytesSync(), path);
+}
+
+({List<Row> rows, bool catalog, String note}) parse(
+  List<int> raw,
+  String what,
+) {
+  var bytes = raw;
   if (bytes.length > 2 && bytes[0] == 0x1f && bytes[1] == 0x8b) {
     bytes = const GZipDecoder().decodeBytes(bytes);
   }
@@ -98,7 +142,8 @@ class Row {
       );
     }
   }
-  stderr.writeln('unrecognised shape: expected a db.json list or a shard map');
+  stderr.writeln('unrecognised shape in $what: '
+      'expected a db.json list or a shard map');
   exit(2);
 }
 
@@ -188,6 +233,10 @@ musicdb — query the music corpus.
   musicdb query --db <file> [filters] [--limit N] [--json] [--count]
   musicdb show  --db <file> <id>
 
+  --live <kind>   query the PUBLISHED catalog instead of a local file
+                  (score|instrument|module|sample|soundfont|lyrics)
+                  e.g. musicdb stats --live score
+
 filters:  --source --kind --format --tier --licence --title --year --text
           (all case-insensitive substring matches; --text searches
            id+title+source+attribution+licence+path)
@@ -202,23 +251,26 @@ deliberately-held material and confusing them misreports what users can see.
 // unreadable file, id not found) was therefore exiting 0, which is the worst
 // possible failure for a tool meant to be used in scripts and pipes. Set
 // `exitCode` and let the VM exit normally so stdout is flushed first.
-void main(List<String> args) {
-  exitCode = _run(args);
+Future<void> main(List<String> args) async {
+  exitCode = await _run(args);
 }
 
-int _run(List<String> args) {
+Future<int> _run(List<String> args) async {
   if (args.isEmpty || args.contains('--help') || args.contains('-h')) {
     stdout.write(_usage);
     return args.isEmpty ? 1 : 0;
   }
   final cmd = args.first;
   final flags = parseFlags(args);
+  final live = flags['live'];
   final dbPath = flags['db'];
-  if (dbPath == null) {
-    stderr.writeln('--db is required (a db.json or a catalog shard)');
+  if (live == null && dbPath == null) {
+    stderr.writeln('--db <file> or --live <kind> is required');
     return 2;
   }
-  final loaded = load(dbPath);
+  final loaded = live != null
+      ? parse(await _fetch('$_kBase/$live.json.gz'), 'live $live shard')
+      : load(dbPath!);
 
   switch (cmd) {
     case 'stats':
