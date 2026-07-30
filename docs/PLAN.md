@@ -295,12 +295,19 @@ is recorded in [HISTORY.md](HISTORY.md).
     so one rest before a syllable shifts every id after it and an exact round
     trip reads as ~50% corrupt. Compare by note POSITION. I filed the LilyPond
     lyric round-trip as an open defect on that basis and had to retract it.
-  - 🚧 **Full-corpus pass RUNNING** on the VPS (`/mnt/volume1/xrt/pass2.log`,
-    progress line every 2,000 files). Every readable file in `music-db` through
-    all 6 writer/reader pairs — the matrix below was a 200-per-extension sample.
-    ⚠️ I killed a first attempt one third of the way in: it predated four fixes
-    that change note content, so its failure list would have needed per-file
-    triage anyway. Restart on current code beat triaging a stale one.
+  - ✅ **FULL-CORPUS PASS DONE — 105,673 source files with notes, 45 of 48 cells
+    perfect.** All 239 failures sat in 3 cells and carried exactly the 2
+    signatures fixed AFTER that run started (the MuseScore 128th crash and the
+    self-contradictory multi-rest bar). Verified by re-testing each named
+    exemplar on current code: `id_2-6_Menuett.abc`, `Legrenzi-Op5,13-
+    Magnificat.mxl`, `LamentationForJerusalemFrench1789bpr.mxl` and
+    `QmTgEpow…mxl` now round-trip through ALL SIX formats. A definitive re-run
+    on current code is in flight (`/mnt/volume1/xrt/final2.log`).
+  - ⚠️ **A long sweep goes stale under you.** Two full-corpus runs had to be
+    discarded because fixes landed mid-run; the harness now prints progress every
+    2,000 files so you can tell a hang from work, and the right move is to
+    re-verify the named exemplars on current code rather than triage a stale
+    list file by file.
   - ✅ **PERMUTATION MATRIX CLEAN: 59,136 / 59,136 = 100%, all 84 cells** (the 6
     direct hops + every one of the 36 ordered format pairs, over 1,408 real
     corpus files, judging SOUNDING duration). It started this arc at 34/48 cells
