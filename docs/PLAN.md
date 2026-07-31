@@ -551,9 +551,15 @@ is recorded in [HISTORY.md](HISTORY.md).
        confirmed from a model-built score with no reader in the way. A reminder
        that "the model has a field for it" is not the same as "the formats carry
        it". **MEI now joins them** (`1deac34`, `<hairpin form="cres|dim">`,
-       verified against VEROVIO rather than only our own reader). **MuseScore,
-       ABC and kern still drop hairpins** — three small writer+reader gaps,
-       pinned by a test that says so.
+       verified against VEROVIO rather than only our own reader).
+       ⚠️ **MuseScore joins them too (`9de639c`) and it was the BIGGEST of the
+       lot: 6,807 of 8,445 corpus `.mscx` (81%) carry a `<Spanner
+       type="HairPin">` and we read and wrote none.** Only a REAL file showed
+       the catch: a Slur spanner is a CHILD of `<Chord>`, a HairPin spanner is
+       a SIBLING of it. Reading it from inside the chord — where our own writer
+       puts it — found every hairpin we wrote and none of the corpus's.
+       📌 **Test new codec work against a corpus file, not only your own
+       output.** ABC and kern still drop hairpins.
        ⚠️ **`mei_writer.dart` has TWO control-event emitters** —
        `_measureControls` (multi-part) and an inline copy in `_writeMeasure`
        (single Score). Patching one and not the other is a silent half-fix; it
