@@ -478,6 +478,29 @@ is recorded in [HISTORY.md](HISTORY.md).
     involved "parsed fine" both before and after. A malformed *symbol* was the
     only visible trace of a truncation — the same lesson as `\<` and `\\`.
 
+- **opus (backing-band)** · ✅ **Chord symbols now actually RENDER in the app**
+  (crisp_notation `41a05d1`, suite **2,502**). `multi_system.dart:_slice`
+  rebuilds a per-system `Score` by forwarding ~40 span/attachment lists — and
+  **`chordSymbols` was not among them**, so multi-system, grand-staff,
+  multi-part and paged rendering dropped every one. That is *every* score view
+  the app shows (`song_screen`, `multi_part_song_screen`, `play_along_screen`,
+  `composition_workshop_screen`); only the single-system `StaffView` path ever
+  displayed them, which is why the feature looked like it worked.
+  - **Filtering matters as much as forwarding:** `_layoutAnnotations` THROWS on
+    an id it cannot resolve, so a symbol belonging to a later system must not be
+    handed to this one. A naive "just add the list" fix crashes.
+  - `annotation_test.dart` has had the analogous test all along ("each system
+    keeps exactly its own annotations"); chord symbols never got one. New test
+    asserts through to the laid-out **primitives** and was **checked to fail
+    without the fix** (4 expected, 0 rendered) — a model-level assertion would
+    have passed on the crashing version.
+  - App-side `chord_symbols_integration_test.dart` now covers the whole chain:
+    real `\chordmode` file → reader → `layoutSystems` at phone width → text.
+  - 📌 **Still missing (unclaimed):** no lead-sheet/chart SCREEN, and
+    `lib/core/harmony/` (`ChordSpec`, `Chart`, `CompArranger`) remains 100%
+    engine — imported by tests only, no widget, no route, and no converter
+    bridging it to crisp_notation's `ChordSymbol`.
+
 - **opus (backing-band)** · ✅ **TWO LilyPond reader bugs FIXED**
   (crisp_notation `ca8051c` + `7525a1a`, on `origin/main`; suite **2,497**,
   +11 tests). ⚠️ **`../crisp_notation` (the shared path-dep clone) has been
