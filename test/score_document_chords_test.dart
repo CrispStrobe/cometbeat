@@ -50,8 +50,10 @@ void main() {
   test('a loaded score keeps its chord symbols', () {
     // The regression: this used to come back empty.
     final doc = ScoreDocument()..loadScore(_charted());
-    expect(doc.buildScore().chordSymbols.map((c) => c.text),
-        ['C', 'Am', 'F', 'G7/B']);
+    expect(
+      doc.buildScore().chordSymbols.map((c) => c.text),
+      ['C', 'Am', 'F', 'G7/B'],
+    );
   });
 
   test('symbols stay anchored to the right notes', () {
@@ -101,8 +103,10 @@ void main() {
     expect(doc.buildScore().chordSymbols, hasLength(3));
 
     doc.undo();
-    expect(doc.buildScore().chordSymbols.map((c) => c.text),
-        ['C', 'Am', 'F', 'G7/B']);
+    expect(
+      doc.buildScore().chordSymbols.map((c) => c.text),
+      ['C', 'Am', 'F', 'G7/B'],
+    );
   });
 
   test('loading a different score clears the previous symbols', () {
