@@ -3670,6 +3670,46 @@ failed:**
     `frescobaldi_fiori_musicali` (CC BY-NC-SA, **not** the CC0 it is often called)
     and `pathawks/Christmas-Songs` (no licence at all).
 
+- ✅ **BB-X1e DONE — `HarmonicWeighting.auto`** (crisp_notation `f8030da`, suite
+  **2,468**). Chooses per-slice vs per-bar from the music's **texture**:
+  more than one sounding voice ⇒ a real vertical sonority exists ⇒ `perSlice`;
+  a single line ⇒ harmony is only implied ⇒ per-bar pooling.
+  - ❌ **A chord-rate heuristic was tried FIRST and failed — do not retry it.**
+    Counting named segments per bar measures how often chord IDENTIFICATION
+    succeeds, not how often harmony changes, and Bach scores *low* on it
+    **because** his suspensions defeat the identifier: measured **0.63
+    named-chords/bar for chorales against 0.11 for folk song**, so both fell the
+    same side of any threshold and chorales would have been read per bar — the
+    exact error the mode exists to prevent.
+  - 🔴 **AND IT EXPOSED A DEEPER DEFECT, unclaimed:** `analyze()` takes a single
+    `Score`, so a multi-staff work read through the single-score readers arrives
+    with **its staves collapsed into voices** — a two-staff chorale comes back
+    with soprano and alto interleaved in voice 1 (measured: bar 2 = 6 notes in
+    voice 1, 4 in voice 2). Slices then mix parts into 6-note sonorities that
+    identify as `Gmaj13/E`, `G6/9/D`. **Choosing `perSlice` there is correct and
+    still yields nonsense, because the input was already wrong.**
+    `multiPartScoreFromMscx` reads the 2 parts fine — what is missing is a
+    `MultiPartScore` entry point for `analyze()`. **That is the next card, and
+    until it exists, chart derivation from POLYPHONIC sources is not trustworthy.**
+
+- 🔎 **BB-X1h — CC0 harmony annotations: NONE EXIST; but CC BY-SA does
+  (2026-07-31).** Surveyed 100 DCMLab repos + the major Roman-numeral corpora.
+  - **DCMLab's permissive repos are all TOOLS, not corpora** (`chord-model` CC0
+    is a 2 MB model; `chord-eval`, `pitchplots`, `Pitches.jl` are code). Every
+    DCML *annotated corpus* is NC.
+  - `craigsapp/bach-370-chorales` — NOASSERTION. `music21` — BSD **code**, but its
+    bundled corpus is per-file licensed; the code licence is not the corpus's.
+  - ✅ **`MarkGotham/When-in-Rome` is CC BY-SA 4.0** (188.9 MB) — a *free-culture*
+    licence, not NC as one might assume. **Tier C** in our scheme, so local-only
+    and out of the shipped catalog — **but evaluation is not distribution**, so it
+    is usable as the ground-truth set a harmoniser needs. That is precisely the
+    gap we had.
+  - 📌 **The pattern is structural, and we have met it before.** `CLAUDE.md`
+    already records it for fingerings: *"every licence-clean corpus is
+    unfingered, and every fingered corpus is not licence-clean … annotation is
+    editorial labour, so whoever does it either sells it or uploads it under a
+    licence they do not own."* Harmonic annotation behaves identically.
+
 - 📚 **BB-X1f — SOURCE ASSESSMENT: annotated-harmony corpora (2026-07-30).**
   Evaluated against both axes; **none acquired**, since acquisition is the
   maintainer's call.

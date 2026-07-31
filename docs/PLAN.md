@@ -460,7 +460,27 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — three items: (1) index the ~500 derived
+- **opus (backing-band)** · 🟡 **2 of 3 done (idle).** ✅ **(2) `auto` weighting
+  shipped** (crisp_notation `f8030da`, suite 2,468) — picks per-slice vs per-bar
+  from TEXTURE. A chord-rate heuristic was tried first and failed, measurably:
+  Bach 0.63 named-chords/bar vs folk 0.11, so chorales would have been read per
+  bar, the very error it exists to prevent. 🔴 **It exposed a deeper defect:**
+  `analyze()` takes a single `Score`, so multi-staff works arrive with staves
+  collapsed into voices and slices mix parts into 6-note sonorities
+  (`Gmaj13/E`). **Chart derivation from POLYPHONIC sources is not trustworthy
+  until `analyze()` gets a `MultiPartScore` entry point** — next card, unclaimed.
+  ✅ **(3) answered:** no CC0 harmony-annotated corpus exists (every DCML
+  annotated corpus is NC; their permissive repos are tools), **but
+  `When-in-Rome` is CC BY-SA 4.0** = Tier C — local-only, yet usable as the
+  ground truth a harmoniser needs, since evaluation is not distribution.
+  ⬜ **(1) NOT done, deliberately:** indexing derived charts into `db.json` is a
+  schema change to shared infrastructure, and (2) just showed the derivation is
+  unreliable for polyphonic sources. **Indexing now would index known-bad data.**
+  The safe subset — the ~500 charts read from files' OWN symbols, which involve
+  no inference — is what should be indexed, and it deserves its own scoped pass
+  rather than a rushed one. Cards: `BB-X1e`, `BB-X1h`.
+
+- **opus (backing-band)** · ✅ **(superseded claim) — was: three items: (1) index the ~500 derived
   charts into `db.json`, (2) choose the weighting mode from HARMONIC RHYTHM
   (`BB-X1e`), (3) find a genuinely CC0 harmony-annotated corpus.**
   - Order is deliberate: **(3) is a cheap licence check, (2) improves the quality
