@@ -121,7 +121,7 @@ bool _allVoices = false;
 List<String> _content(Score s) {
   final out = <String>[];
   for (final m in s.measures) {
-    for (var v = 0; v < (_allVoices ? m.voices.length : 1); v++) {
+    for (var v = 0; v < (_allVoices ? 4 : 1); v++) {
       // Ratio per element index, so a note can be scaled without searching the
       // spans again for every one.
       final scale = <int, Fraction>{};
@@ -131,7 +131,12 @@ List<String> _content(Score s) {
           scale[i] = Fraction(t.normal, t.actual);
         }
       }
-      final elements = m.voices[v];
+      // `voiceAt`, NOT `voices[v]`. `Measure.voices` is a COMPACTING view — it
+      // drops empty voices — while `TupletSpan.voice` is an ABSOLUTE index, so
+      // indexing one by the other pairs voice 3's notes with voice 2's tuplets
+      // the moment a voice is empty. The same confusion crashed the layout
+      // engine; here it would have invented failures and sent me chasing them.
+      final elements = m.voiceAt(v);
       for (var i = 0; i < elements.length; i++) {
         final e = elements[i];
         if (e is! NoteElement) continue;
