@@ -8026,6 +8026,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Leadsheets benennen Akkorde mit kurzen Symbolen über der Melodie — C, Am, G7, Dm. Lernst du sie zu lesen, kannst du die Harmonie eines ganzen Lieds aus einer einzigen Akkordzeile spielen, so wie eine Band.';
 
   @override
+  String get proseChordCharts =>
+      'Ein Akkord-Chart schreibt ein Lied als Takte mit Akkordsymbolen statt mit Noten — nur die Harmonie, also genau das, was eine Rhythmusgruppe wirklich liest. Jeder Takt sagt, welchen Akkord du wie lange spielst, so passt ein ganzes Lied auf eine Seite und jedes Instrument kann mitspielen.';
+
+  @override
   String get proseMelodicDictation =>
       'Eine kurze Melodie zu hören und aufzuschreiben ist Diktat — die härteste Prüfung fürs Ohr. Es verbindet Tonhöhe, Rhythmus und Gedächtnis: Du entschlüsselst die Melodie, wie du ein eben gehörtes Wort schreibst.';
 
@@ -8292,6 +8296,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get conceptChordSymbols => 'Akkordsymbole (Leadsheet)';
+
+  @override
+  String get conceptChordCharts => 'Akkord-Charts lesen und schreiben';
 
   @override
   String get conceptCadences => 'Wie Phrasen enden (Kadenzen)';

@@ -7985,6 +7985,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Lead sheets name chords with short symbols above the tune — C, Am, G7, Dm. Learn to read them and you can play the harmony of a whole song from a single line of chords, the way a band does.';
 
   @override
+  String get proseChordCharts =>
+      'A chord chart writes a song as bars of chord symbols instead of notes — the harmony only, which is what a rhythm section actually reads. Each bar says which chord to play and for how long, so a whole song fits on one page and any instrument can join in.';
+
+  @override
   String get proseMelodicDictation =>
       'Hearing a short melody and writing it down is dictation — the ultimate test of the ear. It ties together pitch, rhythm and memory: you decode the tune the way you’d spell a word you just heard.';
 
@@ -8251,6 +8255,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get conceptChordSymbols => 'Lead-sheet chord symbols';
+
+  @override
+  String get conceptChordCharts => 'Reading and writing a chord chart';
 
   @override
   String get conceptCadences => 'How phrases end';
