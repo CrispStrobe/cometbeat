@@ -8,11 +8,14 @@
 //
 // SHOT_PREFIX (a --dart-define) tags the files per device, e.g. iphone_01_home.
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/tutorial_gate.dart';
 import 'package:comet_beat/main.dart' as app;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:provider/provider.dart';
@@ -32,9 +35,59 @@ void main() {
     }
   }
 
+  // SHOT_DIR: write PNGs straight from the render tree instead of going through
+  // the driver's screenshot sink.
+  //
+  // WHY. On macOS `flutter drive` runs the test fine but the driver's
+  // onScreenshot channel does not attach — the run warns "not capturing test
+  // results properly" and `binding.takeScreenshot` yields no files, silently.
+  // And the host-side fallbacks are closed too: there is no macOS simulator
+  // framebuffer to read (`simctl io screenshot` is iOS-only) and `screencapture`
+  // needs a Screen Recording grant.
+  //
+  // The render tree needs none of that. `RenderView.debugLayer` is an
+  // OffsetLayer, which can rasterise itself — so the test writes the bytes
+  // itself, with an exact pixelRatio, and the driver is not involved at all.
+  const shotDir = String.fromEnvironment('SHOT_DIR');
+  const shotRatio = int.fromEnvironment('SHOT_RATIO', defaultValue: 2);
+
+  Future<void> writeLayerPng(WidgetTester tester, String file) async {
+    // `renderView` is deprecated in favour of renderViews (multi-view); take
+    // the single view this app actually has.
+    final view = tester.binding.renderViews.first;
+    final layer = view.debugLayer! as OffsetLayer;
+    final image = await layer.toImage(
+      view.paintBounds,
+      pixelRatio: shotRatio.toDouble(),
+    );
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    if (data == null) return;
+    // ⚠️ The macOS app runs SANDBOXED (app-sandbox is in the entitlements and is
+    // mandatory for the Mac App Store), so it cannot write to an arbitrary path:
+    // '/tmp/...' fails with "Operation not permitted". Directory.systemTemp
+    // resolves INSIDE the container and is writable, so fall back to it and
+    // print where the bytes actually landed.
+    Directory dir;
+    try {
+      dir = Directory(shotDir)..createSync(recursive: true);
+    } on FileSystemException {
+      dir = Directory('${Directory.systemTemp.path}/cometbeat-shots')
+        ..createSync(recursive: true);
+    }
+    final f = File('${dir.path}/$file.png');
+    await f.writeAsBytes(data.buffer.asUint8List());
+    // ignore: avoid_print
+    print('SHOT ${f.path} ${image.width}x${image.height}');
+  }
+
   Future<void> shot(WidgetTester tester, String name) async {
     await hold(tester);
-    await binding.takeScreenshot('${prefix}_$name');
+    if (shotDir.isNotEmpty) {
+      await writeLayerPng(tester, '${prefix}_$name');
+    } else {
+      await binding.takeScreenshot('${prefix}_$name');
+    }
   }
 
   // Best-effort navigation: a missing finder skips that one shot, never aborts
