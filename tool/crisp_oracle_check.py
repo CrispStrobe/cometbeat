@@ -132,39 +132,78 @@ def compare(ours, theirs):
 
 
 def main():
+    """Compare the oracles against EACH OTHER, never against our own MIDI.
+
+    The first version of this used `scoreToMidi` as the reference and every cell
+    scored badly on the same files — which is the signature of a bad REFERENCE,
+    not of six independently broken writers. It was: our own MIDI round trip is
+    not note-preserving (324 -> 349 notes on one corpus file), so each cell was
+    measuring our MIDI behaviour as much as the format under test.
+
+    So: for one source score we hand the SAME music to several independent
+    readers, each via a different one of our writers, and require THEM to agree
+    with each other. Our MIDI never enters it. A format that disagrees with the
+    majority is one our writer got wrong; when the oracles disagree among
+    themselves the file is simply reported as contested, because that is a fact
+    about them and not about us.
+    """
     payload = json.load(open(sys.argv[1]))
-    results = {}
+    by_file = {}
     for case in payload:
-        name, fmt, oracle = case["name"], case["format"], case["oracle"]
-        key = f"{fmt} via {oracle}"
-        results.setdefault(key, {"tried": 0, "agreed": 0, "examples": []})
-        results[key]["tried"] += 1
-        with tempfile.TemporaryDirectory() as d:
-            w = Path(d)
-            ref = midi_notes(Path(case["our_midi"]))
-            if oracle == "lilypond":
-                got, err = via_lilypond(case["text"], w)
-            elif oracle == "verovio":
-                got, err = via_verovio(case["text"], w,
-                                       "mei" if fmt == "mei" else "musicxml")
-            else:
-                got, err = via_music21(
-                    case["text"],
-                    {"musicxml": ".xml", "abc": ".abc", "kern": ".krn"}[fmt], w)
+        by_file.setdefault(case["name"], []).append(case)
+
+    stats = {}
+    contested = 0
+    for name, cases in by_file.items():
+        readings = {}
+        for case in cases:
+            fmt, oracle = case["format"], case["oracle"]
+            with tempfile.TemporaryDirectory() as d:
+                w = Path(d)
+                if oracle == "lilypond":
+                    got, err = via_lilypond(case["text"], w)
+                elif oracle == "verovio":
+                    got, err = via_verovio(case["text"], w,
+                                           "mei" if fmt == "mei" else "musicxml")
+                else:
+                    got, err = via_music21(
+                        case["text"],
+                        {"musicxml": ".xml", "abc": ".abc", "kern": ".krn"}[fmt],
+                        w)
+            key = f"{fmt} via {oracle}"
+            stats.setdefault(key, {"tried": 0, "agreed": 0, "examples": []})
+            stats[key]["tried"] += 1
             if err:
-                results[key]["examples"].append(f"{name}: ORACLE FAILED {err}")
+                stats[key]["examples"].append(f"{name}: ORACLE FAILED {err}")
                 continue
-            diff = compare(ref, got)
-            if diff is None:
-                results[key]["agreed"] += 1
+            readings[key] = sorted(p for _, p, _ in got)
+
+        if len(readings) < 2:
+            continue
+        # The majority pitch multiset. With no majority the file is contested
+        # and nobody is scored on it.
+        tally = {}
+        for key, pitches in readings.items():
+            tally.setdefault(tuple(pitches), []).append(key)
+        winner, holders = max(tally.items(), key=lambda kv: len(kv[1]))
+        if len(holders) * 2 <= len(readings):
+            contested += 1
+            continue
+        for key, pitches in readings.items():
+            if tuple(pitches) == winner:
+                stats[key]["agreed"] += 1
             else:
-                results[key]["examples"].append(f"{name}: {diff}")
-    for k in sorted(results):
-        r = results[k]
-        print(f"  {k:28} {r['agreed']:4}/{r['tried']:4}"
-              + ("" if r["agreed"] == r["tried"]
-                 else f"   e.g. {r['examples'][0][:150]}"))
-    json.dump(results, open(sys.argv[2], "w"), indent=1)
+                stats[key]["examples"].append(
+                    f"{name}: {len(pitches)} notes vs majority {len(winner)} "
+                    f"({', '.join(holders)})")
+
+    print(f"files {len(by_file)}, contested (no majority) {contested}")
+    for k in sorted(stats):
+        r = stats[k]
+        mark = "" if r["agreed"] == r["tried"] else \
+            f"   e.g. {r['examples'][0][:130]}" if r["examples"] else ""
+        print(f"  {k:24} {r['agreed']:4}/{r['tried']:4}{mark}")
+    json.dump(stats, open(sys.argv[2], "w"), indent=1)
 
 
 if __name__ == "__main__":
