@@ -74,8 +74,11 @@ void main() {
         .listSync(recursive: true)
         .whereType<File>()
         .where((f) => f.path.endsWith('_screen.dart'))
-        .where((f) =>
-            f.readAsStringSync().contains('DragTarget<MusicDragPayload>'))
+        .where(
+          (f) => f.readAsStringSync().contains(
+                'DragTarget<MusicDragPayload>',
+              ),
+        )
         .map((f) => f.path)
         .toSet();
 
