@@ -666,6 +666,38 @@ is recorded in [HISTORY.md](HISTORY.md).
     match" for any future oracle — and an MEI/MusicXML **schema validation**
     pass is the obvious next one in that family.
 
+  - 📊 **EXPRESSION CENSUS OF THE OTHER TWO BIG FORMATS — measured, 4,000 files
+    each.** I audited LilyPond first and it turned out to be the WORST of the
+    three, which is not what I would have guessed. Do not generalise from it.
+
+    ✅ **MusicXML (~45,000 corpus files — the biggest) is essentially COMPLETE.**
+    Every musically-meaningful element the corpus uses is read: tied/tie (3,274
+    files), words (2,944), chord (2,718), slur (2,457), dynamics (2,244),
+    fermata (1,990), metronome (1,989), wedge (1,765), staccato (1,490), grace
+    (1,482), time-modification (1,474), tuplet (1,453), lyric (1,207), accent
+    (1,152), repeat (991), trill (760), arpeggiate (753), pedal (732),
+    octave-shift (604), transpose (494), ending (373), notehead (358), tremolo
+    (340), harmony (285), breath-mark (277), fingering (252)… **Only TWO gaps:
+    `staccatissimo` (225 files) and `cue` (102), both needing a model value
+    first.** That is a useful negative result — nobody needs to go looking here.
+
+    ⚠️ **MuseScore (8,445 corpus files) has real gaps, all `<Spanner>` types.**
+    Handled: Tie (3,184 files), Slur (2,849), **HairPin (2,723 — fixed this
+    session)**, Volta (265). **NOT handled:**
+
+    | spanner | files | model support | note |
+    |---|---|---|---|
+    | **Pedal** | **1,284** | ✅ `Pedal` class EXISTS, MusicXML reads it | pure codec gap |
+    | **Ottava** | **586** | ✅ MusicXML reads `octave-shift` | pure codec gap |
+    | TextLine | 554 | ❌ | a text spanner; needs a model concept |
+    | Trill (as a SPANNER) | 205 | ⚠️ `Ornament.trill` is per-note | a trill LINE is a different thing |
+    | Glissando | 12 | ❌ | tiny |
+
+    📌 **Pedal and Ottava are the pick**: the model already carries both and
+    MusicXML already reads both, so it is a pure codec gap with a proven
+    pattern — they ride the SAME `<Spanner>`+`<next>`/`<prev>` mechanism as the
+    HairPin work in `9de639c`, including the sibling-vs-child trap.
+
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
