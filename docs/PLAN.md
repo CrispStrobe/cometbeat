@@ -507,6 +507,62 @@ is recorded in [HISTORY.md](HISTORY.md).
     | 5 | **Differential vs a THIRD-PARTY implementation** (verovio/MEI, LilyPond itself, humlib/kern, music21) | The one class round-trips structurally CANNOT find: a writer and reader sharing the same misconception round-trip perfectly and are both wrong. | ⬜ |
     | 6 | **Random-walk chains, length 3-5**, deterministic seed, failing walk reported | The honest form of "more permutations" — the useful part without the 6^k blow-up. | ⬜ |
 
+  - 🎼 **LILYPOND EXPRESSION COVERAGE — reader, writer AND the neutral model.
+    MEASURED over all 4,106 corpus `.ly` files, not guessed.** Two fixes already
+    landed (`57aa29f` scripts+post-note commands, `cffa456` MEI tie chain) and
+    the rest is scoped below. Counts are `occurrences / FILES`, and files is the
+    number that matters — it is how many scores lose the feature today.
+
+    ⚠️ **The recurring shape: the WRITER emits it, the READER ignores it.** That
+    asymmetry is invisible to a round trip through any other format and to the
+    old pitch+rhythm signature, which is exactly how it survived this long.
+
+    | construct | occurrences / files | reader | writer | model |
+    |---|---|---|---|---|
+    | **slurs `( )`** | 73,412 / **3,286** | ❌ none | ✅ emits | ✅ `Score.slurs` |
+    | **musica ficta `\ficta`** | 26,693 / **1,800** | ❌ | ❌ | ❌ needs an editorial-accidental flag |
+    | **melisma `\melisma`/`End`** | 15,279 / **1,429** | ❌ | ❌ | ❌ lyric-extender concept |
+    | manual beams `[ ]` | 21,629 / 786 | ❌ | ❌ | ❌ (layout derives beams today) |
+    | **`\breathe`** | 4,412 / **580** | ❌ | ❌ | ❌ needs a breath mark |
+    | **dynamics `\p \f \mf …`** | ~9,400 / **~600** | ❌ | ~none | ✅ `DynamicMarking` |
+    | **`\cadenzaOn/Off`** | 5,002 / 450 | ❌ | ❌ | ⚠️ unmetered exists (`timeSignature: null`) |
+    | `\parenthesize` | 305 / 99 | ❌ | ❌ | ❌ |
+    | `\arpeggio` | 239 / 44 | ❌ | ❌ | ✅ `NoteElement.arpeggio` |
+    | `\glissando` | 33 / 9 | ❌ | ❌ | ❌ |
+    | `\staccatissimo`, `\espressivo` | 67 / 15 | ❌ | ❌ | ⚠️ no `Articulation` value |
+    | hairpins `\< \> \!` | (see note) | ❌ | ❌ | ✅ `Score.hairpins` |
+    | `\times` (old tuplet) | 2,618 / 130 | ✅ | ✅ | ✅ |
+    | `\partial` | 2,118 / 1,061 | ✅ | ✅ | ✅ |
+    | scripts `-. -- -> -^ -! -_` | 4,844 / — | ✅ NEW | ✅ | ✅ |
+    | `\trill \fermata \upbow …` | 6,048+ / 719+ | ✅ NEW | ✅ | ✅ |
+
+    **Order of work, by files affected:**
+    1. **Slurs** — 3,286 files, and the model and writer are ALREADY there. Pure
+       reader gap, biggest single win available.
+    2. **Dynamics** — ~600 files; `DynamicMarking` exists, so reader + writer.
+    3. **`\breathe`** — 580 files; needs a model concept first.
+    4. **`\ficta`** — 1,800 files, but think before adding: it is an EDITORIAL
+       accidental (printed above the note, not altering the written pitch), so
+       it is a rendering/edition property, not a pitch one. Getting it wrong
+       would change the music; `showAccidental` is NOT the same thing.
+    5. **Melisma** — 1,429 files, and it is a LYRIC concept (which syllable
+       spans which notes), so it belongs with the lyric model, not the note.
+    6. Arpeggio and hairpins — small, but the model already holds both, so they
+       are cheap.
+    7. Beams, `\cadenzaOn`, `\parenthesize`, `\glissando`, the two extra
+       articulations — each needs a model addition for a modest number of files.
+
+    ⚠️ **Do not add a model field per construct reflexively.** Anything the model
+    cannot hold is lost the moment a score crosses into another format, so the
+    test is "does this survive MusicXML/MEI/kern too" — that is what makes it
+    NEUTRAL preservation rather than a LilyPond round-trip trick. Where a
+    construct has no cross-format meaning, say so in the table rather than
+    inventing a field.
+
+    ⚠️ **The hairpin counts above are unreliable** — `\<` and `\!` are symbols,
+    and the scan's regex was double-escaped through the shell heredoc, so it
+    under-reports them. Re-measure before working on those.
+
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
