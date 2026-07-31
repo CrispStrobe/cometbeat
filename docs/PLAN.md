@@ -461,7 +461,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     it is a reproducibility regression dressed up as a feature.
 
 - **opus (backing-band)** · ✅ **SHIPPED — 547 EXACT charts indexed into
-  `db.json`** (15,730 chord symbols, 227 distinct). Rows whose source file
+  `db.json`** (15,760 chord symbols, 0 malformed). Rows whose source file
   carries its OWN chord symbols; **no inferred charts**, so the polyphony defect
   cannot contaminate the index. `chords: {symbols, count, distinct, origin}`,
   `origin:"file"` reserving room for inferred charts later.
@@ -469,27 +469,41 @@ is recorded in [HISTORY.md](HISTORY.md).
     PDMX 56 · Season Songs 42 · Wikipedia(de) 23 · Christmas ChordPro 21 ·
     CPDL 2. Merge asserted the row set unchanged and no field but `chords`
     differing (46,356 rows, 0 dangling); backup taken; **no HF publish**.
-  - ⚠️ **The index doubled as a reader audit and found a real bug — see the
-    LilyPond card below.** One `C/C` in the output was not a cosmetic oddity:
-    it was a corrupted root plus 4 silently dropped chords.
+  - ⚠️ **The index doubled as a reader audit and found TWO real bugs — see the
+    LilyPond card below.** 16 `C/C` symbols in the output were not a cosmetic
+    oddity: they were corrupted roots plus silently dropped chords. Both fixed,
+    the corpus re-indexed and re-merged: **32 rows corrected, +30 chords
+    recovered, redundant `X/X` 16 → 0.**
+  - 📌 **The reusable move: audit the DATA, not the parse status.** Every file
+    involved "parsed fine" both before and after. A malformed *symbol* was the
+    only visible trace of a truncation — the same lesson as `\<` and `\\`.
 
-- **opus (backing-band)** · ✅ **LilyPond duration multipliers FIXED**
-  (crisp_notation `ca8051c`, on `origin/main`; suite **2,495**, +9 tests).
-  `c1*3/4` / `s1*4` lex as ONE word because `*` and `/` are not symbol prefixes,
-  and the note gate is `$`-anchored — so it **rejected** the word, and a rejected
-  token is *dropped, not mis-read*: **`c1*3/4 d1` read as a single note.**
-  - In a `\chords` track the same word failed differently: the trailing group
-    caught `*3/4`, which was glued onto the chord text and split on the `/` into
-    a slash chord — **`f1*3/4` read as `C/C`** — and the unscaled duration made
-    the track outrun the melody, **silently dropping later chords** (a real
-    corpus file lost 4 of its 16).
+- **opus (backing-band)** · ✅ **TWO LilyPond reader bugs FIXED**
+  (crisp_notation `ca8051c` + `7525a1a`, on `origin/main`; suite **2,497**,
+  +11 tests). ⚠️ **`../crisp_notation` (the shared path-dep clone) has been
+  fast-forwarded**, so the app sees both — the other agent's uncommitted
+  `html`/`http` pubspec WIP there was left untouched.
+  - **(2) An octave mark on a chord root swallowed the duration.** Chord tracks
+    are written low (`f,2/c`), and the chord-word regex wanted digits directly
+    after the letters — so `,` blocked the duration group and `2` stayed stuck
+    to the root. `f,2` is neither a pitch nor a duration, and the chord came out
+    `C/C`: wrong root AND a bass that was never written.
+  - **(1) Duration multipliers dropped notes outright.** `c1*3/4` / `s1*4` lex
+    as ONE word because `*` and `/` are not symbol prefixes, and the note gate
+    is `$`-anchored — so it **rejected** the word, and a rejected token is
+    *dropped, not mis-read*: **`c1*3/4 d1` read as a single note.**
+    - In a `\chords` track the same word failed differently: the trailing group
+      caught `*3/4`, which was glued onto the chord text and split on the `/`
+      into a slash chord — **`f1*3/4` read as `C/C`** — and the unscaled
+      duration made the track outrun the melody, **silently dropping later
+      chords** (a real corpus file lost 4 of its 16).
+    - ⚠️ `NoteDuration` is base-plus-dots and cannot spell an arbitrary scaling
+      (`c4*2/3`), so a melody note whose scaled value has no symbolic spelling
+      keeps its base value rather than being dropped. The chord cursor is an
+      exact `Fraction`, so there the scaling is exact.
   - Both were silent: the file still "parsed fine", with less music in it. Same
     class as the `\<` truncation and the `\\` voice-2 drop, and **found the same
     way — by looking at the DATA, not at the parse status.**
-  - ⚠️ `NoteDuration` is base-plus-dots and cannot spell an arbitrary scaling
-    (`c4*2/3`), so a melody note whose scaled value has no symbolic spelling
-    keeps its base value rather than being dropped. The chord cursor is an exact
-    `Fraction`, so there the scaling is exact.
 
 - **opus (backing-band)** · 🟡 **2 of 3 done (idle).** ✅ **(2) `auto` weighting
   shipped** (crisp_notation `f8030da`, suite 2,468) — picks per-slice vs per-bar
