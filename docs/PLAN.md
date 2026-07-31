@@ -3348,6 +3348,28 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · ✅ **DONE (idle) — the interop MATRIX is now a TEST.**
+  `test/interop_parity_test.dart`: five surfaces × four affordances (drop target
+  · clipboard host · FX-preset shelf · live project link), 21 assertions.
+  📌 **Why this and not more prose:** every hole closed this session was found by
+  writing the matrix out by hand, and **not one of them was recorded anywhere as
+  missing** — Score could neither receive music nor put its own on the shelf, a
+  tab could not be dropped on the timeline at all, the Advanced Tracker had no FX
+  rack. A feature list says what exists; only a matrix says what is ABSENT. Now
+  the app cannot quietly drift back.
+  * It reads the SOURCE rather than pumping five screens: three run continuous
+    tickers (`pumpAndSettle` hangs), mounting all five would be minutes of CI for
+    a structural question, and what it asserts — "this surface offers the
+    affordance at all" — is exactly what is invisible from inside any one screen.
+  * **It is a WIRING guard, not a behaviour guard**, and says so: each affordance
+    has its own suite proving it works. This catches the one thing those cannot
+    see, a surface that quietly never joins.
+  * A second test **guards the guard**: any screen that accepts music drops but
+    is missing from the matrix fails it, so a sixth surface cannot be added
+    without updating the list.
+  * ✅ **Mutation-checked**: I broke one marker and watched all five rows go red
+    before trusting it. An assertion nobody has seen fail is not yet a test.
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — the ADVANCED Tracker gets a
   per-channel FX rack. The interop matrix is now complete on every axis.**
   I boarded this as "someone else's" an hour ago; on looking, the file is mine
