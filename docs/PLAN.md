@@ -471,6 +471,22 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **CLAIMING — the chart SCREEN (`BB-U1` + `BB-U2`).**
+  The harmony engine (`ChordSpec`/`Chart`/`chart_codec`/`chart_to_groove`/
+  `CompArranger`) is complete and tested but has **no UI at all** — imported by
+  tests only. Building the surface: `lib/features/harmony/chart_screen.dart` +
+  `chart_grid_view.dart` + `chord_keypad.dart`, playing through the existing
+  groove engine via the already-shipped `chart_to_groove` (`BB-A0`).
+  - **NOT a Workshop extension** — `BB-U1` specifies its own screen and the two
+    surfaces have opposite jobs: Workshop engraves noteheads on staves; a chart
+    is a bar grid readable at arm's length with no notation at all. Chord
+    symbols over a STAFF are a separate (now working) thing.
+  - ⚠️ **Hot shared files I will touch:** `lib/features/games/game_registry.dart`
+    (one `GameInfo` in the `harmony` category), `app_en.arb`/`app_de.arb`, and
+    `lib/features/curriculum/concept_map.dart` (a tile without a concept-map
+    entry fails `curriculum_coverage_test`). Small, additive edits; shout if you
+    are mid-edit in any of them.
+
 - **opus (backing-band)** · ✅ **SHIPPED — 547 EXACT charts indexed into
   `db.json`** (15,760 chord symbols, 0 malformed). Rows whose source file
   carries its OWN chord symbols; **no inferred charts**, so the polyphony defect
