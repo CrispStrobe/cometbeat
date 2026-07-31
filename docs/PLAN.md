@@ -547,12 +547,22 @@ is recorded in [HISTORY.md](HISTORY.md).
        marks the model has no distinct level for (`sfz`, `fp`, `spp`, `ppppp`)
        map to the nearest rather than being dropped.
        ⚠️ **Hairpins came with a surprise, and it is NOT a LilyPond problem:
-       only MusicXML and LilyPond carry `Hairpin` AT ALL. MEI, MuseScore, ABC
-       and kern do not emit it** — pre-existing, confirmed from a model-built
-       score with no reader in the way, and now pinned by a test stating the
-       real state so whoever closes one is told to move it up. Four small
-       writer gaps, and a reminder that "the model has a field for it" is not
-       the same as "the formats carry it".
+       only MusicXML and LilyPond carried `Hairpin` AT ALL** — pre-existing,
+       confirmed from a model-built score with no reader in the way. A reminder
+       that "the model has a field for it" is not the same as "the formats carry
+       it". **MEI now joins them** (`1deac34`, `<hairpin form="cres|dim">`,
+       verified against VEROVIO rather than only our own reader). **MuseScore,
+       ABC and kern still drop hairpins** — three small writer+reader gaps,
+       pinned by a test that says so.
+       ⚠️ **`mei_writer.dart` has TWO control-event emitters** —
+       `_measureControls` (multi-part) and an inline copy in `_writeMeasure`
+       (single Score). Patching one and not the other is a silent half-fix; it
+       cost me a confusing debug session where the loop and its guard both
+       looked right and nothing came out.
+       ⚠️ **For kern I deliberately stopped**: I am not confident of the
+       `**dynam` hairpin syntax, and inventing syntax for a standard format is
+       exactly how the MEI tie bug happened. Check humlib or a real Humdrum
+       corpus file first.
     3. **`\breathe`** — 580 files; needs a model concept first.
     4. **`\ficta`** — 1,800 files, but think before adding: it is an EDITORIAL
        accidental (printed above the note, not altering the written pitch), so
