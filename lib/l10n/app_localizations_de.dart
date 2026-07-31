@@ -9190,4 +9190,68 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trayPutTab => 'Tabulatur auf die Ablage legen';
+
+  @override
+  String get gameChart => 'Akkord-Chart';
+
+  @override
+  String get gameChartSubtitle =>
+      'Ein Akkord-Chart schreiben und mit der Band mitspielen';
+
+  @override
+  String get chartPlay => 'Abspielen';
+
+  @override
+  String get chartStop => 'Stopp';
+
+  @override
+  String get chartBpm => 'BPM';
+
+  @override
+  String get chartEditAsText => 'Als Text bearbeiten';
+
+  @override
+  String get chartTextHelp =>
+      'Ein Takt zwischen jedem |. Zwei Akkorde teilen den Takt. % oder ein leerer Takt hält den Akkord. [A] beginnt einen Abschnitt, [A] x2 wiederholt ihn.';
+
+  @override
+  String chartUnreadableChords(int count, String chords) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Akkorde waren nicht lesbar: $chords',
+      one: 'Ein Akkord war nicht lesbar: $chords',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chartCancel => 'Abbrechen';
+
+  @override
+  String get chartOk => 'Übernehmen';
+
+  @override
+  String get chartKeypadClearBar => 'Takt leeren';
+
+  @override
+  String get chartKeypadSet => 'Setzen';
+
+  @override
+  String get chartKeypadMore => 'Mehr Optionen';
+
+  @override
+  String get chartKeypadFewer => 'Weniger Optionen';
+
+  @override
+  String get chartKeypadExtension => 'Erweiterung';
+
+  @override
+  String get chartKeypadAlterations => 'Alterationen';
+
+  @override
+  String get chartKeypadBass => 'Basston (Slash-Akkord)';
+
+  @override
+  String get chartKeypadNone => 'keiner';
 }

@@ -16603,6 +16603,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Put tab on clipboard'**
   String get trayPutTab;
+
+  /// No description provided for @gameChart.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord Chart'**
+  String get gameChart;
+
+  /// No description provided for @gameChartSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a chord chart and play along with the band'**
+  String get gameChartSubtitle;
+
+  /// No description provided for @chartPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get chartPlay;
+
+  /// No description provided for @chartStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get chartStop;
+
+  /// No description provided for @chartBpm.
+  ///
+  /// In en, this message translates to:
+  /// **'BPM'**
+  String get chartBpm;
+
+  /// No description provided for @chartEditAsText.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit as text'**
+  String get chartEditAsText;
+
+  /// No description provided for @chartTextHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'One bar between each |. Two chords in a bar split it. % or an empty bar holds the chord. [A] starts a section, [A] x2 repeats it.'**
+  String get chartTextHelp;
+
+  /// Shown after pasting a text chart that contained chords this build could not parse
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{Could not read one chord: {chords}}other{Could not read {count} chords: {chords}}}'**
+  String chartUnreadableChords(int count, String chords);
+
+  /// No description provided for @chartCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get chartCancel;
+
+  /// No description provided for @chartOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get chartOk;
+
+  /// No description provided for @chartKeypadClearBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear bar'**
+  String get chartKeypadClearBar;
+
+  /// No description provided for @chartKeypadSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Set'**
+  String get chartKeypadSet;
+
+  /// No description provided for @chartKeypadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get chartKeypadMore;
+
+  /// No description provided for @chartKeypadFewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer options'**
+  String get chartKeypadFewer;
+
+  /// No description provided for @chartKeypadExtension.
+  ///
+  /// In en, this message translates to:
+  /// **'Extension'**
+  String get chartKeypadExtension;
+
+  /// No description provided for @chartKeypadAlterations.
+  ///
+  /// In en, this message translates to:
+  /// **'Alterations'**
+  String get chartKeypadAlterations;
+
+  /// No description provided for @chartKeypadBass.
+  ///
+  /// In en, this message translates to:
+  /// **'Bass note (slash chord)'**
+  String get chartKeypadBass;
+
+  /// No description provided for @chartKeypadNone.
+  ///
+  /// In en, this message translates to:
+  /// **'none'**
+  String get chartKeypadNone;
 }
 
 class _AppLocalizationsDelegate

@@ -9139,4 +9139,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trayPutTab => 'Put tab on clipboard';
+
+  @override
+  String get gameChart => 'Chord Chart';
+
+  @override
+  String get gameChartSubtitle =>
+      'Write a chord chart and play along with the band';
+
+  @override
+  String get chartPlay => 'Play';
+
+  @override
+  String get chartStop => 'Stop';
+
+  @override
+  String get chartBpm => 'BPM';
+
+  @override
+  String get chartEditAsText => 'Edit as text';
+
+  @override
+  String get chartTextHelp =>
+      'One bar between each |. Two chords in a bar split it. % or an empty bar holds the chord. [A] starts a section, [A] x2 repeats it.';
+
+  @override
+  String chartUnreadableChords(int count, String chords) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Could not read $count chords: $chords',
+      one: 'Could not read one chord: $chords',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chartCancel => 'Cancel';
+
+  @override
+  String get chartOk => 'Apply';
+
+  @override
+  String get chartKeypadClearBar => 'Clear bar';
+
+  @override
+  String get chartKeypadSet => 'Set';
+
+  @override
+  String get chartKeypadMore => 'More options';
+
+  @override
+  String get chartKeypadFewer => 'Fewer options';
+
+  @override
+  String get chartKeypadExtension => 'Extension';
+
+  @override
+  String get chartKeypadAlterations => 'Alterations';
+
+  @override
+  String get chartKeypadBass => 'Bass note (slash chord)';
+
+  @override
+  String get chartKeypadNone => 'none';
 }

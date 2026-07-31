@@ -25,8 +25,10 @@ void main() {
     });
 
     test('the outer pipes are optional', () {
-      expect(barTexts(parseChartText('C | Am | F | G').chart),
-          ['C', 'Am', 'F', 'G']);
+      expect(
+        barTexts(parseChartText('C | Am | F | G').chart),
+        ['C', 'Am', 'F', 'G'],
+      );
       expect(barTexts(parseChartText('| C | Am |').chart), ['C', 'Am']);
     });
 
@@ -59,8 +61,10 @@ void main() {
 
     test('a split bar respects the meter', () {
       final r = parseChartText('meter: 3/4\n| C G |');
-      expect(r.chart.barsInPlayOrder.single.chordsInOrder.map((c) => c.beat),
-          [0, 1.5]);
+      expect(
+        r.chart.barsInPlayOrder.single.chordsInOrder.map((c) => c.beat),
+        [0, 1.5],
+      );
     });
 
     test('N.C. is silence, which is not the same as a held bar', () {
@@ -119,10 +123,14 @@ void main() {
     });
 
     test('meter', () {
-      expect(parseChartText('meter: 3/4\n| C |').chart.meter,
-          const TimeSignature(3, 4));
-      expect(parseChartText('time: 6/8\n| C |').chart.meter,
-          const TimeSignature(6, 8));
+      expect(
+        parseChartText('meter: 3/4\n| C |').chart.meter,
+        const TimeSignature(3, 4),
+      );
+      expect(
+        parseChartText('time: 6/8\n| C |').chart.meter,
+        const TimeSignature(6, 8),
+      );
     });
 
     test('a meter with a non-power-of-two unit is refused, not asserted', () {
@@ -199,7 +207,9 @@ void main() {
 
     test('nothing but comments is also empty', () {
       expect(
-          parseChartText('// nothing here\n# nor here').chart.isEmpty, isTrue);
+        parseChartText('// nothing here\n# nor here').chart.isEmpty,
+        isTrue,
+      );
     });
   });
 
@@ -217,10 +227,14 @@ void main() {
       expect(round.minor, source.minor);
       expect(round.meter, source.meter);
       expect(round.tempoBpm, source.tempoBpm);
-      expect(round.sections.map((s) => s.label),
-          source.sections.map((s) => s.label));
-      expect(round.sections.map((s) => s.passes),
-          source.sections.map((s) => s.passes));
+      expect(
+        round.sections.map((s) => s.label),
+        source.sections.map((s) => s.label),
+      );
+      expect(
+        round.sections.map((s) => s.passes),
+        source.sections.map((s) => s.passes),
+      );
       expect(barTexts(round), barTexts(source));
     });
 
