@@ -460,6 +460,14 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **ACTIVE — indexing the EXACT charts into `db.json`
+  (the safe subset only).** Rows whose source file carries its OWN chord symbols;
+  **no inferred charts**, so the polyphony defect cannot contaminate the index.
+  - Additive `chords` object per row, mirroring the `music` field precedent. The
+    merge **asserts** the row set is unchanged and that no field but `chords`
+    differs — several agents write `db.json` and a silent clobber is the hazard.
+  - Backup first; append/merge only, never a rebuild; **no HF publish**.
+
 - **opus (backing-band)** · 🟡 **2 of 3 done (idle).** ✅ **(2) `auto` weighting
   shipped** (crisp_notation `f8030da`, suite 2,468) — picks per-slice vs per-bar
   from TEXTURE. A chord-rate heuristic was tried first and failed, measurably:
