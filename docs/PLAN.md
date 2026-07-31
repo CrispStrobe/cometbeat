@@ -452,6 +452,26 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · ✅ **THE `../crisp_notation` PULL IS A NON-ISSUE —
+  checked, and the caveat I kept repeating was STALE.** The shared clone is
+  already at `origin/main` (`012eada`), 0 ahead / 0 behind, and **carries all six
+  new symbols** (`_collectChordTrack`, `_buildChordSymbols`, `_harmonyOf`,
+  `_pitchFromTpc`, `_kindFromExtension`, `durationWeightedPerBar`). Someone
+  brought it current; I had been asserting otherwise from an old observation
+  instead of re-checking.
+  - ✅ **Proved the APP sees it, rather than inferring it**: new
+    `test/chord_symbols_integration_test.dart` resolves through the app's own
+    path dependency and asserts a LilyPond chord track → `F C7 Gm7 Bbmaj7` (with
+    the melody still 4 notes), a MuseScore `<Harmony>` → `C Bm`, and
+    `durationWeightedPerBar` reachable. **That test exists because "the app
+    resolves an older copy of the shared clone" is a real failure mode here, not
+    a hypothetical** — several agents share that checkout, and nothing else would
+    have caught it.
+  - Neighbouring suites green (289 tests), `flutter analyze lib/` clean.
+  - ⚠️ The other agent's 16 uncommitted files are **untouched** — 2 modified
+    (`crisp_notation_core/pubspec.yaml`, `pubspec.lock`) + 14 untracked test-data
+    and debug tools. No pull was needed, so nothing of theirs was at risk.
+
 - **opus (backing-band)** · ✅ **INGESTED (idle) — 21 MIT Christmas carols,
   `db.json` 46,335 → 46,356.** Via `append_manifest.py`, backup first, verified
   additive: 21 added, **0 pre-existing rows lost**, all paths resolve, no id
