@@ -566,6 +566,47 @@ is recorded in [HISTORY.md](HISTORY.md).
     and the scan's regex was double-escaped through the shell heredoc, so it
     under-reports them. Re-measure before working on those.
 
+  - 🆕 **UNCLAIMED — `scoreToMidi` / `scoreFromMidi` is not note-preserving.**
+    **NOT MINE, I am not touching it** — I found it as a confound and scoped it
+    rather than widen my own lane. It is self-contained and someone should take
+    it.
+
+    **How it surfaced (worth knowing, because it nearly produced a wrong
+    result).** I built a third-party differential oracle (music21 / verovio /
+    LilyPond 2.24) using our own MIDI as the reference, and every cell scored
+    5-14 out of 24 — which reads like six broken writers until you notice the
+    SAME files fail in every cell. Six independently-written codecs do not fail
+    on the same inputs; a shared reference does. The reference was the bug.
+    ⚠️ **So do not read the first oracle numbers as a defect count.** The oracle
+    has since been re-pointed at oracle-vs-oracle majority agreement, with our
+    MIDI removed from the loop entirely.
+
+    **Measured on real corpus files** (`scoreNotes(s)` vs
+    `scoreNotes(scoreFromMidi(scoreToMidi(s)))`):
+    `rorate.krn` 324 → **349** · `lament.mxl` 382 → **433** ·
+    `menuett.abc` 343 → **376** · `polo.abc` 108 → 108 (clean).
+
+    **Two causes confirmed by synthetic isolation** — everything else round-trips
+    exactly (plain notes, ties, two voices, chords, grace notes, triplets):
+
+    | construct | result | note |
+    |---|---|---|
+    | **repeat barlines** | 8 → **12** (+4) | the writer EXPANDS the repeat (correct — MIDI has no repeat marks) and the reader cannot re-fold it, so the score gains bars. Decide whether expansion is intended and, if so, whether the reader should fold or the harness should compare post-expansion. |
+    | **a note with `id == null`** | 1 → **0** | silently DROPPED. Already known (auto-memory `scoretomidi-needs-element-ids`) but never fixed; a caller that builds a score by hand loses notes with no error. |
+
+    ⚠️ **A THIRD cause is unidentified and is the interesting one.**
+    `rorate.krn` gains **+25 notes** with **no** repeats, no voltas, no ties, no
+    grace notes, no id-less notes, 112 bars in and 112 bars out, and only 3 bars
+    carrying a voice 2. None of the confirmed causes explains it. Start there.
+
+    **Reproduce:** `scoreNotes` summed over `m.voiceAt(0..3)` before and after
+    `scoreFromMidi(scoreToMidi(s))`. **Acceptance:** the note multiset is
+    preserved for every construct the model can express, or the loss is
+    documented as inherent to MIDI with a test pinning it (the standard this
+    codebase now uses — see the LilyPond over-full-bar and kern respelling
+    calls above). **Then add `midi` to `--rich` in the crossformat harness**,
+    which is currently only in the plain matrix for exactly this reason.
+
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
