@@ -16723,6 +16723,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'none'**
   String get chartKeypadNone;
+
+  /// No description provided for @conceptChordCharts.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord charts'**
+  String get conceptChordCharts;
+
+  /// No description provided for @proseChordCharts.
+  ///
+  /// In en, this message translates to:
+  /// **'A chord chart writes down the harmony and nothing else: a grid of bars, with a chord name in each. There are no noteheads, so it says what to play without saying how — which is exactly what a band needs when everyone is improvising their own part. Read left to right, one bar per box; an empty bar or a % means the chord before it keeps going. Sections get a letter, and a repeat sign or an ×2 tells you how many times round. Because it fits a whole tune on one page, a chart is what most players actually put on the stand.'**
+  String get proseChordCharts;
 }
 
 class _AppLocalizationsDelegate

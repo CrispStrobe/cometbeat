@@ -9261,4 +9261,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get chartKeypadNone => 'keiner';
+
+  @override
+  String get conceptChordCharts => 'Akkord-Charts';
+
+  @override
+  String get proseChordCharts =>
+      'Ein Akkord-Chart notiert nur die Harmonie: ein Raster aus Takten, in jedem ein Akkordname. Es gibt keine Notenköpfe — es sagt also, was gespielt wird, aber nicht wie. Genau das braucht eine Band, in der jede Stimme ihren Part selbst gestaltet. Gelesen wird von links nach rechts, ein Takt pro Kästchen; ein leerer Takt oder ein % bedeutet, dass der Akkord weiterklingt. Abschnitte bekommen einen Buchstaben, ein Wiederholungszeichen oder ein ×2 sagt, wie oft. Weil so ein ganzes Stück auf eine Seite passt, liegt bei den meisten Musikerinnen und Musikern ein Chart auf dem Notenständer.';
 }

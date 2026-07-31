@@ -9210,4 +9210,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartKeypadNone => 'none';
+
+  @override
+  String get conceptChordCharts => 'Chord charts';
+
+  @override
+  String get proseChordCharts =>
+      'A chord chart writes down the harmony and nothing else: a grid of bars, with a chord name in each. There are no noteheads, so it says what to play without saying how — which is exactly what a band needs when everyone is improvising their own part. Read left to right, one bar per box; an empty bar or a % means the chord before it keeps going. Sections get a letter, and a repeat sign or an ×2 tells you how many times round. Because it fits a whole tune on one page, a chart is what most players actually put on the stand.';
 }
