@@ -519,7 +519,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 
     | construct | occurrences / files | reader | writer | model |
     |---|---|---|---|---|
-    | **slurs `( )`** | 73,412 / **3,286** | ❌ none | ✅ emits | ✅ `Score.slurs` |
+    | **slurs `( )`** | 73,412 / **3,286** | ✅ **DONE** `8ab4fe2` | ✅ | ✅ `Score.slurs` |
     | **musica ficta `\ficta`** | 26,693 / **1,800** | ❌ | ❌ | ❌ needs an editorial-accidental flag |
     | **melisma `\melisma`/`End`** | 15,279 / **1,429** | ❌ | ❌ | ❌ lyric-extender concept |
     | manual beams `[ ]` | 21,629 / 786 | ❌ | ❌ | ❌ (layout derives beams today) |
@@ -537,8 +537,11 @@ is recorded in [HISTORY.md](HISTORY.md).
     | `\trill \fermata \upbow …` | 6,048+ / 719+ | ✅ NEW | ✅ | ✅ |
 
     **Order of work, by files affected:**
-    1. **Slurs** — 3,286 files, and the model and writer are ALREADY there. Pure
-       reader gap, biggest single win available.
+    1. ✅ **Slurs — DONE** (`8ab4fe2`). Chords picked up ties and articulations in
+       the same pass; `_processChord` had been building its NoteElement without
+       either. Verified NEUTRAL: the slur survives musicxml, mei, kern, abc,
+       musescore, gp and lilypond alike, which is the bar — anything the model
+       cannot carry across a format boundary is round-tripped, not preserved.
     2. **Dynamics** — ~600 files; `DynamicMarking` exists, so reader + writer.
     3. **`\breathe`** — 580 files; needs a model concept first.
     4. **`\ficta`** — 1,800 files, but think before adding: it is an EDITORIAL
