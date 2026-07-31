@@ -460,13 +460,36 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — indexing the EXACT charts into `db.json`
-  (the safe subset only).** Rows whose source file carries its OWN chord symbols;
-  **no inferred charts**, so the polyphony defect cannot contaminate the index.
-  - Additive `chords` object per row, mirroring the `music` field precedent. The
-    merge **asserts** the row set is unchanged and that no field but `chords`
-    differs — several agents write `db.json` and a silent clobber is the hazard.
-  - Backup first; append/merge only, never a rebuild; **no HF publish**.
+- **opus (backing-band)** · ✅ **SHIPPED — 547 EXACT charts indexed into
+  `db.json`** (15,730 chord symbols, 227 distinct). Rows whose source file
+  carries its OWN chord symbols; **no inferred charts**, so the polyphony defect
+  cannot contaminate the index. `chords: {symbols, count, distinct, origin}`,
+  `origin:"file"` reserving room for inferred charts later.
+  - Per source: Ebersberger 226 · OpenEWLD 97 · Kinder wollen singen 80 ·
+    PDMX 56 · Season Songs 42 · Wikipedia(de) 23 · Christmas ChordPro 21 ·
+    CPDL 2. Merge asserted the row set unchanged and no field but `chords`
+    differing (46,356 rows, 0 dangling); backup taken; **no HF publish**.
+  - ⚠️ **The index doubled as a reader audit and found a real bug — see the
+    LilyPond card below.** One `C/C` in the output was not a cosmetic oddity:
+    it was a corrupted root plus 4 silently dropped chords.
+
+- **opus (backing-band)** · ✅ **LilyPond duration multipliers FIXED**
+  (crisp_notation `ca8051c`, on `origin/main`; suite **2,495**, +9 tests).
+  `c1*3/4` / `s1*4` lex as ONE word because `*` and `/` are not symbol prefixes,
+  and the note gate is `$`-anchored — so it **rejected** the word, and a rejected
+  token is *dropped, not mis-read*: **`c1*3/4 d1` read as a single note.**
+  - In a `\chords` track the same word failed differently: the trailing group
+    caught `*3/4`, which was glued onto the chord text and split on the `/` into
+    a slash chord — **`f1*3/4` read as `C/C`** — and the unscaled duration made
+    the track outrun the melody, **silently dropping later chords** (a real
+    corpus file lost 4 of its 16).
+  - Both were silent: the file still "parsed fine", with less music in it. Same
+    class as the `\<` truncation and the `\\` voice-2 drop, and **found the same
+    way — by looking at the DATA, not at the parse status.**
+  - ⚠️ `NoteDuration` is base-plus-dots and cannot spell an arbitrary scaling
+    (`c4*2/3`), so a melody note whose scaled value has no symbolic spelling
+    keeps its base value rather than being dropped. The chord cursor is an exact
+    `Fraction`, so there the scaling is exact.
 
 - **opus (backing-band)** · 🟡 **2 of 3 done (idle).** ✅ **(2) `auto` weighting
   shipped** (crisp_notation `f8030da`, suite 2,468) — picks per-slice vs per-bar
