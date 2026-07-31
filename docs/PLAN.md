@@ -182,6 +182,20 @@ is recorded in [HISTORY.md](HISTORY.md).
       deliberate — absent optional fixtures (the licence-controlled module
       corpora), `TAB_BENCH`/`HEAVY` benchmarks, and the `MODEL_E2E` ONNX
       inference tests that would add 8-16 min. Those should stay skipped.
+  - 🧾 **How to actually verify "all green" — and the trap in doing it.** An
+    empty failure list is NOT the same claim as "every commit was validated":
+    it cannot distinguish a commit that passed from one that never ran. The real
+    check walks the commits, not the runs — for each, either a green run exists,
+    or it is prose and was correctly skipped. Last 25 on `main`: **9 validated
+    by their own green run · 14 prose correctly skipped · 1 covered by its
+    push-mate · 1 failure** (the interop lint, fixed minutes later).
+    - ⚠️ **The trap that nearly produced a false alarm:** `78fba96e`
+      (`macos/Runner/Info.plist` — code, not docs) had NO run of its own, which
+      looks exactly like `paths-ignore` wrongly skipping real code. It is not.
+      **GitHub creates one run per PUSH, keyed to the head commit**, and that
+      commit shared a timestamp with `e3ad2df1`, which ran and passed. So a
+      commit can be validated by its successor's run. Check the push before
+      concluding a filter leaked.
   - ℹ️ **`Pages` showing `cancelled` is NOT a red.** `pages.yml` sets
     `concurrency: deploy-pages` + `cancel-in-progress`, so a rapid main push
     deliberately supersedes the previous deploy. Left alone on purpose —
