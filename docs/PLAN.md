@@ -508,21 +508,57 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **CLAIMING — the chart SCREEN (`BB-U1` + `BB-U2`).**
-  The harmony engine (`ChordSpec`/`Chart`/`chart_codec`/`chart_to_groove`/
-  `CompArranger`) is complete and tested but has **no UI at all** — imported by
-  tests only. Building the surface: `lib/features/harmony/chart_screen.dart` +
-  `chart_grid_view.dart` + `chord_keypad.dart`, playing through the existing
-  groove engine via the already-shipped `chart_to_groove` (`BB-A0`).
-  - **NOT a Workshop extension** — `BB-U1` specifies its own screen and the two
-    surfaces have opposite jobs: Workshop engraves noteheads on staves; a chart
-    is a bar grid readable at arm's length with no notation at all. Chord
-    symbols over a STAFF are a separate (now working) thing.
-  - ⚠️ **Hot shared files I will touch:** `lib/features/games/game_registry.dart`
-    (one `GameInfo` in the `harmony` category), `app_en.arb`/`app_de.arb`, and
-    `lib/features/curriculum/concept_map.dart` (a tile without a concept-map
-    entry fails `curriculum_coverage_test`). Small, additive edits; shout if you
-    are mid-edit in any of them.
+- **opus (backing-band)** · ✅ **SHIPPED — the chart SCREEN (`BB-U1` + `BB-U2` +
+  `BB-D4a`).** The harmony engine had been complete and tested with **no UI at
+  all** (imported by tests only); it now has a surface. Tile `chart` in the
+  `harmony` category, concept `chord_charts`.
+  - **`chart_grid_view`** — bars per row derived from the available WIDTH, so a
+    phone gets two big bars rather than four unreadable ones. Taps report a
+    **document** bar, not a play-order index: with repeats expanded several
+    played bars share one document bar and the edit must land on the one the
+    user pointed at.
+  - **`chord_keypad`** — one tap for a major chord, two for anything on the main
+    grid; alterations and slash bass are a third tap, deliberately out of the
+    way. Edits a `ChordSpec`, so the symbol shown while typing is the model's
+    own canonical spelling.
+  - **`chart_text` (`BB-D4a`)** — the chart SUPPLY. Round-trips, so the text
+    view is an editor and not an importer. Unreadable chords are **kept and
+    reported**, never dropped.
+  - **`chart_playback`** — comp + bass + click through `playMixedTimedChords`.
+    Deliberately NOT `chart_to_groove`, whose whole vocabulary is six diatonic
+    triads over four bars; this voices with `arrangeComp` over the WHOLE chart
+    and hands absolute MIDI to the audio service, so `Bb7`, `F#m7b5` and
+    `Ebmaj9/G` all play. Bar highlight runs off a local clock because the audio
+    path renders a WAV and has no position callback.
+  - **Two model sharp edges handled rather than tripped over:**
+    `ChartBeatChord.beats` defaults to 1 *and* the codec omits the field when it
+    equals 1, so an explicit "one beat" cannot be told from "unspecified" —
+    honouring it would make `| C |` play one beat and rest three, so a chord
+    sounds until the next chord or the bar end. And `TimeSignature` asserts a
+    power-of-two beat unit, so a typed `meter: 4/3` is refused by the parser
+    rather than thrown from the model.
+  - Layout audited at phone portrait, phone landscape and tablet, no overflow.
+  - 📌 **Next on this surface (unclaimed):** persistence (`chart_codec` exists,
+    nothing calls it), a share token (the codec has JSON only — no `KU1.`-style
+    text token), autoscroll during playback, and the styled band (`BB-A2`…`A6`)
+    to replace one-hit-per-bar comping.
+
+- **opus (backing-band)** · ✅ **Workshop no longer drops a lead sheet's
+  harmony.** `ScoreDocument` neither read nor wrote `Score.chordSymbols`, so
+  opening a chart-bearing score in the Workshop threw its chords away and export
+  could never put them back — the *same* silent loss the `_annotations` field
+  was added to fix, and found the same way.
+  - Six sites, exactly the `_lyrics`/`_annotations` shape: storage, undo
+    snapshot, restore, prune-on-delete, `loadScore` (re-anchored through the id
+    remap), `buildScore`, plus the grand-staff path scoped to its own ids.
+  - **Now visible for free**, because system slicing was fixed earlier today —
+    an imported lead sheet's chords engrave above the staff with no new UI.
+  - ⚠️ **Left alone, deliberately:** `grandStaffFromScore` rebuilds elements
+    with fresh ids and already drops lyrics/dynamics/annotations — a deeper
+    pre-existing hole, not this change's. And the in-document grand-staff path
+    still drops **annotations** (string numerals, pizz./arco); one line of the
+    same shape, but a visible behaviour change outside this claim — Workshop's
+    owner should call it.
 
 - **opus (backing-band)** · ✅ **SHIPPED — 547 EXACT charts indexed into
   `db.json`** (15,760 chord symbols, 0 malformed). Rows whose source file
