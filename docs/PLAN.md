@@ -421,6 +421,17 @@ is recorded in [HISTORY.md](HISTORY.md).
       **`dart run` has assertions OFF while `dart test` has them ON.** If you
       only ever exercise a reader under `dart run`, you are not checking its
       model invariants at all.
+  - ✅ **DONE — FULL CORPUS, CURRENT CODE: 634,043 / 634,044 round trips,
+    47 of 48 cells perfect, 105,674 source files.** App side re-verified after
+    the barcheck change (it alters every `.ly` we write): `flutter analyze`
+    clean, 181 notation-facing app tests green.
+  - 🛑 **The ONE remaining failure is a deliberate non-fix, do not "fix" it
+    blind:** `Brahms schicksalslied.ly`, where the SOURCE holds 9/8 of music in
+    a voice-2 branch inside a 4/4 bar. Our reader carries the overflow into the
+    next measure, which inserts a bar and desyncs voice 1 from there on (4,138
+    notes → 2,838). Making the bar over-full instead would match the source, but
+    it means revisiting the deliberate, tested mid-bar voice-split behaviour for
+    ONE malformed file in 105,674. Worth doing only with a LilyPond oracle.
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
