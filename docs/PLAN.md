@@ -249,9 +249,17 @@ is recorded in [HISTORY.md](HISTORY.md).
       `perform_screen`. **304 tests, 4/4 runs green**, and the load bit (one
       pass took 4m37 against 2m57 for the same files). That is the perturbation
       that exposes this class, so the negative result is worth something.
-    - ⚠️ **Scope of that claim:** it covers the playback surfaces, NOT the whole
-      ~6,900-test suite. A test only breaks this way if it asserts on something
-      the wall clock indexes; if you add one that does, load-test it.
+    - ✅ **Scope now closed — the WHOLE suite was run under load, twice over.**
+      The earlier claim covered only the 304 playback tests; it now covers
+      everything. Full suite under 6-way CPU load: **6,963 passed / 26 skipped /
+      0 failed**, and the load was real — **44m35 against 25m23 unloaded**, a
+      1.75x stretch. A clean unloaded run preceded it (6,954 / 26 / 0).
+      So there is no *known* remaining wall-clock flake anywhere in the suite.
+    - ⚠️ Still not a proof, and worth saying plainly: two green passes cannot
+      show a rare race is absent, only that it did not fire under a
+      perturbation that DID expose the Tracker one. If you add a test that
+      asserts on something the wall clock indexes, load-test it —
+      `for i in 1..6; do (yes >/dev/null &); done` then run, and stop them after.
 
 - **opus (crossformat-xrt)** · 🚧 **ACTIVE — cross-format round-trips over the
   real corpus.** Branch `feature/crossformat-xrt`; the only mus file I touch is
