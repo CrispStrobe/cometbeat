@@ -124,9 +124,9 @@ void main() {
     testWidgets('opens on the chord it was given', (tester) async {
       await tester.pumpWidget(
         host(
-          ChordKeypad(
+          const ChordKeypad(
             initial: ChordSpec(
-              root: const Pitch(Step.d),
+              root: Pitch(Step.d),
               triad: ChordTriad.minor,
               seventh: ChordSeventh.minor,
             ),
@@ -184,9 +184,9 @@ void main() {
       // the user did not build.
       await tester.pumpWidget(
         host(
-          ChordKeypad(
+          const ChordKeypad(
             initial: ChordSpec(
-              root: const Pitch(Step.c),
+              root: Pitch(Step.c),
               seventh: ChordSeventh.minor,
               extension: 9,
             ),
@@ -212,13 +212,12 @@ void main() {
       // A bar is more than its chords; rebuilding it on every edit would drop
       // the barline and the ending number.
       const bar = ChartBar(
-        chords: [],
         barline: ChartBarline.repeatEnd,
         endingNumber: 2,
       );
       final edited = barWithChord(
         bar,
-        ChordSpec(root: const Pitch(Step.a), triad: ChordTriad.minor),
+        const ChordSpec(root: Pitch(Step.a), triad: ChordTriad.minor),
       );
       expect(edited.chordsInOrder.single.chord.text, 'Am');
       expect(edited.barline, ChartBarline.repeatEnd);
@@ -226,7 +225,7 @@ void main() {
     });
 
     test('clearing a bar empties it, which means HOLD not silence', () {
-      const bar = ChartBar(chords: []);
+      const bar = ChartBar();
       expect(barWithChord(bar, null).chords, isEmpty);
     });
   });
