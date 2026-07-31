@@ -255,8 +255,16 @@ void main(List<String> rawArgs) {
     final t = tried[p]!;
     final ok = passed[p] ?? 0;
     final pct = t == 0 ? 0.0 : ok * 100 / t;
+    // NEVER print 100.0% for a cell that missed one. Over 45,000 files a single
+    // failure rounds to 100.0% at one decimal, and a `grep -v 100.0%` triage
+    // then reports a clean sweep while 7 round trips are broken — which is
+    // exactly what happened here. The literal count is the truth; the
+    // percentage is a convenience, so mark it rather than let it lie.
+    final shown = ok == t
+        ? '100.0%'
+        : '${pct >= 99.95 ? '<100' : pct.toStringAsFixed(1)}%';
     stdout.writeln('  ${p.padRight(24)} ${ok.toString().padLeft(5)}/'
-        '${t.toString().padLeft(5)}  ${pct.toStringAsFixed(1)}%'
+        '${t.toString().padLeft(5)}  ${shown.padLeft(6)}'
         '${ok == t ? '' : '   e.g. ${examples[p]}'}');
   }
 
