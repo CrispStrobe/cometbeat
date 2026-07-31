@@ -14474,12 +14474,6 @@ abstract class AppLocalizations {
   /// **'Lead sheets name chords with short symbols above the tune — C, Am, G7, Dm. Learn to read them and you can play the harmony of a whole song from a single line of chords, the way a band does.'**
   String get proseChordSymbols;
 
-  /// No description provided for @proseChordCharts.
-  ///
-  /// In en, this message translates to:
-  /// **'A chord chart writes a song as bars of chord symbols instead of notes — the harmony only, which is what a rhythm section actually reads. Each bar says which chord to play and for how long, so a whole song fits on one page and any instrument can join in.'**
-  String get proseChordCharts;
-
   /// No description provided for @proseMelodicDictation.
   ///
   /// In en, this message translates to:
@@ -14989,12 +14983,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lead-sheet chord symbols'**
   String get conceptChordSymbols;
-
-  /// No description provided for @conceptChordCharts.
-  ///
-  /// In en, this message translates to:
-  /// **'Reading and writing a chord chart'**
-  String get conceptChordCharts;
 
   /// No description provided for @conceptCadences.
   ///
@@ -16727,13 +16715,13 @@ abstract class AppLocalizations {
   /// No description provided for @conceptChordCharts.
   ///
   /// In en, this message translates to:
-  /// **'Chord charts'**
+  /// **'Reading and writing a chord chart'**
   String get conceptChordCharts;
 
   /// No description provided for @proseChordCharts.
   ///
   /// In en, this message translates to:
-  /// **'A chord chart writes down the harmony and nothing else: a grid of bars, with a chord name in each. There are no noteheads, so it says what to play without saying how — which is exactly what a band needs when everyone is improvising their own part. Read left to right, one bar per box; an empty bar or a % means the chord before it keeps going. Sections get a letter, and a repeat sign or an ×2 tells you how many times round. Because it fits a whole tune on one page, a chart is what most players actually put on the stand.'**
+  /// **'A chord chart writes a song as bars of chord symbols instead of notes — the harmony only, which is what a rhythm section actually reads. Each bar says which chord to play and for how long, so a whole song fits on one page and any instrument can join in.'**
   String get proseChordCharts;
 }
 

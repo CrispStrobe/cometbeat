@@ -8026,10 +8026,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Leadsheets benennen Akkorde mit kurzen Symbolen über der Melodie — C, Am, G7, Dm. Lernst du sie zu lesen, kannst du die Harmonie eines ganzen Lieds aus einer einzigen Akkordzeile spielen, so wie eine Band.';
 
   @override
-  String get proseChordCharts =>
-      'Ein Akkord-Chart schreibt ein Lied als Takte mit Akkordsymbolen statt mit Noten — nur die Harmonie, also genau das, was eine Rhythmusgruppe wirklich liest. Jeder Takt sagt, welchen Akkord du wie lange spielst, so passt ein ganzes Lied auf eine Seite und jedes Instrument kann mitspielen.';
-
-  @override
   String get proseMelodicDictation =>
       'Eine kurze Melodie zu hören und aufzuschreiben ist Diktat — die härteste Prüfung fürs Ohr. Es verbindet Tonhöhe, Rhythmus und Gedächtnis: Du entschlüsselst die Melodie, wie du ein eben gehörtes Wort schreibst.';
 
@@ -8296,9 +8292,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get conceptChordSymbols => 'Akkordsymbole (Leadsheet)';
-
-  @override
-  String get conceptChordCharts => 'Akkord-Charts lesen und schreiben';
 
   @override
   String get conceptCadences => 'Wie Phrasen enden (Kadenzen)';
@@ -9263,9 +9256,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get chartKeypadNone => 'keiner';
 
   @override
-  String get conceptChordCharts => 'Akkord-Charts';
+  String get conceptChordCharts => 'Akkord-Charts lesen und schreiben';
 
   @override
   String get proseChordCharts =>
-      'Ein Akkord-Chart notiert nur die Harmonie: ein Raster aus Takten, in jedem ein Akkordname. Es gibt keine Notenköpfe — es sagt also, was gespielt wird, aber nicht wie. Genau das braucht eine Band, in der jede Stimme ihren Part selbst gestaltet. Gelesen wird von links nach rechts, ein Takt pro Kästchen; ein leerer Takt oder ein % bedeutet, dass der Akkord weiterklingt. Abschnitte bekommen einen Buchstaben, ein Wiederholungszeichen oder ein ×2 sagt, wie oft. Weil so ein ganzes Stück auf eine Seite passt, liegt bei den meisten Musikerinnen und Musikern ein Chart auf dem Notenständer.';
+      'Ein Akkord-Chart schreibt ein Lied als Takte mit Akkordsymbolen statt mit Noten — nur die Harmonie, also genau das, was eine Rhythmusgruppe wirklich liest. Jeder Takt sagt, welchen Akkord du wie lange spielst, so passt ein ganzes Lied auf eine Seite und jedes Instrument kann mitspielen.';
 }
