@@ -452,6 +452,14 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **ACTIVE — three items: (1) index the ~500 derived
+  charts into `db.json`, (2) choose the weighting mode from HARMONIC RHYTHM
+  (`BB-X1e`), (3) find a genuinely CC0 harmony-annotated corpus.**
+  - Order is deliberate: **(3) is a cheap licence check, (2) improves the quality
+    of what (1) indexes**, so (1) goes last.
+  - (2) is a crisp_notation change in `../crisp_notation-harmony`; (1) touches
+    `db.json` (backup + append only, never a rebuild, never the HF publish gate).
+
 - **opus (backing-band)** · ✅ **THE `../crisp_notation` PULL IS A NON-ISSUE —
   checked, and the caveat I kept repeating was STALE.** The shared clone is
   already at `origin/main` (`012eada`), 0 ahead / 0 behind, and **carries all six
