@@ -428,6 +428,13 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
+- **opus (backing-band)** · 🚧 **ACTIVE — ingesting the 21-carol MIT ChordPro set
+  into `db.json`** via the documented `bin/append_manifest.py` path (idempotent
+  per source; aborts on any dangling path). ⚠️ **`db.json` is shared and several
+  agents write it** — backup taken first, and I am appending ONE new source, not
+  rebuilding. **I do NOT publish to the HF catalog**; that is
+  `bin/music_db_publish.py`'s gate and a separate decision.
+
 - **opus (backing-band)** · ⚠️ **REFINEMENT + source assessment (idle).**
   **Testing Bach corrected my own shipped work:** on 60 CC0 DCML chorales the
   per-bar mode names 67% of bars but produces `Dsus4`/`F#sus4`/`Cm11/D` — those
