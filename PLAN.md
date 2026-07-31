@@ -3643,6 +3643,33 @@ failed:**
   `BB-H10`'s +30.2pp is a folk-song result, not a general one. Recorded here so
   nobody applies the per-bar mode to a chorale corpus and trusts the output.
 
+- ✅ **BB-X1g — INGESTED: 21 MIT Christmas carols. `db.json` 46,335 → 46,356
+  (2026-07-31).** The first Tier A/B acquisition of this arc, and it is finished
+  end to end rather than left staged.
+  - **Path:** `bin/build_xmas_manifest.py` → `bin/append_manifest.py
+    christmas-manifest.json "Christmas ChordPro"`. Backup taken first
+    (`db.json.bak-xmas-*`); the tool is idempotent per source and **aborts on any
+    dangling path**. Verified afterwards: 21 rows added, **0 pre-existing rows
+    lost**, every path resolves, no id collision against the existing 46,335.
+  - **Titles come from the `{title:}` directive, not the filename** — the
+    transcriber wrote "The First Noel" where the file is `First-Noel.txt`, and
+    `{subtitle:}` carries composer/lyricist for several ("Music by Lowell Mason,
+    Words by Isaac Watts").
+  - 🆕 **`chordpro` is a NEW format in `db.json`** — the census had gabc/midi/krn/
+    mxl/mscx/abc/ly/… and no chordpro. The app already reads it
+    (`songs/import/chordpro.dart` + `chord_sheet_screen.dart`), so it is playable,
+    but anything that switches on format should be checked.
+  - ✅ **The Tier B obligation is discharged.** `emit_catalog._tier` maps MIT to
+    Tier A, but **MIT still requires its notice to travel with the files we
+    redistribute** — so a `kMusicSourceCredits` entry was added and the credit
+    reaches the user. Per the Dahlhoff precedent: an ingest is not finished when
+    `db.json` is written.
+  - 🛑 **NOT published to the HF catalog.** That is `bin/music_db_publish.py`'s
+    gate and a separate decision.
+  - ⚠️ Two candidates deliberately left behind, both correctly:
+    `frescobaldi_fiori_musicali` (CC BY-NC-SA, **not** the CC0 it is often called)
+    and `pathawks/Christmas-Songs` (no licence at all).
+
 - 📚 **BB-X1f — SOURCE ASSESSMENT: annotated-harmony corpora (2026-07-30).**
   Evaluated against both axes; **none acquired**, since acquisition is the
   maintainer's call.

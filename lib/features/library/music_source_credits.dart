@@ -31,6 +31,14 @@ class MusicSourceCredit {
 /// Append new CC-BY / CC-BY-SA sources here as they are ingested.
 const List<MusicSourceCredit> kMusicSourceCredits = [
   MusicSourceCredit(
+    name: 'Christmas ChordPro — Cardinote Inc.',
+    description: 'Twenty-one public-domain Christmas carols and hymns as '
+        'ChordPro sources, with chords and guitar fingerings. The '
+        'transcriptions are MIT-licensed, © 2020 Cardinote Inc.; the carols '
+        'themselves are long out of copyright.',
+    url: 'https://github.com/cardinote/christmas-chords-lyrics',
+  ),
+  MusicSourceCredit(
     name: 'Kinder wollen singen — Musikpiraten e.V.',
     description:
         "Children's-song scores (LilyPond & MuseScore). The settings are "

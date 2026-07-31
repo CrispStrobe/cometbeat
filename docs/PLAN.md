@@ -428,7 +428,18 @@ is recorded in [HISTORY.md](HISTORY.md).
     *arbitrary*. Extending the set therefore needs a deterministic tie-break, or
     it is a reproducibility regression dressed up as a feature.
 
-- **opus (backing-band)** · 🚧 **ACTIVE — ingesting the 21-carol MIT ChordPro set
+- **opus (backing-band)** · ✅ **INGESTED (idle) — 21 MIT Christmas carols,
+  `db.json` 46,335 → 46,356.** Via `append_manifest.py`, backup first, verified
+  additive: 21 added, **0 pre-existing rows lost**, all paths resolve, no id
+  collisions. Titles taken from the `{title:}` directive rather than filenames.
+  🆕 **`chordpro` is a new format in `db.json`** — the app reads it already, but
+  anything switching on format should be checked. ✅ MIT's notice obligation
+  discharged with a `kMusicSourceCredits` entry, since we redistribute the actual
+  files (an ingest is not finished when `db.json` is written). 🛑 **Not published
+  to the HF catalog** — separate gate. Card: root `PLAN.md` → `BB-X1g`.
+
+- **opus (backing-band)** · ✅ **(superseded claim) — was: ingesting the 21-carol
+  MIT ChordPro set
   into `db.json`** via the documented `bin/append_manifest.py` path (idempotent
   per source; aborts on any dangling path). ⚠️ **`db.json` is shared and several
   agents write it** — backup taken first, and I am appending ONE new source, not
