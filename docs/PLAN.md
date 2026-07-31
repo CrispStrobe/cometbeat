@@ -504,7 +504,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     | 2 | **Widen the signature** (ties, slurs, articulations, lyrics, dynamics, clef/key/meter sequence, repeats) | Closes the gap above — 105k files of entirely unmeasured territory. Where I expect the next real crop. | ⬜ |
     | 3 | **Fixed-point iteration** — apply each codec N× and require stability after the first pass | Catches DRIFT, which single-application testing is blind to by construction. | ⬜ |
     | 4 | **Add GP + MIDI to the matrix** (`scoreToGpif`/`scoreFromGpif`, `scoreToMidi`/`scoreFromMidi`) | Breadth beats depth: 6 formats → 8, so 36 ordered pairs → 64, over codecs with ZERO cross-format coverage today. GP carries the tab/fingering data the app ships. | ⬜ |
-    | 5 | **Differential vs a THIRD-PARTY implementation** (verovio/MEI, LilyPond itself, humlib/kern, music21) | The one class round-trips structurally CANNOT find: a writer and reader sharing the same misconception round-trip perfectly and are both wrong. | ⬜ |
+    | 5 | **Differential vs a THIRD-PARTY implementation** (verovio/MEI, LilyPond itself, humlib/kern, music21) | The one class round-trips structurally CANNOT find: a writer and reader sharing the same misconception round-trip perfectly and are both wrong. | ✅ **2 fixes** |
     | 6 | **Random-walk chains, length 3-5**, deterministic seed, failing walk reported | The honest form of "more permutations" — the useful part without the 6^k blow-up. | ⬜ |
 
   - 🎼 **LILYPOND EXPRESSION COVERAGE — reader, writer AND the neutral model.
@@ -606,6 +606,39 @@ is recorded in [HISTORY.md](HISTORY.md).
     codebase now uses — see the LilyPond over-full-bar and kern respelling
     calls above). **Then add `midi` to `--rich` in the crossformat harness**,
     which is currently only in the plain matrix for exactly this reason.
+
+  - 🔬 **ORACLE RESULTS — and the one form of it that actually works.**
+    Two real fixes, both invisible to every other axis:
+    - **MEI ties were never terminated** (`cffa456`). `@tie` is a chain
+      `i → m → t`; we only ever wrote `i`, so **verovio SKIPS the note** — the
+      music is absent from its rendering. Our reader checks only whether `@tie`
+      is PRESENT, never its value, so writer and reader agreed perfectly.
+    - **A fractional tempo made the file fail to COMPILE** (`b83619d`).
+      `\tempo 4 = 91.99980000000001` is a syntax error ("unexpected REAL"), not
+      an imprecise tempo — LilyPond takes an integer. A MuseScore tempo of
+      1.5333 quarters/second arrives as 91.9998, so it is not a rare shape:
+      **4 of 24 sample files produced a `.ly` nobody could open.** Now **24/24
+      compile**.
+
+    ⚠️ **Comparing NOTES across oracles mostly does not work, and the numbers
+    look damning when it fails — do not chase them.** Two lessons:
+    1. **Never use our own `scoreToMidi` as the reference** — it is not
+       note-preserving (see the unclaimed card below), so every cell scored
+       5-14/24 and it read like six broken writers. The giveaway is the SAME
+       files failing in every cell: independent codecs do not do that, a shared
+       reference does.
+    2. **Even oracle-vs-oracle majority voting is mostly inconclusive: 16 of 24
+       files came back CONTESTED.** These tools genuinely differ from each
+       other — verovio expands repeats in its MIDI rendering where music21 does
+       not, so it read 312 notes against a majority of 123 on the same file.
+       That is a fact about them, not about us.
+
+    📌 **The form that DOES work is binary and needs no comparison at all: does
+    the reference implementation ACCEPT the file?** `lilypond` returning
+    non-zero on our output is unambiguous, unarguable, and found the tempo bug
+    immediately. Prefer "does it load/compile/validate" over "do the notes
+    match" for any future oracle — and an MEI/MusicXML **schema validation**
+    pass is the obvious next one in that family.
 
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
