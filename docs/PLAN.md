@@ -2095,7 +2095,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING the TAB WORKSHOP as the clipboard's third
+- **opus (loop-d1d4)** · 🚧 **CLAIMING P2 — the enforcement test + the protocol
+  header note.** The maintainer deferred these until WS-X6 shipped; it has, so
+  they are due. Small: one NEW test file, and a comment-only addition to
+  `drag_payload.dart` (@daw-suite's, but text only).
+  ⭐ **The point is that the invariant is now SATISFIABLE.** When I first
+  proposed this test there were four drop targets and zero drag sources, so it
+  could only have been a ratchet ("do not make it worse"). The clipboard supplies
+  the source, so it can now assert the real rule — *if any
+  `DragTarget<MusicDragPayload>` exists, at least one `Draggable` must too* —
+  and that is a guard rather than a scold. Precedent for scanning source from a
+  test already exists (`project_codec_test` reads `app_mode.dart`).
+  📌 This is the piece that would have caught the original defect: four targets
+  were wired over two days, by three agents, none of whom could see that nothing
+  could start the gesture. A card note did not travel; a red test would have.
+  Previously: 🚧 **CLAIMED the TAB WORKSHOP as the clipboard's third
   host** (WS-X6 slice 2's remainder). `tab_workshop_screen.dart` is another
   lane's file and is COLD — 0 commits in 6 h — and the change is the same small
   shape as the other two hosts: an app-bar action, the band in the layout, one
