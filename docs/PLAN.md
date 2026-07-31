@@ -2217,7 +2217,30 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING P2 — the enforcement test + the protocol
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — P2 (`b2d0ca7a`), and with it the
+  whole clipboard arc. `drag_protocol_reachable_test` + a warning in
+  `drag_payload.dart`'s own header.**
+  ⭐ **The lesson this arc is really about, now enforced instead of written
+  down.** WS-X2 shipped four correct, tested drop targets wired to a gesture
+  nothing in the app could start — for two days, across three agents. None of
+  them could have seen it from their own diff: each target WAS finished. The
+  defect lived between the diffs. I wrote a stop-flag on the card; **two more
+  targets were wired after it.** A note does not travel; a red test does.
+  ⚠️ **I verified the guard actually fails** — renamed the clipboard's
+  `Draggable` to another type, watched the first check go red, restored. A guard
+  that cannot fail is the same defect class it is guarding against, and this
+  whole arc is about not shipping those.
+  📌 Three checks, and the middle one is the non-obvious one: **a source inside a
+  modal is not a source.** A `Draggable` behind a barrier can be looked at and
+  never dragged onto the surface it covers — which is precisely why a menu or a
+  bottom sheet could not have finished WS-X2, and why the maintainer's inline
+  band could.
+  **Whole arc, for a reader arriving late:** the clipboard (WS-X6) is the drag
+  source WS-X2 always lacked. Five hosts, documents and instruments, shared
+  app-wide, persisted across restarts. Slice 2's last hosts were finished by
+  @daw-suite in parallel with me — the third convergence of the session, and the
+  reason the claim-before-writing habit is worth its small cost.
+  Previously: 🚧 **CLAIMED P2 — the enforcement test + the protocol
   header note.** The maintainer deferred these until WS-X6 shipped; it has, so
   they are due. Small: one NEW test file, and a comment-only addition to
   `drag_payload.dart` (@daw-suite's, but text only).
