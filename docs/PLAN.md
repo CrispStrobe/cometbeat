@@ -446,6 +446,29 @@ is recorded in [HISTORY.md](HISTORY.md).
     notes → 2,838). Making the bar over-full instead would match the source, but
     it means revisiting the deliberate, tested mid-bar voice-split behaviour for
     ONE malformed file in 105,674. Worth doing only with a LilyPond oracle.
+  - ✅ **`--voices` SWEEP DONE (task complete): 86,571 / 86,652, 75 of 84 cells
+    perfect** (all 6×6 ordered pairs + 6 direct hops, voices 2-4 compared).
+    - ⚠️ **The harness had the very bug it exists to find** — `_content` indexed
+      `Measure.voices` by a voice NUMBER, and that view drops empty voices while
+      `TupletSpan.voice` is absolute, so it paired voice 3's notes with voice
+      2's tuplets. Caught BEFORE triaging the 151 failures the first run
+      reported. Also: `pkill -f "xrt/bin/xrt.dart"` matches nothing — the argv
+      is `bin/xrt.dart`, relative to its cwd — so a run I thought I had killed
+      finished and raced the relaunch on the same filenames.
+    - ✅ **One real defect, invisible to everything before it:** the kern reader
+      collected tuplet ratios for the MAIN SPINE ONLY, so a triplet living
+      entirely in voice 2 was silently un-tripleted — a third too long, every
+      note present, voice 1 untouched (`crisp_notation` `cd4c967`).
+  - 🛑 **ALL 81 remaining failures are ONE format limitation, verified — do not
+    "fix" it by making the LilyPond reader ignore the meter.** Every failing file
+    has OVER-FULL source bars (polonaise 2 bars at 3/2 in 3/4 · rorate 17 at 3/1
+    in C| · Schulhoff 41, worst 95/16 in 2/4 · Brahms 113). ABC/kern/MusicXML
+    treat the barline as authoritative; **LilyPond derives bars from durations +
+    meter and has no over-full bar**, so it re-bars and everything after shifts.
+    Real LilyPond warns on the same input. The PRINCIPLED fix, if ever wanted, is
+    for the writer to emit `\set Timing.measureLength` for such a bar and the
+    reader to honour it — that is how LilyPond actually expresses an irregular
+    measure. Anything else trades a rare pathology for wrong barring everywhere.
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
@@ -457,7 +480,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     round-trips with all four voices intact through every one of them. `--voices`
     exists only to read the inner-voice result separately from the voice-1 one. **Direct-hop corpus failures 98 → 0 on every file
     traced**, and the permutation matrix went 34/48 → 73/84 perfect cells with
-    every survivor traced and fixed afterwards. Core suite **2478**, green.
+    every survivor traced and fixed afterwards. Core suite **2479**, green.
 
 - **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
   extension** (the cheap win listed inside `BB-X2`). Branch
