@@ -336,6 +336,22 @@ Sound Library creation tools.
   nothing else: `dawAddFromLibrary`, `dawImportAudioFile`, `dawAddMusic`,
   `dawExtractSample`, `dawAddBeat` (+ tune). No sound-design entry — that work
   happens in the Sound Library.
+- ✅ **Every surface with a rack can SAVE a chain, and every surface HAS a rack
+  — DONE 2026-07-30/31** (opus, daw-suite). Two halves, both found by auditing
+  rather than by a card:
+  - **`fx_presets.dart` was a fixed enum of factory sounds with two callers**, so
+    five surfaces hosted an FX rack and none could keep the chain you dialled in.
+    `core/services/fx_preset_store.dart` (the `ProjectStore` shape, storing chain
+    STRINGS — already the interchange format, already what the Audio Editor puts
+    on the clipboard, and readable in a bug report) plus a shared sheet on the
+    `keymap_sheet` pattern, hosted by **all five racks**. A chain string cannot
+    carry per-param automation, so the sheet says so before saving one, and stays
+    quiet for a plain chain.
+  - ⚠️ **The ADVANCED Tracker had no rack at all** while the BEGINNER one did —
+    `TrackerChannel.fxChain` and `setChannelFxChain` already existed and that
+    screen simply never offered them, making the serious tracker the only surface
+    with no per-channel effects. Now a long-press on the channel header (that
+    header is 74 px and already carries three controls).
 - ✅ **Voice Shaping is an audio FX module — DONE (verified 2026-07-26).**
   `voiceShape` / `voiceChipmunk` / `voiceDeep` / `voiceRobot` / `voiceRadio` are
   `FxType` values with defaults in `fx_spec.dart`, and `daw_screen.dart`'s single
@@ -407,6 +423,17 @@ not a second playback engine.
   beginner/advanced workflow and transport states before removing old surfaces.
 
 ## Five-mode product architecture (DECIDED)
+
+> ✅ **INTEROP PARITY REACHED 2026-07-30/31** (opus, daw-suite). All five
+> surfaces — Score Workshop · Tab Workshop · Advanced Tracker · Loop Studio ·
+> Audio Editor — now have **all four** interop affordances: a **drop target**
+> (WS-X2), a **clipboard host** (WS-X6), the **FX-preset shelf**, and a **live
+> project link** (WS-X1).
+> 📌 **Every hole in that set was found by building the matrix, not by reading
+> the cards**: Score could neither receive music from another mode nor put its
+> own on the shelf; a TAB could not be dropped on the timeline at all; the
+> Advanced Tracker had no FX rack. None of those was written down anywhere as
+> missing. A feature list says what exists; a matrix says what is *absent*.
 
 The product has five top-level authoring modes. They are different musical
 mental models over one shared project/document model, not five unrelated apps:
