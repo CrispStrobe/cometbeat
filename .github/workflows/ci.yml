@@ -93,7 +93,22 @@ jobs:
 
       - name: Analyze
         working-directory: cometbeat
-        run: flutter analyze
+        # The remedy is printed HERE, at the moment someone sees the red,
+        # because putting it in a doc did not work: `require_trailing_commas`
+        # has failed this step FOUR times, always a different agent. The trap is
+        # that `dart format` cannot fix that lint, and our documented pre-commit
+        # order (format, then analyze) stops one step short — so a perfectly
+        # formatted file is still a red one. `dart fix --apply` does fix it.
+        # Exit code is unchanged; this only adds output on the failure path.
+        run: |
+          flutter analyze || {
+            echo "::error::flutter analyze failed — most reds here are auto-fixable."
+            echo "Run this, in this order, then push again:"
+            echo "    dart fix --apply && dart format . && flutter analyze"
+            echo "dart format ALONE does not fix require_trailing_commas, which"
+            echo "is how four of these reached main. Analyze covers test/ too."
+            exit 1
+          }
 
       # Without ffmpeg, `mp3_decode_roundtrip_test` self-skips with "ffmpeg not
       # on PATH" and CI stays green having tested NOTHING of MP3 decoding —
