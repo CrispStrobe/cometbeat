@@ -35,12 +35,15 @@ is recorded in [HISTORY.md](HISTORY.md).
 >   the ARBs · `loop_automation_{render,ui}_test.dart` (mine) ·
 >   `bowed_arranger_becker_test.dart` + `test/data/cello_fingering_gold_becker.json`
 >   (**6,488 lines of gold data**, restored here, 4 tests green).
-> - ⬜ **`test/generator_shapes_test.dart` (238 lines)** and
->   **`test/mod_effect_memory_test.dart` (218 lines)** are still gone. I restored
->   both and they **no longer compile** against current code, so the API they
->   cover has moved on — pushing them would only make main red. **Their owners
->   need to decide** whether to port or drop them; either way that coverage is
->   silently absent right now.
+> - ✅ **RESOLVED (verified 2026-07-31, jukebox-ingest).**
+>   `test/generator_shapes_test.dart` and `test/mod_effect_memory_test.dart` were
+>   restored in **`dcedd98d`** and **both now pass — 22 tests green**, run just
+>   now against current main. The note above said they no longer compiled; that
+>   was true when written and has since been fixed (`d6a952cc` reworked the
+>   replayer API they cover). **That coverage is present again; nothing is
+>   owed.** Leaving the history above intact because the stale-tree lesson still
+>   stands — only the ⬜ was out of date, and an open item that is silently
+>   already done costs the next reader more than it saves.
 > - Already present again (someone restored, or the diff was partial):
 >   `tracker_instrument_codec_test.dart` · `daw_edits.dart` · `daw_screen.dart`.
 >
