@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 // ignore: depend_on_referenced_packages
 import 'package:crisp_notation_core/crisp_notation_core.dart';
 
@@ -21,29 +22,40 @@ import 'package:crisp_notation_core/crisp_notation_core.dart';
 ///
 /// `perExt` caps how many source files of each extension are used, so a
 /// 45,000-file corpus can be sampled without waiting hours for a signal.
-typedef Writer = String Function(Score);
-typedef Reader = Score Function(String);
+/// One write-then-read hop through a format.
+///
+/// A single function rather than a writer/reader pair because not every codec
+/// serialises to TEXT — MIDI is bytes — and the harness only ever needs the
+/// round trip, never the intermediate.
+typedef Hop = Score Function(Score);
 
-/// The formats that can express a single-staff score in text and read it back.
-const _formats = ['musicxml', 'mei', 'kern', 'abc', 'lilypond', 'musescore'];
+/// The formats that can express a score and read it back.
+///
+/// GP and MIDI joined late. Both are bidirectional and both were absent, which
+/// mattered more than any amount of extra chain depth: adding two formats takes
+/// the ordered-pair matrix from 36 cells to 64, over codecs with no
+/// cross-format coverage at all. GP in particular carries the string/fret data
+/// the app ships.
+const _formats = [
+  'musicxml',
+  'mei',
+  'kern',
+  'abc',
+  'lilypond',
+  'musescore',
+  'gp',
+  'midi',
+];
 
-Writer _writerFor(String f) => switch (f) {
-      'musicxml' => scoreToMusicXml,
-      'mei' => scoreToMei,
-      'kern' => scoreToKern,
-      'abc' => scoreToAbc,
-      'lilypond' => scoreToLilyPond,
-      'musescore' => scoreToMscx,
-      _ => throw ArgumentError(f),
-    };
-
-Reader _readerFor(String f) => switch (f) {
-      'musicxml' => scoreFromMusicXml,
-      'mei' => scoreFromMei,
-      'kern' => scoreFromKern,
-      'abc' => scoreFromAbc,
-      'lilypond' => scoreFromLilyPond,
-      'musescore' => scoreFromMscx,
+Hop _hopFor(String f) => switch (f) {
+      'musicxml' => (s) => scoreFromMusicXml(scoreToMusicXml(s)),
+      'mei' => (s) => scoreFromMei(scoreToMei(s)),
+      'kern' => (s) => scoreFromKern(scoreToKern(s)),
+      'abc' => (s) => scoreFromAbc(scoreToAbc(s)),
+      'lilypond' => (s) => scoreFromLilyPond(scoreToLilyPond(s)),
+      'musescore' => (s) => scoreFromMscx(scoreToMscx(s)),
+      'gp' => (s) => scoreFromGpif(scoreToGpif(s)),
+      'midi' => (s) => scoreFromMidi(scoreToMidi(s)),
       _ => throw ArgumentError(f),
     };
 
@@ -118,6 +130,12 @@ Score? _load(File f) {
 /// which is precisely what five of them were doing with inner-voice tuplets.
 bool _allVoices = false;
 
+/// Compare everything BUT pitch and rhythm as well, under `--rich`.
+///
+/// Off by default so the historical numbers stay comparable, and because the
+/// two axes fail for different reasons and are worth reading apart.
+bool _rich = false;
+
 List<String> _content(Score s) {
   final out = <String>[];
   for (final m in s.measures) {
@@ -142,16 +160,100 @@ List<String> _content(Score s) {
         if (e is! NoteElement) continue;
         final sounding = e.duration.toFraction() * (scale[i] ?? Fraction(1, 1));
         final pitches = e.pitches.map((p) => p.midiNumber).toList()..sort();
-        out.add('${v == 0 ? '' : 'v$v:'}${pitches.join('.')}@$sounding');
+        final buf = StringBuffer()
+          ..write(v == 0 ? '' : 'v$v:')
+          ..write(pitches.join('.'))
+          ..write('@$sounding');
+        if (_rich) buf.write(_noteExtras(e));
+        out.add(buf.toString());
+      }
+    }
+    if (_rich) {
+      final bar = _measureExtras(m);
+      if (bar.isNotEmpty) out.add('bar{$bar}');
+    }
+  }
+  if (_rich) out.addAll(_scoreExtras(s));
+  return out;
+}
+
+/// Everything about a NOTE beyond its pitch and length.
+///
+/// Omitted from the signature the corpus sweep ran with for its first
+/// 634,044 round trips, which is why that number means "pitches and rhythms
+/// survive" and nothing stronger. Each field is written only when it is set, so
+/// an ordinary note's signature is unchanged and a diff stays readable.
+String _noteExtras(NoteElement e) {
+  final parts = <String>[
+    if (e.tieToNext) 'tie',
+    if (e.articulations.isNotEmpty)
+      'art:${(e.articulations.map((a) => a.name).toList()..sort()).join(',')}',
+    if (e.ornament != null) 'orn:${e.ornament!.name}',
+    if (e.graceNotes.isNotEmpty)
+      'grace:${e.graceStyle.name}:'
+          '${e.graceNotes.map((p) => p.midiNumber).join('.')}',
+    if (e.fingerings.isNotEmpty) 'fing:${e.fingerings.join(',')}',
+    if (e.arpeggio != null) 'arp:${e.arpeggio!.name}',
+    if (e.tremolo != null) 'trem:${e.tremolo}',
+    if (e.notehead != NoteheadShape.normal) 'head:${e.notehead.name}',
+  ];
+  return parts.isEmpty ? '' : '[${parts.join(' ')}]';
+}
+
+/// Per-bar structure: the mid-score changes and repeat marks.
+String _measureExtras(Measure m) => [
+      if (m.clefChange != null) 'clef:${m.clefChange!.name}',
+      if (m.keyChange != null) 'key:${m.keyChange!.fifths}',
+      if (m.timeChange != null) 'time:${m.timeChange}',
+      if (m.startRepeat) 'repeatStart',
+      if (m.endRepeat) 'repeatEnd',
+      if (m.volta != null) 'volta:${m.volta}',
+      if (m.multiRest != null) 'multiRest:${m.multiRest}',
+      if (m.navigation != null) 'nav:${m.navigation!.name}',
+    ].join(' ');
+
+/// Score-level attachments, keyed by the NOTE they point at rather than by the
+/// element id — ids are regenerated by every reader, so comparing them across a
+/// round trip compares nothing. The index of the note in play order is stable.
+List<String> _scoreExtras(Score s) {
+  final index = <String, int>{};
+  var n = 0;
+  for (final m in s.measures) {
+    for (var v = 0; v < 4; v++) {
+      for (final e in m.voiceAt(v)) {
+        if (e is NoteElement && e.id != null) index[e.id!] = n++;
       }
     }
   }
+  String at(String id) => '${index[id] ?? -1}';
+  final out = <String>[
+    for (final l in s.lyrics) 'lyric@${at(l.elementId)}:${l.verse}:${l.text}',
+    for (final d in s.dynamics) 'dyn@${at(d.elementId)}:${d.level.name}',
+    for (final a in s.annotations) 'ann@${at(a.elementId)}:${a.text}',
+    for (final sl in s.slurs) 'slur@${at(sl.startId)}-${at(sl.endId)}',
+    for (final h in s.hairpins)
+      'hairpin@${at(h.startId)}-${at(h.endId)}:${h.type.name}',
+  ]..sort();
   return out;
 }
 
 void main(List<String> rawArgs) {
   _allVoices = rawArgs.contains('--voices');
+  _rich = rawArgs.contains('--rich');
   final chain = rawArgs.contains('--chain');
+  final fixedPoint = rawArgs.contains('--fixed-point');
+  final fixedPointPasses = int.tryParse(
+        rawArgs
+            .firstWhere((a) => a.startsWith('--passes='), orElse: () => '')
+            .replaceFirst('--passes=', ''),
+      ) ??
+      4;
+  final walkLength = int.tryParse(
+        rawArgs
+            .firstWhere((a) => a.startsWith('--walk='), orElse: () => '')
+            .replaceFirst('--walk=', ''),
+      ) ??
+      0;
   final args = rawArgs.where((a) => !a.startsWith('--')).toList();
   if (args.isEmpty) {
     stderr.writeln('Usage: crisp_crossformat_roundtrip.dart <dir> [out.json]');
@@ -218,7 +320,7 @@ void main(List<String> rawArgs) {
     Score? hop(Score from, List<String> before, String to, String pair) {
       tried[pair] = (tried[pair] ?? 0) + 1;
       try {
-        final round = _readerFor(to)(_writerFor(to)(from));
+        final round = _hopFor(to)(from);
         final got = _content(round);
         if (_sameContent(before, got)) {
           passed[pair] = (passed[pair] ?? 0) + 1;
@@ -235,6 +337,75 @@ void main(List<String> rawArgs) {
         examples.putIfAbsent(pair, () => '$name: THREW $m');
       }
       return null;
+    }
+
+    // FIXED POINT: apply each codec repeatedly. `read(write(x))` being lossless
+    // does NOT imply `read(write(read(write(x))))` is — a codec that normalises
+    // on the first pass and then drifts a little on each one looks perfect under
+    // single application. That failure mode is not hypothetical here: the
+    // relative-octave creep compounded across voice splits until pitches left
+    // the MIDI range. Pass 1 may legitimately renormalise (a respelled tuplet,
+    // a re-barred overfull measure), so stability is required from pass 2 on.
+    if (fixedPoint) {
+      for (final to in _formats) {
+        Score? cur;
+        List<String>? settled;
+        for (var pass = 1; pass <= fixedPointPasses; pass++) {
+          final input = cur ?? src;
+          try {
+            cur = _hopFor(to)(input);
+          } catch (e) {
+            var m = e.toString().replaceAll('\n', ' ');
+            if (m.length > 70) m = m.substring(0, 70);
+            examples.putIfAbsent('fix:$to', () => '$name: pass $pass THREW $m');
+            tried['fix:$to'] = (tried['fix:$to'] ?? 0) + 1;
+            cur = null;
+            break;
+          }
+          final now = _content(cur);
+          if (pass == 1) {
+            settled = now;
+            continue;
+          }
+          final before = settled!;
+          tried['fix:$to'] = (tried['fix:$to'] ?? 0) + 1;
+          if (_sameContent(before, now)) {
+            passed['fix:$to'] = (passed['fix:$to'] ?? 0) + 1;
+          } else {
+            examples.putIfAbsent(
+              'fix:$to',
+              () => '$name: drifted on pass $pass; '
+                  '${before.length} -> ${now.length}; '
+                  'first diff ${_firstDiff(before, now)}',
+            );
+          }
+          settled = now;
+        }
+      }
+    }
+
+    // RANDOM WALKS: the honest form of deeper permutations. Every ordered PAIR
+    // is already covered, and a longer chain is lossless by induction over
+    // whatever the pairs preserve — so enumerating 6^k buys little. What a walk
+    // genuinely explores is a different INPUT DISTRIBUTION: scores shaped by our
+    // own writers rather than by third parties. Sampling that beats enumerating
+    // it. The seed is derived from the file path, so a failing walk reproduces.
+    if (walkLength > 0) {
+      final rng = Random(f.path.hashCode);
+      final route = [
+        for (var i = 0; i < walkLength; i++)
+          _formats[rng.nextInt(_formats.length)],
+      ];
+      var cur = src;
+      var expect = want;
+      for (var i = 0; i < route.length; i++) {
+        final label = 'walk:${route.sublist(0, i + 1).join('>')}';
+        final next = hop(cur, expect, route[i], label);
+        if (next == null) break;
+        cur = next;
+        expect = _content(cur);
+        if (expect.isEmpty) break;
+      }
     }
 
     for (final to in _formats) {
