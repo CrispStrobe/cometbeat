@@ -497,6 +497,13 @@ const List<Concept> kConcepts = [
     ['spot_parallels'],
   ),
   Concept(
+    'chord_charts',
+    GradeBand.g910,
+    ConceptArea.harmony,
+    'Reading and writing a chord chart',
+    ['chart'],
+  ),
+  Concept(
     'score_reading',
     GradeBand.g910,
     ConceptArea.reading,

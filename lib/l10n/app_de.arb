@@ -3323,5 +3323,34 @@
   "fxPresetSave": "Sichern",
   "fxPresetAutomationDropped": "Automation lässt sich nicht in einem Preset sichern — die Effekte bleiben, die bewegten Regler nicht.",
   "trayPutSong": "Song auf die Ablage legen",
-  "trayPutTab": "Tabulatur auf die Ablage legen"
+  "trayPutTab": "Tabulatur auf die Ablage legen",
+  "gameChart": "Akkord-Chart",
+  "gameChartSubtitle": "Ein Akkord-Chart schreiben und mit der Band mitspielen",
+  "chartPlay": "Abspielen",
+  "chartStop": "Stopp",
+  "chartBpm": "BPM",
+  "chartEditAsText": "Als Text bearbeiten",
+  "chartTextHelp": "Ein Takt zwischen jedem |. Zwei Akkorde teilen den Takt. % oder ein leerer Takt hält den Akkord. [A] beginnt einen Abschnitt, [A] x2 wiederholt ihn.",
+  "chartUnreadableChords": "{count,plural, =1{Ein Akkord war nicht lesbar: {chords}}other{{count} Akkorde waren nicht lesbar: {chords}}}",
+  "@chartUnreadableChords": {
+    "description": "Shown after pasting a text chart that contained chords this build could not parse",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "chords": {
+        "type": "String"
+      }
+    }
+  },
+  "chartCancel": "Abbrechen",
+  "chartOk": "Übernehmen",
+  "chartKeypadClearBar": "Takt leeren",
+  "chartKeypadSet": "Setzen",
+  "chartKeypadMore": "Mehr Optionen",
+  "chartKeypadFewer": "Weniger Optionen",
+  "chartKeypadExtension": "Erweiterung",
+  "chartKeypadAlterations": "Alterationen",
+  "chartKeypadBass": "Basston (Slash-Akkord)",
+  "chartKeypadNone": "keiner"
 }

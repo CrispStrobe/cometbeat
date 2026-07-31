@@ -3873,5 +3873,34 @@
   "fxPresetSave": "Sichern",
   "fxPresetAutomationDropped": "Automation lässt sich nicht in einem Preset sichern — die Effekte bleiben, die bewegten Regler nicht.",
   "trayPutSong": "Put song on clipboard",
-  "trayPutTab": "Put tab on clipboard"
+  "trayPutTab": "Put tab on clipboard",
+  "gameChart": "Chord Chart",
+  "gameChartSubtitle": "Write a chord chart and play along with the band",
+  "chartPlay": "Play",
+  "chartStop": "Stop",
+  "chartBpm": "BPM",
+  "chartEditAsText": "Edit as text",
+  "chartTextHelp": "One bar between each |. Two chords in a bar split it. % or an empty bar holds the chord. [A] starts a section, [A] x2 repeats it.",
+  "chartUnreadableChords": "{count,plural, =1{Could not read one chord: {chords}}other{Could not read {count} chords: {chords}}}",
+  "@chartUnreadableChords": {
+    "description": "Shown after pasting a text chart that contained chords this build could not parse",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "chords": {
+        "type": "String"
+      }
+    }
+  },
+  "chartCancel": "Cancel",
+  "chartOk": "Apply",
+  "chartKeypadClearBar": "Clear bar",
+  "chartKeypadSet": "Set",
+  "chartKeypadMore": "More options",
+  "chartKeypadFewer": "Fewer options",
+  "chartKeypadExtension": "Extension",
+  "chartKeypadAlterations": "Alterations",
+  "chartKeypadBass": "Bass note (slash chord)",
+  "chartKeypadNone": "none"
 }

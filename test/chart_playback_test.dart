@@ -25,9 +25,8 @@ Chart chartOf(List<String?> barSymbols, {int tempoBpm = 120}) => Chart(
           bars: [
             for (final s in barSymbols)
               ChartBar(
-                chords: s == null
-                    ? const []
-                    : [ChartBeatChord(chord: chord(s), beat: 0)],
+                chords:
+                    s == null ? const [] : [ChartBeatChord(chord: chord(s))],
               ),
           ],
         ),
@@ -40,8 +39,11 @@ void main() {
       final p = resolveChartPlayback(chartOf(['C', 'F', 'G', 'C']));
       expect(p.bars, hasLength(4));
       for (var i = 1; i < p.bars.length; i++) {
-        expect(p.bars[i].startMs, p.bars[i - 1].endMs,
-            reason: 'bar $i does not start where bar ${i - 1} ends');
+        expect(
+          p.bars[i].startMs,
+          p.bars[i - 1].endMs,
+          reason: 'bar $i does not start where bar ${i - 1} ends',
+        );
       }
       expect(p.bars.last.endMs, p.totalMs);
     });
@@ -65,12 +67,12 @@ void main() {
         sections: [
           ChartSection(
             bars: [
-              ChartBar(chords: [ChartBeatChord(chord: chord('C'), beat: 0)]),
+              ChartBar(chords: [ChartBeatChord(chord: chord('C'))]),
               ChartBar(
-                chords: [ChartBeatChord(chord: chord('F'), beat: 0)],
+                chords: [ChartBeatChord(chord: chord('F'))],
                 meterChange: const TimeSignature(2, 4),
               ),
-              ChartBar(chords: [ChartBeatChord(chord: chord('G'), beat: 0)]),
+              ChartBar(chords: [ChartBeatChord(chord: chord('G'))]),
             ],
           ),
         ],
@@ -97,8 +99,8 @@ void main() {
             label: 'A',
             repeatCount: 2,
             bars: [
-              ChartBar(chords: [ChartBeatChord(chord: chord('C'), beat: 0)]),
-              ChartBar(chords: [ChartBeatChord(chord: chord('G'), beat: 0)]),
+              ChartBar(chords: [ChartBeatChord(chord: chord('C'))]),
+              ChartBar(chords: [ChartBeatChord(chord: chord('G'))]),
             ],
           ),
         ],
@@ -112,12 +114,18 @@ void main() {
     test('the section index tracks across sections', () {
       final c = Chart(
         sections: [
-          ChartSection(label: 'A', bars: [
-            ChartBar(chords: [ChartBeatChord(chord: chord('C'), beat: 0)]),
-          ]),
-          ChartSection(label: 'B', bars: [
-            ChartBar(chords: [ChartBeatChord(chord: chord('F'), beat: 0)]),
-          ]),
+          ChartSection(
+            label: 'A',
+            bars: [
+              ChartBar(chords: [ChartBeatChord(chord: chord('C'))]),
+            ],
+          ),
+          ChartSection(
+            label: 'B',
+            bars: [
+              ChartBar(chords: [ChartBeatChord(chord: chord('F'))]),
+            ],
+          ),
         ],
       );
       final p = resolveChartPlayback(c);
@@ -131,8 +139,11 @@ void main() {
       expect(p.comp, hasLength(4), reason: 'every bar should sound');
       // All four are the same chord, re-struck once per bar.
       final pcs = p.comp.map((e) => e.$1.map((m) => m % 12).toSet()).toList();
-      expect(pcs.every((s) => s.containsAll({0, 4, 7})), isTrue,
-          reason: 'held bars must keep sounding C major');
+      expect(
+        pcs.every((s) => s.containsAll({0, 4, 7})),
+        isTrue,
+        reason: 'held bars must keep sounding C major',
+      );
     });
 
     test('a chart starting with an empty bar simply has nothing to hold', () {
@@ -147,10 +158,12 @@ void main() {
         sections: [
           ChartSection(
             bars: [
-              ChartBar(chords: [
-                ChartBeatChord(chord: chord('C'), beat: 0),
-                ChartBeatChord(chord: chord('G'), beat: 2),
-              ]),
+              ChartBar(
+                chords: [
+                  ChartBeatChord(chord: chord('C')),
+                  ChartBeatChord(chord: chord('G'), beat: 2),
+                ],
+              ),
             ],
           ),
         ],

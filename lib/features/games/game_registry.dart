@@ -134,6 +134,7 @@ import 'package:comet_beat/features/games/songs/song_screen.dart';
 import 'package:comet_beat/features/games/songs/tune_quiz_screen.dart';
 import 'package:comet_beat/features/games/transpose/concert_pitch_screen.dart';
 import 'package:comet_beat/features/games/transpose/transpose_write_screen.dart';
+import 'package:comet_beat/features/harmony/chart_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/tutorial/primers.dart';
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
@@ -1176,6 +1177,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gameSpotParallelsSubtitle,
       builder: (_) => const SpotParallelsScreen(),
       tutorial: harmonyPrimer,
+    ),
+    // Not a quiz: a chart is a document you write and then play with a band
+    // behind you. It scores nothing, so it needs no kStarThresholds bracket.
+    GameInfo(
+      id: 'chart',
+      icon: Icons.grid_on,
+      title: (l) => l.gameChart,
+      subtitle: (l) => l.gameChartSubtitle,
+      builder: (_) => const ChartScreen(),
     ),
   ],
   'composition': [
