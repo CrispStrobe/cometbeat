@@ -389,6 +389,30 @@ is recorded in [HISTORY.md](HISTORY.md).
       would have drawn a multi-rest instead of the notes).
     ⚠️ **`find` cannot see part of the corpus** — `pdmx/ship/mxl` is a SYMLINK,
     which Dart's `listSync` follows and `find` does not. Use `find -L`.
+  - 🛑 **THE REPORT LIED, and I nearly relayed it.** The full-corpus log showed
+    all 48 cells at `100.0%`; the JSON showed **7 failures**. Over 45,000 files a
+    single failure rounds to `100.0%` at one decimal, so a `grep -v "100.0%"`
+    triage reports a clean sweep. **Cross-check the counts, not the
+    percentages.** The harness now prints `<100%` for any cell that missed one.
+  - ✅ **Those 7 were real and both causes were broader than their files**
+    (`crisp_notation` `e2fa497`):
+    - **LilyPond dropped mid-score METER CHANGES and reported the wrong
+      signature.** `_time` is the RUNNING meter (it measures bar capacity), so
+      the score's signature came off whatever the last change happened to be —
+      Brahms' Schicksalslied opens 4/4, moves to 3/4, came back declaring 3/4,
+      and re-barring at 3/4 turned 1,624 bars into 1,752. First `\time` is the
+      score's; later ones are `measure.timeChange`. ⚠️ A source writes `\time`
+      either before the bar it applies to OR after the last note of the one
+      before — both mean the same bar.
+    - **The LilyPond writer emitted a barcheck only after a voice split**, so any
+      measure not exactly full merged into the next on reread. Now one per
+      measure — which is what LilyPond wants anyway.
+    - **MusicXML built `TupletSpan(actual: 1, normal: 4)`** from a Mass's
+      time-modification. That is the THIRD model-forbidden state found in the
+      readers (with the multi-rest bar and… see above) — all invisible because
+      **`dart run` has assertions OFF while `dart test` has them ON.** If you
+      only ever exercise a reader under `dart run`, you are not checking its
+      model invariants at all.
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
@@ -400,7 +424,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     round-trips with all four voices intact through every one of them. `--voices`
     exists only to read the inner-voice result separately from the voice-1 one. **Direct-hop corpus failures 98 → 0 on every file
     traced**, and the permutation matrix went 34/48 → 73/84 perfect cells with
-    every survivor traced and fixed afterwards. Core suite **2470**, green.
+    every survivor traced and fixed afterwards. Core suite **2478**, green.
 
 - **opus (backing-band)** · 🚧 **CLAIMING — the `ChordDetector` template
   extension** (the cheap win listed inside `BB-X2`). Branch
