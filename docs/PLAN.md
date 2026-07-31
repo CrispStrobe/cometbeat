@@ -524,13 +524,13 @@ is recorded in [HISTORY.md](HISTORY.md).
     | **melisma `\melisma`/`End`** | 15,279 / **1,429** | ❌ | ❌ | ❌ lyric-extender concept |
     | manual beams `[ ]` | 21,629 / 786 | ❌ | ❌ | ❌ (layout derives beams today) |
     | **`\breathe`** | 4,412 / **580** | ❌ | ❌ | ❌ needs a breath mark |
-    | **dynamics `\p \f \mf …`** | ~9,400 / **~600** | ❌ | ~none | ✅ `DynamicMarking` |
+    | **dynamics `\p \f \mf …`** | ~9,400 / **~600** | ✅ **DONE** `d39f6ef` | ✅ **DONE** | ✅ `DynamicMarking` |
     | **`\cadenzaOn/Off`** | 5,002 / 450 | ❌ | ❌ | ⚠️ unmetered exists (`timeSignature: null`) |
     | `\parenthesize` | 305 / 99 | ❌ | ❌ | ❌ |
     | `\arpeggio` | 239 / 44 | ❌ | ❌ | ✅ `NoteElement.arpeggio` |
     | `\glissando` | 33 / 9 | ❌ | ❌ | ❌ |
     | `\staccatissimo`, `\espressivo` | 67 / 15 | ❌ | ❌ | ⚠️ no `Articulation` value |
-    | hairpins `\< \> \!` | (see note) | ❌ | ❌ | ✅ `Score.hairpins` |
+    | hairpins `\< \> \!` | (see note) | ✅ **DONE** `d39f6ef` | ✅ **DONE** | ⚠️ only musicxml+lilypond carry it |
     | `\times` (old tuplet) | 2,618 / 130 | ✅ | ✅ | ✅ |
     | `\partial` | 2,118 / 1,061 | ✅ | ✅ | ✅ |
     | scripts `-. -- -> -^ -! -_` | 4,844 / — | ✅ NEW | ✅ | ✅ |
@@ -542,7 +542,17 @@ is recorded in [HISTORY.md](HISTORY.md).
        either. Verified NEUTRAL: the slur survives musicxml, mei, kern, abc,
        musescore, gp and lilypond alike, which is the bar — anything the model
        cannot carry across a format boundary is round-tripped, not preserved.
-    2. **Dynamics** — ~600 files; `DynamicMarking` exists, so reader + writer.
+    2. ✅ **Dynamics — DONE** (`d39f6ef`), reader AND writer, verified NEUTRAL:
+       musicxml, mei, musescore, abc, kern and lilypond all carry them. LilyPond
+       marks the model has no distinct level for (`sfz`, `fp`, `spp`, `ppppp`)
+       map to the nearest rather than being dropped.
+       ⚠️ **Hairpins came with a surprise, and it is NOT a LilyPond problem:
+       only MusicXML and LilyPond carry `Hairpin` AT ALL. MEI, MuseScore, ABC
+       and kern do not emit it** — pre-existing, confirmed from a model-built
+       score with no reader in the way, and now pinned by a test stating the
+       real state so whoever closes one is told to move it up. Four small
+       writer gaps, and a reminder that "the model has a field for it" is not
+       the same as "the formats carry it".
     3. **`\breathe`** — 580 files; needs a model concept first.
     4. **`\ficta`** — 1,800 files, but think before adding: it is an EDITORIAL
        accidental (printed above the note, not altering the written pitch), so
