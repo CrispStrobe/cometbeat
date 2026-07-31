@@ -469,6 +469,44 @@ is recorded in [HISTORY.md](HISTORY.md).
     for the writer to emit `\set Timing.measureLength` for such a bar and the
     reader to honour it — that is how LilyPond actually expresses an irregular
     measure. Anything else trades a rare pathology for wrong barring everywhere.
+  - 📐 **NEXT ROUND — six axes, in yield order. Claimed by me; the reasoning
+    matters more than the list, so read the first two paragraphs before picking
+    one up.**
+
+    ⚠️ **What "634,043 / 634,044" actually means, and what it does NOT.** The
+    corpus sweep compares ONE line per note:
+    `sorted pitches @ sounding duration` (plus the voice under `--voices`).
+    **Ties, slurs, articulations, ornaments, grace notes, lyrics, dynamics,
+    chord symbols, clef/key/meter changes, repeats, voltas, tempo and metadata
+    are NOT compared at all.** A codec could destroy every one of them across
+    105,000 files and all 84 cells would still read 100%. The number means
+    pitches and rhythms survive. Nothing stronger.
+
+    ⚠️ **And a chain never asserts `A…A` end to end.** Each hop is judged against
+    its IMMEDIATE PREDECESSOR, so `A→B→A` gives `A==A` only by transitivity, and
+    only over that narrow signature. We also apply each codec exactly ONCE —
+    `read(write(x))` is checked, `read(write(read(write(x))))` is not, so a codec
+    that drifts slightly per pass looks perfect. That failure mode is not
+    hypothetical here: the relative-octave creep compounded across `\\` splits
+    until pitches left the MIDI range.
+
+    📌 **Which is why MORE PERMUTATION DEPTH is the weakest axis.** Every ordered
+    pair is now lossless over the signature (84/84), so every longer chain is
+    lossless over it **by induction** — `A→B→C→D→A` mostly re-proves what the
+    pairs proved. What a longer chain genuinely buys is a different INPUT
+    DISTRIBUTION (scores shaped by our own writers rather than by third parties),
+    and that is better sampled than enumerated: `6^4` = 1,296 chains × 105k files
+    is a lot of compute for a little coverage.
+
+    | # | Axis | Why it beats deeper chains | Status |
+    |---|---|---|---|
+    | 1 | **Run the sweep with `--enable-asserts`** | `dart run` has assertions **OFF**. THREE model-forbidden states were built silently this session and surfaced far away as quiet data loss. This makes them throw where they happen. | 🚧 running |
+    | 2 | **Widen the signature** (ties, slurs, articulations, lyrics, dynamics, clef/key/meter sequence, repeats) | Closes the gap above — 105k files of entirely unmeasured territory. Where I expect the next real crop. | ⬜ |
+    | 3 | **Fixed-point iteration** — apply each codec N× and require stability after the first pass | Catches DRIFT, which single-application testing is blind to by construction. | ⬜ |
+    | 4 | **Add GP + MIDI to the matrix** (`scoreToGpif`/`scoreFromGpif`, `scoreToMidi`/`scoreFromMidi`) | Breadth beats depth: 6 formats → 8, so 36 ordered pairs → 64, over codecs with ZERO cross-format coverage today. GP carries the tab/fingering data the app ships. | ⬜ |
+    | 5 | **Differential vs a THIRD-PARTY implementation** (verovio/MEI, LilyPond itself, humlib/kern, music21) | The one class round-trips structurally CANNOT find: a writer and reader sharing the same misconception round-trip perfectly and are both wrong. | ⬜ |
+    | 6 | **Random-walk chains, length 3-5**, deterministic seed, failing walk reported | The honest form of "more permutations" — the useful part without the 6^k blow-up. | ⬜ |
+
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
