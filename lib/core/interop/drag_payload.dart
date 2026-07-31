@@ -10,6 +10,27 @@
 //
 // Pure Dart — no widgets — so the decision is testable without pumping a
 // surface. The widget half is a thin wrapper over `dropDecisionFor`.
+//
+// ⚠️ BEFORE YOU ADD A DROP TARGET, KNOW WHERE THE DRAG COMES FROM.
+//
+// This protocol shipped with four drop targets and, for two days, **no drag
+// source at all** — `Draggable<MusicDragPayload>` occurred zero times in `lib/`,
+// and no two music surfaces were ever on screen together, so the gesture those
+// targets accept could not be started by anyone. Every target was correct and
+// tested; each author was looking at their own, which was genuinely finished.
+// The missing half lived in the space between them, and the card was recorded
+// as complete.
+//
+// The source is the WS-X6 clipboard (`shared/widgets/tray_panel.dart`), and the
+// property that makes it work is one a menu or a bottom sheet cannot have: it
+// is an INLINE band a host puts in its own layout, so the chip and the target
+// share one frame with no barrier between them. A source behind a route or a
+// modal can be looked at and never dragged onto anything.
+//
+// `test/drag_protocol_reachable_test.dart` now enforces this, because a note
+// like the one you are reading did not travel: two more targets were wired
+// after it was written. If that test is red, adding another target will not
+// help — the app has lost its way in.
 
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
