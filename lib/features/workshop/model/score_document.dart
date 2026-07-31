@@ -222,6 +222,7 @@ class _Snapshot {
     this.elements2,
     this.activeVoice,
     this.annotations,
+    this.chordSymbols,
     this.tabVoicings,
     this.tabBarres,
   );
@@ -230,6 +231,9 @@ class _Snapshot {
   /// Staff text anchored to an element (string numerals, pizz./arco …),
   /// captured for undo.
   final Map<String, String> annotations;
+
+  /// Chord symbols anchored to an element, captured for undo.
+  final Map<String, ChordSymbol> chordSymbols;
 
   /// Tab facts anchored to an element — the per-pitch string choice and any
   /// barre — captured for undo.
@@ -370,6 +374,16 @@ class ScoreDocument {
   // into a Score, and thrown away one line later. Anything the editor round
   // trips through Score must have a home here or it does not survive.
   final Map<String, String> _annotations = {};
+
+  // Chord symbols anchored to an element: element id → symbol.
+  //
+  // ⚠ Same silent data loss the annotations note above describes, found the
+  // same way. `Score.chordSymbols` is what every reader fills in from a lead
+  // sheet's `<harmony>` / `\chordmode` / `<Harmony>`, and the layout engine
+  // engraves it — but this document neither read nor wrote it, so importing a
+  // chart-bearing score into the Workshop dropped its harmony on the floor and
+  // exporting could never put it back.
+  final Map<String, ChordSymbol> _chordSymbols = {};
 
   // TAB facts that belong to a note but are not properties of it: the string
   // each pitch is played on, and a barre held for the chord.
@@ -620,6 +634,7 @@ class ScoreDocument {
         List.of(_v2),
         _activeVoice,
         Map.of(_annotations),
+        Map.of(_chordSymbols),
         {for (final e in _tabVoicings.entries) e.key: List.of(e.value)},
         Map.of(_tabBarres),
       );
@@ -654,6 +669,9 @@ class ScoreDocument {
     _annotations
       ..clear()
       ..addAll(s.annotations);
+    _chordSymbols
+      ..clear()
+      ..addAll(s.chordSymbols);
     _tabVoicings.clear();
     for (final e in s.tabVoicings.entries) {
       _tabVoicings[e.key] = List.of(e.value);
@@ -1053,6 +1071,7 @@ class ScoreDocument {
     );
     _lyrics.removeWhere((id, _) => !ids.contains(id));
     _annotations.removeWhere((id, _) => !ids.contains(id));
+    _chordSymbols.removeWhere((id, _) => !ids.contains(id));
     _tabVoicings.removeWhere((id, _) => !ids.contains(id));
     _tabBarres.removeWhere((id, _) => !ids.contains(id));
   }
@@ -1218,6 +1237,7 @@ class ScoreDocument {
     _hairpins.clear();
     _lyrics.clear();
     _annotations.clear();
+    _chordSymbols.clear();
     _tabVoicings.clear();
     _tabBarres.clear();
     _clefChanges.clear();
@@ -1260,6 +1280,7 @@ class ScoreDocument {
     _hairpins.clear();
     _lyrics.clear();
     _annotations.clear();
+    _chordSymbols.clear();
     _tabVoicings.clear();
     _tabBarres.clear();
     _clefChanges.clear();
@@ -1409,6 +1430,14 @@ class ScoreDocument {
     for (final a in score.annotations) {
       final id = remap[a.elementId];
       if (id != null && a.text.isNotEmpty) _annotations[id] = a.text;
+    }
+    for (final c in score.chordSymbols) {
+      final id = remap[c.elementId];
+      // Re-anchored to this document's id for the note the symbol sat on, the
+      // same way every other attachment is.
+      if (id != null) {
+        _chordSymbols[id] = ChordSymbol(id, c.root, c.quality, bass: c.bass);
+      }
     }
     for (final v in score.tabVoicings) {
       final id = remap[v.noteId];
@@ -1697,6 +1726,10 @@ class ScoreDocument {
         for (final e in [..._v1, ..._v2])
           if (_annotations[e.id] case final String text) Annotation(e.id, text),
       ],
+      chordSymbols: [
+        for (final e in [..._v1, ..._v2])
+          if (_chordSymbols[e.id] case final ChordSymbol c) c,
+      ],
       tabVoicings: [
         for (final e in [..._v1, ..._v2])
           if (_tabVoicings[e.id] case final List<int> strings)
@@ -1804,6 +1837,13 @@ class ScoreDocument {
           ),
           dynamics: dynamicsFor(voice),
           lyrics: lyricsFor(voice),
+          // Scoped to this staff's own ids: a symbol on the other staff's note
+          // would be unresolvable here, and `_layoutAnnotations` throws on an
+          // id it cannot find rather than skipping it.
+          chordSymbols: [
+            for (final e in voice)
+              if (_chordSymbols[e.id] case final ChordSymbol c) c,
+          ],
           slurs: slursFor(ids),
           hairpins: hairpinsFor(ids),
         );
