@@ -139,6 +139,12 @@ BridgeResult<Score> chartToScore(Chart chart, {Step slashStep = Step.b}) {
       timeSignature: chart.meter,
       measures: measures,
       chordSymbols: symbols,
+      // ⚠️ The tempo has to travel too. Without it a chart → score → chart
+      // round trip silently reset to the default 120, which a play-along
+      // exposes immediately: the band plays at the wrong speed and the melody
+      // with it. Caught by a test asserting a 60bpm piece offsets its melody
+      // twice as far as a 120bpm one.
+      tempo: Tempo(chart.tempoBpm.toDouble()),
       metadata: ScoreMetadata(
         title: chart.title.isEmpty ? null : chart.title,
         composer: chart.composer,
@@ -196,6 +202,9 @@ BridgeResult<Chart> chartFromScore(Score score, {String title = ''}) {
       composer: score.metadata.composer,
       keyFifths: score.keySignature.fifths,
       meter: meter,
+      tempoBpm: score.tempo == null
+          ? const Chart().tempoBpm
+          : score.tempo!.quarterBpm.round().clamp(1, 400),
       sections: [ChartSection(bars: bars)],
     ),
     losses,

@@ -90,6 +90,12 @@ class BandMix {
 ///
 /// Returns null when there is nothing to play, rather than an empty WAV — a
 /// caller must be able to tell "silence" from "no performance".
+///
+/// [extraStems] are mixed alongside the band — a melody over the top, say.
+/// `mixStemsFloat` unit-peaks each stem independently before applying its gain,
+/// so an extra stem CANNOT change the band's own contribution; that is what
+/// makes "mute the melody, the band is untouched" true by construction rather
+/// than by luck.
 BandPerformance? renderBand(
   Chart chart, {
   required StyleSpec style,
@@ -98,6 +104,7 @@ BandPerformance? renderBand(
   bool humanize = true,
   int seed = 0,
   int sampleRate = kSampleRate,
+  List<MixStem> extraStems = const [],
 }) {
   final bars = realizeForm(chart, options: form);
   if (bars.isEmpty) return null;
@@ -294,6 +301,7 @@ BandPerformance? renderBand(
         ),
         gain: mix.drums
       ),
+    ...extraStems,
   ];
   if (stems.isEmpty) return null;
 

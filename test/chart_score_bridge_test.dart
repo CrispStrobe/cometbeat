@@ -61,6 +61,25 @@ void main() {
       expect(notes.first.duration.toFraction(), Fraction(1, 2));
     });
 
+    test('the TEMPO travels with it', () {
+      // Without this a round trip silently reset to the default 120, which a
+      // play-along exposes at once: the band plays at the wrong speed and the
+      // melody with it.
+      final result = chartToScore(chart('tempo: 76\n| C |'));
+      expect(result.value.tempo?.quarterBpm, 76);
+      expect(chartFromScore(result.value).value.tempoBpm, 76);
+    });
+
+    test('a score with no tempo mark falls back to the chart default', () {
+      const bare = Score(
+        clef: Clef.treble,
+        measures: [
+          Measure([RestElement(NoteDuration(DurationBase.whole))]),
+        ],
+      );
+      expect(chartFromScore(bare).value.tempoBpm, const Chart().tempoBpm);
+    });
+
     test('the key, meter and title travel with it', () {
       final result = chartToScore(
         chart('title: Blues\ncomposer: Nobody\nkey: Bb\nmeter: 3/4\n| Bb |'),
