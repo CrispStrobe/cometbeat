@@ -898,7 +898,20 @@ is recorded in [HISTORY.md](HISTORY.md).
     ABC self round-trip on the sample file is now exact: 40 notes, 40 lyrics,
     25 annotations, 21 verse lines, title intact.
 
-    🆕 **UNCLAIMED — annotations survive only MusicXML.** Measured on one real
+    ✅ **ANNOTATIONS — DONE for LilyPond and MEI** (`ea928da`), the dominant
+    remaining failure signature. **4,150 of the 10,000 ABC files carry at least
+    one** and four of six formats dropped every one. LilyPond writes `^"text"` /
+    `_"text"` on the note (the direction arrives as its own `LyWord`, the text as
+    the NEXT node); MEI uses `<dir place startid>` — and BOTH emitters in
+    `mei_writer.dart` needed it again. Placement is preserved: above vs below is
+    the difference between a chord symbol and a performance note. A `"` inside a
+    mark is escaped, the same trap as the ABC delimiter.
+    ⚠️ **kern and MuseScore still drop annotations**, pinned by a test.
+    ⚠️ The ABC reader still files a quoted `"Eb"` under `annotations`, NOT
+    `chordSymbols` — decide deliberately before doing those two.
+
+    🗄️ **Superseded note (kept for the reasoning) — annotations survive only
+    MusicXML.** Measured on one real
     file with 25 of them (ABC chord symbols like `"Eb"`): **musicxml 25/25;
     lilypond, kern, MEI and MuseScore all 0/25.** `Score.chordSymbols` is
     likewise written only by musicxml and abc. Four writer+reader gaps, each
