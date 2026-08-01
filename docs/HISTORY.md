@@ -174,6 +174,32 @@ exists to set the tempo — but they still occupy their beats, so the exercise
 cannot drift against what is being played. 23 tests, including one asserting
 the deliberately-duplicated suffix set still agrees with `kChordTemplates`.
 
+### BB-X8 — a rhythm section under any library piece (2026-08-01)
+
+A notated score carrying chord symbols already holds everything a band needs,
+so `lib/core/harmony/song_with_band.dart` puts one underneath: the melody plays
+over it, or is muted for the student to play themselves.
+
+🔴 **The hard part is alignment, and it is not obvious.** The band's timeline is
+the REALISED form — count-in, tune, ending — while the melody is only the tune.
+Starting both at sample 0 puts the melody over the count-in and leaves it a bar
+early for the entire piece. The melody is offset to the first TUNE bar, and the
+test proves it **against the PCM**: render with and without the melody over a
+silenced band, diff the samples, and the first differing sample must be the
+reported offset.
+
+**"Muting the melody leaves the band untouched" is true by construction.**
+`renderBand` gained an `extraStems` seam, and `mixStemsFloat` unit-peaks each
+stem before its gain, so an extra stem cannot change what the band contributes.
+Asserted byte-identical — and the complement asserted too, since if adding the
+melody did NOT change the mix, the first assertion would pass for the wrong
+reason.
+
+⚠️ **A real bridge bug the tempo test caught:** `chartToScore` never wrote the
+tempo, so a chart → score → chart round trip silently reset to 120. Invisible
+until a play-along, where the band plays at the wrong speed and drags the melody
+with it. Now carried both ways.
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**

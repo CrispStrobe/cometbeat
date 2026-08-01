@@ -1930,17 +1930,6 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
   - **Acceptance.** Each export opens in its own mode and plays the same changes.
     Round-trip where the format allows; report the loss where it does not.
 
-- ⬜ **BB-X8 — a rhythm section under any piece in the library.** `M`
-  - **Depends.** BB-X1, BB-A5. **Files.** `features/games/songs/song_screen.dart`,
-    `library_browser_screen.dart`.
-  - **Build.** Open a Song Book or catalog piece → its derived chart → a band
-    plays underneath while the notated melody plays, is muted for the student to
-    play, or is graded (BB-X5). This is the bridge that turns 38k library items
-    into 38k play-alongs.
-  - **Acceptance.** A piece with a derived chart plays melody + band in sync
-    (assert alignment at the sample level, not by ear). Muting the melody leaves
-    the band untouched.
-
 - ⬜ **BB-X9 — real instruments per role.** `S`
   - **Depends.** BB-A7. **Files.** `core/audio/sound_library.dart`,
     `features/library/instrument_installer.dart`.
