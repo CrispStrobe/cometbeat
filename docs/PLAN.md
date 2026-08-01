@@ -1091,6 +1091,39 @@ is recorded in [HISTORY.md](HISTORY.md).
     - Tests: `chord_name_test.dart` (99), `chord_symbol_crossformat_test.dart`
       (every quality × every format, plus a no-harmony byte-identity check).
 
+  - ✅ **A FORCED OR CAUTIONARY ACCIDENTAL DELETED ITS NOTE IN LILYPOND**
+    (2026-08-01, opus, `1b6117f`). `c'4 d'!4 e'!4 f'?4` read as **ONE** note,
+    not four.
+    - The note regex in `lilypond_parser.dart` is `$`-anchored and knew nothing
+      of `!` (forced) or `?` (cautionary). The comment already sitting above
+      that regex records exactly what rejection costs — the note does not read
+      wrongly, **it vanishes** — because that is what the `*N` duration
+      multiplier used to do. Same trap, second occurrence.
+    - Both marks are ordinary in carefully engraved music: a reminder
+      accidental after a bar line, an editorial one in early music. Invisible
+      to any round trip of our own output, since the writer never emitted one.
+    - 📊 **MEASURED, old build vs new, same files** (250 affected `.ly` sampled
+      from the corpus): **364,349 → 366,406 notes, +2,057. 241 of 250 files
+      gained; ZERO lost.** Largest single file +106. **1,951 of 4,106 corpus
+      `.ly` files (48%) are affected** — overwhelmingly CPDL (1,813), which is
+      early/choral music where editorial accidentals are the norm — so the
+      corpus-wide recovery is on the order of **16,000 notes**.
+    - ⚠️ **A regex token count is NOT a note count.** Counting `!`/`?` tokens
+      found 5 and 8 in two files whose real recovery was +6 and +6. The pattern
+      is a good filter for WHICH files are affected and a bad estimate of HOW
+      MUCH. The only honest measurement is running both builds over the same
+      files — cheap via a detached `git worktree` at the parent commit.
+    - ⚠️ **`db.json`'s `music.notes` is not the total either** — the feature
+      index selects a part by register — so it cannot serve as the "before"
+      side of a note-count delta. It disagreed with both builds on one file.
+    - Found by asking the score-level channel question one level down: which
+      NOTE fields does the signature compare? That level turned out to be well
+      covered (tie, articulations, ornament, grace, fingerings, arpeggio,
+      tremolo, notehead); **`showAccidental` was the hole, and probing it found
+      a parser bug rather than the codec gap I was looking for.**
+      `velocity` remains uncompared — a playback hint, low value.
+    - Carried in 4 of 6 now: MusicXML, MEI and kern already had it.
+
   - ⚠️ **A HEADLINE RATIO IS NOT COMPARABLE ACROSS HARNESS VERSIONS — only the
     per-cell table is** (2026-08-01, opus). A fresh full-corpus run came back at
     **82%** against a recorded baseline of **634,043/634,044**, which reads as a
