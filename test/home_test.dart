@@ -70,6 +70,9 @@ void main() {
     expect(find.text(l10n.workshopModePerform), findsNothing);
     expect(find.text(l10n.workshopModeDrums), findsNothing);
     expect(find.text(l10n.workshopModeTranscribe), findsNothing);
+    // The project mixer left this menu — it is an overlay inside Loop Studio
+    // and the Audio Editor now, not a sixth destination.
+    expect(find.text(l10n.mixerConsoleTitle), findsNothing);
   });
 
   testWidgets('seven taps on the title reveal the debug settings',

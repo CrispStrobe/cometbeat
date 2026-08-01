@@ -2850,12 +2850,37 @@ Import/export is **DONE and at parity across native and web** (shipped
     There is no shared voice identity to carry, so closing this needs a product
     decision about what a loop voice MAPS TO in tracker terms — a mapping table,
     or a shared voice model. Not a weight to tweak.
-  - ⬜ **OPEN 2 — no code splitting anywhere.** `grep -rn "deferred as" lib/` is
-    **0**, so all five 250 KB+ authoring screens (`advanced_tracker_screen`,
-    `loop_mixer_screen`, `daw_screen`, `composition_workshop_screen`,
-    `tab_workshop_screen`), `tracker_replayer.dart` (304 KB) and the 360 KB TTS
-    G2P dictionaries are all in the initial payload despite hanging off a popup
-    menu. This is the next real web perf lever now that the renderer is handled.
+  - ⬜ **OPEN 2 — code splitting: SCOPED and PILOTED, then deliberately not
+    landed.** `grep -rn "deferred as" lib/` is **0**. What the pilot established,
+    so nobody repeats it:
+    - ✅ **The heavy screens really are shipped.** Probing the built
+      `main.dart.js` for distinctive literals: `loop-studio-editor`, `mixer-strip-`
+      and `mixer-play` all appear.
+    - ❌ **But the TTS G2P dictionaries are NOT**, contrary to what I first
+      wrote — probing for their content (`deːɐ`, `ˈaɪnə`, `kBundledDeDictTsv`)
+      returns zero hits. dart2js already tree-shakes them. **Probe the bundle
+      before claiming something is in it.**
+    - 🔑 **Only ONE of the five can be deferred without a cross-file refactor.**
+      Deferring a library shrinks the main chunk only if EVERY reference is
+      deferred, and `advanced_tracker_screen`, `loop_mixer_screen`,
+      `composition_workshop_screen` and `tab_workshop_screen` are reachable from
+      `score_router.dart`, `game_registry.dart`, `transport_service.dart`,
+      `catalog_browse_sheet.dart` **and from each other**. `daw_screen.dart` has
+      exactly ONE reference site (`home_screen.dart`) — the `daw_timeline.dart`
+      hit is only a comment.
+    - **The `daw_screen` pilot was written, analyzed clean, and REVERTED**
+      because neither half could be verified on this machine: `flutter build web`
+      was killed repeatedly (~57 MB free RAM with other agents building), so the
+      size benefit was unmeasured; and a widget test proving the route still
+      opens has to instantiate the whole Audio Editor, which **timed out at 10
+      minutes** (the same file's other tests run in 2 s). Shipping an unmeasured,
+      unverified, web-only behaviour change was the worse trade.
+    - **To finish it:** measure first — baseline `main.dart.js` is
+      **8,625,020 raw / 2,238,086 brotli**; defer `daw_screen` from
+      `home_screen.dart`, rebuild, and diff. If the delta justifies it, the other
+      four need every reference site deferred together, and the failure mode of a
+      missed `loadLibrary()` is a web-only runtime error a native test cannot
+      catch.
   - ⬜ **OPEN 3 — the new overlays are test-verified, not eye-verified.** The
     editor route pushes and the widgets build, but neither the pattern editor nor
     the mixer sheet has been looked at on a phone-width viewport.
