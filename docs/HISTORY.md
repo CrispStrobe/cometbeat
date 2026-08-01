@@ -87,6 +87,36 @@ renderer; the current path renders the whole performance up front.
 
 ---
 
+### BB-T4 — transposition, on both axes (2026-08-01)
+
+A horn player reads B♭ while the band plays concert pitch, and collapsing
+those into one "transpose" control is the classic mistake. **Sounding** moves
+the tune, audio and print together; **display** (a B♭ instrument, a capo) moves
+only what is printed and must never touch the audio.
+
+Interval-based rather than semitone-based throughout, which is what makes the
+spelling come out right for free: up a major third from A♭ is C, not B♯, and a
+semitone count cannot express that difference.
+
+⚠️ **Two real defects the tests caught before shipping:**
+
+- **F♯ major up a major second is G♯ major — eight sharps, a signature that
+  does not exist.** I had clamped to ±7, which silently lands on an unrelated
+  key. The right answer is to respell the INTERVAL: F♯ up a *diminished third*
+  is A♭, four flats, and every chord then spells in flats to match. A
+  consequence worth stating: a key that leaves the circle **cannot** round-trip
+  and must not — F♯ up a tone and back is G♭, which is F♯ enharmonically.
+- **Wiring the grid to the printed chart nearly shipped a silent rewrite.**
+  Tapping a bar that prints `C` would have opened the keypad on the *sounding*
+  chord and stored the result as concert pitch, so a trumpeter editing their
+  own part would rewrite the tune for everyone. The keypad now opens on what
+  the user sees and converts back through `documentChordOf` — the inverse in
+  reverse order: capo, then instrument, then the sounding shift.
+
+`lib/core/harmony/chart_transpose.dart` + `features/harmony/transpose_sheet.dart`,
+24 model tests (including an exhaustive sweep of all 15 keys × 23 shifts) and 4
+widget tests.
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**

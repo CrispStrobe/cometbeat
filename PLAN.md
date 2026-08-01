@@ -1693,17 +1693,6 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     enharmonic spelling appropriate to each key (not 12 sharps). A drop-out
     schedule at a given seed is reproducible. Every mode composes with looping.
 
-- ⬜ **BB-T4 — transposition, playback vs. display.** `S`
-  - **Goal.** A horn player reads B♭ while the band plays concert pitch.
-  - **Depends.** BB-D2. **Files.** `lib/core/harmony/chart.dart`; reads
-    crisp_notation `theory/transposition.dart`.
-  - **Build.** Two independent transpositions: **sounding** key (what plays) and
-    **display** key (what is printed — concert / B♭ / E♭ / F / capo-relative).
-    Spelling follows the target key signature.
-  - **Acceptance.** Sounding B♭ + display for a B♭ instrument prints C. A capo-3
-    display on a chart in E♭ prints C shapes. Transposing twice by inverse
-    intervals returns the original spelling.
-
 - ⬜ **BB-T5 — make the existing scorer a projection.** `S`
   - **Goal.** Don't keep two chart types.
   - **Depends.** BB-A5. **Files.**
