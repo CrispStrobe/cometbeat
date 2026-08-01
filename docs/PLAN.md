@@ -211,6 +211,27 @@ is recorded in [HISTORY.md](HISTORY.md).
     `require_trailing_commas` ×2) — and because Analyze runs *before* Test, the
     whole test suite and the Chrome web-seam run never executed on those
     commits. Fixed on main by `a8964b57`.
+  - 🪝 **ENABLE THE PRE-COMMIT HOOK — one command, once per clone:**
+    ```
+    git config core.hooksPath .githooks
+    ```
+    Worktrees share the repo config, so doing it in your main clone covers
+    every sibling worktree. **The hook is committed but inert until you run
+    that.** Maintainer-approved and shipped after SIX analyzer reds in two
+    days from six different agents — and twice the lint was concealing a real
+    test failure nobody could see until the gate was cleared.
+    - It checks **only your staged Dart files**: `dart format`, then
+      `dart analyze`. ~17s, against ~93s for a whole-project analyze — a
+      two-minute hook is one everybody turns off. It therefore **cannot see
+      cross-file breakage**; CI still runs the full analyze and is still the
+      authority. This is a fast filter, not a replacement.
+    - Escape hatches: `git commit --no-verify`, or `SKIP_DART_CHECKS=1`.
+    - ⚠️ **The bug worth knowing even if you never read the hook:** bare
+      `dart analyze` **exits 0 on `info`-level issues** while `flutter analyze`
+      exits 1 — and every red we have had is an `info`. So a local
+      `dart analyze` that looks clean proves nothing about CI. Use
+      `dart analyze --fatal-infos`, or `flutter analyze`. The hook nearly
+      shipped without that flag, which would have made it worse than useless.
   - 🔁 **`require_trailing_commas` has now reddened `main` THREE times**
     (`lyric_index_test`, `musicdb_cli_test`, `score_interop_test`). It is
     always someone different, so it is a missing habit, not a careless agent.
