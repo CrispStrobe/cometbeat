@@ -8,6 +8,1790 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## Chord-chart backing band — the whole ladder, and it plays (2026-08-01)
+
+**One-line status:** the backing-band arc went from a headless engine nobody
+could reach to a **complete feature** — write a chart, read it on a stand, hear
+a styled band play it, keep it. `BB-D1`, `D2`, `D4a`, `A0`–`A7`, `U1`, `U2` are
+all closed, plus chart persistence and autoscroll.
+
+**What you can now do:** open **Chord Chart** in the harmony category → a
+twelve-bar blues is already there → tap a bar for the keypad (one tap for a
+major chord, two for anything on the main grid) or paste a text chart → pick a
+style and how many times through → press play and a kit, a bass and a comp
+arrive, with a count-in, fills at phrase ends and an ending. Charts autosave and
+can be named and reopened.
+
+**The pattern that produced most of it:** *the tests kept catching real defects
+in my own design, not just typos.* Four worth keeping:
+
+- **A style pattern validates against its LONGEST claimed meter, not its
+  shortest.** The validator's first run rejected my own data: `straight` claimed
+  meters 2–7 while writing 4-beat patterns. That forced a decision left
+  implicit — a pattern is written for the longest bar and truncated to the
+  actual one, so validating against the longest is what proves no hit is dead
+  code. Truncation is an author's judgement the validator cannot make: a plain
+  pulse survives being cut to three beats, a bossa clave does not, which is why
+  `straight` claims 2–7 and every characterful style claims one meter.
+- **`(seed + barIndex) % 4` was degenerate exactly where it was used.** Drum
+  fills land on phrase ends; phrases are 4 or 8 bars; so every fill index is
+  congruent mod 4 and the "varying" fill shape was always the same one. Bars 7,
+  15, 23 and 31 all produced shape 3. A mixing hash has no such resonance with
+  the phrase length.
+- **`StyleHit.voice` had to become REQUIRED because 0 is the kick.**
+  `avoid_redundant_argument_values` stripped every `voice: _kick` out of the
+  style data the moment `dart fix` ran, leaving drum hits that read as
+  *unspecified* when they meant *kick*. The lint was right about code and wrong
+  about data.
+- **Swing is the STYLE, not humanisation.** `humanize: false` keeps the swing
+  and drops only the feel and jitter, or turning humanisation off would silently
+  straighten a swing chart.
+
+**Three silent-data-loss bugs, all found by looking at DATA rather than at parse
+status** — the same class as the historical `\<` truncation:
+
+- **System slicing dropped every chord symbol.** `multi_system.dart:_slice`
+  forwards ~40 attachment lists and `chordSymbols` was not among them, so
+  multi-system, grand-staff, multi-part and paged rendering lost them — which is
+  every score view the app shows. Only the single-system `StaffView` path ever
+  displayed them, which is why the feature looked like it worked
+  (crisp_notation `41a05d1`).
+- **The Workshop threw away a lead sheet's harmony.** `ScoreDocument` neither
+  read nor wrote `Score.chordSymbols`, so opening a chart-bearing score there
+  dropped its chords and export could never put them back. Six sites, following
+  the existing `_lyrics`/`_annotations` pattern.
+- **Two LilyPond reader bugs**, surfaced by indexing 547 exact charts and
+  noticing sixteen malformed `C/C` symbols in the output: duration multipliers
+  (`c1*3/4`) were *dropped* by a `$`-anchored note gate — a rejected token
+  vanishes rather than being mis-read — and an octave mark on a chord root
+  (`f,2/c`) blocked the duration group. Between them they corrupted roots and
+  silently truncated charts (crisp_notation `ca8051c`, `7525a1a`).
+
+**Process failures worth recording, because they cost other people time:**
+
+- I committed a new test file without re-running `flutter analyze`, and another
+  agent had to fix seven lints I left on main. **CI runs Analyze BEFORE Test, so
+  green tests are not evidence.** A pre-commit hook now enforces the order.
+- Two of us fixed the same red concurrently and the merge produced a **duplicate
+  ARB key**, which survives both git and `flutter analyze` (analyze reads the
+  *generated* Dart, which only `flutter gen-l10n` rebuilds) and surfaces as a
+  compilation failure. Delete-and-recreate is not the fix; checking for
+  duplicates after every rebase is.
+
+**Known limitations, stated rather than hidden:** per-note dynamics reach the
+kit (`renderDrumPattern` takes gains) but not comp or bass — `Segment` is
+`(freqs, ms)` with no level field, so melodic dynamics come only from the stem
+gain, and fixing it means changing `Segment` in the shared `synth.dart`. Live
+changes *during* playback (`BB-T2`, `BB-U3`) still need `BB-T1`'s windowed
+renderer; the current path renders the whole performance up front.
+
+---
+
+### The cards, as they were written
+
+- ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**
+  `_generateFx` (`my_instruments_sheet.dart:470`) lives in the Sound Library
+  creation menu and returns a `SavedInstrument` that is merged straight into the
+  library list, so a generated FX is thereafter pickable anywhere the sheet
+  opens — Tracker, Workshop playback, Audio Editor voicing. It is **not**
+  reachable from Audio Editor > Add clip, which was the anti-requirement.
+
+- ✅ **Add clip adds timeline material — DONE (verified 2026-07-26).** The
+  Add-clip menu (`daw_screen.dart:~4390`) offers exactly the specified set and
+  nothing else: `dawAddFromLibrary`, `dawImportAudioFile`, `dawAddMusic`,
+  `dawExtractSample`, `dawAddBeat` (+ tune). No sound-design entry — that work
+  happens in the Sound Library.
+
+- ✅ **Every surface with a rack can SAVE a chain, and every surface HAS a rack
+  — DONE 2026-07-30/31** (opus, daw-suite). Two halves, both found by auditing
+  rather than by a card:
+  - **`fx_presets.dart` was a fixed enum of factory sounds with two callers**, so
+    five surfaces hosted an FX rack and none could keep the chain you dialled in.
+    `core/services/fx_preset_store.dart` (the `ProjectStore` shape, storing chain
+    STRINGS — already the interchange format, already what the Audio Editor puts
+    on the clipboard, and readable in a bug report) plus a shared sheet on the
+    `keymap_sheet` pattern, hosted by **all five racks**. A chain string cannot
+    carry per-param automation, so the sheet says so before saving one, and stays
+    quiet for a plain chain.
+  - ⚠️ **The ADVANCED Tracker had no rack at all** while the BEGINNER one did —
+    `TrackerChannel.fxChain` and `setChannelFxChain` already existed and that
+    screen simply never offered them, making the serious tracker the only surface
+    with no per-channel effects. Now a long-press on the channel header (that
+    header is 74 px and already carries three controls).
+
+- ✅ **Voice Shaping is an audio FX module — DONE (verified 2026-07-26).**
+  `voiceShape` / `voiceChipmunk` / `voiceDeep` / `voiceRobot` / `voiceRadio` are
+  `FxType` values with defaults in `fx_spec.dart`, and `daw_screen.dart`'s single
+  `_clipEffectTypes` list feeds **all four scopes** — `_trackFxEditor`,
+  `_masterFxEditor`, `_busEditor` and `_openClipInspector` — plus the marked-range
+  FX action. So the voice-shaping DSP already processes any clip, track, bus,
+  master or segment, which was the ask.
+
+- ✅ **Controls must be scannable — DONE (verified 2026-07-26).** The BPM control
+  is a slider (`loop_mixer_screen.dart` ~3685, `kMinTempoBpm`..`kMaxTempoBpm` →
+  `_setTempo`) PLUS a numeric field (~3702, `onSubmitted` → `_setTempo`), so
+  Chill/Groove/Fast is no longer the only tempo control. The style presets that
+  remain are GROOVE styles, not tempo — which the bullet explicitly allows.
+
+- ✅ **Notation is a view of the document — DONE (grand staff landed 2026-07-26).**
+  It engraves every enabled track, follows the selection, and shares the
+  transport. The missing piece was the clef: `clefForGrooveCells` returned ONE
+  clef, so a track straddling middle C was forced onto a single staff and its far
+  end vanished under ledger lines (the "hard-coded clef choices" the retirement
+  map lists under Replace). `grooveStaffForCells` (`groove_notation.dart`) now
+  returns `GrooveStaff.treble|bass|grand` from the range actually used, and
+  `_buildScorePanel` renders `GrandStaffView` for the grand case — reusing the
+  primitive the Tab Workshop already uses, not new notation code.
+  The rule is "at least two notes clearly on EACH side of middle C" (a third of
+  margin either way). A single low pickup or high grace note therefore does not
+  split the staff. A span-based rule was tried and removed: >2 octaves fires on a
+  treble line with one low pickup — exactly the incidental note the count guard
+  exists to ignore — and it was redundant, since notes bunched at two extremes
+  already give two clear notes per side. +20 tests (15 classifier boundaries,
+  5 widget).
+
+- ✅ **D1 — "Add a track" = roles AND empty (option C).** The ＋ offers the five
+  authored roles (drums / bass / chords / melody / sparkle) *and* an "empty"
+  entry, with the role list first so nothing is ever a blank page but the
+  ceiling is uncapped. A role-add arrives with that role's authored patterns and
+  variants and plays immediately; an empty-add arrives silent for the tune grid.
+  **Rename matters only for empty tracks** ("Track 6" means nothing) — do it
+  with the empty path, not before.
+  Build on `duplicateTrack`/`removeExtraTrack` (`loop_engine.dart`), which
+  already handle the extra-track roster, id allocation and settings cleanup.
+  ⚠️ Copies/new tracks are NOT in `_trackColors` or `_trackLabel` — see the
+  `_sourceIdOf` fallback; an empty track needs its own colour + name, not a
+  suffix fallback. ⚠️ The track-card row is FULL (23px overflow); put any new
+  control in the inspector.
+
+- ✅ **D2 — pan automation gets a parameter SWITCH (option A).** One 16-cell
+  strip per track with a Volume / Pan toggle above it, not two strips. The
+  render path already exists (A3); this is the editor. Reuse
+  `_cycleAutomationStep` with the param as an argument, and keep the
+  "cycling back to neutral DROPS the lane" rule — it is what preserves the
+  byte-identical guarantee.
+
+- ✅ **D3 — build a PER-TRACK FILTER, then automate it.** Approved as real work.
+  Today `_masterFilter` is global and `AutomationParam.filter` renders nothing.
+  A biquad per track in the mix path; the payoff is the filter sweep (dull the
+  bass while the hats stay bright, then open it across the loop). Do the filter
+  FIRST, then wire `AutomationParam.filter` through the same envelope seam
+  `mixStems` already takes.
+
+- ✅ **D4 — the two orphaned tests are BACK (they needed no port).**
+  `test/generator_shapes_test.dart` (238 lines) and
+  `test/mod_effect_memory_test.dart` (218) were deleted by `8a2c2d52`. Recovered
+  with `git show 8a2c2d52^:<path>` — and they compile and pass **unchanged**, so
+  no owner call was needed after all. The note that said otherwise was written
+  while A7's generator code was still reverted; `9adc7b9b` put it back. **The
+  lesson worth keeping: "the test no longer compiles" can mean the CODE is
+  missing, not that the API moved on** — check what the clobber took before
+  concluding a test is stale, or you will edit a good test to match bad code.
+
+- ✅ **WS-W1 — `Project`: one document, many track kinds.** `M` · **SHIPPED
+  2026-07-28** (opus, loop-d1d4). `lib/core/project/project.dart` +
+  `project_codec.dart`, 26 tests. **Everything below is the ORIGINAL card, kept
+  because its warnings still apply to WS-W2/W5.** What shipped differs in three
+  ways, each forced by the code rather than chosen:
+  - The codec is a **REGISTRY**, not a switch over five types. Two kinds have no
+    codec to name (`tab` has none at all — WS-L11; `audio` needs a PCM render
+    callback a pure container should not hold), and a switch would have dragged
+    every mode's types, two of them Flutter-bound, into the container.
+    `registerProjectDocumentCodec` lets those register from their own side.
+  - **"No codec registered" and "kind I have never heard of" are ONE path**,
+    both preserved verbatim. `ProjectTrack.unreadable` holds the raw document
+    and `unknownKind` the stored kind string, so an older build opening a newer
+    file writes the track back byte-identical instead of deleting it on the
+    second save. `Project.hasUnreadableTracks` lets a caller warn BEFORE saving.
+  - `AppMode` moved to `core/interop/app_mode.dart` (re-exported, no call site
+    changed) because its old home is Flutter-bound. **Purity is now asserted**,
+    not assumed: a test fails if any of the three files gains a Flutter import.
+  - **Goal.** One container the three surfaces can share, so "the tracker
+    pattern in bar 9" and "the clip on the timeline" can be the same object.
+  - **Depends.** Nothing. *Do this first.*
+  - **Files.** New `lib/core/project/project.dart` (pure Dart, no Flutter) +
+    `project_codec.dart`. Reads, does not modify: `core/audio/daw_timeline.dart`,
+    `tracker_song.dart`, `loop_engine.dart`, `tab_document.dart`.
+  - **Build.** `Project { List<ProjectTrack> tracks, TempoMap tempo, String name }`;
+    `ProjectTrack { id, name, AppMode kind, Object document, mix }` where
+    `document` is the mode's **existing** type, unchanged. Codec to/from JSON.
+    ➕ The **Loop** document is now a trustworthy one to assert on: `GrooveSpec`
+    carries per-track length, swing and automation lanes as of `3a018344`.
+    Before that it silently dropped every lane, so "each document intact" would
+    have passed while losing state.
+    The precedent to follow is `.cbdaw v2`, which already stores a clip's model
+    beside its audio — the same trick, one level up. Reuse `AppMode` from
+    `core/interop/project_bridge.dart` rather than declaring a second enum.
+  - **Acceptance.** A project holding one track of every kind round-trips
+    through the codec with each document intact (assert on the documents, not on
+    the JSON). An unknown `kind` in a stored file is preserved verbatim rather
+    than dropped, so a newer project opened by an older build loses nothing.
+  - ⚠️ **Do not** put mix state inside the mode documents — it belongs to
+    `ProjectTrack`, or WS-W5 will have to unpick it from four places.
+  - 🔴 **Found while building (2026-07-28): `TabDocument` has NO codec, and
+    Tab's only persistence is LOSSY** — `saveToSongBook` goes through MusicXML,
+    which drops tuning, strings, frets and every technique, i.e. everything that
+    makes a tab a tab. `TabColumn` has ~22 fields plus nested
+    `crisp_notation_core` types, so a lossless codec is **its own task** (see
+    WS-L11 below), not a sub-task of this one. WS-W1 therefore ships a codec
+    REGISTRY: a kind with no registered codec is preserved verbatim, the same
+    mechanism the unknown-kind rule already needs.
+  - ⚠️ **The card contradicts itself on `AppMode`**: "reuse it from
+    `project_bridge.dart`" + "pure Dart, no Flutter" cannot both hold, because
+    that file imports the Flutter `crisp_notation`. Resolved by extracting the
+    enum to `core/interop/app_mode.dart` and re-exporting it — additive, no call
+    site changes.
+
+- ✅ **WS-W1b — make `Project` REACHABLE.** `S` · **SHIPPED 2026-07-28**
+  (opus, workstation-parity). `lib/core/services/project_service.dart`, 13 tests.
+  **A card the ladder did not have, added because the audit found the same shape
+  twice.** `WS-W1` built the container and **nothing in the app ever constructed
+  one** — a grep for `Project(` outside `lib/core/project/` returned only the
+  Audio Editor's unrelated `.cbdaw` save/load. Worse, `registerTabProjectCodec()`,
+  whose own comment says *"call once at start-up"*, **was never called**, so a
+  tab track would have been carried as `unreadable` despite a working codec
+  existing. Both are fixed in `main.dart`: one provider, one registration call.
+  - The seam `WS-X1` needs is `updateDocument(id, doc)` — swap a track's document
+    while keeping its id, name and **mix**. A live link that reset the level and
+    pan on return would be worse than the copy it replaces, so that is the
+    assertion the test leads with.
+  - ⚠️ `ProjectTrack.copyWith` resolves `document ?? this.document` and therefore
+    **cannot clear a document**. The service builds the track directly for that
+    reason; a test pins it so nobody "simplifies" it back into `copyWith`.
+  - **The pattern worth generalising:** twice now a card has shipped complete,
+    tested and unreachable (the shared count-in on the unused `advance` path;
+    `Project` with no owner). **Before ticking any remaining card, grep for a
+    caller.** Passing tests are not reachability.
+
+- ✅ **WS-W5d — the shared bar and the shared undo get their first host.**
+  `S` · **2026-07-28** (opus, workstation-parity). The mixer console hosts
+  `TransportBar` and pushes a labelled `UndoEntry` for every mix change.
+  - **Found by applying this ladder's own reachability rule to my own work.**
+    `TransportBar` (`WS-W3`) had **no host** and `UndoService` (`WS-W4`) was
+    provided in `main.dart` and **consumed by nothing** — `UndoEntry(` appeared
+    only inside its own file. Two more complete-tested-and-inert artefacts, both
+    mine, after I had flagged the pattern four times.
+  - **Drags coalesce.** Level and pan push with a `coalesceKey` and end the run
+    on `onChangeEnd`, so a fader drag is ONE undo rather than one per frame —
+    the first real exercise of `UndoEntry.coalesceKey`, and without it Cmd-Z
+    would nudge instead of undo.
+  - The mixer passes `showRecord: false`: arming a record here would imply a
+    capture path this screen does not have.
+
+- ✅ **WS-W4 — one undo history. COMPLETE 2026-07-30 — ALL THREE surfaces**
+  (Audio Editor · Loop Studio · Tracker). Service shipped 2026-07-28 (opus,
+  workstation-parity); the Audio Editor and Loop Studio folded in 2026-07-29;
+  **the Tracker's block history folded in 2026-07-30** (opus, daw-suite), taking
+  the dispose trap and the private-service rule the card warned about rather
+  than rediscovering them, with all 84 of that screen's tests passing
+  unchanged. `lib/core/services/
+  undo_service.dart`, 17 tests. **PHASE 1 IS NOW COMPLETE as services** — W1
+  Project · W2 TransportService · W3 transport bar · W4 undo history all exist.
+  What shipped, and what it deliberately does not do:
+  - **It does not replace the snapshot mechanisms.** A surface keeps capturing
+    exactly as it does today and hands over `(label, scope, undo, redo)`
+    closures. Re-implementing capture/restore for four document types would be
+    a rewrite wearing a refactor's clothes, and the card says to change only
+    who owns the stack.
+  - **Scope and order are both real, and not in conflict** — the card reads as
+    if they were. The history is ONE ordered list so the Audio Editor can show
+    what you just did in Loop Studio; `undo()` takes the most recent entry from
+    any surface (what Cmd-Z means); `undoScope(id)` takes the most recent of one
+    surface, so an undo cannot silently rewind another's unrelated work.
+  - **Coalescing is first-class.** A 200-frame drag is one edit to a user and
+    200 entries to a naive stack. The run keeps the FIRST entry's undo and the
+    LAST entry's redo, which is what makes it reversible in one step. Different
+    scopes never merge even on the same key.
+  - `clearScope` exists for closing a surface: its closures capture state that
+    is going away, and running them afterwards would restore into nothing.
+  - ✅ **The acceptance IS discharged now, on the real screens** (2026-07-29,
+    loop-d1d4). It is worded at the screen level — "an edit made in Loop Studio
+    is undoable from the Audio Editor's history list" — and neither earlier
+    author would tick it, correctly: @workstation-parity had no screen migrated
+    and proved it headlessly with two adapters; @daw-suite had one, and one
+    folded-in surface cannot demonstrate a boundary. With Loop Studio folded in
+    there are two, so `loop_shared_undo_test`'s last four cases run a **real
+    `DawService` and the real Loop Studio screen against one `UndoService`**: an
+    edit made in Loop Studio appears in the shared history and is reversed by a
+    `Cmd-Z` that knows nothing about Loop Studio; neither surface's own button
+    reaches into the other; the redo branch holds the same line; and leaving
+    Loop Studio leaves the Audio Editor's history fully usable.
+    ✅ **AND THE LIST IS BUILT — the acceptance is met in full** (2026-07-29,
+    loop-d1d4). `lib/shared/undo/undo_history_sheet.dart`, hosted by BOTH the
+    Audio Editor (its width-aware `secondary` toolbar list) and Loop Studio (its
+    overflow menu — that toolbar Row has five fixed icon buttons before its
+    scrollable region and has overflowed twice, so a secondary action does not
+    get to be the sixth). Until this, `history` and `nextUndoLabel` had **no
+    viewer at all**: both fold-ins produced careful labels — the DAW's free from
+    its coalesce token, Loop's derived by diffing snapshots — and nobody could
+    read a single one. **An output with no reader is this ladder's recurring
+    defect one level up from the usual unused method, and much harder to see,
+    because every test passes and the data is genuinely correct.**
+    * **Tapping a row reverts to it**, which was a product call and is written
+      down as one. A history you cannot navigate is a log. Crossing another
+      surface's entries is *unavoidable* rather than chosen — one ordered list,
+      and an entry's closure assumes everything after it is already undone — and
+      it is safe because it is itself reversible. So no confirm dialog; instead
+      each row states how many edits its tap takes back, and every row names its
+      surface.
+    * **Scope names are a REGISTRY** (`registerUndoScopeName`), following
+      `project_codec.dart`: a shared widget hard-coding every surface's scope
+      would sit in `shared/` importing half the feature tree. Each surface
+      registers on mount, which is always in time — a scope only has entries
+      while its screen lives.
+    * ⚠️ **The redo BRANCH is not listed, deliberately.** `UndoService` exposes
+      `history` and `nextRedoLabel` but no accessor for the future queue, and
+      adding one to a file two agents were folding into, for a nice-to-have, was
+      not worth the collision. A labelled Redo action ("Redo Move clip") meets
+      "the label says what it was" for the entry that matters. **This ship
+      touches no shared file.** Tests: `undo_history_sheet_test` (17), both
+      hosts driven through their real UI rather than by calling the function —
+      a sheet nobody can open would be the same defect wearing the fix's
+      clothes.
+  - ✅ **Fold-in — the AUDIO EDITOR is done (opus, daw-suite).**
+    `DawService({UndoService? history})`; omit it and the surface keeps a
+    private one, so every existing caller behaves exactly as before. The
+    snapshot MECHANISM is untouched, per this card — only the owner changed.
+    * **The evidence is what did NOT change:** their 17 service tests and every
+      existing DAW undo test pass **unchanged, none edited**. Editing one would
+      have been the signal I changed behaviour rather than ownership.
+    * `_coalesceToken` does map onto `coalesceKey`, as this card guessed — and
+      the token already names the gesture, so **labels came free** (`('move',…)`
+      → "Move clip") instead of editing 97 call sites, which is the churn this
+      card warns against. Sites with no token still say "Edit".
+    * ⚠️ **`UndoService` scoped UNDO but not redo**, so I added `canRedoScope` /
+      `redoScope` (additive, mirrors `undoScope`). Without them the Audio
+      Editor's redo button would replay another surface's edit — exactly what
+      `undoScope` prevents, in the other direction.
+    * `loadProject` calls `clearScope`, not `clear`: its closures capture state
+      that is going away, but another surface's entries are still good.
+    Tests: `daw_shared_undo_test` (10).
+  - ✅ **Fold-in — LOOP STUDIO is done (opus, loop-d1d4).** `loop_mixer_screen`
+    no longer owns a stack; capture and restore are unchanged (`_engine.spec` →
+    `_applyHistory`), and the evidence is again what did NOT change — **all 105
+    existing `loop_mixer_test` cases pass unedited.**
+    * **Labels are DERIVED, not set per call site** (`groove_change_label.dart`,
+      new). Every Loop edit funnels through ONE hook that knows the groove
+      changed but not what changed — which is why one hook could cover them all.
+      The label is diffed out of the two snapshots' canonical `toJson()`, the
+      same view `cacheKey` already uses to decide there was anything to record.
+      Setting a label at ~20 sites would be this ladder's recurring inert seam:
+      the site that forgets does not fail, it files its edit under the wrong
+      name. A new `GrooveSpec` field falls through to a generic label — missing,
+      never wrong. (The DAW got labels free from `_coalesceToken`; Loop had no
+      equivalent token, hence the diff.)
+    * ⚠️ **THE TRAP THE DAW DOES NOT HAVE, and the tracker WILL.** Loop Studio
+      is a GAME SCREEN — pushed and popped — while the service outlives it, and
+      every entry closes over the `State`. An undo pressed elsewhere afterwards
+      would `setState` on a dead screen. `clearScope` in `dispose` (what this
+      card provides it for) plus a `mounted` guard in the restore path.
+      **Anything the games registry mounts inherits this.**
+    * ⚠️ **`redoScope` was written TWICE, independently, within the hour** — by
+      daw-suite (above) and by loop-d1d4, same semantics, from opposite ends of
+      the service. Theirs landed first and mine was deleted in favour of it. Two
+      agents on adjacent cards converge on the same gap even when both announce
+      it on the board first; announcing it is still what kept the collision to a
+      comment-level conflict.
+    * A screen with NO service in scope keeps a private `UndoService` rather
+      than not recording: the registry and most of this screen's own tests mount
+      it bare, and undo has worked there since it shipped. One code path either
+      way. Tests: `loop_shared_undo_test` (24).
+  - ✅ **Fold-in COMPLETE — the tracker screen's block history, 2026-07-30**
+    (opus, daw-suite). All three surfaces are in. It did inherit Loop Studio's
+    dispose trap rather than the DAW's clean case, exactly as this card
+    predicted: `clearScope` in `dispose` plus `mounted` guards, pinned by a test
+    that tears the screen down and asserts the scope is empty. Labels are coarse
+    on purpose ("Pattern edit"/"Recorded notes") — naming them at ~30 sites is
+    the inert-seam shape, where the site that forgets files its edit under the
+    wrong name. All 84 of that screen's existing tests pass unchanged.
+  - ⚠️ **This card's own premise mislabels the third stack, and whoever takes it
+    should decide rather than assume.** The header says "three surfaces, three
+    private stacks: `DawService` … `LoopStack` holds loop state … the tracker".
+    But `loop_record.dart`'s `LoopStack<T>` is **not an edit history** — it is a
+    live looper's ORDERED OVERDUB LAYER STACK with per-layer mute, where `undo`
+    means "drop the take I just recorded", a performance action taken while
+    playing. Loop Studio's edit history was a different structure entirely
+    (`GrooveSpec` snapshots in `loop_mixer_screen`), and that is what was folded
+    in. Folding the take stack into a shared *edit* history is a real question,
+    not a chore: it would put "remove my last overdub" in the same list as
+    "changed the tempo", and a `Cmd-Z` from another surface would silently
+    delete a recording. **My read is that it should stay out**, but it is the
+    next agent's call and it should be made deliberately. `maxEntries` defaults to 50 to match `DawService._maxUndo`, so that
+    fold-in changes nothing a user can observe.
+  - **Goal.** One labelled, cross-surface history instead of three private
+    stacks.
+  - **Depends.** WS-W1.
+  - **Files.** New `lib/core/services/undo_service.dart`. Existing stacks to
+    fold in: `daw_service.dart` (`_undo`/`_redo`/`_Snapshot`, `_maxUndo`),
+    `loop_record.dart` (`LoopStack`), and the tracker screen's block clipboard
+    history.
+  - **Build.** Entries carry `(trackId?, label, undo, redo)`. Keep the existing
+    snapshot **mechanism** — it is proven — and change only who owns the stack.
+    Scope by track so an undo in one surface cannot silently rewind another's
+    unrelated edit.
+  - **Acceptance.** An edit made in Loop Studio is undoable from the Audio
+    Editor's history list **and the label says what it was**. Existing
+    per-surface undo tests stay green unchanged.
+
+- ✅ **WS-T3 — the keymap is shared, hosted and rebindable — SHIPPED.**
+  `lib/shared/keymap/` = `intents.dart` (the verb) · `keymap.dart` (which chord
+  means it) · `keymap_service.dart` (the live one, persisted) ·
+  `keymap_sheet.dart` (the reference). Hosted by the **Tracker**, the **Audio
+  Editor** and **Loop Studio**, each declaring the subset it handles.
+  * ⚠️ **this card's acceptance was written against a regression suite that did
+    not exist.** "The tracker's existing keyboard behaviour is unchanged (its
+    tests are the regression suite)" — `LogicalKeyboardKey` and `KeyDownEvent`
+    appeared ZERO times across every tracker test, including the screen's own
+    78. So step one was to WRITE it
+    (`tracker_keymap_characterization_test`, 13), and only then extract. It
+    passes unchanged across the extraction, as do the tracker's own 112.
+  * ⚠️ **two harness traps, both of which make a keyboard test lie.**
+    `pumpAndSettle` never completes on the tracker (continuous ticker); and a
+    screen's `autofocus: true` does NOT win against the route's focus scope in
+    the test binding, so **every key press is silently swallowed and the suite
+    passes vacuously**. Claim the node directly. The DAW and Loop `Focus`
+    widgets now carry explicit, disposed `FocusNode`s for the same reason.
+  * **Loop Studio had no keyboard at all** — not even space-to-play. It has one
+    now purely by hosting the table, which is the clearest evidence the
+    extraction bought something rather than moving code.
+  * what stayed in each screen is the DISPATCH and the ORDER of the checks,
+    which is itself behaviour: block ops resolve before note entry, or Ctrl+C
+    types a C.
+  * **only the DIFFERENCE from the defaults is stored**, including defaults the
+    user removed. Storing the whole table would freeze today's bindings on their
+    device, so a later release that improves one would never reach anyone who
+    had opened the sheet. `fromJson` never throws — a keymap that will not load
+    would lock someone out of their own keyboard.
+  * the sheet lists only intents the CURRENT surface handles, and every chord
+    bound to each (Delete and Backspace both delete; showing one teaches half
+    the truth).
+  Tests: `keymap_test` (18) · `keymap_hosting_test` (12) ·
+  `tracker_keymap_characterization_test` (13).
+  **This unblocks WS-A3 and WS-L1**, which are now about which intents those
+  surfaces choose to handle, not about plumbing.
+
+- ✅ **WS-L1 — keyboard support in Loop Studio.** `S` · **SHIPPED 2026-07-28**
+  (opus, loop-d1d4) — a cursor on the lane strip, 12 tests. Depended WS-T3.
+  Space = play/stop, arrows = move the cell cursor, digits = velocity,
+  Cmd/Ctrl+D = duplicate, Cmd/Ctrl+Z = undo. Acceptance: a widget test drives
+  the grid entirely from the keyboard.
+  ⚠️ **Sizing note from @daw-suite (I claimed this an hour before you and am
+  standing down — it is yours).** Two things worth knowing before you start:
+  * **The transport half is already done.** Space/Stop/undo/redo landed with
+    WS-T3; this screen had NO keyboard at all before that, and got one purely
+    by hosting the shared table. Covered by `keymap_hosting_test`. What is
+    left is only the grid half.
+  * **The grid half is not `S`.** `cursor` matches ZERO times in
+    `loop_mixer_screen.dart` — the step grids are tap-only, so "arrows move
+    the cell cursor" means introducing a cursor concept (selection state,
+    painting it, threading it through the shared `StepGridView`) plus
+    per-cell velocity, which is its own model question. Re-size before you
+    commit to it; the acceptance is right, the `S` is not.
+  * New intents go on the END of `AppIntent` — the names are persisted in
+    user rebindings. `duplicate` is already there and bound to Ctrl+D.
+  - ⚠️ **Half of this card was already shipped by the thing that unblocked it.**
+    WS-T3 step three wired space, stop, undo and redo into `loop_mixer_screen`
+    (96 lines). What was missing — and what the acceptance is actually about —
+    was a CURSOR: Loop Studio had no notion of a selected cell at all.
+  - ✅ **Built on the lane strip** (16 steps × N tracks), the one grid in this
+    surface with per-step VALUES, so digits map to it directly. Arrows move in
+    two dimensions and **clamp** rather than wrap (wrapping steps jumps from the
+    end of a bar to its start, which reads as a mis-key). The cursor does not
+    EXIST until a key asks for it, and a tap moves it to the tapped cell so the
+    two ways in agree. Typing keeps the drop-when-neutral rule, so a second way
+    in is not a way around the byte-identical guarantee.
+  - ✅ **`Cmd/Ctrl+D = duplicate` DONE — and I was wrong about it.** I had
+    recorded "there is no duplicate intent, so this is left out"; @daw-suite's
+    stand-down note above corrected me, and they are right: `AppIntent.duplicate`
+    has been at `intents.dart:87` bound to Ctrl+D all along. My grep was
+    truncated and cut it off. It duplicates the track the cursor is on.
+
+- ✅ **WS-A3 — keyboard support in the Audio Editor — SHIPPED.** Split at the
+  playhead (Ctrl+S) · trim to the marked range (Ctrl+T) · nudge (`,` / `.`) ·
+  marker jump (`[` / `]`) · mute and solo (M / S), all resolved through the
+  shared keymap, so a rebinding made in the Tracker applies here.
+  * **every one acts on the SELECTION and does nothing without one.** A
+    timeline shortcut that guesses which clip you meant is worse than one that
+    refuses: the guess is silent, and the arrangement is already wrong by the
+    time you notice. Pinned per verb.
+  * mute/solo are per-LANE, so a selection spanning two lanes is ambiguous and
+    does nothing rather than picking one.
+  * split walks the selection highest-index-first — splitting inserts a clip
+    and would otherwise shift the indices of everything after it on that lane.
+  * ⚠️ **plain M and S are NOTE KEYS in the Tracker** (classic QWERTY piano
+    layout) — found by writing the test, not by reading. Binding them is safe
+    only because the Tracker does not dispatch those intents, so an unhandled
+    intent falls through to note entry. Recorded at the binding site and pinned
+    by `tracker_keymap_characterization_test`; if the Tracker ever handles
+    mute/solo, these two must move first.
+  * new `DawTester.selectClip` — every keyboard verb here acts on the
+    selection, so a test could not drive one without it.
+  Tests: `daw_keyboard_test` (11).
+
+- ✅ **WS-A1 — clip edge handles: trim and fade — SHIPPED.** Narrow strips at
+  both clip edges drag to trim; the two top corners drag the fades. Honours
+  `snapOn`; handles appear only on a clip wide enough to hold them (below that
+  they would cover the clip they edit, and the inspector is still the way in).
+  * **It needed a new verb, not a composition of the two existing ones.**
+    `setClipTrim` + `moveClip` per frame alternates their coalescing tokens and
+    pushes an undo snapshot on EVERY drag frame — the user then presses undo
+    and watches the edge crawl back a pixel at a time. `trimClipEdge` does both
+    under one token, and trimming the leading edge moves the start with it so
+    the remaining audio stays anchored in the arrangement.
+  * ⚠️ **a no-op must not cost an undo entry either.** The first cut coalesced
+    before working out whether anything would change, so every frame a drag
+    spends against a clamp — and a drag spends many — bought a snapshot. The
+    delta is now computed first; the verb returns what actually landed so the
+    caller can tell the edge has stopped.
+  * `endCoalescedEdit()` ends the run so a SECOND drag is its own entry; without
+    it two drags merge and one undo jumps further back than expected.
+  * ⚠️ **the scroll warning in this card is real and I broke a different thing
+    first:** wrapping the clip in a `Stack` to host the handles let the body
+    collapse to zero height, and the waveform painter's clamp went min > max.
+    `StackFit.expand` fixes it; a widget test now drags across the clip BODY and
+    asserts the clip is neither moved nor trimmed, so the long-press-to-move /
+    plain-drag-to-scroll split stays intact.
+  Tests: `daw_edge_handles_test` (16, incl. a gesture test that drags the real
+  handle and asserts bounds + a single undo entry — the card's acceptance).
+
+- ✅ **WS-X1 — live links, not copies. COMPLETE 2026-07-30 — all five surfaces**
+  (Tracker · Tab · Score · Loop Studio · Audio Editor).
+  ⚠️ **The last one shipped because a "not possible" note had expired.** The
+  card recorded, correctly at the time, that the Audio Editor could not hold a
+  link because audio had no project codec. `WS-W1c` then added one — making the
+  timeline the document — and nothing re-read the note. **A note that says
+  something is impossible is the least re-read line in a plan; date them, and
+  re-check them when the thing they depend on lands.**
+
+- ✅ **WS-X2 — drag between surfaces. COMPLETE 2026-07-30** — the protocol plus
+  **all FIVE** drop targets (Audio Editor · Loop Studio · Tracker · Tab
+  Workshop · **Score Workshop**, added 2026-07-30 after an interop-matrix audit
+  showed Score as the one surface that could neither receive music nor put its
+  own on the shelf).
+  ⚠️ **The protocol gained one rule after shipping, from probing rather than
+  reading it: a CONTAINER also accepts what can BECOME what it holds.** A tab
+  could not be dropped on the Audio Editor's timeline at all — it fell through
+  to `convert(tab → audio)`, correctly unsupported since a bounce is one-way, so
+  the one mode that could put nothing on the timeline was the one most likely to
+  want to. The order of `acceptsDirectly` is now the caller's stated preference
+  (score before tracker, because score keeps a tab's pitches and voicings), and
+  a test flips the order to prove it is a promise rather than a coincidence.
+  📌 **The lesson the four targets share:** every single one broke an invariant
+  its own callers had always satisfied — a container that is not a mode, one
+  `AppMode` carrying two document shapes, a grid-length assert, a row-count
+  assert, and an unchecked string index that CRASHED. The protocol was right
+  each time; what a protocol cannot carry is the target's own constraints, and
+  only wiring a real surface finds them.
+  * ✅ `core/interop/drag_payload.dart` — `MusicDragPayload (kind, document,
+    label, trackId)`, `DropDecision`, `dropDecisionFor`, `dropSummary`. Pure
+    Dart, no widgets, so the decision is testable without pumping a surface.
+  * **one protocol, not a handler per pair, is arithmetic:** five modes is
+    twenty ordered pairs, and twenty handlers is how nineteen end up subtly
+    different. `ProjectBridge` already converts any pair and already reports
+    the cost — this decides what should HAPPEN.
+  * ⚠️ **a same-kind drop does not touch the bridge at all.** A round trip
+    would introduce loss the drop never needed — the copy-instead-of-link bug
+    WS-X1 fixed, in another shape. Pinned by identity, not equality.
+  * **only a lossy drop asks for confirmation**, and a lossy decision must have
+    a non-empty report (a dialog with nothing in it is a lie). Making people
+    dismiss a dialog on every drop is how they learn to dismiss the one that
+    mattered.
+  * the conversion runs ONCE and is handed back: the report IS the conversion's
+    output, so a preview cannot be free, and the commit must not run it again
+    and risk a different answer.
+  * ✅ **the first drop TARGET is wired: the Audio Editor's timeline.** A lane
+    accepts a dragged document, shows what a release would do while the finger
+    is down, confirms BEFORE committing when the conversion costs something,
+    and does nothing at all if the user declines.
+  * ⚠️ **wiring that first consumer exposed a real gap in the protocol, which
+    the contract alone hid: not every drop target is a MODE.** The timeline is
+    a CONTAINER — it holds `ScoreSource`/`TrackerSource`/`GrooveSource` clips
+    as they are. Asking `ProjectBridge` to convert a score "to audio" answers
+    *unsupported*, correctly (a bounce is one-way), and would have refused a
+    drop the timeline handles natively. `acceptsDirectly` names the kinds a
+    container holds; empty by default, so pure mode targets are unchanged. It
+    is a whitelist, not a bypass — an unlisted kind is still refused.
+  * ✅ **the third drop target is wired: the TRACKER** (2026-07-30, daw-suite).
+    A drag onto the pattern grid shows what a release would do, warns when it
+    costs something, and lands as ONE undoable edit.
+    ⚠️ **It lands in the CURRENT PATTERN rather than replacing the song, and
+    that is the opposite call to Loop Studio's — for a concrete reason.** The
+    Tracker's replace path (`_replaceSong`) calls `_clearUndo()`, because a
+    snapshot history cannot survive a change of channel/row shape; a replacing
+    drop would therefore be unrecoverable. The dialog states the cost of the
+    choice: a dropped song's other patterns stay behind.
+    ⚠️ **`setChannelCells` asserts the row count** — the third invariant in this
+    arc that only a foreign document could break. `tracker_pattern_fit.dart`
+    (pure) cuts or pads to the target's shape and reports **notes** lost, not
+    rows trimmed: a 32-row song using its first four rows loses nothing in a
+    16-row pattern, and a warning people learn to dismiss is worse than none.
+    ➕ Simpler than the Loop target in one way: everything converting into
+    tracker yields a `TrackerSong`, so there is one document shape, not two.
+  * ✅ **the second drop target is wired: LOOP STUDIO** (2026-07-29, loop-d1d4).
+    A drag onto the mixer surface shows what a release would do, confirms when
+    it costs something, and lands as one undoable edit.
+    ⚠️ **"a few lines over this protocol" was wrong, and the reason is worth
+    reading before wiring the remaining two.** The protocol is sound; what it
+    does not carry is the target's own constraints, and each of the three below
+    was found only by wiring a real surface — the same way `acceptsDirectly` was.
+    1. **`kind` does NOT determine the document type.** `AppMode.loop` travels
+       as a **`GrooveSpec`** when Loop Studio produced it and as a
+       **`List<PatternCell>`** when the bridge converted INTO loop. Same-kind
+       never consults the bridge, so `dropDecisionFor` answers *exact* for both
+       and the hint reads "Moves here unchanged" either way. **A handler keyed
+       on `payload.kind` hands a cell list to `applySpec` and loses it
+       silently.** Switch on the document TYPE. Every mode that both produces
+       and receives a document should be assumed to have this shape.
+    2. **The target can lose something the REPORT cannot know about.** Loop
+       Studio plays a two-bar grid; a longer melody has to be trimmed, and that
+       happens *after* the conversion the bridge reported on. Landing the head
+       and dropping the tail silently is exactly the lossy-drop-that-did-not-ask
+       the protocol exists to prevent — so the trim is added to the same
+       confirmation, and declining leaves the groove untouched.
+    3. **A foreign document can violate an invariant every existing caller
+       happened to satisfy.** `MelodicPattern.render` ASSERTS its cells fill the
+       grid exactly. Nothing had ever handed it a melody from elsewhere — a
+       capture is recorded against the grid — so the first drop crashed the
+       render. Cells are now fitted (`takeSteps` + `tileCellsTo`). Also:
+       `setUserTrack` creates the track but does not ENABLE it, which every
+       other caller in that file pairs by hand; without it a dropped melody
+       lands silent and looks like a failed drop.
+    📌 Consistent with `openProjectTrack` refusing a converted document: that
+    refusal was because *opening* hid the cost, and a drop does not hide it.
+  * 🛑 **UPDATE 2026-07-30, AFTER ALL FOUR TARGETS EXIST: the count went 2 → 4
+    and the number of drag SOURCES is still ZERO.** Re-measured on `origin/main`:
+    `Draggable<MusicDragPayload>` appears 0 times in `lib/`. `10ed9a25` records
+    the card as complete; the four targets are complete, the FEATURE is not,
+    because nothing in the app can begin the gesture. **Do not wire a fifth.**
+    The stop-flag below was written when there were two and did not travel — a
+    note on a card is not a message to a person, and that is on me as much as
+    anyone. What is needed is a SOURCE and a frame where source and target
+    coexist (the WS-W6 browser as a docked panel, or a split view); the
+    maintainer has meanwhile leaned to parking the whole gesture and keeping
+    `OpenInMenu`. 📌 The targets were still worth building: each one exposed a
+    real latent bug in its own surface, which is @tab's tally and is the honest
+    win here.
+  * 🛑 **STOP — DO NOT WIRE THE REMAINING TWO TARGETS YET. This whole card is
+    structurally unreachable in the product, and I only found it after adding
+    to it.** Measured 2026-07-30 (loop-d1d4):
+    1. **`Draggable<MusicDragPayload>` appears ZERO times in `lib/`.** There is
+       no drag SOURCE anywhere in the app. Both drop targets are wired to a
+       gesture nothing can start.
+    2. **No two music surfaces are ever on screen together.** Every
+       `DawScreen()` / `LoopMixerScreen()` / `AdvancedTrackerScreen()` is a
+       full-screen route push or an exclusive home-tab index. So even given a
+       source, you could not drag from one surface to another — there is no
+       frame in which both exist.
+    ⇒ The protocol and both targets are correct code that **cannot fire**. This
+    is the ladder's own recurring defect — shipped but never called — one level
+    up: not an uncalled method, but an entire interaction with no way in. ⚠️ **I
+    wired the second target the day before finding this, without checking there
+    was a producer. Owning that plainly: the first target's author could not
+    have seen it (they built the protocol AND its first consumer, which looks
+    complete from inside), but I could have, and did not.**
+    📌 **The capability is NOT missing — only this gesture is.** `OpenInMenu`
+    already moves a document between surfaces and is hosted by **six** of them
+    (Workshop, Drumkit, Loop Studio, Tracker, Tab Workshop, Audio Editor). So
+    nothing a player can do today is blocked by any of this; X2 is an
+    alternative UI for a solved problem.
+    ⬜ **MAINTAINER DECISION before any more of this card is built** — how
+    should music move between surfaces?
+    **(a)** Make the WS-W6 browser a DOCKED panel (its card already anticipates
+    this: "when the browser becomes a docked panel, this is what goes in the
+    projects tab") and drag from the panel onto the surface behind it. This is
+    the only option that makes the two existing targets live, and it works on
+    tablet/desktop while being cramped on a phone.
+    **(b)** A split view with two surfaces at once — heaviest, and a large
+    change to navigation.
+    **(c)** Keep `OpenInMenu` as the only route and treat the drag protocol as
+    a dead end: delete the two targets, or leave them dormant behind (a).
+    **My recommendation is (a) if drag is wanted at all, otherwise (c) —** and
+    (c) is not a failure: the menus work, are discoverable, and already state
+    the conversion's cost, which is the thing the drag protocol was written to
+    preserve.
+  Tests: `drag_payload_test` (17) · `loop_drop_target_test` (11).
+
+- ✅ **WS-X3 — the shared FX rack in the LAST mode. SHIPPED 2026-07-29** (opus,
+  daw-suite), route 1 as the maintainer chose. `lib/core/audio/score_fx.dart` +
+  the rack in the Workshop's per-part menu + `bin/rendersong.dart`; the chain
+  lives in `ScoreMetadata.extras` (crisp_notation `ee7dbc9`), which MusicXML
+  carries per part in `<miscellaneous-field>`. 16 tests.
+  ⚠️ **The card's premise did not hold, in two places** — the library neither
+  read nor wrote `<miscellaneous-field>`, and `multiPartToMusicXml` discarded
+  metadata outright, so the field alone would have been a no-op end to end. Both
+  closed first; the card was an `S` only after that. Details, plus two measured
+  caveats (CLI normalisation cancels a level-only chain; an effect tail is cut
+  at the part's end, app-wide) and one hole left open (`midiProgram`/
+  `isPercussion` never reach MusicXML at all), on the board in `docs/PLAN.md`.
+  ⚠️ Also fixed there: a multi-part export was dropping its whole header.
+
+- ✅ **WS-L5 — copy a PATTERN.** `S` · **SHIPPED 2026-07-28** (opus, loop-d1d4)
+  — `copyPattern`/`copyTargetsFor` + a two-tap chip row, 21 tests.
+  **Narrowed twice, then resolved.** The first
+  pass said "`duplicateSection` shipped, so the section half is done;
+  duplicating a scene or a single pattern still has no route." Re-audited
+  2026-07-28 (loop-d1d4): **a section IS a `GrooveScene`** — `_scenes` is
+  `List<GrooveScene?>` and the UI merely calls them sections — so
+  `_duplicateSection` already IS scene duplication, deep-copying both the
+  enabled set and the variant map. **Only the PATTERN half is open.**
+  ⚠️ **It needs a product decision before it is pullable**, which is why it is
+  no longer an `S`: a "pattern" here is either an authored **variant** (data,
+  not editable per slot) or a `_cellOverrides`/`_drumOverrides` entry that
+  REPLACES whichever variant is active. So "copy A to B, change one thing" has
+  no B to copy *into* — either editable variant slots have to exist first, or
+  the feature is really "copy this track's pattern onto that track".
+  ⚠️ Deep-copy automation lanes; the aliasing trap already bit the track-copy.
+  - ✅ **Resolved by taking the second reading:** the feature is "copy this
+    track's pattern ONTO that track", which writes an override on the
+    destination — no new model, no editable variant slots, no schema change.
+    Pitched↔pitched and drums↔drums only; the meaningless pairings are not
+    offered rather than offered-then-refused, and an audio track has no pattern
+    in either direction.
+  - ⚠️ **The aliasing trap, in its pattern form:** `setTrackCells` copies its
+    list but `setTrackDrums` stores the `DrumRowsPattern` OBJECT, so a shallow
+    copy leaves both tracks sharing one grid and editing either edits both.
+    Rows and velocities are deep-copied; two tests pin it, because the bug is
+    invisible until somebody edits.
+  - ⚠️ **And the one that would have shipped a broken render:** the copy takes
+    the AUTHORED 2-bar pattern, not `cellsFor`, which resolves to FOUR bars
+    under a progression — writing that back as an override is a length the
+    renderer asserts on.
+
+- ✅ **WS-L11 — a lossless `TabDocument` codec.** `M` · **SHIPPED 2026-07-28**
+  (opus, loop-d1d4) — `tab_document_codec.dart`, 16 tests. **NEW, found while
+  building WS-W1 (2026-07-28).** Tab is the only mode with no way to save what
+  it actually is: `saveToSongBook` converts to MusicXML, which drops the tuning,
+  the strings, the frets and every technique. There is no `toJson`/`fromJson`
+  for `TabDocument` anywhere. Until this exists, a tab cannot live in a
+  `Project`, cannot be a DAW clip model (`daw_clip_source_codec` has no `tab`
+  kind either), and cannot survive its own app restart.
+  - **Files.** New codec file; READS `tab_document.dart`, does not modify it.
+  - **Build.** ~22 `TabColumn` fields + `Tuning`/`TimeSignature`/`KeySignature`/
+    `ChordDiagram`/`BendPoint` and the enums, all from `crisp_notation_core`.
+  - **Acceptance.** A document using every field round-trips equal, asserted on
+    the DOCUMENT not the JSON; an unknown enum name degrades that one field
+    rather than failing the parse.
+  - ⚠️ `tab_document.dart` is Flutter-bound (it imports `crisp_notation`), so
+    this codec cannot live in a pure-Dart core file — register it into
+    `project_codec`'s registry rather than hardcoding it there.
+  - ✅ **Shipped as scoped**, plus one thing the card did not ask for and should
+    have: the real failure mode for a save format is not "the codec is wrong",
+    it is "`TabColumn` grew four fields and nobody told the codec". So the codec
+    exports `tabColumnFieldKeys` and a test PARSES `TabColumn`'s constructor out
+    of the source and diffs the two — **add a field without teaching the codec
+    and the suite fails**, instead of saves quietly shrinking. Thirty fields
+    round-trip today, asserted on one fully-populated column rather than thirty
+    separate tests that would all pass while a thirty-first was dropped.
+  - ⬜ **Still open, deliberately:** nothing CALLS `registerTabProjectCodec()`
+    yet, because nothing loads a `Project` yet — that call belongs to whoever
+    first wires Project into the app (WS-W6 / WS-X1). And
+    `daw_clip_source_codec` still has no `tab` kind, so a tab still cannot be a
+    DAW clip model; that is a ~10-line addition **in a hot file** (`daw_*` took
+    19 commits in 30 hours), so it is left to that file's owner.
+
+- ✅ **WS-L10 — audio tracks in the loop.** `M` · **SHIPPED 2026-07-28** (opus,
+  loop-d1d4) — `AudioPattern` + `loop_audio_fit.dart` + an import chip, 33
+  tests. Depended on WS-W1. A Loop Studio
+  track is symbolic only today, so a recorded audio loop has nowhere to live
+  except a bounce. After WS-W1 it is the **same** clip type the Audio Editor
+  holds, so this is a track-kind admission plus tempo-matching, not a new
+  model. ⚠️ Honour the sample-integrality invariant the whole engine rests on
+  (tempos 75/100/120 keep eighth-steps integral in ms **and** samples) — an
+  audio track whose length does not land on that grid must be resampled to it,
+  not tiled past it, or the gapless seam clicks.
+  - ✅ **How it landed.** `AudioPattern extends LoopPattern` — a pattern that IS
+    the render rather than a description of one. That is the whole admission:
+    `_renderMix` only ever asked a track for a `Float64List`, so level, pan, the
+    D3 filter and every automation lane apply to audio with **no audio-specific
+    mixing code**, and the tests assert exactly that.
+  - ⚠️ **A trap worth passing on.** Audio is excluded from `GrooveSpec` (PCM
+    cannot travel in a paste-able token) — and the render cache was keyed on
+    `spec.cacheKey`, so the moment audio left the spec, changing an audio
+    track's level served the STALE cached WAV back. Fixed by splitting
+    `renderIdentity` (everything that decides the sound) from `spec` (everything
+    that can be shared). **If you make anything else unserialisable, that
+    getter is where it has to be accounted for.**
+  - ⬜ **Left open:** the take is fitted to exactly ONE loop. A four-bar
+    recording over a two-bar groove is therefore played at double speed rather
+    than lengthening the loop — `audioStretchOf` reports it and the UI says so,
+    but offering "make the loop longer instead" is the obvious next step.
+
+- ✅ **WS-A5 — loudness metering as a VIEW — SHIPPED.** A **Loudness** button in
+  the Audio Editor toolbar measures the mix (or the **marked range**, since "is
+  the chorus louder than the verse" is the question people actually have) and
+  reads it back. The judgement lives in a pure `core/audio/loudness_advice.dart`
+  rather than in the widget, so it is testable: a meter that renders five
+  numbers beautifully and reasons about them wrongly is worse than no meter,
+  because it is trusted. It reports against a **target** (streaming −14 LUFS ·
+  broadcast −23 · none), because a LUFS number means nothing without one —
+  and *quieter than target is GOOD*, not a fault, which is the judgement most
+  meters get backwards and the one that pushes people into squashing a mix for
+  no gain. True peak over −1 dBTP and negative correlation are WARNINGS at any
+  target: they are the two failures that break on the listener's device while
+  looking clean on yours. Tests: `loudness_advice_test` (17, incl. a widget half
+  — the door opens on real audio and reads it, and is disabled rather than
+  opening onto "Silence").
+
+- ✅ **WS-A7 — clip warp / follow the tempo map — SHIPPED.** `Clip.warp` +
+  `Clip.nativeBpm`, an optional `TempoMap` on both render entry points (**null =
+  the old behaviour, byte-identical**), a "Follow project tempo" toggle in the
+  clip inspector.
+  * **WSOLA, not a resampler.** Warp is a TIMING feature; resampling would have
+    been half the code and would transpose the loop, which is a different (and
+    wrong) feature. A test measures the pitch after warping.
+  * **it refuses rather than guesses.** Warp with no stated native tempo leaves
+    the audio alone, and so does an absurd factor (a 60 BPM loop declared at
+    240 is a mis-stated tempo, not a request for a 4× stretch). An invented
+    factor shifts the arrangement's timing invisibly, and the listener cannot
+    tell that from a mistake they made themselves.
+  * a clip spanning a tempo CHANGE gets one factor derived from the map's
+    real-time span, so the change is smeared inside the clip but its **end lands
+    exactly** — nothing after it drifts, which is the invariant that matters.
+  * a RECORDING is the case warp exists for and cannot know its own tempo, so
+    the toggle **asks**; a symbolic clip (drum/groove) already carries its grid
+    and just toggles. Cancelling does nothing at all.
+  * the **length calculation** warps too (computed, not stretched) — without it
+    a clip that warped longer would simply be truncated.
+  Tests: `daw_warp_test` (20, incl. windowed-vs-full byte-identity for a warped
+  clip and a widget half for all three toggle paths).
+
+- ✅ **WS-A9 — the last DSP tier — SHIPPED. The Audio Editor ladder is
+  COMPLETE.** `StretchQuality{light, balanced, deep}` on `timeStretch`, a
+  `quality` param on the `timeStretch` effect (so the GUI panel, `fxproc
+  --list` and the chain string all got it with no per-effect code), and a
+  per-clip `Clip.warpQuality` the WS-A7 warp honours.
+  * ⚠️ **I scoped this wrong and the measurements corrected it.** The plan
+    (and my own claim on the board) said this was a MATERIAL trade-off —
+    "short frames keep drum hits sharp, long frames are smooth on held
+    notes". **Only half of that is real.** The transient half did not
+    reproduce: across 768/1024/2048 the crest factor of a stretched drum
+    pattern is flat to within noise, and at a factor of 2 every setting
+    doubles the hits identically (8 in, 15 out) — that is WSOLA repeating
+    material, which frame length does not fix. The names and the tests follow
+    what measurement supports, not what the plan predicted.
+  * **What IS real, and is now the feature:** the correlation window sets a
+    PITCH FLOOR. A window shorter than one period cannot find the right
+    alignment, so the stretch locks onto a sub-harmonic — the note comes out
+    at the wrong pitch, not merely rougher. Measured floors ≈ 85 / 67 / 39 Hz,
+    each within ~25% of the analytic `sampleRate / overlap`.
+  * ⚠️ **This exposed a pre-existing bug nobody had measured:** the hardcoded
+    1024-sample window that every stretch used cannot hold a bass low E — a
+    41.2 Hz note comes out at 26.7 Hz. Not a regression from this work; it has
+    been there since WSOLA shipped, invisible because nothing measured pitch
+    after stretching. Now pinned by a test, and `deep` is the fix.
+  * `lowestReliableHz` is advertised to the user, so it is deliberately
+    CONSERVATIVE — a first cut put `deep`'s claim exactly on its measured floor
+    and it failed there.
+  * ⚠️ **A choice label is also the CLI token** in a chain string, which is the
+    whole point of sharing one text form. A first cut labelled these
+    "Deep — bass (≥43 Hz)" and was unusable from the command line; the pitch
+    guidance moved to the caption and the labels are single words.
+  Tests: `stretch_quality_test` (12) + `daw_warp_test` (+3, incl. deep keeping
+  a 55 Hz bass in tune through a warp where light does not).
+
+- ✅ **WS-T1 — eased playhead follow — SHIPPED.** `followScrollOffset` (pure) +
+  a follow toggle in the toolbar.
+  * ⚠️ **two stale details in the card:** the sub-row field is `_rowPhase`, not
+    `_playFrac` (which matches nothing in `lib/`); and only ONE of its "two
+    jumpTo sites" is the follow — the other is cursor-into-view for keyboard
+    nav, where jumping is *correct* and easing would lag behind key-repeat.
+  * **the defect was not `jumpTo`.** `jumpTo` against a continuously-moving
+    target is exactly right; `animateTo` per frame fights itself. The defect was
+    that `_followPlayhead` only ran when the INTEGER row changed, so the view
+    sat still for a row then lurched a row's height, while `_rowPhase` already
+    knew where between rows the music was and nothing used it.
+  * ⚠️ **a bigger bug found on the way: the SONG branch never called it at
+    all.** Following worked when auditioning one pattern and silently did
+    nothing when playing the actual song — the mode people listen in.
+  * ⚠️ **`_followPlay` was hardcoded `true` and toggled NOWHERE** — there was no
+    way to turn following off. That mattered less when the view moved once per
+    row; now that it glides continuously, anyone editing while the song plays
+    needs the switch, so the toolbar has one.
+  Tests: `tracker_follow_test` (9) — **unit tests over the pure function, and
+  the reason is worth inheriting.** My first version drove the widget and
+  guarded on `maxScrollExtent <= 0`; on the shared 1400x2400 surface the grid
+  never overflowed, so all three tests returned early and **passed while
+  asserting nothing**. The version after that measured a per-frame delta, passed
+  alone and flaked under `--concurrency` — it was measuring how much time the
+  harness delivers per pump. The arithmetic is the interesting part and it is
+  exact.
+
+- ✅ **WS-T2 — pattern overview + drag-to-reorder — SHIPPED.** A "Song overview"
+  sheet listing every order slot, and `reorderOrderSlot` behind a real drag.
+  * the card's premise held, with a sharper edge than it stated: the strip is a
+    `Wrap` of chips whose move buttons **SWAP with a neighbour**. That is the
+    right verb for a nudge and the wrong one for "this chorus belongs at the
+    end" — sixty presses at sixty slots, and each one displaces something. A
+    drag is a remove-and-insert, so the slots between shift instead.
+  * **the cursor follows the SLOT, not the index.** Keeping it on the same
+    number would leave it pointing at whatever slid into that position, so the
+    next edit lands somewhere the user did not look. Both crossing directions
+    are pinned, and mutation-checked: collapsing the bookkeeping to
+    `if (cursor == from) cursor = to` fails them.
+  * ⚠️ `ReorderableListView.onReorder` is **deprecated** in favour of
+    `onReorderItem`, which already accounts for the removed item — so the
+    classic `to > from ? to - 1 : to` correction is not merely unnecessary
+    there, it is an off-by-one. I wrote the old form first.
+  Tests: `tracker_order_overview_test` (8).
+
+- ✅ **WS-T4 — a piano-roll view of one channel — SHIPPED (read-only).**
+  `tracker_piano_roll.dart`: `rollNotesFor` (pure) + a painted roll, opened from
+  the tracker toolbar for the cursor's channel. Premise verified before
+  building: `pianoRoll` really was 0 hits across `lib/`.
+  * **a view beside the grid, not instead of it.** The grid is exact and
+    unapproachable; the roll is legible and imprecise. They answer different
+    questions, which is why both exist and why the roll is one CHANNEL — the
+    grid is already the multi-channel view.
+  * **where a note ENDS is the whole logic.** A tracker cell says a note starts
+    and says nothing about when it stops, so a run ends at the next note (the
+    channel is monophonic — a new note takes the voice), at a key-off, or at the
+    pattern edge. That last is a stated simplification: a note held across a
+    pattern boundary really does sound on, but this view shows one pattern and
+    a note running off the edge with no end is less honest than stopping there.
+  * the same pitch re-struck is **two** notes, not one long one — merging them
+    would erase the rhythm, which is the thing the view exists to show.
+  * an empty channel **says so** rather than drawing a blank grid, which reads
+    as broken software.
+  * ⛔ **read-only, deliberately.** A roll you could edit that silently
+    disagreed with the grid would be worse than no roll; making them agree is
+    its own piece of work and should be its own card.
+  Tests: `tracker_piano_roll_test` (14) — arithmetic over the pure function,
+  plus the two doors.
+
+- ✅ **WS-T6 — pattern-level time signature — SHIPPED** (groove templates
+  deliberately NOT, see below). `tracker_meter.dart`: one `TrackerMeter` the
+  tracker grid AND the piano roll both read, and a "Beats and bars" picker.
+  * ⚠️ **beats-per-bar was hardcoded to 4.** The grid drew its bar line at
+    `row % (highlightEvery * 4)`, so a pattern in **3/4 was barred as common
+    time** — a waltz drawn as 4/4. That is what the card's one line was really
+    about.
+  * ⚠️ **`_highlightEvery` was DEAD**: declared, read once as
+    `_highlightEvery ?? stepsPerBeat`, **assigned nowhere in `lib/`**. The
+    "configurable" row-highlight spacing had never been configurable — the same
+    shape as `_followPlay` in WS-T1. It is a real, settable meter now.
+  * ⚠️ **and one of the three was mine**: the WS-T4 roll hardcoded `% 4` / `% 16`
+    and read no beat at all, so it disagreed with the grid for any pattern that
+    is not 4 rows to the beat. Both views now share one value and cannot drift.
+  * the load-bearing detail: **every bar row is also a beat row**, so a painter
+    must test `isBar` FIRST — test the beat first and every bar draws as a beat
+    and the meter reads as 4/4 whatever it is. Pinned as a property across all
+    the offered meters.
+  * **display only, and the sheet says so.** This changes where a line is drawn,
+    not when a note sounds, which is why it lives screen-side rather than in
+    `TrackerTiming` — putting it in the engine's timing model would imply the
+    replayer cared, and it does not. (That also keeps it out of the replay
+    lane's files.)
+  * ⛔ **groove templates are NOT in this card.** They change WHEN notes play;
+    everything above changes only how the grid is drawn. Conflating them is how
+    a display change turns into a playback change nobody asked for. Still open.
+  Tests: `tracker_meter_test` (12).
+
+- ✅ **WS-T7 — record into a pattern from the transport. SHIPPED 2026-07-29**
+  (opus, daw-suite). ⚠️ **Mostly already built when the card was pulled** —
+  FT2 live record, the record button, the quantize chip and `quantizeRowToBeat`
+  all existed in `advanced_tracker_screen.dart`. The delta that shipped:
+  `PerformancePads` finally has a host (its first anywhere), so notes can be
+  PLAYED in through `ManualMidiInput` — hardware MIDI (X5 3a) will land as a
+  second producer with nothing else to change; record-arm reaches the shared
+  transport and the count-in length comes from `countInBars`; and three defects
+  are gone — a chord collapsed into one cell, live record was silent, and every
+  recorded note cost a full-pattern undo snapshot against an 80-entry cap.
+  New pure `lib/core/audio/pattern_record.dart`; 26 tests.
+  ✅ **Note LENGTH followed the same day** (`b37536d8`): a release writes a
+  key-off cell at the sounding row (`releaseRowFor`), so a staccato stab and a
+  held pad are no longer identical; it never overwrites a cell that has a note
+  in it.
+  ⬜ **Still open:** the WAV re-render per note (needs `tracker_engine.dart`,
+  another lane's file) · the swing-correct ms→row inverse · the transport
+  arming the Tracker (today it is one-way) · a note held a whole lap or more
+  records as one row.
+
+- ✅ **D-RT — DECIDED by the maintainer 2026-07-29: build B, and keep C
+  REACHABLE.** Not "B instead of C" — **B now, with C later as an optional USER
+  SETTING**, so the architecture must not foreclose it.
+  **What that constraint means concretely, because "keep it open" is otherwise a
+  slogan:**
+  1. **Put the preview behind a SEAM, not a special case.** B is one audio path
+     today; C is a different implementation of the same idea. If B is bolted
+     onto one surface, C is a rewrite. If B implements an interface, C is a
+     second implementation of it.
+  2. **Playback mode becomes a RUNTIME choice, not a build-time one.** A user
+     setting means offline and real-time must coexist in one binary, so the
+     render/transport boundary has to be an abstraction from the start —
+     `TransportService` schedules, it does not render, which is already the
+     right shape.
+  3. **Do NOT fork the FX vocabulary.** B's "subset of FX" must stay `FxSpec`;
+     a second vocabulary would force C to write a third.
+  4. **The byte-identical guards stay — CONDITIONED, never deleted.** They are
+     assertions about the OFFLINE path, and that path remains the default and
+     the export path. A test that is removed because a second mode exists is a
+     guarantee quietly dropped.
+  Mixing and export stay offline and exact under B; C, if it ever ships, is an
+  opt-in preview mode, not a replacement for the render.
+  Original card and the three-option table: `docs/WORKSTATION_PARITY.md` §8.
+  **Build after Phase 4.**
+
+- ✅ **SHIPPED (`chord_spec.dart` + `chord_spec_parser.dart`). BB-D1 — the chord-symbol vocabulary and its parser.** `M`
+  - **Goal.** One type that can represent any chord a chart needs, parse it from
+    what a musician types, and print it back.
+  - **Depends.** Nothing. *Do this first.*
+  - **Files.** New `lib/core/harmony/chord_spec.dart` (pure Dart, no Flutter) +
+    `chord_spec_parser.dart`. Reads, does not yet modify:
+    `features/games/songs/import/chord_quality.dart` (the 18-quality table),
+    crisp_notation `theory/chord_analysis.dart`, `model/element.dart:1542`.
+  - **Build.** `ChordSpec { Pitch root, ChordCore core, Set<Extension>,
+    Set<Alteration>, List<AddedTone>, Set<int> omitted, Pitch? bass }` →
+    `pitchClasses`, `guideTones`, `voicingCandidates`. Parser accepts the ugly
+    real-world set: `Cmaj7` `CM7` `C∆` `C-7` `Cmi7` `F#m7b5` `F♯m7♭5` `Cø`
+    `Bb7alt` `A7#11/E` `C6/9` `Dsus` `G7sus4` `Ealt` `C/G` `N.C.` `%` (repeat
+    previous) and the German `H`/`B` convention the app already honours
+    elsewhere. Formatter is **convention-parameterised** (jazz `∆`/`ø` vs pop
+    `maj7`/`m7b5`, `♭`/`♯` vs `b`/`#`) — a display choice, never stored.
+  - **Acceptance.** A table-driven test of ≥150 real symbol strings → expected
+    pitch-class set + expected canonical print. `parse(print(x)) == x` for every
+    representable spec. **An unparseable symbol is preserved verbatim as text and
+    voiced as its best-guess triad — it never fails to load a chart** (the
+    existing `intervalsForSuffix` fallback ethos).
+  - ⚠️ **Do not** extend `ChordSymbolKind` (crisp_notation `element.dart:1542`)
+    to carry extensions. It is a 15-value MusicXML `<kind>` mapping and belongs to
+    the *notation* layer; a chart needs a richer type that can *narrow* to it.
+    BB-D3 owns that narrowing, with its loss report.
+
+- ✅ **BB-D2 — the chart document. SHIPPED 2026-07-30** (opus, loop-d1d4;
+  maintainer-authorised cross-lane pull, claimed before writing code).
+  `lib/core/harmony/chart.dart` + `chart_codec.dart`, pure Dart, 17 tests.
+  - **CHORDS ARE STORED AS SYMBOLS, and that is exact rather than merely tidy.**
+    `ChordSpec` (BB-D1) documents the invariant it rests on — *"`parse(format(x))
+    == x` holds even where `format(parse(s)) != s`"* — so a chart file says
+    `"Cmaj7"` and not eleven fields, which matters because a chart is a file
+    people open in a text editor. ⚠️ **Verified, not trusted:** the encoder
+    re-parses every symbol it writes and falls back to a structural form for any
+    chord that does not come back identical, and a 30-symbol corpus test asserts
+    the fallback is never needed today. A construct D1's formatter could not
+    express would otherwise be saved as a *different chord*.
+  - **Unknown keys survive TWO round trips**, not one. One can pass by accident
+    if `extra` is merely held in memory; open→save→open→save is the sequence that
+    actually loses a newer build's form, so that is what the test does.
+  - **Hostile input costs the smallest possible thing:** an unreadable chord
+    symbol costs that chord, not the bar or the file; a garbage meter falls back
+    to 4/4; `repeat: 0` plays once instead of vanishing; nonsense reads as "not a
+    chart" rather than throwing at the call site.
+  - ⬜ **ONE piece of the acceptance is DEFERRED, deliberately and measured:**
+    *"`Chart` opens as a `ProjectTrack`"*. The registry is keyed by `AppMode` and
+    there is no `AppMode.chart`. Adding one is not free — **3 files switch on
+    `AppMode` (`advanced_tracker_screen`, `daw_screen`, `tab_workshop_screen`),
+    none with a fallback case**, so a new value puts analyzer complaints in three
+    other lanes' hot files, and whole-project `flutter analyze` is a CI gate. My
+    claim promised not to touch hot shared files, so this wants its own
+    coordinated card rather than a drive-by enum edit. Everything else the card
+    asked for is done, and nothing in Phase 2 is blocked by it.
+  Original card:
+
+- ✅ **BB-A0 — drive the EXISTING groove engine from a `Chart`. SHIPPED
+  2026-07-30** (opus, loop-d1d4). `lib/core/harmony/chart_to_groove.dart`, 17
+  tests. A chart is audible through the shipped band before any of BB-A1–A6
+  exists, exactly as the card intended.
+  - **THE GUARD the card asked for, in its strongest cheap form:** feed the
+    engine a progression this code BUILT from text and one the engine already
+    ships, and the two renders are **byte-identical**. That makes the projection
+    provably a re-description rather than a second arranger — stronger than
+    "I did not edit the file".
+  - **Two failure kinds, kept apart because they mean different things to a
+    player.** *Approximated* — it plays without its colour (`Cmaj7` → `C`), which
+    is what a beginner's band would play anyway. *Unrepresentable* — it cannot
+    play, and is **not** bent onto something nearby, because a wrong chord in a
+    backing track makes a player doubt their own reading of the chart. `Bb7` in C
+    and any diminished/augmented triad are reported, never substituted.
+  - ⚠️ **QUALITY IS MATCHED, NOT JUST THE ROOT — the trap in this card.** `Cm` in
+    C major shares the tonic's root, so a root-only match would play it as a
+    MAJOR `I`: a wrong chord that sounds confident. Pinned by a test.
+  - ⚠️ **THE ENGINE HAS NO MINOR MODE, and anyone reading a report needs to know.**
+    `ChordDegree` is a MAJOR-key set, so a minor chart projects through its
+    RELATIVE MAJOR — which is how the engine already models minor
+    (`GrooveScale.minorPentatonic` is "the relative-major set, +3 semitones").
+    An A-minor chart therefore reports its tonic as **`vi`, not `i`**. The chords
+    are right; the numerals are relative-major. Mapping onto the minor tonic
+    instead would put a major triad on `Am`.
+    📌 A test caught that the *message* still named the wrong key ("C minor" for
+    an A-minor chart) because the shifted tonic was passed to the reporter as
+    well as to the mapper. Reports get read; a report naming the wrong key is
+    worse than no report.
+  - **Answering the card's own question early:** reduction is useful enough to
+    keep as a beginner fallback *when the chart is diatonic*, and useless outside
+    that — a I–vi–IV–V chart plays exactly, while a chart of dominant sevenths
+    yields nothing playable at all. So it is scaffolding for jazz and a real
+    feature for pop. Decide at the end of Phase 2, as the card says.
+  Original card:
+
+- ✅ **SHIPPED (`comp_arranger.dart`). BB-A1 — the voicing arranger.** `L` — *split it: candidates, then path.*
+  - **Goal.** Chord symbol → an actually playable voicing per instrument role,
+    voice-led into the next chord.
+  - **Depends.** BB-D1.
+  - **Files.** New `lib/core/harmony/comp_arranger.dart`. **Read
+    `lib/core/notation/bowed_arranger.dart` and the tab arranger first** — this
+    is the same Sayegh/Viterbi optimum-path shape with a different state and a
+    different cost, and it should be recognisably the same code.
+  - **Build.** State = a candidate voicing (register-bounded pitch list). Cost =
+    voice-leading distance + `checkVoiceLeading` violations (crisp_notation
+    `theory/voice_leading.dart:80`) + register/spread/hand-span penalties + an
+    avoid-note table (natural 11 over a major triad, ♭9 where unmarked…).
+    Candidate generators per role: **piano** close/drop-2/shell/rootless-A-and-B,
+    **guitar** from the bundled MIT chords-db grips
+    (`composition/chord_db.dart` — real multi-position shapes, already loaded),
+    **pad/horns** guide-tone lines.
+  - **Acceptance.** Over a ii–V–I in all 12 keys the top voice moves by ≤2
+    semitones per change and no parallel fifths/octaves are reported. A rootless
+    voicing never doubles the bass's root in the same octave. Golden voicing sets
+    for 20 named progressions, pinned.
+
+- ✅ **SHIPPED (`style_spec.dart`). BB-A2 — the style model.** `M`
+  - **Goal.** A style is *data*, so adding one is content work, not code work.
+  - **Depends.** BB-D5.
+  - **Files.** New `lib/core/harmony/style_spec.dart` + `style_library.dart`.
+  - **Build.** `StyleSpec { id, feel, swingAmount, meters, tempoRange,
+    Map<Role, RolePattern> }` per **intensity level** (0..3), where `Role` is
+    drums · bass · comp1 · comp2 · pad · perc. A `RolePattern` is a cell list on
+    the chart clock's subdivision, expressed *relative to the harmony*
+    (attack points + which voicing slot + accent), never absolute pitches.
+    Bass modes as an enum: root · root-5 · 2-feel · 4-feel walking · pedal ·
+    arpeggiated · tumbao · alberti. Plus per-style default kit and default
+    instrument per role, from the registry.
+  - **Acceptance.** A validator rejects a malformed style (cells overrunning the
+    bar, an intensity level missing a role, a meter the pattern can't fill) with
+    the offending field named. The 3 existing `kGrooveStyles`
+    (`loop_engine.dart:1598`) are expressible in the new model, proving it is a
+    superset — **but leave them running on the old path** (rule 1).
+
+- ✅ **SHIPPED (`bass_generator.dart`). BB-A3 — the bass line generator.** `M`
+  - **Goal.** A bass line that walks *into* the next chord instead of restating
+    this one.
+  - **Depends.** BB-A2. **Files.** New `lib/core/harmony/bass_generator.dart`.
+  - **Build.** Given (this chord, next chord, beats available, mode, register):
+    chord-tone skeleton on strong beats, **approach note** into the next root
+    (chromatic below/above, scalar, dominant-5th), 2-feel ↔ 4-feel by intensity,
+    repeated-chord variation so eight bars of one chord are not eight identical
+    bars, register continuity (no octave leaps between bars unless the range
+    forces it), open-string/low-limit awareness per instrument.
+  - **Acceptance.** Over a 12-bar blues and a 32-bar AABA: every bar-final note
+    is a semitone, a whole tone or a fifth from the next bar's root; no note
+    leaves the instrument's range; two consecutive identical bars occur only
+    where the seed says so. Render → `dart run bin/listen.dart --wav` and assert
+    the detected pitches match the generated line (the proven acceptance pattern).
+
+- ✅ **SHIPPED (`drum_generator.dart`). BB-A4 — the drum generator.** `M`
+  - **Goal.** A kit that plays the feel, marks the form, and fills into it.
+  - **Depends.** BB-A2. **Files.** New `lib/core/harmony/drum_generator.dart`;
+    `core/audio/synth.dart:412` (`enum Drum`) — **append only**.
+  - **Build.** Groove per style × intensity; **fills** at 2/4/8-bar phrase ends
+    and every section boundary; a count-in; an ending. Section intensity comes
+    from the chart (`ChartSection.intensity`), so the last chorus lifts.
+  - ⚠️ **Three real constraints, verified — record them, don't rediscover them:**
+    (a) `enum Drum` has 12 values and is an **order-locked ordinal palette**
+    (`interop/drum_tracker.dart` uses the ordinal *as* a MIDI note) — new voices
+    (shaker, tambourine, congas, clave, timbale, sticks, brush snare, ride bell)
+    must be **appended**. (b) The SFZ loader parses no `group`/`off_by`, so
+    **there is no hi-hat choke** — an open hat is not cut by the closed hat that
+    follows it; either accept it or shorten the open-hat sample per style.
+    (c) `midi_render.dart` **sums every zone** covering a key+velocity, so a
+    round-robin kit stacks into an N×-louder comb-filtered hit — emit exactly one
+    region per (key, velocity) window. All three are in `CLAUDE.md` in full.
+  - **Acceptance.** A fill lands in the last bar of every 8-bar phrase and nowhere
+    else at a given seed. Rendered kit hits are within ±1 sample of the chart
+    clock's grid. Byte-identical guard on the existing groove render path.
+
+- ✅ **SHIPPED (`form_realizer.dart`). BB-A5 — form realisation.** `M`
+  - **Goal.** Chart + repeats + form → the flat bar timeline everything renders
+    from.
+  - **Depends.** BB-D2, BB-A2. **Files.** New
+    `lib/core/harmony/form_realizer.dart`.
+  - **Build.** Expand `|: :|`, endings, `D.C.`/`D.S. al Coda`, chorus counts and
+    a solo section into `List<RealizedBar { chords, meter, intensity, roleVariant,
+    isFill, sectionLabel, choruseIndex }>`. Generate an intro (count-in · vamp on
+    the first chord · turnaround into bar 1) and an ending (last-bar hold ·
+    ritardando · button). **Vary each chorus** from the seed so eight passes are
+    not eight identical passes.
+  - **Acceptance.** A chart with two endings, a `D.S. al Coda` and `x4` realises
+    to exactly the bar sequence a musician would play — a table-driven test with
+    hand-written expected bar lists for six pathological forms. Same seed → same
+    realisation, byte-identical.
+
+- ✅ **SHIPPED (`humanize.dart`). BB-A6 — humanisation.** `S`
+  - **Goal.** The difference between "a band" and "a sequencer".
+  - **Depends.** BB-A5. **Files.** New `lib/core/harmony/humanize.dart`.
+  - **Build.** Per-role micro-timing (a drummer's hat slightly early, a bassist
+    slightly behind, a comp pushed), swing as a *continuous* ratio not a
+    triplet-only switch, velocity shaping by metric position and phrase arc,
+    per-note timing jitter bounded by role. All from one seed.
+  - **Acceptance.** Offsets are bounded (no note moves more than a configured
+    fraction of a subdivision), the seed reproduces exactly, and humanisation
+    **off** renders byte-identically to the pre-card output.
+
+- ✅ **SHIPPED (`style_library.dart`). BB-A7 — the starter style pack: SIX, done properly.** `M` — *content.*
+  - ✅ **Decision 6: depth before breadth, and this card is `M` not `L`.** A
+    shallow style is *immediately* audible as fake, and "does the band sound real"
+    is the entire product. Six also keeps the BB-Q2 fingerprints meaningful.
+  - **Goal.** Six feels that stand up to a musician, authored as data.
+  - **Depends.** BB-A2..A6. **Files.** `assets/styles/*.json` + registry entry.
+  - **Build.** **Swing · blues shuffle · rock 8ths · bossa · ballad · waltz.**
+    Chosen because between them they exercise every mechanism Phase 2 must prove:
+    4/4, 12/8 and 3/4; straight and swung; a latin clave feel; a two-feel and a
+    four-feel bass; and a half-time intensity floor. Each with 4 intensity levels,
+    fills, intro and ending, and default instruments.
+  - **Then widen, as pure data behind the validator** — samba, funk, pop 16ths,
+    country two-beat, reggae one-drop, gospel, folk strum, latin montuno, up-tempo
+    swing, jazz ballad. No new code should be needed for any of them; if one *does*
+    need code, BB-A2's model is short a mechanism and that is the finding.
+  - **Acceptance.** Every style passes the BB-A2 validator, renders at the low,
+    middle and high end of its tempo range without drift, and has a pinned audio
+    fingerprint at a fixed seed (BB-Q2). A per-style provenance note stating the
+    published-theory basis — clean-room rule 4.
+
+- ✅ **SHIPPED (`chart_screen.dart` + `chart_grid_view.dart`). BB-U1 — the chart view.** `L`
+  - **Goal.** Readable at a music stand, at arm's length, in a dim room.
+  - **Depends.** BB-D2, BB-T2. **Files.** New
+    `lib/features/harmony/chart_screen.dart` + `chart_grid_view.dart`.
+  - **Build.** Bar grid (4 bars/line, 2 on a phone in portrait), section labels
+    and colour bands, repeat/ending/coda marks, split bars, current-bar highlight
+    + next-section preview, autoscroll that never scrolls during a bar, landscape
+    and tablet layouts, a high-contrast stage theme, and **no accidental edits
+    while playing**.
+  - **Acceptance.** A headless layout audit at phone-portrait, phone-landscape and
+    tablet with no overflow (`../testing_dart.md` methodology). Chord type stays
+    above a stated minimum size at every breakpoint. Playhead tracks the transport
+    in a widget test driven by `advance`.
+
+- ✅ **SHIPPED (`chord_keypad.dart`). BB-U2 — chord entry fast enough to be used.** `M`
+  - **Goal.** A 32-bar tune entered in a couple of minutes, or nobody enters one.
+  - **Depends.** BB-U1. **Files.** New
+    `lib/features/harmony/chord_keypad.dart`.
+  - **Build.** Tap a bar → a root ring + quality grid + extension/alteration
+    chips + slash-bass picker; hold a bar to split it; paste a text grid (BB-D4);
+    drag-copy a bar or a whole section; long-press a section to repeat it; undo
+    through the shared undo service. Recently-used chords surface first.
+  - **Acceptance.** A scripted widget test enters a named 32-bar form in a bounded
+    number of taps (assert the count — it is the actual product metric). Every
+    quality BB-D1 can parse is reachable from the keypad in ≤3 taps.
+
+- ✅ **BB-H1 — bass detection. SHIPPED 2026-07-30, but NOT as carded.** `S`
+  - **Result:** the bass pitch class is now on `ChordReading.bassPc`. Measured
+    (`tool/bass_detect_ab.dart`, 100 root-position chords + 84 inversions):
+    **74% correct at the shipped 4096 window, 100% at 8192; inversions 82% / 87%.**
+    All four collision cases resolve at *both* windows — `C6`→C, `Am7`→A,
+    `Cm6`→C, `Am7♭5`→A. Chroma path **unchanged**: the template A/B still reads
+    exactly 82.6% exact / 86.8% root.
+  - ❌ **The card's own premise was WRONG and is refuted by measurement.** "A
+    second chroma over the bass band" cannot work at any window we can afford: at
+    44.1 kHz a 4096-point FFT has 10.77 Hz bins while a semitone spans 7.8 Hz at
+    C3, 4.9 Hz at E2 and 3.3 Hz at A1 — **midi 28–40 all land in bins 4–8**, so
+    folding the low band into 12 pitch classes measures leakage, not the bass.
+  - **Three measured dead ends on the way, recorded so nobody retries them:**
+    1. **Harmonic summation alone** → 29% correct / 71% unknown. Candidates a
+       fourth or fifth away collect the real note's partials, so the scores
+       cluster and everything reads as ambiguous.
+    2. **+ a fundamental-presence test, taking the argmax** → 14% correct /
+       **43% wrong**. The conceptual error: **the bass is the LOWEST note, not
+       the loudest**, and an argmax finds the strongest note in the register.
+    3. **Walking upward with a widened window** → 4% correct / 96% wrong. The
+       ±2-bin widening lets a candidate steal the peak of the note a semitone
+       above it, giving a systematic "reports the note just below" error.
+  - ✅ **What actually worked: peak-picking with parabolic interpolation.** The
+    insight is that the resolution limit applies to *separating* two close
+    partials, not to *locating* an isolated one — and a bass fundamental has
+    nothing within a semitone of it. Sub-bin interpolation over the peak and its
+    two neighbours recovers its frequency far more precisely than the bin width,
+    which is what makes this tractable at 4096 at all.
+  - ⚠️ **`bassMaxMidi` is E4, deliberately above a "bass" register**: an
+    inversion puts the lowest sounding note in the middle of the chord, and that
+    note is still the bass for naming. Capping at G3 cost 60pp on inversions.
+  - 📌 **Follow-on, unclaimed:** the default window stays **4096** — raising it to
+    8192 takes bass detection to 100% but doubles latency to 186 ms, which is a
+    call for whoever owns live grading (`BB-X5`), not one to make here. And now
+    that the bass is available, **re-run the rejected template extension with
+    bass disambiguation** — the 66 collisions that sank it are exactly what
+    `bassPc` resolves.
+
+- ✅ **BB-H4b — `ChordSmoother`: temporal smoothing. SHIPPED 2026-07-30.** `S`
+  - **The largest measured win in the non-neural path, and nothing in the app did
+    it before.** Measured on GuitarSet (real audio, 70 segments), against the
+    performed annotation:
+
+    | mode | exact | root |
+    |---|---|---|
+    | single window (was) | 12.9% | 57.1% |
+    | `labelVote` | **24.3%** | 62.9% |
+    | `medianChroma` | 21.4% | 68.6% |
+    | `meanChroma` | 20.0% | **70.0%** |
+
+  - ⚖️ **My hypothesis was half wrong and the split is the finding.** I expected
+    chroma-domain smoothing to beat label voting outright because it keeps the
+    continuous evidence. It wins decisively on **root** (+12.9pp over a single
+    window) and LOSES on **exact** (20.0 vs 24.3). Explicable: averaging
+    stabilises the overall pitch-class profile but blurs qualities that differ by
+    a single note, so the muddier the chroma the harder maj7-vs-maj becomes. With
+    the dense 17-template set `meanChroma` collapses to 11.4% exact for the same
+    reason.
+  - ⇒ **Pick the mode by what the caller needs, and the defaults differ by use
+    case.** Live grading (`BB-X5`) wants **root** → `meanChroma`. Chart-from-audio
+    (`BB-X2`) wants **exact** → `labelVote` with the fuller vocabulary. The class
+    defaults to `medianChroma` as the balanced middle; neither extreme is right
+    for both.
+  - **Design.** Separate class, because `ChordDetector` documents itself as
+    stateless per window and stays that way. `matchChroma` was extracted and made
+    public so a smoothed chroma is ranked by **identical** ordering rules to an
+    unsmoothed one — otherwise the two paths would disagree subtly. The bass
+    votes rather than averages, being categorical. `reset()` exists because
+    without it the previous take's chords bleed into the next one's first second.
+  - ⚠️ Still n=70 on solo guitar. The direction is unambiguous; the exact
+    percentages are not load-bearing.
+
+- ✅ **BB-H7/step-zero — ANSWERED 2026-07-30. The neural path is dramatically
+  better, so the licence IS the blocker and training a replacement is justified.**
+
+  `docs/BTC_TRAINING_HANDOVER.md` §0.2 said step zero is a measurement, not a
+  training run. Run, on the same 12 GuitarSet takes and the same MIREX-style
+  majmin duration-weighted metric (`tool/btc_guitarset_eval.dart`):
+
+  | path | majmin | root |
+  |---|---|---|
+  | chroma templates, best config (`BB-H0`) | 70.7% | 71.4% |
+  | **BTC (neural, NC weights)** | **89.7%** | **95.8%** |
+  | | **+19.0pp** | **+24.4pp** |
+
+  - ⇒ **The gap is real, large, and measured on our own data.** 89.7% sits at the
+    top of the published band (~83–85%), consistent with our set being
+    favourable (solo guitar, close mic). Chroma is not merely behind — it is a
+    different class of result.
+  - ⇒ **This validates `BB-H7`.** We have a model that works and cannot ship it.
+    The weeks of training work now have a measured prize rather than a hunch, and
+    a replacement has two numbers to hit: **clear 70.7% to be worth shipping at
+    all, approach 89.7% to be worth the effort.**
+  - ⇒ **And it re-prices the licence decision.** Choosing "ship symbolic only"
+    now means knowingly giving up a 19-point capability we have already built and
+    measured. That is a much sharper trade than it looked before.
+  - **Speed is not a blocker: RTF 0.20** — 289 s of audio in 58 s, ~5× real time
+    on this laptop. Fine offline (`BB-X2`); a real-time path would need work but
+    is not obviously out of reach.
+  - ⚠️ **Caught a harness bug before believing a wrong answer.** The first run
+    reported **majmin 4.5% against root 95.8%** — a gap that large between root
+    and quality is a bug in the ruler, not a property of a model. Cause:
+    `ChordEvent.quality` is literally `'maj'`/`'min'`, and I had reduced `''` to
+    major, so every major chord scored zero. 4.5% was exactly the minor-chord
+    fraction of the set. **The check that saved it was a plausibility check on the
+    shape of the result, not on the code.**
+  - **Licence posture, unchanged:** the weights are CC-BY-NC-SA-4.0, this was
+    non-commercial evaluation scoped by `COMET_ACCEPT_LICENSES`, and nothing here
+    makes the model shippable or weakens `model_license.dart`.
+  - ⚠️ Same caveat as everything else on this set: 69 maj/min segments, 278 s,
+    solo guitar.
+
+- ✅ **BB-H10 — duration-weighted per-bar harmonic analysis. SHIPPED to
+  crisp_notation `main` (`0b6e863`), worktree `../crisp_notation-harmony`.**
+  - **What.** `analyze(score, weighting: HarmonicWeighting.durationWeightedPerBar)`
+    reads ONE chord per bar from the bar's duration-weighted pitch content. That
+    is the mode a lead sheet wants — one symbol per bar — so it is the primitive
+    `BB-X1` needs to derive charts from the 46k-score corpus. `perSlice` stays the
+    default and every existing caller sees identical output.
+  - **Why.** `BB-H9` measured that WHICH NOTES the identifier sees matters far
+    more than the identifier does — a 32-point spread from the selection rule
+    alone — and `analyze()` was using the weakest shape.
+  - 🔴 **The design detail worth keeping, because a test forced it.** The rule is
+    a threshold **relative to the strongest tone**, not a fixed top-N. Top-N
+    sounds equivalent and is not: on a held C-E-G decorated with three
+    sixteenths, top-4 admits one arbitrary passing note, and `analyze`'s existing
+    one-non-chord-tone recovery then discards a REAL chord tone to make the
+    intruder fit — **the bar read as `C#dim`, having dropped its own root.** A
+    relative threshold excludes decoration by construction; the search widens to
+    every significant tone and then to the whole bar only if the confident set
+    names nothing.
+  - **Ties resolve by pitch class**, so the reading is deterministic rather than
+    dependent on map iteration order.
+  - Additive: new enum, two optional parameters, default unchanged. 6 new tests,
+    **full core suite green at 2,022**.
+  - ⚠️ **The app cannot see this yet.** `../crisp_notation` (the shared path-dep
+    clone) is on `main` but **behind origin and carrying another agent's 16
+    uncommitted changes**, so I did not pull it — that is their tree. The change
+    lands app-side the moment someone pulls it.
+  - ✅ **NOW MEASURED END TO END** (crisp_notation `a36643a`,
+    `packages/crisp_notation_core/tool/guitarset_symbolic_eval.dart`), through
+    `analyze()` itself rather than a standalone selection rule:
+
+    | mode | named | root | majmin | full quality |
+    |---|---|---|---|---|
+    | `perSlice` (default) | 70.8% | 49.1% | 36.6% | 30.9% |
+    | `durationWeightedPerBar` | **87.7%** | **78.7%** | **66.7%** | **63.9%** |
+
+    **+30.2pp majmin**, and within **0.2pp** of `BB-H9`'s standalone prediction
+    (66.5 → 66.7) — so `analyze`'s wrapper (slicing, NCT recovery, merging, key
+    context) costs nothing and the gain survives the real code path. Root gains a
+    similar margin; full quality doubles.
+  - 📊 **In context: symbolic now beats the audio chroma path on its own ground.**
+    78.7% root from notes vs 70.5% from audio chroma — though still short of the
+    neural audio model's 95.8%. For `BB-X1`, where the input is a real score
+    rather than pitch-tracked guitar, this is a **lower bound**.
+  - Bonus: the commit also corrected pre-existing `dart format` drift in
+    `analysis_test.dart`, which CI enforces (`--set-exit-if-changed` on
+    `packages/*/test`).
+
+- ✅ **BB-X1c — HARVEST RESULT + a source assessment (2026-07-30).**
+
+  **The `.mxl` harvest, by source** (271 unique files carrying `<harmony>`;
+  staging-dir duplicates excluded):
+
+  | source | charts from the file's OWN symbols | bars named | files ≥70% |
+  |---|---|---|---|
+  | **OpenEWLD** (MIT) | **103 of 103** | **74.9%** | **71** |
+  | PDMX | 57 of 79 | 45.6% | 34 |
+  | CPDL | 11 of 85 | 7.8% | 4 |
+
+  - ⇒ **OpenEWLD is the gold: real lead sheets, MIT, 100% carry chords.** PDMX is
+    worth taking. **CPDL is not** — Renaissance polyphony with an occasional stray
+    `<harmony>`, not lead sheets.
+  - **Standing total of exact charts: ~375** — 238 Ebersberger (LilyPond) + ~137
+    usable MusicXML.
+  - ⚠️ **The OpenEWLD ceiling is RIGHTS, not availability.** The upstream dataset
+    is thousands of lead sheets; we hold **103** because it was filtered to EU
+    public domain. The rest is in-copyright popular song. There is no bigger clean
+    slice to take.
+
+  🆕 **NEW in-corpus source found while checking: `.mscz` carries `<Harmony>`.**
+  **7 of 60 sampled (~12% → ≈300 of 2,555 files)** — where `.mscx` sampled **0 of
+  200**, so the two have different provenance and must be measured separately.
+  🔴 **And our MuseScore reader does not read `<Harmony>` at all**, so those ~300
+  charts are invisible today. That is the same shape as the `\chordmode` fix and
+  the obvious next card.
+
+  ❌ **`.mid` chord-text check was INVALID** — the probe used `grep -qmE1`, which
+  is not a flag, so every invocation errored and the "0 of 150" is meaningless.
+  Unmeasured, not zero.
+
+  **Assessment of externally-suggested tab/chord sources:**
+
+  | source | verdict |
+  |---|---|
+  | `tombatossals/chords-db` (MIT) | ✅ **already shipped** — bundled in `assets/chords/`, read by `composition/chord_db.dart`. Chord *shapes*, not songs. |
+  | **SynthTab** (CC BY-NC 4.0) | ❌ **NC → excluded**, and axis-2 dirty as well: synthesised from user-transcribed Guitar Pro files. Fails both axes. |
+  | **Tabs-Lite** (Apache-2.0) | ❌ ⚠️ **The APP is Apache; the "million songs" are not.** It is a client for a third-party tab database. Same "wrapper is not the grant" pattern as the MIDI-rendered corpora — and that database is already on this repo's do-not-connect list. |
+  | TuxGuitar (LGPL), alphaTab | 🔧 **tools, not content.** Genuinely useful as *oracles* for differential-testing our Guitar Pro import, the way OLGA is used for ASCII tab. No corpus value, and GPL/LGPL code must not be ported (clean-room rule). |
+  | OpenSong, OpenChord (GPL-3.0), Chord-Provider | 🔧 apps; their songs are user-supplied. No corpus. |
+  | ChordPro, MusicXML | ✅ already read. |
+  | OpenTab, alphaTex | ➕ **import features we lack**, not sources. Cheap to add, zero content. |
+
+  ⇒ **None of the suggested list adds Tier A/B corpus content.** The real remaining
+  leads are the ~300 `.mscz` above and, for tab specifically, GuitarSet's 360 takes
+  and IMSLP's 235 CC0 tab PDFs.
+
+- ✅ **BB-X1d — ~500 EXACT CHARTS NOW READABLE. Running total (2026-07-30).**
+
+  | source | format | files with exact charts | bars named |
+  |---|---|---|---|
+  | Ebersberger | `.ly` `\chordmode` | **238** | 37 of 40 sampled, 28 ≥90% |
+  | OpenEWLD | `.mxl` `<harmony>` | **103** | 74.9% |
+  | MuseScore corpus | `.mscz` `<Harmony>` | **122** of 132 | 64.7%, 43 ≥90% |
+  | PDMX | `.mxl` | ~34 usable | 45.6% |
+  | | | **≈497** | |
+
+  All three readers shipped today (crisp_notation `0aaaf43`, `82150b9`,
+  `5d02482`); before this, **every one of these was discarded at read time.**
+
+  🔬 **The MuseScore 1.x chord ids were INFERRED FROM THE MUSIC, and the method
+  generalises.** 1.x writes quality as an integer indexing a list we cannot
+  resolve. Over 132 files, taking only bars with exactly one harmony so
+  attribution is unambiguous, the interval the melody plays above each harmony's
+  own root separates them cleanly:
+
+  | ext | n | top intervals | reading |
+  |---|---|---|---|
+  | 1 | 1920 | 1 · 5 · **3** (25.4%), no ♭3 in top six | major |
+  | 64 | 356 | 5 · 1 · **♭7** (17.4%) · 3 | dominant 7th |
+  | 16 | 138 | 1 · 5 · **♭3** (23.2%), no major 3 in top six | minor |
+
+  Corroborated twice independently: `joy-world.mscz` gives C and G under "Joy to
+  the World"; and *Stille Nacht* now reads `| C | C | Dm | C | F | C | F | C |`,
+  where the **Dm is a correct ii in C major and appears only because of the
+  inferred mapping**. Values outside the table still emit nothing.
+  ⚠️ It remains an INFERENCE — documented as such in the code and in a test, so
+  anyone meeting real documentation replaces the table rather than extending it
+  by pattern-matching.
+
+  📌 **Display is already handled** — `layout_annotations.dart` places
+  `score.chordSymbols`, so the app renders all ~497 the moment
+  `../crisp_notation` is pulled. **That pull is the only thing standing between
+  this work and the user seeing it.**
+
+- ✅ **BB-X1g — INGESTED: 21 MIT Christmas carols. `db.json` 46,335 → 46,356
+  (2026-07-31).** The first Tier A/B acquisition of this arc, and it is finished
+  end to end rather than left staged.
+  - **Path:** `bin/build_xmas_manifest.py` → `bin/append_manifest.py
+    christmas-manifest.json "Christmas ChordPro"`. Backup taken first
+    (`db.json.bak-xmas-*`); the tool is idempotent per source and **aborts on any
+    dangling path**. Verified afterwards: 21 rows added, **0 pre-existing rows
+    lost**, every path resolves, no id collision against the existing 46,335.
+  - **Titles come from the `{title:}` directive, not the filename** — the
+    transcriber wrote "The First Noel" where the file is `First-Noel.txt`, and
+    `{subtitle:}` carries composer/lyricist for several ("Music by Lowell Mason,
+    Words by Isaac Watts").
+  - 🆕 **`chordpro` is a NEW format in `db.json`** — the census had gabc/midi/krn/
+    mxl/mscx/abc/ly/… and no chordpro. The app already reads it
+    (`songs/import/chordpro.dart` + `chord_sheet_screen.dart`), so it is playable,
+    but anything that switches on format should be checked.
+  - ✅ **The Tier B obligation is discharged.** `emit_catalog._tier` maps MIT to
+    Tier A, but **MIT still requires its notice to travel with the files we
+    redistribute** — so a `kMusicSourceCredits` entry was added and the credit
+    reaches the user. Per the Dahlhoff precedent: an ingest is not finished when
+    `db.json` is written.
+  - 🛑 **NOT published to the HF catalog.** That is `bin/music_db_publish.py`'s
+    gate and a separate decision.
+  - ⚠️ Two candidates deliberately left behind, both correctly:
+    `frescobaldi_fiori_musicali` (CC BY-NC-SA, **not** the CC0 it is often called)
+    and `pathawks/Christmas-Songs` (no licence at all).
+
+- ✅ **BB-X1e DONE — `HarmonicWeighting.auto`** (crisp_notation `f8030da`, suite
+  **2,468**). Chooses per-slice vs per-bar from the music's **texture**:
+  more than one sounding voice ⇒ a real vertical sonority exists ⇒ `perSlice`;
+  a single line ⇒ harmony is only implied ⇒ per-bar pooling.
+  - ❌ **A chord-rate heuristic was tried FIRST and failed — do not retry it.**
+    Counting named segments per bar measures how often chord IDENTIFICATION
+    succeeds, not how often harmony changes, and Bach scores *low* on it
+    **because** his suspensions defeat the identifier: measured **0.63
+    named-chords/bar for chorales against 0.11 for folk song**, so both fell the
+    same side of any threshold and chorales would have been read per bar — the
+    exact error the mode exists to prevent.
+  - 🔴 **AND IT EXPOSED A DEEPER DEFECT, unclaimed:** `analyze()` takes a single
+    `Score`, so a multi-staff work read through the single-score readers arrives
+    with **its staves collapsed into voices** — a two-staff chorale comes back
+    with soprano and alto interleaved in voice 1 (measured: bar 2 = 6 notes in
+    voice 1, 4 in voice 2). Slices then mix parts into 6-note sonorities that
+    identify as `Gmaj13/E`, `G6/9/D`. **Choosing `perSlice` there is correct and
+    still yields nonsense, because the input was already wrong.**
+    `multiPartScoreFromMscx` reads the 2 parts fine — what is missing is a
+    `MultiPartScore` entry point for `analyze()`. **That is the next card, and
+    until it exists, chart derivation from POLYPHONIC sources is not trustworthy.**
+
+- ✅ **BB-H3 — deterministic ordering + bass tie-break. SHIPPED 2026-07-30, and
+  it made the SHIPPED detector better.** `S`
+  - **Measured, same grid as the rejection above:** the shipped 8 qualities go
+    **82.6 → 86.1% exact and 86.8 → 90.3% root (+3.5pp each)**. A free win — the
+    tie-break costs nothing and improves the path we already ship.
+  - **Two parts.** (a) A fully deterministic comparator: score, then FEWER TONES
+    (a documented prior, and also how the cosine already behaves on
+    subset/superset), then root, then name — because `List.sort` is not stable
+    and any exact tie otherwise makes the reported name arbitrary between runs.
+    (b) The bass then breaks a *near*-tie, which is real evidence rather than a
+    prior. Applied only within `bassTieEpsilon` — **never as a general
+    preference**, because a first-inversion C major has E in the bass and is
+    still a C chord. A test pins exactly that.
+  - 📊 **And it re-opened the rejected extension — but not far enough to ship.**
+    Re-measured with bass disambiguation: the full 17-quality set improves from
+    **63.5 → 75.3% exact** yet still regresses the shipped 8 by **−10.8pp**. A
+    targeted "+4 four-note only" set (`m7b5 dim7 6 m6`, no five-note ninths)
+    lands at **81.9% exact / 86.5% root — −4.2pp** while covering 12 qualities.
+  - ⚖️ **Neither is adopted, and the reason is that the synthetic grid cannot
+    settle it.** The −4.2pp is measured on a vocabulary that EXCLUDES the very
+    chords the extension exists to catch: today a half-diminished or a diminished
+    seventh is confidently named as something else entirely, so the 86.1%
+    baseline flatters the shipped set on any real jazz chart. **The decisive test
+    is real audio** — GuitarSet (CC BY, chord-annotated, axis-2 clean, and
+    already acquired in `jams-corpus/tierA`, parsed by our own `jams.dart`).
+    That is the next measurement, and it is cheap because both harnesses exist.
+
+- ✅ Standalone `ring_mod` → `crisp_dsp/ring_mod.dart` (`ringModFx`).
+
+- ✅ Full `distortion` set → `crisp_dsp/distortion.dart` has `hardClip`/`softClip`/
+  `fuzz`/`wavefold` (`DistortionKind`).
+
+- ✅ sfxr FM/LFO → `crisp_dsp/sfxr.dart` carries `fmDepth`/`lfoDepth`/`lfoSpeed`.
+
+- ✅ Cubic-Hermite interpolation → `resampleCubic` in `crisp_dsp/resample.dart`,
+  used by `sound_library.dart` + `tracker_replayer.dart`.
+
+- ✅ Multi-effect per-channel chain → `tracker_engine.dart` applies an ordered
+  chain of inserts per stem; the DAW has clip/track/bus/master chains.
+
+- ✅ Reverb/delay send on the Loop Mixer → `loop_engine.dart` `_applySend` /
+  `_applySendStereo`.
+
+- ✅ FFT-convolution reverb → `crisp_dsp/convolution_reverb.dart` (synthesized IR,
+  FFT overlap-add) existed and was tested, **but was only reachable from the Voice
+  Lab.** Now wired into the shared FX rack as `FxType.convolutionReverb`
+  (appended; `.cbdaw` stores effects by name) with tail/decay/pre-delay/mix, so
+  clips, tracks, buses and the master can use it alongside the algorithmic
+  Freeverb. Tests assert it actually behaves like a reverb — decaying tail,
+  pre-delay moves the onset, deterministic (fixed IR seed, so baked clips stay
+  byte-identical), and audibly different from `FxType.reverb`.
+
+- ✅ **DONE (verified 2026-07-26)** — pitch envelope on both voices:
+  `pitchEnvSemitones`/`pitchEnvDecay` on `crisp_dsp/sfxr.dart`'s `SfxParams` AND
+  on `synth.dart`'s additive voice (`238fa39e`). ⇒ **the whole Audio-FX block is
+  now done.**
+
+- ✅ **DONE (verified 2026-07-26)** — "starter-module generator" shipped as
+  `starterBeatHits` in `lib/features/library/starter_pattern.dart` (pure, with
+  `test/starter_pattern_test.dart`) plus the Tracker action wired in
+  `advanced_tracker_screen.dart` (`case 'starterBeat'`).
+
+- ✅ **DONE** P0.1 convolution reverb — `crisp_dsp/convolution_reverb.dart`
+  (synthesized IR + FFT overlap-add) landed and is tested; as of 2026-07-26 it's
+  also wired into the shared FX rack as `FxType.convolutionReverb`, where before
+  it was reachable only from the Voice Lab.
+
+### Shipped modes and the Songbook, moved out of the plan
+
+#### Modes & games
+
+#### 1. Tuner — DONE (real)
+Chromatic/cello tuner: big note, cents needle, in-tune zone. Cello-first
+(fretless intonation is where it matters). Keeper tile.
+
+#### 2. Play-along (moving score) — DONE
+Target notes are scored against your live pitch (correct pitch within a cents
+window for enough of a note's duration = hit); `PlayAlongEngine` is pure-Dart
+and unit-tested. **Four switchable scroll views** (a menu in the app bar):
+highway (piano-roll), falling (vertical), notation (real engraved staff +
+moving cursor, via crisp_notation), and coach (big current/next note for beginners).
+Cello/guitar/keyboard charts + count-in metronome.
+
+#### 3. Sing-along — DONE (v1)
+The same engine + screen with a vocal-range melody preset. Voice is the same
+monophonic detection; only the chart/labelling differs.
+
+#### 4. Chord listener — DONE (spike)
+Names the chord you strum/play with runner-up guesses + a chroma bar chart.
+
+#### 5. Chord-progression play-along — DONE
+A moving chord chart (C–G–Am–F): strum the progression as it scrolls; each
+chord is scored by the fuzzy ChordDetector (`ChordProgressionEngine`, top-2
+lenient match). Records to ProgressService + stars. Validated end-to-end via
+the BlackHole loop — all four roots detected on real captured audio (the
+7th/maj7 variants are expected overtone pickup, hence the lenient match).
+
+#### Songbook — scan sheet music into playable songs (DONE — audited 2026-07-26)
+
+> Audit against the code, because the PLANNED marker was badly out of date:
+> ✅ **collection model** — `SongCollection` in `user_songs_service.dart` +
+> `songbook_screen.dart` (named, ordered books; drag-reorder; remove-from-book
+> without deleting the song). ✅ **persistence** — `UserSongsService.load/_save`
+> over SharedPreferences. ✅ **OMR → notation bridge** — `songs/import/
+> omr_import{,_io,_stub}.dart` + `import_screen.dart`, consuming CrispEmbed's
+> GGUF engines as intended. ✅ **per-song metadata** — composer / key / tempo,
+> derived from the stored MusicXML, persisted, shown in the book (2026-07-26).
+> ✅ **source image retained** — `import/omr_source_store{,_io,_stub}.dart` keeps
+> the photo in the same `~/.cache/crisp_notation` tree as the model cache, and
+> `ImportedSong.hasSourceImage` records it (`4c86257b`).
+> ✅ **re-run correction flow** — `_RescanButton` on the song row re-runs
+> recognition on the retained scan and replaces the notation, so a bad read is
+> fixed without re-photographing (`4c86257b`).
+>
+> ⇒ **This section is now complete.** Everything it scoped is built.
+>
+> ✅ Related sibling-repo bug, FIXED (crisp_notation `d8589c5`): the MusicXML
+> reader took its tempo from `<metronome>` only and ignored `<sound tempo="…">`,
+> so files from exporters that write just the playback attribute imported with no
+> tempo. `<metronome>` stays authoritative (it is what the score PRINTS);
+> `<sound tempo>` is the fallback. Our own writer already emitted both, which is
+> exactly why round-trip tests never caught it.
+
+Product feature, not a detector: let the user build **songbooks** from real sheet
+music. Flow: import/scan a score photo → **Optical Music Recognition** → notation
+→ store as a song the existing play-along/notation modes can drive → group songs
+into named collections (browse / search / reorder / export).
+
+- **OMR engine — reuse CrispEmbed, don't rebuild.** `CrispEmbed` already ships
+  two validated OMR engines with Dart FFI bindings (`CrispEmbedOmr`): **SMT**
+  (printed pianoform → bekern) and **Polyphonic-TrOMR** (printed/camera-robust →
+  rhythm/pitch/lift → symbolic notation, `cstr/tromr-GGUF`). Auto-detected from
+  the GGUF; a plain photo of a staff system works. So this app consumes those
+  GGUFs via the FFI wrapper rather than porting any model here.
+- **Scope TBD:** persistence format (song = source image + recognized notation +
+  metadata), per-song metadata (title/composer/key/tempo), collection model,
+  and an edit/re-run flow for correcting recognition mistakes before it becomes a
+  chart. Bridge OMR notation → the app's internal note/chart representation that
+  `PlayAlongEngine` / the `crisp_notation` notation view already consume.
+- Flagged here so the OMR work in CrispEmbed and this app's songbook UI stay
+  aligned; sequencing vs. the AEC/backing work is open.
+
+### Agent-board entries
+
+- ✅ **FIXED (was a shared CI blocker) — `test/layout_audit_test.dart` red overflow.** The `cello_finger_quiz` position selector overran 375px by 26px [en] after `6daeac99` (feat cello positions 1–4 added chips to a `Row`); I converted that Row → `Wrap` (label + 1–4 chips flow to a second line on a phone, centered on wide). Layout-audit green again → **CI gate unblocked for everyone**. Not my file (cello), but a red shared gate is worth a 1-line safe fix + this note. — opus Turning `bin/tts_render.dart` into a shipped feature: `tool/bake_narration.dart` (input JSON list of {text,lang} → `assets/narration/<lang>/<hash>.wav` + `manifest.json`), a pure-Dart `PrebakedNarration` runtime lookup (dep-free hash key; loads the manifest via `rootBundle`, resolves text+lang→asset — web-safe) + a `PrebakedNarrationBackend` that plays the baked WAV via a sink, and an ADDITIVE prebaked-first check in `TtsService.speak()` (falls through to the existing `_pick()` flow when nothing is baked → no behaviour change until assets exist). ⚠️ Touching shared `TtsService` (additive optional field only) + `pubspec.yaml` (an `assets/narration/` line). NOT committing baked WAV binaries — the bake is a maintainer/CI step (which strings + size budget is a product call); tests bake to a temp dir + inject fake loaders. — opus
+
+- ✅ **DONE: replay-fidelity ladder X5 (flow/timing vs NodMOD) — @opus (daw-ux), 2026-07-27.** **The first CI-able piece of the replay audit** (everything else needs openmpt123/xmp/mod2wav and is opt-in): `test/mod_flow_timeline_test.dart` walks six order-list shapes × three formats against a frozen NodMOD oracle. **It found row onsets accumulating rounding without bound** — a row is `speed*2.5/bpm` seconds, whole ms only at convenient tempos, and we rounded EACH row then summed, so `tempo_change_Fxx` rendered 20.720 s against everyone else's 20.670 and 4000 rows at 160 BPM would drift a full second. It reached the AUDIO too (sample counts came off the rounded ms), so long modules rendered the wrong length with a playhead sliding against their own audio. One shared `rowOnsets()` now accumulates exactly. ⚠️ **Verify an oracle before trusting it:** NodMOD's S3M walker does not model `SBx` pattern loop (we are right, it is incomplete — pinning to it would have been a self-inflicted bug), and libopenmpt/libxmp disagree with EACH OTHER on FT2's XM loop counter. Both excluded by name with reasons. *(originally claimed before starting, per the X2-done-twice lesson)* Claiming it here BEFORE starting because X2 just got built twice in parallel by two agents off the same unclaimed ladder (see root `PLAN.md` §6). Touching: `tool/make_flow_fixtures.dart`, `test/fixtures/flow/`, a new `test/mod_flow_timeline_test.dart`, and READING `module_flow_timeline.dart` / `tracker_replayer.dart`'s `walkFlow`. If you want any of those, say so here first.
+
+- ✅ **DONE: X3/X4 effect memory — @opus (daw-ux), 2026-07-27.** ProTracker's effect memory is **per-COMMAND**: `1xx`/`2xx`/`Axy` read the ROW's parameter (a bare `100`/`A00` does nothing) while `3xx`/`4xy` latch. We latched everything. **`mem_porta_up` 0.270 → 1.000, `mem_porta_down` 0.531 → 1.000** against three engines agreeing at 1.000; the control `mem_tone_porta` was already 1.000, which is what proved it was the RULE not the mechanism. ⚠️ **Design note worth inheriting:** threading a flag through the render helpers CASCADED — seven functions became thirty-five call sites and still growing, my automation mis-parsed and the count doubled each round until I reverted. The flag rides **`TrackerChannel`** instead, which every render path already receives, so it reaches all ten `ReplayVoice` sites with **no signature changes**. A cascade that grows under you is the design telling you it is wrong. CI-able test: `test/mod_effect_memory_test.dart` (asserts BOTH rules; `traceChannel` gained an optional flag).
+
+- ✅ **X10 sample-playback layer (mostly) — @opus (daw-ux), 2026-07-27.** Five XM fixtures, one property each. **Loop arithmetic is SOUND** — forward wrap, ping-pong, a 32-frame loop inside a longer sample, and a one-shot that must stop all land on the references (0.999–1.000). **One bug: 16-bit loop UNITS.** XM stores length AND loop points in BYTES, so a 16-bit sample's frame counts are half the stored numbers; our reader halved the length but passed the loop points through verbatim, looping past the end of the buffer. ⚠️ **The writer had the matching bug**, so `parseXm(writeXm(x)) == x` held while the file meant something else to everyone else — caught by asking the references whether our 16-bit fixture and our byte-identical 8-bit one were the same music (**they said 0.21**; now 1.000). Ours 0.207 → 0.999. **This is the THIRD both-directions format bug this audit** (IT hex break row, XM loop units): `parse(write(x)) == x` cannot catch a misunderstanding the reader and writer SHARE. ⬜ Open: interpolation quality, stereo samples; and `oneshot_held` is a case where the references only agree at 0.960 with each other (fade vs hard stop past the end), so there is no single right answer.
+
+- ✅ **X9 continued — S3M/IT fine portamento — @opus (daw-ux), 2026-07-27.** S3M/IT overload the porta parameter by RANGE (`0xFx` fine, once; `0xEx` extra-fine, quarter units; below `0xE0` per-tick). We passed the byte through as a normal slide, so `EF4` — four units ONCE — became 244 units EVERY tick. **`fine_porta_up_FFx.it` 0.131 → 1.000**, fine down 0.510 → 1.000, extra-fine 0.458 → 1.000. The replayer already had `E1x`/`E2x`, so it was routing, not a new mechanism; they were also missing from the REVERSE map, so fine porta was silently dropped on export. ⬜ **Two gaps remain, in `_kKnownOpenDefects` so they print every run:** IT plain porta (0.683/0.544 where S3M is 1.000 — probably IT's LINEAR frequency slides) and S3M fine porta (0.857/0.828 where IT is 1.000 — looks like a constant scale factor, since extra-fine has a quarter the step and a quarter the error). ⚠️ **My premise was wrong and measuring caught it:** the stale comment blamed VOLUME slides, which read 1.000 — but spectral similarity is amplitude-invariant, so **those 1.000s are not evidence of anything** and the volume fixtures need an ENVELOPE metric. ⚠️ I also re-made X1's fixture mistake (holding a slide 31 rows runs it off the period table so clamping dominates); bounding to 8 rows moved `porta_down_Exx.s3m` 0.982 → 1.000 with no code change.
+
+- ✅ **The sweep has an ENVELOPE metric now — @opus (daw-ux), 2026-07-27.** Spectral similarity is amplitude-invariant, so every volume effect was ungated (it hid tremolo's 4× depth in X2). Envelope correlation on the same inter-reference baseline, gated only where the references agree AND the envelope actually moves (90/10 percentile ratio ≥1.6 — without that it false-reds on pure PITCH fixtures). Found three things: (1) ✅ **S3M/IT fine VOLUME slides misread** (`DFy`/`DxF` are once-per-row, we used MOD's per-tick `Axy`) — 0.63 → 0.98 envelope, and `EAx`/`EBx` were missing from the reverse map so they were dropped on export too; (2) ✅ **S3M/IT slide volume on EVERY tick** including tick 0 (libxmp `QUIRK_VSALL`), we skipped tick 0 for all formats — ⚠️ source-justified but NOT measurement-confirmed, because (3) masks it; (3) ⬜ **the VOLUME COLUMN does not set the channel volume** — a cell's volume becomes `noteVolume` (a 0..1 multiplier) while `Axy` slides the 0..64 channel volume, still at its default 64, so a slide UP from a quiet note starts already clamped. **Diagnosed by the asymmetry** (DOWN fixtures start at 64 = the default and pass; only UP fails — a rate error would hit both). **NOT fixed:** `TrackerCell.volume` is shared with the app's own authoring (Loop Mixer ghost notes use it as a multiplier), so this is a decision about the tracker's model, not a bug fix. In `_kKnownOpenDefects`, printing every run.
+
+- ✅ **IT/XM linear frequency slides — @opus (daw-ux), 2026-07-27.** IT/XM bend pitch LINEARLY; MOD/S3M bend the Amiga PERIOD. We always slid the period. **`porta_*.it` 0.683/0.544 → 1.000/1.000**, with S3M staying at 1.000 — the diagnosis needed no source reading because the same command in both formats under each model is a **perfect mirror image**. IT's fine and extra-fine porta came along too (extra-fine envelope 0.19 → 0.93). ⚠️ **This means `PORTA_PERIOD` is the wrong SHAPE, not just off by a default** — the slide model is per-FORMAT and no global switch can be right for a library holding all four. `TrackerChannel.linearSlides` takes precedence for IT/XM and leaves MOD/S3M to the gate, so the pending MOD decision is untouched; when it is made the gate should probably become "MOD/S3M use period slides" outright. ⚠️ **The sweep's own reporting had two opposite bugs** — "now passing" checked only the spectral gap (telling me to retire exemptions whose envelope still failed), and a known-open entry failing only on envelope printed no flag at all. Both fixed; every row now names which metric failed.
+
+- ✅ **`ReplayProfile`/`PitchDomain` + the slide model is a SETTING now — @opus (daw-ux), 2026-07-28.** Three per-format booleans became one profile per format; `PitchDomain` owns the sign convention that made the vibrato branches drift. **`PORTA_PERIOD` is DELETED** — it was wrong in shape, not just default: one global switch cannot serve MOD/XM/S3M/IT at once. **Every portamento fixture now reads 1.000 with no compile flag**, so the shipped default is the measurably correct one. Where a genuine preference remains (MOD/S3M hardware vs evenly-spaced) it is **`SettingsService.authenticSlides`**, on by default, de/en. It changes the pitch domain and NOTHING else, reaches MOD/S3M only (touching XM/IT would be breaking them, which is what the gate did), and is resolved at IMPORT into the song's profile — so the replayer holds no global state and module import stays a pure function for the CLI tools. `ReplayProfile.native` keeps app-authored songs out of it entirely, which was the actual blocker all along.
+
+- ✅ **D1 SHIPPED** (`233ead40`): global volume now on the mono flow/variable paths + ALL stereo paths (shared _applyGlobalVolumeStereo + _flatRowScan helpers; null-gated → byte-identical without the command). Was: Shipped on
+  `replayPattern` + uniform mono `replaySong`; still missing on `_replayFlow`
+  (mono flow), `_replayVariable` (mono mid-song-tempo), and ALL stereo paths
+  (`replayPatternStereo`, uniform `replaySongStereo`, `_replayFlowStereo`,
+  `_replayVariableStereo`). Fix: build the row scan each path already has
+  (`_rowScan` / a flat scan from `walkFlow`'s `played`) and multiply the
+  `globalVolumeEnvelope` into `mix` (mono) or `left`+`right` (stereo).
+
+- ✅ **D2 SHIPPED** (`233ead40`): _panRegionsVariable now handles Pxy (+ticksPerRow), so a variable-timing panned song slides too. Was: Shipped in
+  `_panRegions` (uniform stereo); `_panRegionsVariable` still only reads 8xx.
+  Fix: mirror the Pxy step into `_panRegionsVariable`.
+
+- ✅ **D3 SHIPPED** (`f6633e4e`): the command-editor effect dropdown now offers Gxx/Hxy/Pxy/Txy; the in-grid effect column renders via radix-36 so extended commands show their letter code (G20/T02/PF0) and fit the 3-char column. Field-cursor hex stays 0–F. Was: Gxx/Hxy/Txx/Pxy (+ the already-
+  engine-supported Exy sub-commands) have no tracker UI — the `_CommandEditor`
+  only types a 0x0–0xF nibble. Needs an "extended effects" picker. Touches
+  `advanced_tracker_screen.dart` (hot lane) — coordinate with @tracker-ui.
+
+- ✅ **C12b — `EditorCaret` on `InteractiveMultiPartView`** (crisp_notation
+  `afc283a`): the render paints a caret before its `beforeElementId` — the id
+  locates the part, so it lands in the right staff. mus `_mpCaret` feeds the
+  active part's caret (namespaced).
+
+- ✅ **C12c — `ElementRegionController` on `InteractiveMultiPartView`**
+  (`afc283a`): `RenderMultiPartView implements ElementRegionProvider`; a
+  controller binds for marquee / cross-part region queries. mus binds `_regions`
+  + shows the rubber-band overlay in multi-part mode (`_applyMpMarquee` selects
+  within the most-covered part).
+
+- ✅ **C12a — live drag preview** (no lib change needed): built app-side from the
+  existing `suppressElementIds` (hide the dragged note) + placement ghost
+  (`onElementDragUpdate` moves it under the pointer) — same visual as single-part
+  `dragPreviewOpacity`. A dedicated multi-part `dragPreviewOpacity` (real-glyph
+  translation) is an optional future nicety, not required.
+
+- ✅ **C11b — multi-part MEI/kern/MuseScore writers** — **SHIPPED (un-deferred 2026-07-19, `opus (multipart-*)`).** The deferral premise (that it needs refactoring the oracle-hardened single-part writers, for low value + regression risk) turned out wrong: the app's export sheet + Workshop were **dropping all-but-the-first part** on MEI/kern/MuseScore export — a concrete data-loss — and each writer was added as a **NEW** function with the single-part path untouched (zero regression). Shipped: `multiPartToMei` (`crisp_notation@f613c9f`), `multiPartToMscx` (`ac68a08`), `multiPartToKern` (columnar N-way time-merge, `af10bcb`) + a `multiPartScoreFromMscx` reader (`516dcd2`); wired into `music_export.dart` + Workshop + fixed the online-library import. `multiPartToAbc` already exists app-side (`multi_part_export.dart`). **⇒ every multi-capable format keeps every part on import AND export.** LilyPond now keeps every part too (`multiPartToLilyPond` — a `\new StaffGroup` of one `\new Staff` per part, `crisp_notation@fb32573`; wired `4745d89`). **⇒ every multi-capable format keeps every part: MusicXML, MEI, MuseScore, kern, ABC, LilyPond, PDF.** **PDF now too** (`exportMultiPartToPdf`, `c729704`): mirrors the single-staff PDF but uses `layoutMultiPartPages` + `renderStaffSystemLayoutToPng` (BOTH already in crisp_notation — the renderer engraves all staves per system with connected systemic barlines), so a full score prints every instrument; zero library change, wired into the export sheet + Workshop. **Only Braille stays first-part** (genuinely complex/niche — no multi-part Braille writer). Bug-hunt aside: probed the theory/analysis engine (roman numerals, chord ID) and MIDI/robustness — all verified excellent + already comprehensively tested (roman numerals get secondary dominants, all dom7 inversions, ø7/°7, Neapolitan right); the one real find was the MIDI dotted-decoder fix above. **+ MIDI fidelity fix (`crisp_notation@9276dfb`):** a probe of MIDI round-trip (a heavily-used codec absent from the property suites) found dotted notes importing as tied splits (dotted quarter → quarter+eighth); the tick→value decoder now recognises dotted/double-dotted values directly. +4 regression tests. (Triplets through MIDI stay lossy — inherent to the format's lack of tuplets.)
+
+- ✅ **Measure numbers in the editor** — crisp_notation `MultiSystemView` gained
+  opt-in `showMeasureNumbers` (system-start numbering off `SystemLayout.
+  firstMeasure`, paint-only, defaults off — ported from `png_export`'s
+  convention; it previously existed only on `StaffView`). Wired a **"Bar
+  numbers"** toggle in the Workshop ⋮ menu, wired to **all three** editor
+  canvases — single-staff (`MultiSystemView`), grand-staff
+  (`InteractiveGrandStaffView`) and multi-part (`InteractiveMultiPartView`) all
+  gained the same opt-in system-start numbering. **Feature complete.**
+
+- ✅ **Metric-aware beaming** — already automatic: the layout engine
+  (`_computeBeamGroups`) derives beam windows from the meter during layout, so
+  the editor needs no opt-in. Nothing to wire.
+
+- ✅ **`showNoteNames` overlay** — shipped. crisp_notation gained a
+  **`NoteNameStyle`** (letter / German-H / solfège) threaded through the layout
+  engine's note-name overlay (was fixed English) + `showNoteNames` on
+  `MultiSystemView`; the Workshop **"Note names"** ⋮ toggle overlays each note's
+  name **on all three editor canvases** (single-staff, grand-staff, multi-part —
+  the flags now forward through the grand-staff/multi-part layout paths too),
+  **spelled per the app's note-naming setting** (germanH → H for B, solfège →
+  do/re/mi, auto → locale). **Feature complete.**
+
+- ✅ **Per-group barlines in the chrome** — shipped. `MultiPartDocument`
+  `toggleBarlineBreakAfter`/`hasBarlineBreakAfter` recompute `barlineGroups`; a
+  **"Break barline below"** item in each part's ⋮ menu breaks the systemic
+  barline between instrument groups (crisp_notation already paints them). **All
+  Workshop→crisp_notation parity items are now shipped.**
+
+
 ## Workstation ladder — the daw-suite lane, day three (2026-07-30)
 
 **One-line status:** three long-running cards CLOSED — **WS-X1** (live links,
