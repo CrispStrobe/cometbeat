@@ -20,6 +20,7 @@
 library;
 
 import 'package:comet_beat/core/harmony/chart.dart';
+import 'package:comet_beat/core/harmony/chord_spec.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart'
     show Interval, IntervalQuality, Pitch, Step;
 
@@ -97,6 +98,33 @@ Chart displayChart(Chart chart, ChartTransposition t) {
   final reading = readingInterval(t.instrument);
   if (reading != null) out = transposeChart(out, reading);
   if (t.capo != 0) out = transposeChartBySemitones(out, -t.capo);
+  return out;
+}
+
+/// A chord the user typed while READING a transposed chart, converted back to
+/// what the document must hold.
+///
+/// Without this, tapping a bar that prints `C` would open the editor on the
+/// sounding chord and store whatever was chosen as if it were concert pitch —
+/// so a trumpeter editing their own part would silently rewrite the tune.
+/// The inverse runs in reverse order: undo the capo, then the reader's
+/// instrument, then the sounding shift.
+ChordSpec documentChordOf(ChordSpec displayed, ChartTransposition t) {
+  var out = displayed;
+  if (t.capo != 0) {
+    out = out.transposedBy(
+      intervalForSemitones(t.capo.abs() % 12),
+      descending: t.capo < 0,
+    );
+  }
+  final reading = readingInterval(t.instrument);
+  if (reading != null) out = out.transposedBy(reading, descending: true);
+  if (t.soundingSemitones != 0) {
+    final n = ((t.soundingSemitones % 12) + 12) % 12;
+    if (n != 0) {
+      out = out.transposedBy(intervalForSemitones(n), descending: true);
+    }
+  }
   return out;
 }
 

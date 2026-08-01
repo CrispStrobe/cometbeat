@@ -9252,4 +9252,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartChoruses => 'Times through';
+
+  @override
+  String get chartTranspose => 'Transpose';
+
+  @override
+  String get chartTransposeSounding => 'Move the tune';
+
+  @override
+  String get chartTransposeSoundingHelp =>
+      'Changes the key. The band plays it there too.';
+
+  @override
+  String get chartTransposeReading => 'What you read';
+
+  @override
+  String get chartTransposeReadingHelp =>
+      'Changes the printed chords only — the band is unaffected.';
+
+  @override
+  String get chartTransposeCapo => 'Capo';
+
+  @override
+  String get chartTransposeReset => 'Reset';
 }

@@ -222,6 +222,8 @@ void main() {
 
   group('band', _bandTests);
 
+  group('transpose', _transposeTests);
+
   group('bar editing', () {
     test('replacing a chord keeps the rest of the bar', () {
       // A bar is more than its chords; rebuilding it on every edit would drop
@@ -507,5 +509,96 @@ void _bandTests() {
     final saved = ChartStore(prefs).readWorking();
     // Nothing about choruses reached the document.
     expect(saved?.extra?.containsKey('choruses') ?? false, isFalse);
+  });
+}
+
+/// Transposition on the screen.
+void _transposeTests() {
+  Widget screen() => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Provider<AudioService>(
+          create: (_) => AudioService(),
+          child: ChartScreen(
+            initialChart: parseChartText('key: Bb\n| Bb | Eb | F7 |').chart,
+          ),
+        ),
+      );
+
+  Future<void> openSheet(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('chartTransposeButton')));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a reading transposition changes the GRID', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    expect(find.text('Bb'), findsOneWidget);
+
+    await openSheet(tester);
+    await tester.tap(find.byKey(const Key('transposeInstrument_bFlat')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('transposeApply')));
+    await tester.pumpAndSettle();
+
+    // A B♭ player reading a B♭ tune sees C.
+    expect(find.text('C'), findsOneWidget);
+    expect(find.text('Bb'), findsNothing);
+  });
+
+  testWidgets('a reading transposition does NOT change the DOCUMENT',
+      (tester) async {
+    // The bug the whole two-axis design exists to prevent: a capo must not
+    // rewrite the tune that gets saved or shared.
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await openSheet(tester);
+    await tester.tap(find.byKey(const Key('transposeCapo_3')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('transposeApply')));
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    final saved = ChartStore(prefs).readWorking();
+    // Nothing was persisted by a display change, and if anything was, it is
+    // still the original key.
+    if (saved != null) {
+      expect(saved.keyFifths, -2, reason: 'still B♭');
+    }
+  });
+
+  testWidgets('reset returns the grid to concert pitch', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await openSheet(tester);
+    await tester.tap(find.byKey(const Key('transposeInstrument_eFlat')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('transposeApply')));
+    await tester.pumpAndSettle();
+    expect(find.text('Bb'), findsNothing);
+
+    await openSheet(tester);
+    await tester.tap(find.text('Reset'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bb'), findsOneWidget);
+  });
+
+  testWidgets('a sounding transposition moves the grid too', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await openSheet(tester);
+    await tester.tap(find.byKey(const Key('transposeSounding_2')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('transposeApply')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('C'), findsOneWidget, reason: 'B♭ up a tone');
   });
 }

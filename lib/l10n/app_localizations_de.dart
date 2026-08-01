@@ -9303,4 +9303,27 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get chartChoruses => 'Durchgänge';
+
+  @override
+  String get chartTranspose => 'Transponieren';
+
+  @override
+  String get chartTransposeSounding => 'Das Stück versetzen';
+
+  @override
+  String get chartTransposeSoundingHelp =>
+      'Ändert die Tonart. Die Band spielt sie ebenfalls.';
+
+  @override
+  String get chartTransposeReading => 'Was du liest';
+
+  @override
+  String get chartTransposeReadingHelp =>
+      'Ändert nur die gedruckten Akkorde — die Band bleibt unberührt.';
+
+  @override
+  String get chartTransposeCapo => 'Kapodaster';
+
+  @override
+  String get chartTransposeReset => 'Zurücksetzen';
 }

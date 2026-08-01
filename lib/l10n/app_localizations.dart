@@ -16783,6 +16783,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Times through'**
   String get chartChoruses;
+
+  /// No description provided for @chartTranspose.
+  ///
+  /// In en, this message translates to:
+  /// **'Transpose'**
+  String get chartTranspose;
+
+  /// No description provided for @chartTransposeSounding.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the tune'**
+  String get chartTransposeSounding;
+
+  /// No description provided for @chartTransposeSoundingHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes the key. The band plays it there too.'**
+  String get chartTransposeSoundingHelp;
+
+  /// No description provided for @chartTransposeReading.
+  ///
+  /// In en, this message translates to:
+  /// **'What you read'**
+  String get chartTransposeReading;
+
+  /// No description provided for @chartTransposeReadingHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes the printed chords only — the band is unaffected.'**
+  String get chartTransposeReadingHelp;
+
+  /// No description provided for @chartTransposeCapo.
+  ///
+  /// In en, this message translates to:
+  /// **'Capo'**
+  String get chartTransposeCapo;
+
+  /// No description provided for @chartTransposeReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get chartTransposeReset;
 }
 
 class _AppLocalizationsDelegate

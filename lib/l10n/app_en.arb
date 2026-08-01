@@ -3928,5 +3928,12 @@
   },
   "chartUnreadableSaved": "This chart was saved by a newer version and cannot be opened.",
   "chartStyle": "Style",
-  "chartChoruses": "Times through"
+  "chartChoruses": "Times through",
+  "chartTranspose": "Transpose",
+  "chartTransposeSounding": "Move the tune",
+  "chartTransposeSoundingHelp": "Changes the key. The band plays it there too.",
+  "chartTransposeReading": "What you read",
+  "chartTransposeReadingHelp": "Changes the printed chords only — the band is unaffected.",
+  "chartTransposeCapo": "Capo",
+  "chartTransposeReset": "Reset"
 }

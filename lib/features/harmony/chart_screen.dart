@@ -18,6 +18,7 @@ import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_playback.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
+import 'package:comet_beat/core/harmony/chart_transpose.dart';
 import 'package:comet_beat/core/harmony/form_realizer.dart';
 import 'package:comet_beat/core/harmony/style_library.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -25,6 +26,7 @@ import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
 import 'package:comet_beat/features/harmony/chart_library_sheet.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
+import 'package:comet_beat/features/harmony/transpose_sheet.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -64,6 +66,15 @@ class _ChartScreenState extends State<ChartScreen> {
   /// How many times through the form. Playback-only, so it is NOT stored on the
   /// chart: it is how you want to practise today, not what the tune is.
   int _choruses = 1;
+
+  /// Sounding and display transposition. Like the chorus count, this is about
+  /// the PLAYER rather than the tune, so it lives here and not on the chart —
+  /// a chart shared with a trumpeter must not arrive pre-transposed.
+  var _transpose = const ChartTransposition();
+
+  /// What the grid shows: the tune plus whatever the reader's instrument and
+  /// capo ask for.
+  Chart get _printed => displayChart(_chart, _transpose);
   ChartBarRef? _playingBar;
 
   /// The transport clock. `playMixedTimedChords` renders a WAV and hands it to
@@ -142,7 +153,7 @@ class _ChartScreenState extends State<ChartScreen> {
     // The band is the real path; the plain one is the fallback. A band that
     // fails to assemble must degrade to something that plays, not to silence.
     final band = renderBand(
-      _chart,
+      soundingChart(_chart, _transpose),
       style: styleFor(_chart.styleId),
       form: FormOptions(choruses: _choruses),
     );
@@ -157,7 +168,7 @@ class _ChartScreenState extends State<ChartScreen> {
       return;
     }
 
-    final playback = resolveChartPlayback(_chart);
+    final playback = resolveChartPlayback(soundingChart(_chart, _transpose));
     if (playback.isEmpty) return;
     _playback = playback;
     _clock = Stopwatch()..start();
@@ -242,14 +253,21 @@ class _ChartScreenState extends State<ChartScreen> {
 
     setState(() => _selected = ref);
     final bar = _chart.sections[ref.sectionIndex].bars[ref.barIndex];
-    final current =
-        bar.chordsInOrder.isEmpty ? null : bar.chordsInOrder.first.chord;
+    // Open on what the user is LOOKING AT. With a capo or a B♭ instrument the
+    // printed chord is not the stored one, and showing the stored one would
+    // make the editor disagree with the grid.
+    final printedBar = _printed.sections[ref.sectionIndex].bars[ref.barIndex];
+    final current = printedBar.chordsInOrder.isEmpty
+        ? null
+        : printedBar.chordsInOrder.first.chord;
 
     final result = await showChordKeypad(context, initial: current);
     if (!mounted || result == null) return;
 
     final chosen = switch (result) {
-      ChordChosen(:final chord) => chord,
+      // …and convert back, or a trumpeter editing their own part would
+      // silently rewrite the tune.
+      ChordChosen(:final chord) => documentChordOf(chord, _transpose),
       ChordCleared() => null,
     };
     setState(() {
@@ -290,6 +308,16 @@ class _ChartScreenState extends State<ChartScreen> {
       pickupBeats: chart.pickupBeats,
       extra: chart.extra,
     );
+  }
+
+  Future<void> _transposeDialog() async {
+    // A SOUNDING change alters the audio, which is already rendered, so the
+    // sheet is closed while playing exactly like the style and chorus pickers.
+    if (_playing) await _stop();
+    if (!mounted) return;
+    final next = await showTransposeSheet(context, current: _transpose);
+    if (!mounted || next == null) return;
+    setState(() => _transpose = next);
   }
 
   Future<void> _openLibrary() async {
@@ -399,6 +427,12 @@ class _ChartScreenState extends State<ChartScreen> {
             ),
           ),
           IconButton(
+            key: const Key('chartTransposeButton'),
+            tooltip: l10n.chartTranspose,
+            icon: const Icon(Icons.swap_vert),
+            onPressed: _transposeDialog,
+          ),
+          IconButton(
             tooltip: l10n.chartLibrary,
             icon: const Icon(Icons.folder_open),
             onPressed: _openLibrary,
@@ -416,7 +450,7 @@ class _ChartScreenState extends State<ChartScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(12),
               child: ChartGridView(
-                chart: _chart,
+                chart: _printed,
                 playingBar: _playingBar,
                 selected: _selected,
                 onTapBar: _editBar,

@@ -3378,5 +3378,12 @@
   },
   "chartUnreadableSaved": "Dieses Chart wurde mit einer neueren Version gesichert und lässt sich nicht öffnen.",
   "chartStyle": "Stil",
-  "chartChoruses": "Durchgänge"
+  "chartChoruses": "Durchgänge",
+  "chartTranspose": "Transponieren",
+  "chartTransposeSounding": "Das Stück versetzen",
+  "chartTransposeSoundingHelp": "Ändert die Tonart. Die Band spielt sie ebenfalls.",
+  "chartTransposeReading": "Was du liest",
+  "chartTransposeReadingHelp": "Ändert nur die gedruckten Akkorde — die Band bleibt unberührt.",
+  "chartTransposeCapo": "Kapodaster",
+  "chartTransposeReset": "Zurücksetzen"
 }
