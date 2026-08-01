@@ -28,6 +28,27 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> ⚠️ **`test/loop_mixer_test.dart` is TIME-flaky, and it is not an assertion
+> failure — for whoever owns Loop Studio (2026-08-01, opus/backing-band).**
+> Three runs, three DIFFERENT failing tests, every one of them reporting *"did
+> not complete"*, i.e. a per-test TIMEOUT:
+> - full suite → "every 4th loop schedules the drum fill at the seam" + "section
+>   scenes capture, relaunch, and chain at the seam"
+> - isolated, machine busy → "WS-X1 — Loop Studio holds a live project link"
+> - isolated, machine idle → "harmony dropdown switches between the vamp and a
+>   progression"
+>
+> The file takes **14m41s for 17 tests** on this machine, so whichever test is
+> unlucky exceeds the timeout. It is therefore a red CI gate that says nothing
+> about the code under test, and it will keep moving. Worth either splitting the
+> file or finding what makes each test render so much — the tests themselves
+> look fine.
+>
+> 📌 **A measurement lesson from chasing it:** a test result taken while another
+> suite is running on this machine is NOT evidence. My first isolated run timed
+> out on a third, unrelated test purely from contention, which would have
+> supported a completely wrong conclusion.
+
 > 🚨 **`8a2c2d52` ("feat(tts-android)") COMMITTED A STALE TREE OVER MAIN — check
 > your area.** It touched dozens of files it has nothing to do with and reverted
 > them. The commit is a normal ancestor of main, so **nothing looks wrong in the
