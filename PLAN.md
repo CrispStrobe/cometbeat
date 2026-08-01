@@ -295,6 +295,82 @@ Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
 on one pure-Dart detection core so it stays testable headlessly and from a CLI.
 
+## Tune identification & melodic search (scoped 2026-08-01, NOT STARTED)
+
+**"What is this tune?" — hum, play or pick a melody and find it in the corpus.**
+Prompted by a competitor review (Nota ABC, below); the point is that we already
+own every piece and have never connected them.
+
+**The key asset is already built and sitting unused.** The corpus feature index
+backfill put a `music` object on **45,930 of 45,940 score rows**, and one of its
+fields is **`incipitIntervals` — the opening interval sequence, which is
+transposition-proof**. That is precisely a melodic fingerprint. Our own note on
+it already says it is "a standing same-tune detector"; the German cross-source
+dedup was a one-off fingerprinting pass, and this generalises it. **29,081,963
+notes are indexed.** Nothing in the app reads `incipitIntervals` today.
+
+**The three query modes, cheapest first:**
+1. **Symbolic → symbolic.** "Find tunes that start like this" from a Workshop /
+   Loop Studio / Tab selection, or from a few tapped notes. Pure interval
+   matching against the catalog's existing `music.incipitIntervals`. No audio, no
+   model, no new data — this is mostly a UI and an index lookup.
+2. **Sung / played → symbolic.** Mic → our existing pitch chain
+   (`pitch_analysis.dart` MPM → note HMM, already real-audio validated) → an
+   interval sequence → the same lookup. The detection core is shipped and
+   headlessly testable; what is missing is the *search*.
+3. **Recording → symbolic.** The polyphonic transcription arc's output fed into
+   the same index.
+
+**Matching notes worth having before starting:**
+- Match on **intervals, not pitches** (transposition-proof) and allow **edit
+  distance**, not equality — a hummed opening drops and adds notes, and a
+  "setting" of a tune differs from another setting by exactly this kind of small
+  edit. Exact match will look broken on real input.
+- **Rhythm is a weak signal from a hum** and a strong one from a score; keep it
+  as a re-rank, not a filter.
+- The index is per-row and small (an incipit, not a whole piece), so a
+  client-side search over the shipped catalog is realistic — see the offline
+  point below.
+- ⚠️ **GABC rows (18,684, the corpus's largest format) have no key** by design
+  (Krumhansl–Schmuckler only returns major/minor and would mislabel a Mode 1
+  antiphon). They DO have ambitus and incipit, so they are searchable — do not
+  assume the `music` object is uniform across formats.
+
+**Adjacent ideas from the same review, worth their own decisions:**
+- **Offline-first archive.** `CometbeatCatalogSource` is network-backed; the
+  competitor ships its archive for offline use. Search especially wants this.
+- **Anti-lock-in as an advertised feature** — per-edit local backups and a
+  one-tap "download your whole library". We largely support this; they *say* it,
+  which is the part that builds trust.
+- **Say what a count counts.** Their "+40.000 tunes" is ~42k *settings* of ~21k
+  tunes (per FolkFriend, which syncs to the same source). If we ever put a
+  number on a page, state whether it counts works, settings or files.
+
+**Competitor reference — Nota ABC (`notabc.app`, iOS, Davide Benini).** Claims
+"+40.000 tunes", offline archive, and audio tune ID "powered by Folkfriend"
+(record → transcribe → search; client-side, offline after first load, 200–1000 ms
+per query). FolkFriend states its database "is synced to thesession.org
+(~42k settings of ~21k tunes)".
+
+> 🛑 **THE SOURCE THEY USE IS ONE WE HAVE REJECTED — and the block is
+> agent-specific.** Their 40k is a mirror of **The Session**, whose data is ODbL
+> **plus an explicit prohibition on processing the material with Large Language
+> Models** (accessibility exception only). Consequences, kept separate because
+> they are different:
+> - **A human maintainer is not blocked by the LLM clause** — ODbL permits reuse
+>   with attribution and share-alike, which is why a solo iOS dev can ship this.
+> - **Agent-driven work MUST NOT touch that data**, so this scoping was done from
+>   the competitor's and FolkFriend's public descriptions only; no tune data was
+>   fetched or processed.
+> - **ODbL share-alike would propagate to the derived database portion**, which
+>   is a real complication for a corpus that is deliberately tiered A/B/C behind
+>   a ship gate — not a formality.
+>
+> **None of this blocks the feature.** The index we would search is our OWN
+> corpus, already built, already licence-cleared per row. The competitor's data
+> source is a reason to look elsewhere for repertoire, not a reason to skip
+> melodic search.
+
 ## Note Highway — falling-note play-along (scoped 2026-07-28, IN PROGRESS)
 
 Generalise our existing falling-note view (today a private painter inside
