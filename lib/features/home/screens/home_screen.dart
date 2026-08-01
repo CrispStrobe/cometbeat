@@ -308,7 +308,13 @@ class HomeScreen extends StatelessWidget {
                   maxCrossAxisExtent: 280,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio: 1.05,
+                  // ⚠️ Was 1.05, which left a two-column phone card ~165 pt tall
+                  // against ~162 pt of content — so a module whose TITLE wrapped
+                  // to two lines had its subtitle sliced through the glyphs
+                  // ("Fill the measure so…" with no ellipsis). Taller cards let
+                  // the two-line titles keep their subtitle instead of trading
+                  // one for the other.
+                  childAspectRatio: 0.92,
                 ),
                 itemCount: kLearningModules.length,
                 itemBuilder: (context, index) {
@@ -502,16 +508,53 @@ class _ModuleCard extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 4),
-              // Flexible so the subtitle clips instead of overflowing when the
-              // card is short (iPhone SE) or the text is longer (German).
+              // ⚠️ This used to be a plain `Flexible` + `maxLines: 2`, and the
+              // comment on it said the subtitle would "clip instead of
+              // overflowing". It does — but clipping a Text does NOT ellipsize
+              // it: `maxLines: 2` means the widget still LAYS OUT two lines, and
+              // when Flexible hands it room for one and a half, the Card's
+              // `Clip.antiAlias` slices the second line through the middle of
+              // the glyphs. On a 390-wide phone that reads as "Fill the measure
+              // so" simply cut off — no ellipsis, no indication there is more.
+              //
+              // It is invisible to `layout_audit_test` because nothing
+              // overflows: the text is clipped, which is exactly what the widget
+              // was asked to do. Only looking at it catches this.
+              //
+              // So ask for the number of lines that actually FIT, and let Text
+              // ellipsize within that. A title that wraps to two lines leaves
+              // room for one subtitle line; a short title leaves room for two.
               Flexible(
-                child: Text(
-                  module.subtitle(l10n),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: unlocked ? null : Colors.grey,
-                      ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final style =
+                        Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: unlocked ? null : Colors.grey,
+                            );
+                    // Measure a real line rather than guessing from fontSize:
+                    // `TextStyle.height` is usually null, so the true line box
+                    // comes from the font's own metrics.
+                    final probe = TextPainter(
+                      text: TextSpan(text: 'Xg', style: style),
+                      textDirection: Directionality.of(context),
+                      maxLines: 1,
+                    )..layout();
+                    final lines = constraints.maxHeight.isFinite
+                        ? (constraints.maxHeight / probe.height).floor()
+                        : 2;
+                    // No room for even ONE line: draw nothing. `maxLines: 1`
+                    // would not help — a one-line Text cannot be shorter than a
+                    // line, so it would be clipped through the glyphs again.
+                    // A missing subtitle reads as "this card has no subtitle";
+                    // a half-sliced one reads as broken.
+                    if (lines < 1) return const SizedBox.shrink();
+                    return Text(
+                      module.subtitle(l10n),
+                      style: style,
+                      maxLines: lines > 2 ? 2 : lines,
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  },
                 ),
               ),
             ],
