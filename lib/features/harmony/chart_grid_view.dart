@@ -44,7 +44,7 @@ class ChartBarRef {
 }
 
 /// A chord chart as a grid of bars.
-class ChartGridView extends StatelessWidget {
+class ChartGridView extends StatefulWidget {
   const ChartGridView({
     super.key,
     required this.chart,
@@ -53,6 +53,7 @@ class ChartGridView extends StatelessWidget {
     this.onTapBar,
     this.style = ChordSymbolStyle.plain,
     this.minBarWidth = 132,
+    this.autoScroll = true,
   });
 
   final Chart chart;
@@ -72,6 +73,58 @@ class ChartGridView extends StatelessWidget {
   /// what keeps the chord type legible instead of letting four bars squeeze
   /// onto a phone.
   final double minBarWidth;
+
+  /// Keep the playing bar on screen. Off for a static render (a test, a
+  /// screenshot) and harmless when there is no enclosing scrollable.
+  final bool autoScroll;
+
+  @override
+  State<ChartGridView> createState() => _ChartGridViewState();
+}
+
+class _ChartGridViewState extends State<ChartGridView> {
+  /// One key per DOCUMENT bar, so `ensureVisible` can be handed the real box.
+  /// Rebuilt lazily and pruned with the chart, since a chart is tens of bars.
+  final _keys = <ChartBarRef, GlobalKey>{};
+
+  GlobalKey _keyFor(ChartBarRef ref) => _keys.putIfAbsent(ref, GlobalKey.new);
+
+  @override
+  void didUpdateWidget(ChartGridView old) {
+    super.didUpdateWidget(old);
+    if (!identical(old.chart, widget.chart)) _keys.clear();
+    if (widget.playingBar != old.playingBar) _followPlayhead();
+  }
+
+  /// Brings the playing bar into view.
+  ///
+  /// Fires only when the bar CHANGES, which is what "never scrolls during a
+  /// bar" means: at any sane tempo that is seconds apart, so the page moves
+  /// once per bar rather than continuously under the reader's eye. Centred,
+  /// because a bar pinned to the top edge gives no sight of what is coming.
+  void _followPlayhead() {
+    if (!widget.autoScroll) return;
+    final ref = widget.playingBar;
+    if (ref == null) return;
+    // After this frame: the bar may not be laid out yet on the first change.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = _keys[ref]?.currentContext;
+      if (context == null || !mounted) return;
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  Chart get chart => widget.chart;
+  ChartBarRef? get playingBar => widget.playingBar;
+  ChartBarRef? get selected => widget.selected;
+  void Function(ChartBarRef)? get onTapBar => widget.onTapBar;
+  ChordSymbolStyle get style => widget.style;
+  double get minBarWidth => widget.minBarWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -180,6 +233,7 @@ class ChartGridView extends StatelessWidget {
     }
 
     return Semantics(
+      key: _keyFor(ref),
       button: onTapBar != null,
       selected: isSelected,
       // The chord names are the label a screen reader should read; an empty bar

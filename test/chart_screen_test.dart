@@ -217,6 +217,8 @@ void main() {
 
   group('screen', _screenTests);
 
+  group('autoscroll', _autoScrollTests);
+
   group('bar editing', () {
     test('replacing a chord keeps the rest of the bar', () {
       // A bar is more than its chords; rebuilding it on every edit would drop
@@ -357,5 +359,93 @@ void _screenTests() {
     await tester.pumpAndSettle();
     expect(find.text('Abm7'), findsOneWidget);
     expect(find.text('Ebmaj7'), findsNothing);
+  });
+}
+
+/// Autoscroll: the playing bar stays on screen.
+void _autoScrollTests() {
+  /// A chart long enough that later bars start off screen.
+  Chart longChart() => parseChartText(
+        '[A]\n${List.filled(8, '| C | Am | F | G |').join('\n')}',
+      ).chart;
+
+  Widget scrollHost(Chart chart, ChartBarRef? playing) => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ChartGridView(chart: chart, playingBar: playing),
+          ),
+        ),
+      );
+
+  testWidgets('a bar below the fold is scrolled into view', (tester) async {
+    tester.view.physicalSize = const Size(400, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final chart = longChart();
+    await tester.pumpWidget(scrollHost(chart, null));
+    await tester.pumpAndSettle();
+
+    final scroll = tester.widget<Scrollable>(find.byType(Scrollable).first);
+    expect(scroll.controller?.offset ?? 0, 0, reason: 'starts at the top');
+
+    // Jump the playhead to a late bar.
+    await tester.pumpWidget(scrollHost(chart, const ChartBarRef(0, 30)));
+    await tester.pumpAndSettle();
+
+    final after = tester
+        .widget<Scrollable>(find.byType(Scrollable).first)
+        .controller
+        ?.offset;
+    expect(after, isNotNull);
+    expect(after, greaterThan(0), reason: 'the view followed the playhead');
+  });
+
+  testWidgets('autoScroll:false leaves the view alone', (tester) async {
+    tester.view.physicalSize = const Size(400, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final chart = longChart();
+    Widget host(ChartBarRef? playing) => MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ChartGridView(
+                chart: chart,
+                playingBar: playing,
+                autoScroll: false,
+              ),
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(host(null));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(host(const ChartBarRef(0, 30)));
+    await tester.pumpAndSettle();
+
+    final offset = tester
+        .widget<Scrollable>(find.byType(Scrollable).first)
+        .controller
+        ?.offset;
+    expect(offset ?? 0, 0);
+  });
+
+  testWidgets('no enclosing scrollable is not a crash', (tester) async {
+    // The grid is also used inside fixed-height hosts and in tests.
+    await tester.pumpWidget(
+      host(
+        ChartGridView(
+          chart: parseChartText('| C | G |').chart,
+          playingBar: const ChartBarRef(0, 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 }
