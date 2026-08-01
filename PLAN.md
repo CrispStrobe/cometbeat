@@ -2926,9 +2926,33 @@ Import/export is **DONE and at parity across native and web** (shipped
     There is no shared voice identity to carry, so closing this needs a product
     decision about what a loop voice MAPS TO in tracker terms — a mapping table,
     or a shared voice model. Not a weight to tweak.
-  - ⬜ **OPEN 2 — code splitting: SCOPED and PILOTED, then deliberately not
-    landed.** `grep -rn "deferred as" lib/` is **0**. What the pilot established,
-    so nobody repeats it:
+  - ❎ **OPEN 2 — code splitting: MEASURED, and it is NOT the lever. Closed, do
+    not re-attempt on this evidence.**
+    **Deferring the ENTIRE Audio Editor moves 46,870 bytes brotli — 2.1% of the
+    app module, ~1.2% of first-load transfer.** Measured, two full release
+    builds of the same tree:
+
+    | | raw | brotli |
+    |---|---|---|
+    | baseline `main.dart.js` | 8,661,176 | 2,247,945 |
+    | with `daw_screen` deferred | 8,454,336 | 2,201,075 |
+    | the split-out chunk | 217,947 | 58,026 |
+
+    **Why so little, and this is the transferable part: the screens are not the
+    payload — their shared dependencies are.** `daw_screen.dart` is 252 KB of
+    source, but `daw_service`, `daw_timeline`, the FX chain and the synth are all
+    reachable from elsewhere, so only the screen's own widget code moves. Rough
+    ceiling if the other four were also deferred (which needs the cross-file
+    refactor below): ~1.15 MB of screen source ⇒ **~265 KB brotli, ~12% of the
+    app module**, and that assumes the refactor is perfect.
+    Weighed against: an async hop on every authoring-mode route, a **web-only**
+    failure mode (a missed `loadLibrary()` is a runtime error no native test can
+    catch — the widget test that would cover it has to instantiate the whole
+    Audio Editor and **timed out at 10 minutes**), and touching five hot shared
+    files. **Not worth it.** The renderer switch (`--wasm` → skwasm) already took
+    4.86 → 3.86 MB; that was the lever.
+    Everything below is what the pilot established on the way, kept so the
+    reasoning is not re-derived:
     - ✅ **The heavy screens really are shipped.** Probing the built
       `main.dart.js` for distinctive literals: `loop-studio-editor`, `mixer-strip-`
       and `mixer-play` all appear.
@@ -2944,22 +2968,43 @@ Import/export is **DONE and at parity across native and web** (shipped
       `catalog_browse_sheet.dart` **and from each other**. `daw_screen.dart` has
       exactly ONE reference site (`home_screen.dart`) — the `daw_timeline.dart`
       hit is only a comment.
-    - **The `daw_screen` pilot was written, analyzed clean, and REVERTED**
-      because neither half could be verified on this machine: `flutter build web`
-      was killed repeatedly (~57 MB free RAM with other agents building), so the
-      size benefit was unmeasured; and a widget test proving the route still
-      opens has to instantiate the whole Audio Editor, which **timed out at 10
-      minutes** (the same file's other tests run in 2 s). Shipping an unmeasured,
-      unverified, web-only behaviour change was the worse trade.
-    - **To finish it:** measure first — baseline `main.dart.js` is
-      **8,625,020 raw / 2,238,086 brotli**; defer `daw_screen` from
-      `home_screen.dart`, rebuild, and diff. If the delta justifies it, the other
-      four need every reference site deferred together, and the failure mode of a
-      missed `loadLibrary()` is a web-only runtime error a native test cannot
-      catch.
-  - ⬜ **OPEN 3 — the new overlays are test-verified, not eye-verified.** The
-    editor route pushes and the widgets build, but neither the pattern editor nor
-    the mixer sheet has been looked at on a phone-width viewport.
+    - **The `daw_screen` pilot was written, measured, and REVERTED** — the
+      numbers are in the table above. It works (dart2js emits
+      `main.dart.js_1.part.js`); it simply does not buy enough.
+    - ⚠️ **The first attempt at this measurement was defeated by MACHINE LOAD,
+      not by the change.** At load average 200–370 (other agents building)
+      `flutter build web` was silently killed three times and a widget test
+      timed out at 10 minutes; at load 20–40 the same build finished normally
+      and the same `loop_mixer_test` ran 69/69 in **72 seconds instead of 17
+      minutes**. **Check `uptime` before concluding anything from a failed build
+      or a flaky timing test here** — two seam tests
+      (`section scenes…`, `quantized launch…`) fail under load and pass when
+      quiet, on `origin/main` as well as on a feature branch.
+  - ✅ **OPEN 3 — EYE-VERIFIED in the real web build** at 390×844, by driving
+    Chrome over the DevTools Protocol. Confirmed on screen: the authoring menu
+    shows **five** modes (mixer gone); **Bass opens with its notes visible** —
+    the exact case that used to render an empty grid; Precise shows chromatic
+    rows labelled **C2…C♯3**, i.e. real bass register (the old fixed C4–C5 grid
+    is what made those notes invisible), with the readout reading
+    `G2 · ♪ · 1.4+ · 100%`; the drum grid shows its lanes plus "Add a drum"; and
+    the mixer opens as a sheet with the arrangement still visible behind it and
+    playback continuing.
+  - 🔧 **How to drive the real app headlessly (no dependencies).** Node 26 has a
+    global `WebSocket`, so CDP can be spoken directly — script kept at
+    `scratchpad/drive.js`. This matters because **the app renders to a CANVAS**,
+    so selector-based automation cannot click a widget at all; every interaction
+    is a coordinate click via `Input.dispatchMouseEvent`. Serve `build/web` and
+    navigate, wait ~12 s for the engine, then tap by coordinate.
+    ⚠️ Two traps: Chrome's `--force-prefers-color-scheme` is IGNORED in headless
+    (to check the light branch, delete the dark `@media` block from a copy), and
+    `--virtual-time-budget` fast-forwards the boot so a splash is already gone
+    before the screenshot — serve `index.html` WITHOUT the engine bundle to see
+    it.
+  - 🐞 **Spotted while eye-verifying, unrelated to this arc:** the home module
+    cards **clip their description mid-word** ("Fill the measure so…", "Build
+    triads and train…" are cut off at the card edge) at 390×844. Not an overflow,
+    so `layout_audit_test` cannot see it — a fixed card height with unbounded
+    text. Unclaimed.
 
 - **Tracker→editors sweep — 2 items handed to `daw-suite`** ✅ **BOTH DONE**
   (2026-07-27, per maintainer; the sweep itself is in
