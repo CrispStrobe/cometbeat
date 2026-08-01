@@ -1091,6 +1091,26 @@ is recorded in [HISTORY.md](HISTORY.md).
     - Tests: `chord_name_test.dart` (99), `chord_symbol_crossformat_test.dart`
       (every quality × every format, plus a no-harmony byte-identity check).
 
+  - ⚠️ **A HEADLINE RATIO IS NOT COMPARABLE ACROSS HARNESS VERSIONS — only the
+    per-cell table is** (2026-08-01, opus). A fresh full-corpus run came back at
+    **82%** against a recorded baseline of **634,043/634,044**, which reads as a
+    catastrophic regression and is not one.
+    - The baseline had **6 target formats**; the harness has since gained **GP
+      and MIDI**, so it now runs **8**. 8/6 = 1.333, and the observed round-trip
+      denominator was **exactly** 1.333× the baseline's at the same file index.
+      That arithmetic is what identified it.
+    - The two new columns are the already-known-bad ones: **`-> midi` scores 0%**
+      (the `scoreToMidi`/`scoreFromMidi` loss scoped to another agent) and
+      **`-> gp` ~20%** (documented format limits). Six good columns plus those
+      two predicts ~78%; observed 82%.
+    - **Diagnosis method that worked, after the ratio arithmetic:** run the
+      harness on ONE SMALL SUBDIRECTORY instead of the corpus. Scanning 306k
+      files dominates a full run, so a sampled run over everything is barely
+      cheaper than the whole thing — but a single source directory returns a
+      complete per-cell table in under a minute. Every one of the six original
+      targets came back 100%.
+    - 📌 Record baselines **per cell**, and re-state which cell set they cover.
+
   - 🆕 **THE CHANNEL AUDIT — `Score` has 44 channels and the harness compared 6**
     (2026-08-01, opus). The chord-symbol gap was not a one-off; it was a
     *class*. Every channel the signature ignores can be silently dropped by any
