@@ -371,6 +371,52 @@ per query). FolkFriend states its database "is synced to thesession.org
 > source is a reason to look elsewhere for repertoire, not a reason to skip
 > melodic search.
 
+### Status 2026-08-01 — the SEARCH CORE is built and validated
+
+`lib/core/music/melodic_search.dart` + `test/melodic_search_test.dart` (19) +
+`tool/melodic_search_probe.dart`. Query mode 1 (symbolic → symbolic) is done at
+the core level; **only the UI is missing.**
+
+⚠️ **Correction to the scoping above:** the shipped CATALOG stores `incipit`
+(absolute MIDI), not `incipitIntervals` — that field is in `db.json`. Intervals
+derive from the incipit with a diff, so this needed **no catalog change, no
+schema change and no re-emit**. Confirmed against the live shard: **38,417 of
+38,427 score rows carry an incipit**, median length 16.
+
+**Measured against the real catalog** (not fixtures), 38,383 searchable rows,
+by taking a row's own opening N notes, TRANSPOSING them so nothing can match on
+absolute pitch, and asking whether the row comes back:
+
+| query | top-1 | top-10 |
+|---|---|---|
+| 4 notes | 5.5% | 20.4% |
+| 6 notes | 27.9% | 69.7% |
+| 8 notes | 51.2% | 90.5% |
+
+The 4-note figure is honest, not a defect: three intervals genuinely are
+ambiguous across 38k pieces. **8 notes is where it becomes useful.** A human
+query — "Ode to Joy" transposed up a tritone — returns *Ode an die Freude*,
+*Oda do radości* and *Odo al ĝojo*: the same tune across languages and
+arrangements, which is exactly the use case.
+
+**Next:** the UI. Natural home is the music picker (a "find by melody" tab beside
+the search box), taking notes from a Workshop/Loop selection or a tapped
+keyboard. Mode 2 (sung) then only has to feed the same function from the
+existing pitch chain.
+
+⚠️ **Client-side search over the whole catalog needs the score shard**
+(2.68 MB gzipped, 30 MB raw) — which is the offline-archive item above, now with
+a second reason to want it.
+
+📌 **Minor data note, NOT ours to fix here:** 13 of 38,427 catalog titles
+(0.03%) carry UTF-8-read-as-Latin-1 mojibake with the C1 continuation byte
+stripped (`Odo al Äojo` for *Odo al ĝojo*). 12 of the 13 are **PDMX**, a
+community corpus, so the damage is plausibly upstream rather than in our ingest.
+Detect with: a Latin-1 capital (U+00C0–U+00DE) immediately after a lowercase
+letter — mid-word, which no orthography does. ⚠️ Do NOT detect by searching for
+C1 controls (they were already stripped) or by flagging accented capitals
+generally (`Étude`, `süßer` are correct).
+
 ## Note Highway — falling-note play-along (scoped 2026-07-28, IN PROGRESS)
 
 Generalise our existing falling-note view (today a private painter inside
@@ -2981,11 +3027,16 @@ Import/export is **DONE and at parity across native and web** (shipped
     `--virtual-time-budget` fast-forwards the boot so a splash is already gone
     before the screenshot — serve `index.html` WITHOUT the engine bundle to see
     it.
-  - 🐞 **Spotted while eye-verifying, unrelated to this arc:** the home module
-    cards **clip their description mid-word** ("Fill the measure so…", "Build
-    triads and train…" are cut off at the card edge) at 390×844. Not an overflow,
-    so `layout_audit_test` cannot see it — a fixed card height with unbounded
-    text. Unclaimed.
+  - ✅ **Spotted while eye-verifying, and FIXED:** the home module cards sliced
+    their description mid-word at 390×844 whenever the TITLE wrapped to two
+    lines. ⚠️ **`layout_audit_test` is structurally blind to this class and
+    always would have been** — nothing overflows, the text is *clipped*, which
+    is exactly what a `Flexible` + `maxLines: 2` inside a `Clip.antiAlias` Card
+    was asked to do. Clipping a Text does NOT ellipsize it. New
+    `home_card_clipping_test.dart` states the invariant directly instead of
+    waiting for an exception: walk the RENDER tree, fail on any paragraph laid
+    out taller than the box it paints into. **Generalises — any "text is cut off
+    but nothing overflowed" bug needs that check, not the audit.**
 
 - **Tracker→editors sweep — 2 items handed to `daw-suite`** ✅ **BOTH DONE**
   (2026-07-27, per maintainer; the sweep itself is in
