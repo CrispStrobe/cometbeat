@@ -345,7 +345,13 @@ void main(List<String> rawArgs) {
         }
         examples.putIfAbsent(
           pair,
-          () => '$name: ${before.length} notes -> ${got.length}; '
+          // "entries", not "notes": under --rich the signature also holds bar
+          // markers, lyrics, dynamics, annotations and metadata, so calling the
+          // count notes reads as note LOSS when a format simply does not carry
+          // text. It misled me into diagnosing a GP note-loss bug that did not
+          // exist — GP was dropping lyrics and annotations, and its notes were
+          // exact.
+          () => '$name: ${before.length} entries -> ${got.length}; '
               'first diff ${_firstDiff(before, got)}',
         );
       } catch (e) {
