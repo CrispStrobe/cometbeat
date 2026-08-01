@@ -188,6 +188,23 @@ is recorded in [HISTORY.md](HISTORY.md).
     reported that as our bundle size; its dart2js banner said `csp`. A normal
     release build of the same tree is 8.45 MB. Check the banner before quoting
     a size.
+  - 🐛 **PRE-EXISTING FLAKE, not mine — don't chase it.**
+    `loop_mixer_test.dart` → *"section scenes capture, relaunch, and chain at
+    the seam"* **fails when run alone** (`--plain-name`) and **passes in a
+    full-file run**: after `toggleChain()` + `debugLoopWrap()` it expects scene
+    B `{melody}` and gets scene A `{drums, bass}`, i.e. the chain does not
+    advance. Verified on an **unmodified `origin/main` worktree** — identical
+    expected/actual — so it is an isolation dependence that predates this arc.
+    Worth someone's attention because a test that only passes with its
+    neighbours is not really testing the thing it names, but it is not a
+    regression and the file is green as a whole.
+  - ❌ **CORRECTION to something I put on this board earlier:** I listed "the
+    360 KB TTS G2P dictionaries" among the things shipped in the initial web
+    payload. They are NOT — probing the built `main.dart.js` for their content
+    (`deːɐ`, `ˈaɪnə`, `kBundledDeDictTsv`) returns zero hits, so dart2js already
+    tree-shakes them out. The heavy SCREENS are shipped (`loop-studio-editor`
+    and the mixer keys do appear); the dictionaries are not. Probe the built
+    bundle for a distinctive literal before claiming something is in it.
 
 - **opus (ci-green)** · ✅ **SHIPPED (idle) — CI is green again.** Branch
   `feature/ci-green`, worktree `../mus-cifix`; I touched only what CI was
