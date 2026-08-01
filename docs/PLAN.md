@@ -807,10 +807,21 @@ is recorded in [HISTORY.md](HISTORY.md).
     power-of-two beat unit, so a typed `meter: 4/3` is refused by the parser
     rather than thrown from the model.
   - Layout audited at phone portrait, phone landscape and tablet, no overflow.
-  - 📌 **Next on this surface (unclaimed):** persistence (`chart_codec` exists,
-    nothing calls it), a share token (the codec has JSON only — no `KU1.`-style
-    text token), autoscroll during playback, and the styled band (`BB-A2`…`A6`)
-    to replace one-hit-per-bar comping.
+  - ✅ **PERSISTENCE DONE** — `lib/core/services/chart_store.dart`, shape taken
+    wholesale from `FxPresetStore`/`ProjectStore` (SharedPreferences list,
+    newest first, capped oldest-dropped, corrupt rows skipped not thrown).
+    **Two kinds of save, kept apart:** NAMED (the library, an act the user
+    performed) and WORKING (the on-screen chart, rewritten every edit under its
+    own key, restored on next open). The working slot is deliberately NOT in
+    the named list — an autosave that fills the library with "Untitled 7" is
+    worse than none — and an empty chart CLEARS it, so "I deleted everything"
+    is not resurrected. 📌 The store tests are the **first thing ever to call
+    `chart_codec`** (written for BB-D2, never used), so their round-trip
+    assertions are load-bearing: split-bar beat positions, held bars, section
+    repeats and meter all verified to survive.
+  - 📌 **Next on this surface (unclaimed):** a share token (the codec has JSON
+    only — no `KU1.`-style text token), autoscroll during playback, and the
+    styled band (`BB-A2`…`A6`) to replace one-hit-per-bar comping.
 
 - **opus (backing-band)** · ✅ **Workshop no longer drops a lead sheet's
   harmony.** `ScoreDocument` neither read nor wrote `Score.chordSymbols`, so
