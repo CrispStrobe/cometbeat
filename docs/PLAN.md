@@ -1121,19 +1121,28 @@ is recorded in [HISTORY.md](HISTORY.md).
     |---|---|---|---|---|---|---|
     | tempo | ✅ | ✅ | ✅ | ✅ **fixed** | ✅ **fixed** | ✅ |
     | glissandos | ✅ **fixed** | ✅ **new** | — | — | ✅ **new** | ✅ **new** |
+    | ottavas | ✅ | ✅ **new** | ❌ | — | ✅ **new** | ✅ |
+    | pedals | ✅ | ✅ **new** | ❌ | — | ✅ **new** | ✅ |
+    | trillExtensions | ✅ | ✅ **new** | ❌ | — | ✅ **new** | ✅ **new** |
     | portamentos | ✅ **new** | ❌ | — | — | ❌ | ❌ |
     | cueNoteIds | ✅ **new** | ❌ | — | — | ❌ | ❌ |
-    | ottavas | ✅ | ❌ | ❌ | — | ❌ | ✅ |
-    | pedals | ✅ | ❌ | ❌ | — | ❌ | ✅ |
-    | trillExtensions | ✅ | ❌ | ❌ | — | ❌ | ❌ |
     | laissezVibrer | ✅ | ❌ | ❌ | — | ❌ | ❌ |
-    | figuredBass | ✅ | ❌ | ✅?* | — | ❌ | ❌ |
+    | figuredBass | ✅ | ❌ | ❌* | — | ❌ | ❌ |
 
     `—` = the format genuinely cannot express it (kern and ABC have no
-    glissando; ABC no ottava/pedal). `❌` = a real gap: **MEI has `<octave>`,
-    `<pedal>`, `<trill @endid>`, `<fb>`; LilyPond has `\ottava`,
-    `\sustainOn/Off`, `\startTrillSpan`, `\laissezVibrer`, `\figuremode`;
-    kern has `*8va` and a `**fb` spine.** *figuredBass in kern is untested.
+    glissando; ABC no ottava/pedal). `❌` = a real gap: **MEI has `@lv` and
+    `<fb>`; LilyPond has `\laissezVibrer` and `\figuremode`; kern has `*8va`
+    and a `**fb` spine.** *figuredBass in kern is unimplemented, not merely
+    untested.
+
+    ⚠️ **One canonical form came out of the trill work and is worth applying to
+    any future span that has a note-level twin: an extended trill is the SPAN
+    ALONE, never a span plus an `Ornament.trill` on the same note.** MusicXML
+    already stated that; MEI, LilyPond and MuseScore each kept both, and since
+    every one of these formats draws the "tr" as part of the span, that printed
+    the sign twice and made a chain through several of them unstable. Four
+    codecs agreeing on one normal form is what makes the chain matrix mean
+    anything.
 
     - ✅ **Done in this pass** (details in the changelog): the LilyPond/ABC
       tempo fixes, the MusicXML `<glissando>`-vs-`<slide>` split, `<cue/>`, and
