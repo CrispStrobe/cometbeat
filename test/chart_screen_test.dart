@@ -1,13 +1,17 @@
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/chord_spec.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
 import 'package:comet_beat/features/harmony/chart_library_sheet.dart';
+import 'package:comet_beat/features/harmony/chart_screen.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart' show Pitch, Step;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The chart surface.
@@ -211,6 +215,8 @@ void main() {
 
   group('library', _libraryTests);
 
+  group('screen', _screenTests);
+
   group('bar editing', () {
     test('replacing a chord keeps the rest of the bar', () {
       // A bar is more than its chords; rebuilding it on every edit would drop
@@ -298,5 +304,58 @@ void _libraryTests() {
       find.byKey(const Key('chartSaveButton')),
     );
     expect(button.onPressed, isNull, reason: 'saving a blank grid is refused');
+  });
+}
+
+/// The screen itself, which needs an AudioService from a provider.
+void _screenTests() {
+  Widget screen() => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Provider<AudioService>(
+          create: (_) => AudioService(),
+          child: const ChartScreen(),
+        ),
+      );
+
+  testWidgets('opens on the starter chart', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    expect(find.text('C7'), findsWidgets);
+    expect(find.byKey(const Key('chartPlayButton')), findsOneWidget);
+  });
+
+  testWidgets('restores the working chart from a previous visit',
+      (tester) async {
+    // What makes leaving the screen non-destructive.
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await ChartStore(prefs).saveWorking(parseChartText('| Ebmaj7 |').chart);
+
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    expect(find.text('Ebmaj7'), findsOneWidget);
+  });
+
+  testWidgets('an explicit initialChart wins over the working slot',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await ChartStore(prefs).saveWorking(parseChartText('| Ebmaj7 |').chart);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Provider<AudioService>(
+          create: (_) => AudioService(),
+          child: ChartScreen(initialChart: parseChartText('| Abm7 |').chart),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Abm7'), findsOneWidget);
+    expect(find.text('Ebmaj7'), findsNothing);
   });
 }

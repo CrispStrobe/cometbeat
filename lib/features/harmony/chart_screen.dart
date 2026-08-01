@@ -82,13 +82,25 @@ class _ChartScreenState extends State<ChartScreen> {
     // else the starter. Restoring beats the starter: coming back to your own
     // half-written tune is the whole point of the working slot.
     _chart = widget.initialChart ?? parseChartText(kStarterChartText).chart;
-    _restore();
+    unawaited(_restore());
   }
 
+  /// Attaches the store and restores the chart that was on screen last time.
+  ///
+  /// ⚠️ Guarded, because this runs unawaited from `initState`: on any platform
+  /// where the shared_preferences channel is absent — a plain widget test, a
+  /// misconfigured host — `getInstance()` THROWS, and an unhandled error in an
+  /// unawaited future fails the enclosing test rather than the screen. Losing
+  /// persistence is a degraded screen; throwing is a broken one, and the whole
+  /// point of the working slot is that it is best-effort.
   Future<void> _restore() async {
-    final prefs = await SharedPreferences.getInstance();
+    final ChartStore store;
+    try {
+      store = ChartStore(await SharedPreferences.getInstance());
+    } catch (_) {
+      return; // no storage on this platform; the screen still works
+    }
     if (!mounted) return;
-    final store = ChartStore(prefs);
     final working = widget.initialChart == null ? store.readWorking() : null;
     setState(() {
       _store = store;
@@ -97,7 +109,14 @@ class _ChartScreenState extends State<ChartScreen> {
   }
 
   /// Remembers the chart, so leaving the screen is not destructive.
-  void _persist() => unawaited(_store?.saveWorking(_chart) ?? Future.value());
+  ///
+  /// Errors are swallowed for the same reason [_restore] guards: a failed
+  /// autosave must not take the screen down with it.
+  void _persist() {
+    final store = _store;
+    if (store == null) return;
+    unawaited(store.saveWorking(_chart).catchError((_) {}));
+  }
 
   @override
   void dispose() {
