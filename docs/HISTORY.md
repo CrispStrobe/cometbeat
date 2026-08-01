@@ -148,6 +148,32 @@ rather than silent.
 
 `lib/core/harmony/chart_score_bridge.dart`, 26 tests.
 
+### BB-T5 — grade a player against a real chart (2026-08-01)
+
+`ChordProgressionEngine` scored live playing against hand-written
+`ChordChart`s, so a chart the user actually wrote could not be practised
+against. `lib/core/harmony/chart_to_targets.dart` projects one onto the other.
+
+⚠️ **It touches `chord_progression.dart` not at all** — a deliberate departure
+from the card's "add `ChordChart.fromRealizedBars`". That file is hot (it backs
+a shipped game) and `ChordChart`'s constructor is already public and const, so
+the projection lives in the harmony layer and the shipped scorer keeps a
+byte-identical definition. A factory inside it would have bought nothing and
+risked something.
+
+🔴 **The narrowing is mandatory, not cosmetic.** `TargetChord.matches` requires
+the detector's suffix EXACTLY, and the detector knows eight (`'' m 7 m7 maj7
+sus4 dim aug`). A target outside that set can never be emitted, so it can never
+be hit — the bar would sit unscorable for the whole exercise. Every chart chord
+is narrowed into that vocabulary and every narrowing is reported, including the
+ones a musician would not guess: a slash bass is invisible to the detector,
+sus2 is heard as sus4, a sixth is heard as a triad.
+
+Count-in and ending bars carry no target — nobody should be graded on a bar that
+exists to set the tempo — but they still occupy their beats, so the exercise
+cannot drift against what is being played. 23 tests, including one asserting
+the deliberately-duplicated suffix set still agrees with `kChordTemplates`.
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**

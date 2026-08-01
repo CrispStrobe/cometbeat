@@ -1670,16 +1670,6 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     enharmonic spelling appropriate to each key (not 12 sharps). A drop-out
     schedule at a given seed is reproducible. Every mode composes with looping.
 
-- ⬜ **BB-T5 — make the existing scorer a projection.** `S`
-  - **Goal.** Don't keep two chart types.
-  - **Depends.** BB-A5. **Files.**
-    `core/audio/chord_progression.dart` (**hot — it backs a shipped game**).
-  - **Build.** Add `ChordChart.fromRealizedBars(...)` so `ChordProgressionEngine`
-    grades a player against a *real* chart. `TargetChord` stays as-is.
-  - **Acceptance.** The existing `chord_progression_test` and the chord
-    play-along game are untouched in behaviour; a chart projects to the same
-    beat-list a hand-written `ChordChart` would.
-
 ### Phase 4 — the surface (fixes G5/G6)
 
 - ⬜ **BB-U3 — band controls, live (and they are Loop Studio's).** `S`
