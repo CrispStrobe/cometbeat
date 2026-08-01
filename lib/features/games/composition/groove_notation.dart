@@ -235,12 +235,17 @@ const grooveTrackOrder = ['voice', 'melody', 'chords', 'sparkle', 'bass'];
 /// there is nothing honest to engrave for them (v1).
 ///
 /// Returns null when no pitched track is enabled — nothing to save.
-({MultiPartScore score, List<String> partNames})? grooveParts(
+({
+  MultiPartScore score,
+  List<String> partNames,
+  List<String> trackIds,
+})? grooveParts(
   LoopEngine engine, {
   required String Function(String id) nameOf,
 }) {
   final parts = <Score>[];
   final partNames = <String>[];
+  final trackIds = <String>[];
   for (final id in grooveTrackOrder) {
     if (!engine.enabled.contains(id)) continue;
     // Transposed to the current key/scale, so the saved score matches the sound.
@@ -248,9 +253,19 @@ const grooveTrackOrder = ['voice', 'melody', 'chords', 'sparkle', 'bass'];
     if (cells == null) continue; // defensive: an unpitched id in the order
     parts.add(grooveScore(cells, clef: clefForGrooveCells(cells)));
     partNames.add(nameOf(id));
+    // The track each part CAME FROM, so a caller can recover what notation
+    // cannot carry — the synth voice above all. Returned rather than
+    // re-derived: the enabled/pitched filter above is the thing that decides
+    // which parts exist, and a caller repeating it would silently desync the
+    // moment this loop changes.
+    trackIds.add(id);
   }
   if (parts.isEmpty) return null;
-  return (score: MultiPartScore(parts), partNames: partNames);
+  return (
+    score: MultiPartScore(parts),
+    partNames: partNames,
+    trackIds: trackIds,
+  );
 }
 
 /// The pitch each drum is engraved on for a rhythm-line reduction — kick low,

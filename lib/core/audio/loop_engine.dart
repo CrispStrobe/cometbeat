@@ -3052,6 +3052,25 @@ class LoopEngine {
   // to copy into; what a track plays instead of its variant is an override, and
   // that is what this writes. See the WS-L5 note in PLAN.md.
 
+  /// The synth voice [id] currently SOUNDS through, or null when it is not a
+  /// pitched track.
+  ///
+  /// Exposed because the timbre used to stop at the engine's edge: converting a
+  /// groove for the Tracker went Loop → `MultiPartScore` → `TrackerSong`, and
+  /// notation carries no synth voice, so every part arrived on the Tracker's
+  /// FIRST instrument (piano). A cello line opened as a piano line — the same
+  /// notes through a different voice, which reads as "the two modes sound
+  /// different". They need not: the Tracker's `AdditiveInstrument` wraps this
+  /// very enum and renders through the same `timbreFor` + `renderSegmentsRaw`
+  /// path, so carrying the value across makes them identical rather than merely
+  /// similar.
+  Instrument? instrumentFor(String id) {
+    final track = tracks.where((t) => t.id == id).firstOrNull;
+    if (track == null) return null;
+    final pattern = track.variants[_variantOf(track)];
+    return pattern is MelodicPattern ? pattern.instrument : null;
+  }
+
   /// The AUTHORED 2-bar cells [id] plays, or null when it is not pitched.
   ///
   /// Deliberately not [cellsFor], which in progression mode returns the

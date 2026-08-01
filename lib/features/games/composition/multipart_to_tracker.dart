@@ -5,6 +5,7 @@
 // by any "open in Tracker" interconnection (e.g. Loop Mixer groove → Tracker),
 // so the conversion lives once, not copy-pasted per caller.
 
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/interop/tracker_song_flatten.dart';
@@ -19,6 +20,24 @@ import 'package:crisp_notation/crisp_notation.dart'
 /// 64 is the tracker convention and what the pattern editor is laid out for; a
 /// score longer than that becomes SEVERAL patterns rather than one long one.
 const int kImportPatternRows = 64;
+
+/// The voice channel [p] should sound through.
+///
+/// ⚠️ This used to be `kTrackerInstruments.first.build()` for EVERY part, i.e.
+/// piano regardless of what the music sounded like where it came from. That is
+/// why "open in Tracker" changed the timbre of a groove: a cello line arrived as
+/// a piano line. It is not an approximation problem — the Tracker's
+/// `AdditiveInstrument` wraps the SAME `Instrument` enum the Loop engine uses
+/// and renders through the same `timbreFor` + `renderSegmentsRaw` path, so a
+/// carried voice is identical, not merely close.
+///
+/// A caller with no voice to offer (a plain notation import, which genuinely
+/// has none) still gets the first instrument, so that path is unchanged.
+TrackerInstrument _voiceFor(List<Instrument?>? voices, int p) {
+  final voice = (voices != null && p < voices.length) ? voices[p] : null;
+  if (voice == null) return kTrackerInstruments.first.build();
+  return AdditiveInstrument(voice.name, voice);
+}
 
 /// How many grid steps [score] needs end to end.
 ///
@@ -50,7 +69,10 @@ int _stepsNeeded(Score score, TrackerTiming timing) {
 /// need, which is also the shape a module importer produces — so the inverse
 /// [multiPartScoreFromTrackerSong], which concatenates patterns in order,
 /// reads the whole song back.
-TrackerSong trackerSongFromMultiPart(MultiPartScore mp) {
+TrackerSong trackerSongFromMultiPart(
+  MultiPartScore mp, {
+  List<Instrument?>? voices,
+}) {
   const timing = TrackerTiming(rows: kImportPatternRows);
 
   // Long enough for the longest part, and never shorter than one pattern.
@@ -109,7 +131,7 @@ TrackerSong trackerSongFromMultiPart(MultiPartScore mp) {
     for (var p = 0; p < full.length; p++)
       TrackerChannel(
         id: 'part${p + 1}',
-        instrument: kTrackerInstruments.first.build(),
+        instrument: _voiceFor(voices, p),
         rows: kImportPatternRows,
         cells: patterns.first.cells[p],
       ),

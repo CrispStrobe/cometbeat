@@ -2535,7 +2535,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AdvancedTrackerScreen(
-          initialSong: trackerSongFromMultiPart(parts.score),
+          initialSong: trackerSongFromMultiPart(
+            parts.score,
+            // Carry each track's SYNTH VOICE across. Notation cannot hold one,
+            // so without this every part arrived on the Tracker's first
+            // instrument and the groove changed timbre on the way over — the
+            // "it sounds different in the Tracker" report. Same enum, same
+            // synthesis path, so this makes them identical rather than close.
+            voices: [
+              for (final id in parts.trackIds) _engine.instrumentFor(id),
+            ],
+          ),
           // Auto-publish the edited tune back on exit → no manual "Share tune".
           autoShareOnExit: true,
         ),
