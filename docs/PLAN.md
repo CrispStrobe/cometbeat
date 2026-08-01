@@ -946,6 +946,35 @@ is recorded in [HISTORY.md](HISTORY.md).
     the dataset creator's corruption, faithfully read. `file` calls it valid
     UTF-8 because it is.
 
+  - 🆕 **UNCLAIMED, and it needs a DECISION before any code: ABC files a chord
+    symbol as an ANNOTATION.** The reader already DETECTS the distinction and
+    then throws it away.
+    - ABC's rule: a bare `"Eb"` is a **chord symbol** (guitar chord over the
+      staff); one prefixed `^ _ < > @` is a **positioned annotation**.
+      `_readChordSymbol` strips the prefix — so it knows which is which — and
+      then files BOTH under `Score.annotations`. `Score.chordSymbols` gets
+      nothing from ABC at all.
+    - **Why it matters beyond tidiness:** the app's chord features
+      (ChordDetector, backing band, harmony analysis) read `chordSymbols`, so a
+      correct classification would light them up on 4,150 of the 10,000
+      held-control ABC files. It also decides what kern/MuseScore need to carry.
+    - ⚠️ **Why I did NOT just do it:** `ChordSymbol` stores `root`/`quality`/
+      `bass`, not text, so this needs a **chord-NAME parser** for standard
+      notation (`Ebmaj7`, `C#m7b5`, `G/B`) — and **none exists**. MusicXML reads
+      `<harmony>` structurally, MuseScore reads its own XML, and LilyPond's
+      `_parseChordText` handles LilyPond's COLON syntax (`c:maj7`), not chord
+      names. Plus it is a behaviour change for anything already consuming
+      `annotations`.
+    - **Suggested shape:** a `ChordSymbol.tryParse(String)` in `theory/`, used
+      by the ABC reader for unprefixed strings only, with prefixed ones staying
+      annotations. Test it against the 10k control, where chord names are dense.
+
+  - ✅ **ANNOTATIONS NOW IN 5 OF 6 FORMATS** — MusicXML, LilyPond, MEI, ABC and
+    MuseScore (`<StaffText>`, a voice-level sibling preceding its chord, the
+    same shape as `<Dynamic>`/`<Harmony>`/the spanners). ⚠️ **kern still drops
+    them**: it would need a parallel spine for text, a bigger change than the
+    sibling-element pattern the other five share. Pinned by a test.
+
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
