@@ -6,6 +6,7 @@
 // pickers. Complements [showMyInstrumentsSheet] (instruments/samples): together
 // they are the library, parameterised by what you ask it to show.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -279,6 +280,23 @@ class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
   List<LibraryItem>? _items;
   bool _failed = false;
   bool _fetching = false;
+  String _query = '';
+
+  /// Guards against an out-of-order result overwriting a newer one: typing
+  /// fires a browse per keystroke and they can settle in any order.
+  int _searchSeq = 0;
+
+  final _searchController = TextEditingController();
+  Timer? _debounce;
+
+  /// How many rows a listing shows.
+  ///
+  /// ⚠️ This used to be a bare `browse(limit: 1000)` with no query, against a
+  /// catalog of ~38,900 items. That is not a browse, it is an arbitrary 2.5%
+  /// slice in whatever order the index happened to be in — the piece the user
+  /// wanted was almost certainly not in it, and there was no way to ask for it.
+  /// A search box is what makes the rest of the catalog reachable at all.
+  static const _pageSize = 300;
 
   @override
   void initState() {
@@ -286,20 +304,37 @@ class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String value) {
+    _debounce?.cancel();
+    // Debounced: the source filters an in-memory catalog, but it also has to
+    // FETCH it the first time, and a request per keystroke would queue them.
+    _debounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      setState(() => _query = value);
+      _load();
+    });
+  }
+
   Future<void> _load() async {
+    final seq = ++_searchSeq;
     try {
-      final items = await _source.browse(limit: 1000);
-      if (mounted) {
-        setState(
-          () => _items = [
-            for (final item in items)
-              if (item.collection == 'score' || item.collection == 'module')
-                item,
-          ],
-        );
-      }
+      final items = await _source.browse(query: _query, limit: _pageSize);
+      if (!mounted || seq != _searchSeq) return;
+      setState(
+        () => _items = [
+          for (final item in items)
+            if (item.collection == 'score' || item.collection == 'module') item,
+        ],
+      );
     } catch (_) {
-      if (mounted) setState(() => _failed = true);
+      if (mounted && seq == _searchSeq) setState(() => _failed = true);
     }
   }
 
@@ -360,6 +395,29 @@ class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onQueryChanged,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  hintText: l10n.musicPickerSearchHint,
+                  border: const OutlineInputBorder(),
+                  suffixIcon: _searchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onQueryChanged('');
+                          },
+                        ),
+                ),
+              ),
+            ),
             if (_fetching) const LinearProgressIndicator(),
             Expanded(
               child: _failed
@@ -367,7 +425,17 @@ class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
                   : items == null
                       ? const Center(child: CircularProgressIndicator())
                       : items.isEmpty
-                          ? Center(child: Text(l10n.musicPickerCatalogEmpty))
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  _query.isEmpty
+                                      ? l10n.musicPickerCatalogEmpty
+                                      : l10n.musicPickerNoMatch,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            )
                           : ListView.builder(
                               itemCount: items.length,
                               itemBuilder: (_, i) {

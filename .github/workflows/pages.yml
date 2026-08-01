@@ -93,8 +93,16 @@ jobs:
         # main.dart.js, so a fresh deploy keeps serving the OLD build until the
         # SW happens to update on a later load ("I deployed but see no change").
         # No service worker → every load fetches the current build.
+        #
+        # `--wasm`: compiles to WasmGC, but the reason that matters here is the
+        # RENDERER it selects. A JS build ships canvaskit.wasm (7.2 MB raw /
+        # 2.67 MB brotli); a wasm build ships skwasm instead (3.6 MB / 1.41 MB).
+        # Measured first-load transfer goes 4.86 MB → 3.86 MB, and the renderer
+        # is the dominant download, not our app module. Flutter still emits the
+        # dart2js fallback for browsers without WasmGC (Safari < 18.2), and the
+        # loader picks per browser, so nothing is dropped.
         run: |
-          flutter build web --release --base-href /cometbeat/ \
+          flutter build web --wasm --release --base-href /cometbeat/ \
             --pwa-strategy=none \
             --dart-define=GIT_COMMIT=$(git rev-parse --short HEAD) \
             --dart-define=BUILD_TIME=$(date -u +%Y-%m-%dT%H:%MZ)

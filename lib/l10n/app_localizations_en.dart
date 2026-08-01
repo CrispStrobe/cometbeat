@@ -1723,6 +1723,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerTuneWide => 'Wide range';
 
   @override
+  String get loopMixerSongBookLoaded => 'Loaded into “My tune”.';
+
+  @override
+  String get loopMixerSongBookShortened =>
+      'Loaded the opening of it into “My tune” — a loop is two bars.';
+
+  @override
+  String get loopMixerSongBookSilent =>
+      'That piece has no melody we could turn into a loop.';
+
+  @override
+  String get loopEditorSimple => 'Simple';
+
+  @override
+  String get loopEditorPrecise => 'Precise';
+
+  @override
+  String get loopEditorClear => 'Clear part';
+
+  @override
+  String get loopEditorAddLane => 'Add a drum';
+
+  @override
+  String get loopEditorPreciseIdle =>
+      'Tap a cell to see its note, length and position.';
+
+  @override
+  String get loopEditorFollowsChords =>
+      'This part follows the chords. Editing it pins it to your own notes instead.';
+
+  @override
   String get loopMixerTuneInTracker => 'Fine-tune in Tracker';
 
   @override
@@ -2241,6 +2272,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicPickerCatalogEmpty => 'No online scores found.';
+
+  @override
+  String get musicPickerSearchHint => 'Search title or composer';
+
+  @override
+  String get dawInsertMusicTitle => 'How should this music arrive?';
+
+  @override
+  String get dawInsertMusicSymbolic => 'Notation';
+
+  @override
+  String get dawInsertMusicRendered => 'Rendered';
+
+  @override
+  String get dawInsertMusicSymbolicHint =>
+      'Keep it as notes — editable, re-voiceable, and it follows the tempo.';
+
+  @override
+  String get dawInsertMusicRenderedHint =>
+      'Render it to fixed audio now. You can thaw it back to notes later.';
+
+  @override
+  String get dawInsertMusicTempo => 'Tempo';
+
+  @override
+  String get dawInsertMusicConfirm => 'Add to the timeline';
+
+  @override
+  String get musicPickerNoMatch =>
+      'Nothing matches that. Try a composer\'s name, or part of a title.';
 
   @override
   String get musicPickerCatalogFailed => 'Couldn\'t reach the catalog.';

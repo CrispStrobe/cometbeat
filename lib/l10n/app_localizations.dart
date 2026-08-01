@@ -3188,6 +3188,60 @@ abstract class AppLocalizations {
   /// **'Wide range'**
   String get loopMixerTuneWide;
 
+  /// No description provided for @loopMixerSongBookLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Loaded into “My tune”.'**
+  String get loopMixerSongBookLoaded;
+
+  /// Shown when the picked music was longer than the 2-bar loop grid, or was quantised onto it. The loss is stated rather than applied silently.
+  ///
+  /// In en, this message translates to:
+  /// **'Loaded the opening of it into “My tune” — a loop is two bars.'**
+  String get loopMixerSongBookShortened;
+
+  /// No description provided for @loopMixerSongBookSilent.
+  ///
+  /// In en, this message translates to:
+  /// **'That piece has no melody we could turn into a loop.'**
+  String get loopMixerSongBookSilent;
+
+  /// Pattern editor lens: scale-locked rows, no numbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Simple'**
+  String get loopEditorSimple;
+
+  /// Pattern editor lens: every semitone, with note names, lengths and dynamics shown.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise'**
+  String get loopEditorPrecise;
+
+  /// No description provided for @loopEditorClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear part'**
+  String get loopEditorClear;
+
+  /// No description provided for @loopEditorAddLane.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a drum'**
+  String get loopEditorAddLane;
+
+  /// No description provided for @loopEditorPreciseIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a cell to see its note, length and position.'**
+  String get loopEditorPreciseIdle;
+
+  /// Shown when the pattern was seeded from a chord-resolved shape, so the user knows editing changes the behaviour rather than just the notes.
+  ///
+  /// In en, this message translates to:
+  /// **'This part follows the chords. Editing it pins it to your own notes instead.'**
+  String get loopEditorFollowsChords;
+
   /// Button in the Loop Studio tune editor: open the full (Advanced) Tracker to fine-edit the groove on the chromatic grid; a tune shared back folds into the loop.
   ///
   /// In en, this message translates to:
@@ -4141,6 +4195,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No online scores found.'**
   String get musicPickerCatalogEmpty;
+
+  /// No description provided for @musicPickerSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search title or composer'**
+  String get musicPickerSearchHint;
+
+  /// No description provided for @dawInsertMusicTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How should this music arrive?'**
+  String get dawInsertMusicTitle;
+
+  /// No description provided for @dawInsertMusicSymbolic.
+  ///
+  /// In en, this message translates to:
+  /// **'Notation'**
+  String get dawInsertMusicSymbolic;
+
+  /// No description provided for @dawInsertMusicRendered.
+  ///
+  /// In en, this message translates to:
+  /// **'Rendered'**
+  String get dawInsertMusicRendered;
+
+  /// No description provided for @dawInsertMusicSymbolicHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it as notes — editable, re-voiceable, and it follows the tempo.'**
+  String get dawInsertMusicSymbolicHint;
+
+  /// No description provided for @dawInsertMusicRenderedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Render it to fixed audio now. You can thaw it back to notes later.'**
+  String get dawInsertMusicRenderedHint;
+
+  /// No description provided for @dawInsertMusicTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo'**
+  String get dawInsertMusicTempo;
+
+  /// No description provided for @dawInsertMusicConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to the timeline'**
+  String get dawInsertMusicConfirm;
+
+  /// No description provided for @musicPickerNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches that. Try a composer\'s name, or part of a title.'**
+  String get musicPickerNoMatch;
 
   /// No description provided for @musicPickerCatalogFailed.
   ///

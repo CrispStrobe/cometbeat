@@ -4,6 +4,8 @@
 // creates a second copy of the music.
 
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
+import 'package:comet_beat/features/games/composition/mixer_console_screen.dart'
+    show showMixerConsoleSheet;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -23,7 +25,17 @@ class _LoopStudioScreenState extends State<LoopStudioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.loopStudioTitle),
-        actions: [_viewSwitcher(l10n)],
+        actions: [
+          // The project mixer, as an overlay rather than a sixth module. Mixing
+          // happens while arranging, so the arrangement stays behind the sheet.
+          IconButton(
+            key: const Key('loop-studio-mixer'),
+            icon: const Icon(Icons.tune),
+            tooltip: l10n.mixerConsoleTitle,
+            onPressed: () => showMixerConsoleSheet(context),
+          ),
+          _viewSwitcher(l10n),
+        ],
       ),
       body: LoopMixerScreen(
         key: const ValueKey('loop-studio-editor'),

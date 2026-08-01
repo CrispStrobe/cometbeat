@@ -738,6 +738,27 @@
   "firstRunLoopEdit": "Tap ✎ on any card (or a note on the sheet music) to change what it plays — you hear the change right away.",
   "firstRunLoopMore": "Stuck? Roll 🎲 for a surprise. Want more? Open the beat in the Drum Kit, or the whole song in the Tracker or Score Workshop.",
   "loopMixerTuneWide": "Wide range",
+  "loopMixerSongBookLoaded": "Loaded into “My tune”.",
+  "loopMixerSongBookShortened": "Loaded the opening of it into “My tune” — a loop is two bars.",
+  "@loopMixerSongBookShortened": {
+    "description": "Shown when the picked music was longer than the 2-bar loop grid, or was quantised onto it. The loss is stated rather than applied silently."
+  },
+  "loopMixerSongBookSilent": "That piece has no melody we could turn into a loop.",
+  "loopEditorSimple": "Simple",
+  "@loopEditorSimple": {
+    "description": "Pattern editor lens: scale-locked rows, no numbers."
+  },
+  "loopEditorPrecise": "Precise",
+  "@loopEditorPrecise": {
+    "description": "Pattern editor lens: every semitone, with note names, lengths and dynamics shown."
+  },
+  "loopEditorClear": "Clear part",
+  "loopEditorAddLane": "Add a drum",
+  "loopEditorPreciseIdle": "Tap a cell to see its note, length and position.",
+  "loopEditorFollowsChords": "This part follows the chords. Editing it pins it to your own notes instead.",
+  "@loopEditorFollowsChords": {
+    "description": "Shown when the pattern was seeded from a chord-resolved shape, so the user knows editing changes the behaviour rather than just the notes."
+  },
   "loopMixerTuneInTracker": "Fine-tune in Tracker",
   "@loopMixerTuneInTracker": {
     "description": "Button in the Loop Studio tune editor: open the full (Advanced) Tracker to fine-edit the groove on the chromatic grid; a tune shared back folds into the loop."
@@ -995,6 +1016,15 @@
   "musicPickerFailed": "Couldn't read that music file.",
   "musicPickerCatalog": "Browse online catalog",
   "musicPickerCatalogEmpty": "No online scores found.",
+  "musicPickerSearchHint": "Search title or composer",
+  "dawInsertMusicTitle": "How should this music arrive?",
+  "dawInsertMusicSymbolic": "Notation",
+  "dawInsertMusicRendered": "Rendered",
+  "dawInsertMusicSymbolicHint": "Keep it as notes — editable, re-voiceable, and it follows the tempo.",
+  "dawInsertMusicRenderedHint": "Render it to fixed audio now. You can thaw it back to notes later.",
+  "dawInsertMusicTempo": "Tempo",
+  "dawInsertMusicConfirm": "Add to the timeline",
+  "musicPickerNoMatch": "Nothing matches that. Try a composer's name, or part of a title.",
   "musicPickerCatalogFailed": "Couldn't reach the catalog.",
   "dawAddClip": "Add clip",
   "dawAddToTimeline": "Add to timeline",

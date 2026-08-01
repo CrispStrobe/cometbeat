@@ -1727,6 +1727,37 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerTuneWide => 'Großer Tonumfang';
 
   @override
+  String get loopMixerSongBookLoaded => 'In „Meine Melodie“ geladen.';
+
+  @override
+  String get loopMixerSongBookShortened =>
+      'Der Anfang ist in „Meine Melodie“ gelandet — ein Loop ist zwei Takte lang.';
+
+  @override
+  String get loopMixerSongBookSilent =>
+      'Dieses Stück hat keine Melodie, die wir zu einem Loop machen können.';
+
+  @override
+  String get loopEditorSimple => 'Einfach';
+
+  @override
+  String get loopEditorPrecise => 'Genau';
+
+  @override
+  String get loopEditorClear => 'Stimme leeren';
+
+  @override
+  String get loopEditorAddLane => 'Trommel hinzufügen';
+
+  @override
+  String get loopEditorPreciseIdle =>
+      'Tippe auf ein Feld, um Note, Länge und Position zu sehen.';
+
+  @override
+  String get loopEditorFollowsChords =>
+      'Diese Stimme folgt den Akkorden. Wenn du sie bearbeitest, wird sie auf deine eigenen Noten festgelegt.';
+
+  @override
   String get loopMixerTuneInTracker => 'Im Tracker feinschleifen';
 
   @override
@@ -2251,6 +2282,36 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get musicPickerCatalogEmpty => 'Keine Online-Noten gefunden.';
+
+  @override
+  String get musicPickerSearchHint => 'Titel oder Komponist suchen';
+
+  @override
+  String get dawInsertMusicTitle => 'Wie soll diese Musik ankommen?';
+
+  @override
+  String get dawInsertMusicSymbolic => 'Noten';
+
+  @override
+  String get dawInsertMusicRendered => 'Gerendert';
+
+  @override
+  String get dawInsertMusicSymbolicHint =>
+      'Als Noten behalten — bearbeitbar, neu instrumentierbar, folgt dem Tempo.';
+
+  @override
+  String get dawInsertMusicRenderedHint =>
+      'Jetzt zu festem Audio rendern. Du kannst es später wieder zu Noten auftauen.';
+
+  @override
+  String get dawInsertMusicTempo => 'Tempo';
+
+  @override
+  String get dawInsertMusicConfirm => 'Zur Timeline hinzufügen';
+
+  @override
+  String get musicPickerNoMatch =>
+      'Dazu passt nichts. Versuch einen Komponistennamen oder einen Teil des Titels.';
 
   @override
   String get musicPickerCatalogFailed => 'Katalog nicht erreichbar.';

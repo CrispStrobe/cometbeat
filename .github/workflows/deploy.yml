@@ -83,8 +83,12 @@ jobs:
       - name: Build web
         working-directory: cometbeat
         # Bake the commit + build time into the app (About screen provenance).
+        # `--wasm` is chosen for the RENDERER as much as the codegen: it ships
+        # skwasm (3.6 MB) instead of canvaskit (7.2 MB), taking measured
+        # first-load transfer from 4.86 MB to 3.86 MB brotli. The dart2js
+        # fallback is still emitted for browsers without WasmGC.
         run: |
-          flutter build web --release \
+          flutter build web --wasm --release \
             --dart-define=GIT_COMMIT=$(git rev-parse --short HEAD) \
             --dart-define=BUILD_TIME=$(date -u +%Y-%m-%dT%H:%MZ)
 

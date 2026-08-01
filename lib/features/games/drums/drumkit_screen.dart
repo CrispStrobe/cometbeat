@@ -37,6 +37,7 @@ import 'package:comet_beat/features/sound_lab/instrument_library_store.dart'
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
     show renderInstrumentNote, showMyInstrumentsSheet;
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music/drum_labels.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
 import 'package:comet_beat/shared/music_io/music_export.dart'
@@ -1036,20 +1037,10 @@ class _DrumkitScreenState extends State<DrumkitScreen>
 
   // --- UI --------------------------------------------------------------------
 
-  String _drumLabel(AppLocalizations l10n, Drum d) => switch (d) {
-        Drum.kick => l10n.drumkitKick,
-        Drum.snare => l10n.drumkitSnare,
-        Drum.hat => l10n.drumkitHat,
-        Drum.openHat => l10n.drumkitOpenHat,
-        Drum.clap => l10n.drumkitClap,
-        Drum.tom => l10n.drumkitTom,
-        Drum.rim => l10n.drumkitRim,
-        Drum.cowbell => l10n.drumkitCowbell,
-        Drum.crash => l10n.drumkitCrash,
-        Drum.ride => l10n.drumkitRide,
-        Drum.lowTom => l10n.drumkitLowTom,
-        Drum.highTom => l10n.drumkitHighTom,
-      };
+  /// Moved to `shared/music/drum_labels.dart` so the Loop Studio's beat grid
+  /// can name its lanes from the same table instead of the three `performPad*`
+  /// keys, which is why its extended kit voices had no labels at all.
+  String _drumLabel(AppLocalizations l10n, Drum d) => drumLabel(l10n, d);
 
   IconData _drumIcon(Drum d) => switch (d) {
         Drum.kick => Icons.circle,

@@ -31,8 +31,136 @@
 
   <title>CometBeat</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Boot splash. A Flutter web app paints NOTHING until its engine has loaded
+    (canvaskit.wasm alone is ~7 MB), which on a cold cache reads as a hung blank
+    page rather than as a download. This is plain CSS in the document head, so it
+    is on screen in the first paint — before any Dart, any engine, any fetch.
+
+    Deliberately NOT a fake percentage: we cannot see the engine's byte progress
+    from here, so the bar is honestly indeterminate and the STATUS LINE carries
+    the real information, driven by milestones the loader actually reaches.
+  -->
+  <style>
+    :root { color-scheme: light dark; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    #boot {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #faf8ff;
+      color: #1b1b1f;
+      transition: opacity .35s ease;
+      z-index: 2147483647;
+    }
+    @media (prefers-color-scheme: dark) {
+      #boot { background: #131318; color: #e5e1e6; }
+    }
+    #boot.done { opacity: 0; pointer-events: none; }
+    #boot-mark {
+      width: 84px; height: 84px;
+      border-radius: 22px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, #6750a4, #9a82db);
+      box-shadow: 0 10px 30px rgba(103, 80, 164, .35);
+      font-size: 42px; line-height: 1;
+      animation: boot-pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes boot-pulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.06); }
+    }
+    #boot-name { font-size: 20px; font-weight: 600; letter-spacing: .2px; }
+    /* Indeterminate bar: a sweeping segment, so it reads as "working" without
+       claiming a progress fraction we do not have. */
+    #boot-track {
+      width: min(260px, 62vw);
+      height: 4px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(128, 128, 128, .22);
+    }
+    #boot-fill {
+      height: 100%; width: 40%;
+      border-radius: 999px;
+      background: #6750a4;
+      animation: boot-slide 1.4s cubic-bezier(.4, 0, .2, 1) infinite;
+    }
+    @media (prefers-color-scheme: dark) { #boot-fill { background: #cfbcff; } }
+    @keyframes boot-slide {
+      0%   { transform: translateX(-110%); }
+      100% { transform: translateX(275%); }
+    }
+    #boot-status { font-size: 13px; opacity: .7; min-height: 1.2em; text-align: center; }
+    #boot-hint {
+      font-size: 12px; opacity: 0; max-width: 30em; text-align: center;
+      padding: 0 24px; transition: opacity .4s ease;
+    }
+    #boot-hint.show { opacity: .55; }
+    /* Respect a user who has asked for less motion. */
+    @media (prefers-reduced-motion: reduce) {
+      #boot-mark, #boot-fill { animation: none; }
+      #boot-fill { width: 100%; opacity: .5; }
+    }
+  </style>
 </head>
 <body>
+  <div id="boot" role="status" aria-live="polite">
+    <div id="boot-mark" aria-hidden="true">☄️</div>
+    <div id="boot-name">CometBeat</div>
+    <div id="boot-track" aria-hidden="true"><div id="boot-fill"></div></div>
+    <div id="boot-status">Loading…</div>
+    <div id="boot-hint"></div>
+  </div>
+  <script>
+    (function () {
+      var status = document.getElementById('boot-status');
+      var hint = document.getElementById('boot-hint');
+      var boot = document.getElementById('boot');
+      var de = (navigator.language || '').toLowerCase().indexOf('de') === 0;
+      function say(t) { if (status) status.textContent = t; }
+
+      say(de ? 'App wird geladen…' : 'Loading the app…');
+
+      // Flutter fires this on window once the engine has painted its first
+      // frame — the only moment we can honestly call the app "ready".
+      window.addEventListener('flutter-first-frame', function () {
+        if (!boot) return;
+        boot.classList.add('done');
+        setTimeout(function () { if (boot.parentNode) boot.parentNode.removeChild(boot); }, 400);
+      });
+
+      // Real milestone: the engine bundle has been parsed and is initialising.
+      // (`_flutter.loader` exists as soon as flutter_bootstrap.js has run.)
+      var polls = 0;
+      var poll = setInterval(function () {
+        if (window._flutter && window._flutter.loader) {
+          clearInterval(poll);
+          say(de ? 'Audio-Engine wird gestartet…' : 'Starting the audio engine…');
+        } else if (++polls > 600) {
+          clearInterval(poll);
+        }
+      }, 100);
+
+      // A cold first visit really does pull ~10 MB. After 8 s, say so — the
+      // complaint is not the wait, it is not knowing whether anything is
+      // happening.
+      setTimeout(function () {
+        if (!hint || !boot || boot.classList.contains('done')) return;
+        hint.textContent = de
+          ? 'Der erste Besuch lädt etwa 10 MB (Notensatz + Audio-Engine). Danach startet die App deutlich schneller.'
+          : 'The first visit downloads about 10 MB (engraving + audio engine). Later visits start much faster.';
+        hint.classList.add('show');
+      }, 8000);
+    })();
+  </script>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

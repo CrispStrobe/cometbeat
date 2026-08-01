@@ -16,7 +16,6 @@ import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/games/composition/loop_studio_screen.dart';
-import 'package:comet_beat/features/games/composition/mixer_console_screen.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
 import 'package:comet_beat/features/games/harmony/function_ear_screen.dart';
 import 'package:comet_beat/features/games/harmony/harmony_quiz_screen.dart';
@@ -192,7 +191,6 @@ class HomeScreen extends StatelessWidget {
                   2 => const TabWorkshopScreen(),
                   3 => const LoopStudioScreen(),
                   8 => const DawScreen(),
-                  9 => const MixerConsoleScreen(),
                   _ => const CompositionWorkshopScreen(),
                 },
               ),
@@ -248,19 +246,13 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              // WS-W5 — the project mixer. It sits with the five authoring
-              // modes rather than in Settings because it is where the PROJECT
-              // is mixed, not an app preference.
-              PopupMenuItem(
-                value: 9,
-                child: Row(
-                  children: [
-                    const Icon(Icons.tune, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.mixerConsoleTitle),
-                  ],
-                ),
-              ),
+              // WS-W5's project mixer used to sit here as a SIXTH entry beside
+              // the five authoring modes. It is not a mode: you mix while you
+              // arrange, and making it a separate destination meant leaving the
+              // thing you were mixing to move a fader. It is now an overlay
+              // inside Loop Studio and the Audio Editor
+              // (`showMixerConsoleSheet`), where the arrangement stays visible
+              // behind it.
             ],
           ),
           IconButton(

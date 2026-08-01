@@ -48,10 +48,35 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class MixerConsoleScreen extends StatefulWidget {
-  const MixerConsoleScreen({super.key});
+  const MixerConsoleScreen({super.key, this.asSheet = false});
+
+  /// Render as a sheet body (a drag handle and a title row) instead of a full
+  /// screen with its own [Scaffold] and [AppBar].
+  ///
+  /// The mixer stopped being a sixth top-level module because it never was one:
+  /// mixing is something you do WHILE arranging, and sending the user out to a
+  /// separate destination to move a fader — losing sight of the thing they were
+  /// mixing — is the whole reason it felt bolted on. Same widget, same state,
+  /// same tester interface; only the chrome differs.
+  final bool asSheet;
 
   @override
   State<MixerConsoleScreen> createState() => _MixerConsoleScreenState();
+}
+
+/// Opens the project mixer over the current editor.
+///
+/// A modal sheet rather than a route: the point of the overlay is that the
+/// surface underneath stays where it was, so closing the mixer returns to the
+/// exact arrangement view the user was mixing.
+Future<void> showMixerConsoleSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => const MixerConsoleScreen(asSheet: true),
+  );
 }
 
 @visibleForTesting
@@ -192,52 +217,82 @@ class _MixerConsoleScreenState extends State<MixerConsoleScreen>
     final projects = context.watch<ProjectService>();
     final tracks = projects.tracks;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.mixerConsoleTitle),
-        actions: [
-          IconButton(
-            key: const ValueKey('mixer-play'),
-            tooltip: _playing ? l10n.mixerStop : l10n.mixerPlay,
-            icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
-            onPressed:
-                tracks.isEmpty ? null : () => _playing ? _stop() : playMix(),
-          ),
-        ],
-      ),
-      body: tracks.isEmpty
-          // An empty mixer is the normal state until a surface adds a track,
-          // and a blank screen reads as broken. Say which action fills it.
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  l10n.mixerConsoleEmpty,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
+    final playButton = IconButton(
+      key: const ValueKey('mixer-play'),
+      tooltip: _playing ? l10n.mixerStop : l10n.mixerPlay,
+      icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
+      onPressed: tracks.isEmpty ? null : () => _playing ? _stop() : playMix(),
+    );
+
+    final body = tracks.isEmpty
+        // An empty mixer is the normal state until a surface adds a track,
+        // and a blank screen reads as broken. Say which action fills it.
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                l10n.mixerConsoleEmpty,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-            )
-          : Column(
-              children: [
-                // WS-W3's shared bar, finally hosted. The project mixer is a
-                // natural home for the shared transport: it is the one screen
-                // that is about the project rather than about one editor.
-                _transportBar(context),
-                if (_skipped.isNotEmpty) _skippedBanner(),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: tracks.length,
-                    itemBuilder: (context, i) => _Strip(
-                      key: ValueKey('mixer-strip-${tracks[i].id}'),
-                      track: tracks[i],
-                      projects: projects,
-                    ),
+            ),
+          )
+        : Column(
+            children: [
+              // WS-W3's shared bar, finally hosted. The project mixer is a
+              // natural home for the shared transport: it is the one surface
+              // that is about the project rather than about one editor.
+              _transportBar(context),
+              if (_skipped.isNotEmpty) _skippedBanner(),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: tracks.length,
+                  itemBuilder: (context, i) => _Strip(
+                    key: ValueKey('mixer-strip-${tracks[i].id}'),
+                    track: tracks[i],
+                    projects: projects,
                   ),
                 ),
+              ),
+            ],
+          );
+
+    if (!widget.asSheet) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.mixerConsoleTitle),
+          actions: [playButton],
+        ),
+        body: body,
+      );
+    }
+    // Sheet form. Sized to most of the viewport rather than wrapping its
+    // content: a mixer with one track would otherwise open as a sliver, and the
+    // strip count changes as the user works.
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.75,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 8, 4),
+            child: Row(
+              children: [
+                const Icon(Icons.tune, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.mixerConsoleTitle,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                playButton,
               ],
             ),
+          ),
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 }

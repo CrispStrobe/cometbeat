@@ -22,6 +22,7 @@ import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/groove_play_along.dart';
 import 'package:comet_beat/features/games/composition/loop_creatures.dart';
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
+import 'package:comet_beat/features/games/composition/loop_pattern_editor.dart';
 import 'package:comet_beat/features/games/composition/loop_secrets.dart';
 import 'package:comet_beat/features/games/composition/smear_pad.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
@@ -1800,9 +1801,11 @@ void main() {
     await tester.pump();
 
     expect(find.byType(StaffView), findsWidgets);
-    expect(game.tuneEditVisible, isFalse);
+    expect(find.byType(LoopPatternEditorScreen), findsNothing);
 
-    // Tapping the melody staff's row opens the tune editor targeting it.
+    // Tapping the melody staff's row opens the pattern editor targeting it.
+    // (It used to reveal an inline card; the editor is now a route, so the
+    // assertion moved from a visibility flag to the screen being pushed.)
     final staffRow = find
         .ancestor(
           of: find.byType(StaffView).first,
@@ -1811,7 +1814,8 @@ void main() {
         .first;
     await tester.tap(staffRow, warnIfMissed: false);
     await tester.pump();
-    expect(game.tuneEditVisible, isTrue);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(LoopPatternEditorScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1846,20 +1850,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('tune editor wide-range parity exposes two octaves',
+  testWidgets('tune editor rows fit the part, and wide range adds room',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
 
-    // One octave of C pentatonic + the octave = 6 rows by default.
+    // ⚠️ This test used to assert exactly 6 rows (one fixed octave of C
+    // pentatonic) and 11 wide. Those counts were a property of the FIXED grid
+    // that made bass parts invisible, so pinning them would pin the bug. The
+    // invariant that actually matters is the one below: the grid covers the
+    // notes the part really has, whatever octave they live in.
     expect(game.tuneWideRange, isFalse);
-    expect(game.debugTuneRowCount, 6);
+    final narrow = game.debugTuneRowCount;
+    expect(narrow, greaterThan(1));
 
     game.setTuneWideRange(true);
     await tester.pump();
     expect(game.tuneWideRange, isTrue);
-    // Two octaves: 5 pentatonic × 2 + the top C = 11 rows.
-    expect(game.debugTuneRowCount, 11);
+    expect(
+      game.debugTuneRowCount,
+      greaterThan(narrow),
+      reason: 'wide range must reach further than the fitted range',
+    );
 
     // A high note only reachable in wide mode edits the target's cells.
     game.debugSetTuneTarget('melody');
@@ -1868,6 +1880,27 @@ void main() {
     expect(
       game.debugTuneCells!.any((c) => c.midis?.contains(84) ?? false),
       isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a low part is not squashed onto one row', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    // The regression in its own right: a bass-register part against the old
+    // fixed C4..C5 grid had every note snap to the bottom lane.
+    game.debugSetTuneTarget('bass');
+    game.debugEditTuneCell(36, 0); // C2
+    game.debugEditTuneCell(43, 4); // G2
+    await tester.pump();
+
+    final rows = game.debugTuneRowCount;
+    expect(rows, greaterThan(2));
+    expect(
+      game.debugTuneCells!.where((c) => c.midis != null).length,
+      greaterThanOrEqualTo(2),
+      reason: 'both low notes survive as separate onsets',
     );
     expect(tester.takeException(), isNull);
   });
@@ -1899,25 +1932,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('per-track Edit opens the right editor targeting that track',
+  testWidgets('per-track Edit opens the pattern editor on that track',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
     game.toggleTrack('melody');
     await tester.pump();
 
-    // Editing a pitched card opens the tune grid (targeting that track).
-    expect(game.tuneEditVisible, isFalse);
+    // Edit now opens the full-screen editor rather than revealing an inline
+    // card — the card could not give a fitted pitch range or the whole kit the
+    // width they need, which is what this rework is for.
+    // ⚠️ Not pumpAndSettle: the Loop Mixer drives a continuous playhead Ticker,
+    // so the tree never reaches a quiescent state and pumpAndSettle times out.
+    // Pump past the route transition explicitly instead.
     game.editTrack('melody');
     await tester.pump();
-    expect(game.tuneEditVisible, isTrue);
-    expect(game.beatEditVisible, isFalse);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(LoopPatternEditorScreen), findsOneWidget);
+    // It opened on the track that was asked for, not on a default.
+    expect(game.debugTuneTarget, 'melody');
 
-    // Editing the drums card opens the beat grid instead.
+    Navigator.of(tester.element(find.byType(LoopPatternEditorScreen))).pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // A drum card opens the same editor, on the percussive grid.
     game.editTrack('drums');
     await tester.pump();
-    expect(game.beatEditVisible, isTrue);
-    expect(game.tuneEditVisible, isFalse);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(LoopPatternEditorScreen), findsOneWidget);
+    expect(game.debugBeatTarget, 'drums');
     // The edited track is enabled so the edit is audible.
     expect(game.enabledTracks, contains('drums'));
     expect(tester.takeException(), isNull);

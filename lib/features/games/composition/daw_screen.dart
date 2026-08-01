@@ -64,6 +64,8 @@ import 'package:comet_beat/features/games/composition/automation_curve_editor.da
 import 'package:comet_beat/features/games/composition/daw_help_sheet.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart'
     show grooveParts;
+import 'package:comet_beat/features/games/composition/mixer_console_screen.dart'
+    show showMixerConsoleSheet;
 import 'package:comet_beat/features/games/composition/spectrogram_view.dart'
     show showSpectrogramDialog;
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
@@ -3193,15 +3195,47 @@ class _DawScreenState extends State<DawScreen>
 
   /// Pick actual MUSIC from the library (Song Book or a file import) and drop it
   /// onto a fresh lane as a re-voiceable ScoreSource clip.
+  ///
+  /// The insert is not unconditional any more: bringing a score in raises a
+  /// real question — do you want the NOTES (editable, re-voiceable, engraved)
+  /// or a fixed RENDER of them? Both were reachable before, but only by
+  /// inserting first and then hunting through the clip menu for "Instrument"
+  /// and "Freeze". Asking once, at the moment the music arrives, is where the
+  /// question actually belongs.
   Future<void> _addMusic() async {
     final picked = await showMusicPickerWithLicense(context);
     if (picked == null || !mounted) return;
+    final options = await _askMusicInsertOptions();
+    if (options == null || !mounted) return;
+
+    final track = _daw.timeline.tracks.length;
     _daw.addClip(
-      ScoreSource(picked.score),
-      track: _daw.timeline.tracks.length,
+      ScoreSource(
+        picked.score,
+        quarterMs: options.quarterMs,
+        instrument: options.instrument,
+      ),
+      track: track,
       // Music from the library carries its licence in with the notes, the same
       // way an imported sample does.
       provenance: picked.provenance,
+    );
+    // "Rendered" is a FROZEN score clip rather than a different source type:
+    // the render already goes through the same voice, and freezing is what
+    // makes it fixed audio. That keeps one code path and lets the user thaw it.
+    if (options.freeze && track < _daw.timeline.tracks.length) {
+      final index = _daw.timeline.tracks[track].clips.length - 1;
+      if (index >= 0) _daw.freezeClip(track, index);
+    }
+  }
+
+  /// Asks how the picked music should arrive. Null = cancelled.
+  Future<_MusicInsertOptions?> _askMusicInsertOptions() {
+    return showModalBottomSheet<_MusicInsertOptions>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => _MusicInsertSheet(pickInstrument: _pickInstrument),
     );
   }
 
@@ -5455,6 +5489,15 @@ class _DawScreenState extends State<DawScreen>
         onPressed: toggleLoop,
         active: _loop,
       ),
+      // The project mixer as an overlay. It used to be a sixth top-level
+      // module, which meant leaving the arrangement to move a fader; here the
+      // timeline stays visible behind the sheet.
+      (
+        icon: Icons.tune,
+        label: l10n.mixerConsoleTitle,
+        onPressed: () => showMixerConsoleSheet(context),
+        active: false,
+      ),
       (
         icon: daw.snapOn ? Icons.grid_on : Icons.grid_off,
         label: l10n.dawSnap,
@@ -6914,4 +6957,156 @@ class _ClipWaveformPainter extends CustomPainter {
       !identical(old.peaks, peaks) ||
       !identical(old.rightPeaks, rightPeaks) ||
       old.color != color;
+}
+
+/// How a picked score should arrive on the timeline.
+class _MusicInsertOptions {
+  const _MusicInsertOptions({
+    required this.quarterMs,
+    required this.instrument,
+    required this.freeze,
+  });
+
+  /// The tempo the score plays at, as milliseconds per quarter note — the unit
+  /// [ScoreSource] already speaks, so nothing has to convert on the way in.
+  final int quarterMs;
+
+  /// The voice the notes sound through; null = the default synth timbre.
+  final TrackerInstrument? instrument;
+
+  /// Render it down to fixed audio on arrival (a frozen clip) rather than
+  /// leaving it as live notation.
+  final bool freeze;
+}
+
+/// Asks how to bring a picked score in: as editable notation, or rendered.
+///
+/// Deliberately a THIN sheet with a sensible default rather than a wizard.
+/// Notation with the default voice is the right answer most of the time and is
+/// one tap away; the tempo and voice controls are there for the case where the
+/// user already knows what they want, so they do not have to insert-then-fix.
+class _MusicInsertSheet extends StatefulWidget {
+  const _MusicInsertSheet({required this.pickInstrument});
+
+  final Future<TrackerInstrument?> Function() pickInstrument;
+
+  @override
+  State<_MusicInsertSheet> createState() => _MusicInsertSheetState();
+}
+
+class _MusicInsertSheetState extends State<_MusicInsertSheet> {
+  /// 120 bpm — `ScoreSource`'s own default, so leaving this alone reproduces
+  /// exactly the previous behaviour.
+  int _bpm = 120;
+  TrackerInstrument? _instrument;
+  bool _freeze = false;
+
+  int get _quarterMs => (60000 / _bpm).round();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.library_music_outlined, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.dawInsertMusicTitle,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<bool>(
+              segments: [
+                ButtonSegment<bool>(
+                  value: false,
+                  icon: const Icon(Icons.edit_note, size: 18),
+                  label: Text(l10n.dawInsertMusicSymbolic),
+                ),
+                ButtonSegment<bool>(
+                  value: true,
+                  icon: const Icon(Icons.graphic_eq, size: 18),
+                  label: Text(l10n.dawInsertMusicRendered),
+                ),
+              ],
+              selected: {_freeze},
+              showSelectedIcon: false,
+              onSelectionChanged: (v) => setState(() => _freeze = v.first),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _freeze
+                  ? l10n.dawInsertMusicRenderedHint
+                  : l10n.dawInsertMusicSymbolicHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const Divider(height: 24),
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.music_note),
+              title: Text(l10n.dawInstrument),
+              subtitle: Text(
+                _instrument?.id ?? l10n.dawInstrumentDefault,
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                final inst = await widget.pickInstrument();
+                if (inst != null && mounted) {
+                  setState(() => _instrument = inst);
+                }
+              },
+            ),
+            Row(
+              children: [
+                SizedBox(
+                  width: 92,
+                  child: Text(
+                    l10n.dawInsertMusicTempo,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+                Expanded(
+                  child: Slider(
+                    value: _bpm.toDouble(),
+                    min: 40,
+                    max: 208,
+                    divisions: 168,
+                    label: '$_bpm',
+                    onChanged: (v) => setState(() => _bpm = v.round()),
+                  ),
+                ),
+                SizedBox(
+                  width: 56,
+                  child: Text('$_bpm', textAlign: TextAlign.end),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).pop(
+                _MusicInsertOptions(
+                  quarterMs: _quarterMs,
+                  instrument: _instrument,
+                  freeze: _freeze,
+                ),
+              ),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.dawInsertMusicConfirm),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

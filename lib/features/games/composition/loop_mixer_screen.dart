@@ -60,6 +60,8 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/interop/drag_payload.dart';
+import 'package:comet_beat/core/interop/score_to_loop.dart'
+    show loopCellsFromScore;
 import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
@@ -76,6 +78,7 @@ import 'package:comet_beat/features/games/composition/groove_play_along.dart';
 import 'package:comet_beat/features/games/composition/groove_slots.dart';
 import 'package:comet_beat/features/games/composition/loop_challenges.dart';
 import 'package:comet_beat/features/games/composition/loop_creatures.dart';
+import 'package:comet_beat/features/games/composition/loop_pattern_editor.dart';
 import 'package:comet_beat/features/games/composition/loop_secrets.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
@@ -94,6 +97,9 @@ import 'package:comet_beat/shared/keymap/intents.dart';
 import 'package:comet_beat/shared/keymap/keymap.dart';
 import 'package:comet_beat/shared/keymap/keymap_service.dart';
 import 'package:comet_beat/shared/keymap/keymap_sheet.dart';
+import 'package:comet_beat/shared/music/drum_labels.dart';
+import 'package:comet_beat/shared/music/music_picker.dart'
+    show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:comet_beat/shared/music_io/export_sheet.dart';
@@ -343,6 +349,7 @@ abstract interface class LoopMixerTester {
 
   /// Which drum track the beat editor targets ('drums' card or captured 'beat').
   void debugSetBeatTarget(String id);
+  String get debugBeatTarget;
 
   /// Applies a Drum Kit round-trip result to the current beat target (the pure
   /// half of "edit drums on the Drum Kit pads", without navigation).
@@ -355,6 +362,7 @@ abstract interface class LoopMixerTester {
   void debugEditTuneCell(int midi, int step);
   List<PatternCell>? get debugTuneCells;
   void debugSetTuneTarget(String id);
+  String get debugTuneTarget;
 
   /// Whether track [id] carries a hand-edited cell override (vs. still playing
   /// its generated preset). Distinguishes "seeded from the real notes" from
@@ -1088,6 +1096,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   void debugSetBeatTarget(String id) => setState(() => _beatTarget = id);
   @override
+  String get debugBeatTarget => _beatTarget;
+  @override
   void debugApplyDrumKitEdit(DrumRowsPattern edited) =>
       _applyDrumKitEdit(edited);
 
@@ -1209,6 +1219,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   void debugSetTuneTarget(String id) => setState(() => _tuneTarget = id);
   @override
+  String get debugTuneTarget => _tuneTarget;
+  @override
   bool debugHasTuneOverride(String id) =>
       _engine.trackCellsOverride(id) != null;
   @override
@@ -1223,42 +1235,55 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// Which pitched part the tune editor edits: the user track ('voice' = "My
   /// tune") or a built-in stem (LM-UX4c, via the engine's cell-override).
   String _tuneTarget = LoopEngine.userTrackId;
-  static const _tuneTargets = [
-    LoopEngine.userTrackId,
-    'melody',
-    'chords',
-    'bass',
-    'sparkle',
-  ];
+
+  /// The pitched parts the tune editor can target.
+  ///
+  /// Derived from the engine rather than the hardcoded five-id list this used
+  /// to be: a track the user ADDED or duplicated is a pitched track like any
+  /// other, and a fixed list meant it had no way into the editor at all. The
+  /// user track is always offered — it is where a sung or tapped tune lands,
+  /// so it must be reachable before it exists.
+  List<String> get _tuneTargets => [
+        LoopEngine.userTrackId,
+        for (final t in _engine.tracks)
+          if (t.id != LoopEngine.userTrackId &&
+              t.id != LoopEngine.beatTrackId &&
+              _engine.drumRowsFor(t.id) == null)
+            t.id,
+      ];
 
   bool get _tuneTargetIsUser => _tuneTarget == LoopEngine.userTrackId;
 
   /// The authored-C cells behind the current tune target.
   ///
   /// For the user track: its own cells (null until sung/tapped — an empty grid
-  /// is correct there). For a built-in stem: its live override, or — when there
-  /// is none yet — the notes it CURRENTLY plays ([cellsFor]), so tapping Edit
-  /// opens on the real tune instead of a blank grid ("it mostly shows empty").
-  /// Only when those cells fit one 2-bar editor grid; a progression can tile a
-  /// stem across more bars than this grid can represent, so that stays blank.
+  /// is correct there). For a built-in stem: its live override, else the notes
+  /// it CURRENTLY plays.
+  ///
+  /// ⚠️ This used to end with `total == kPatternSteps ? authored : null`, and
+  /// that gate is what produced "it shows nothing at all for a voice". In
+  /// progression mode — the normal state of a Loop Studio groove — `cellsFor`
+  /// returns the FOUR-bar resolved shape, the gate rejected it, and melody,
+  /// chords and bass all opened blank. [seedCellsFor] instead takes the first
+  /// bar-pair of a longer shape, so there is always something real to edit.
+  /// Null is still returned for a genuinely empty part, because an empty grid
+  /// IS correct for a user track nothing has been sung into yet.
   List<PatternCell>? _targetCells() {
-    if (_tuneTargetIsUser) return _engine.userTrackCells;
-    final override = _engine.trackCellsOverride(_tuneTarget);
-    if (override != null) return override;
-    final authored = _engine.cellsFor(_tuneTarget);
-    if (authored == null) return null;
-    final total = authored.fold<int>(0, (a, c) => a + c.steps);
-    return total == kPatternSteps ? authored : null;
+    final seeded = seedCellsFor(_engine, _tuneTarget);
+    return seeded.cells.isEmpty ? null : seeded.cells;
   }
 
-  /// The tune editor's pitch rows — one octave of C major pentatonic. Cells are
-  /// authored in C (like every built-in stem); the engine's `pitchTranspose`
-  /// shifts the whole pattern into the current key AND scale at render (the
-  /// same `{0,2,4,7,9} + pitchTranspose` rule), so edits always fit the band and
-  /// follow later key/scale changes.
-  /// Beginner-Tracker parity: a wide-range toggle. Off = one octave of C major
-  /// pentatonic (C4..C5); on = two octaves (C4..C6), so a melody can leap
-  /// like it can in the Tracker's wide mode.
+  /// The tune editor's pitch rows. Cells are authored in C (like every built-in
+  /// stem); the engine's `pitchTranspose` shifts the whole pattern into the
+  /// current key AND scale at render (the same `{0,2,4,7,9} + pitchTranspose`
+  /// rule), so edits always fit the band and follow later key/scale changes.
+  ///
+  /// ⚠️ These rows were FIXED at C4..C5 (C4..C6 wide). A bass part lives an
+  /// octave or more below that and `StepGridView` snaps a cell to its NEAREST
+  /// row, so every bass note piled onto the bottom lane — visible as a smear,
+  /// impossible to read or edit. [pitchRowsFor] fits the rows to the notes that
+  /// are actually there, so "wide range" now means EXTRA room around them
+  /// rather than a second fixed octave.
   bool _tuneWideRange = false;
   @override
   bool get tuneWideRange => _tuneWideRange;
@@ -1267,16 +1292,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   int get debugTuneRowCount => _tuneRows.length;
 
-  static const _tunePentatonic = [0, 2, 4, 7, 9];
-
-  List<int> get _tuneRows => [
-        for (final octave in _tuneWideRange ? const [0, 12] : const [0])
-          for (final d in _tunePentatonic) 60 + octave + d,
-        60 + (_tuneWideRange ? 24 : 12),
-      ];
+  List<int> get _tuneRows => pitchRowsFor(
+        _targetCells() ?? const [],
+        extraOctaves: _tuneWideRange ? 1 : 0,
+      );
 
   /// A soft note's velocity (accent parity with the Beginner Tracker's soft).
-  static const _softVelocity = 0.45;
+  static const _softVelocity = kLoopSoftVelocity;
 
   /// The target's cells as grid cells (one StepCell per pitch per onset),
   /// carrying each cell's velocity so soft notes render dimmer.
@@ -1755,6 +1777,45 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context)!.tuneLoaded)),
+    );
+  }
+
+  /// Pull real music in from the Song Book / catalog / a file.
+  ///
+  /// Loop Studio had no route to the music library at all — every other
+  /// authoring surface calls this picker, and this one only reached
+  /// INSTRUMENTS. The conversion is lossy by nature (a 2-bar eighth grid cannot
+  /// hold an arbitrary piece), so what was given up is REPORTED rather than
+  /// quietly applied: the user chose a piece and is owed the truth about what
+  /// arrived.
+  Future<void> _loadFromSongBook() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final picked = await showMusicPickerWithLicense(context);
+    if (picked == null || !mounted) return;
+
+    final converted = loopCellsFromScore(picked.score);
+    if (converted == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.loopMixerSongBookSilent)),
+      );
+      return;
+    }
+    setState(() {
+      _engine.setUserTrack(converted.cells, instrument: Instrument.musicBox);
+      _engine.enabled.add(LoopEngine.userTrackId);
+      _tuneTarget = LoopEngine.userTrackId;
+    });
+    _restartGroove();
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          converted.report.isLossless
+              ? l10n.loopMixerSongBookLoaded
+              : l10n.loopMixerSongBookShortened,
+        ),
+      ),
     );
   }
 
@@ -2833,10 +2894,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final p = _beatTargetPattern;
     final scheme = Theme.of(context).colorScheme;
     bool on(Drum d, int s) => (p?.rows[d]?.length ?? 0) > s && p!.rows[d]![s];
+    // ⚠️ This was a fixed three-lane list (hat/snare/kick) against a twelve-
+    // voice `Drum` enum, so any preset placing a clap, tom, ride or crash had
+    // those hits present in the data and absent from the grid — one of the
+    // "the editor shows nothing" cases. [drumLanesFor] shows every lane the
+    // pattern actually uses, highest-sounding first to match the old order.
     final lanes = [
-      (Drum.hat, l10n.performPadHat),
-      (Drum.snare, l10n.performPadSnare),
-      (Drum.kick, l10n.performPadKick),
+      for (final d in drumLanesFor(p).reversed) (d, drumLabel(l10n, d)),
     ];
     return Card(
       child: Padding(
@@ -3655,20 +3719,23 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       _tuneTargets.contains(t.id) ||
       _trackIsPitched(t);
 
-  /// Per-track Edit (Loop Studio contract): open the editor for THIS track's
-  /// actual events — the beat grid for a drum/beat track, or the tune grid
-  /// targeting this pitched track — and make sure it's audible while editing.
+  /// Per-track Edit (Loop Studio contract): open the pattern editor on THIS
+  /// track's actual events, and make sure it's audible while editing.
+  ///
+  /// This opens the full-screen editor rather than revealing an inline card.
+  /// The inline grids are a preview strip inside a scrolling column; the editor
+  /// needs the whole width for a fitted pitch range and the whole kit, which is
+  /// what a cramped card could not give it. The inline grids remain available
+  /// from the toolbar for a quick tap, over the same (now corrected) data.
   void _editTrack(String id) {
-    final isDrum = id == 'drums' || id == LoopEngine.beatTrackId;
+    final isDrum = id == 'drums' ||
+        id == LoopEngine.beatTrackId ||
+        _engine.drumRowsFor(id) != null;
     setState(() {
       if (isDrum) {
         _beatTarget = id;
-        _showBeatEdit = true;
-        _showTuneEdit = false;
       } else {
         _tuneTarget = _tuneTargets.contains(id) ? id : LoopEngine.userTrackId;
-        _showTuneEdit = true;
-        _showBeatEdit = false;
       }
       if (!_engine.enabled.contains(id) &&
           _engine.tracks.any((t) => t.id == id)) {
@@ -3676,6 +3743,30 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       }
     });
     _syncPlayback();
+    unawaited(_openPatternEditor(id));
+  }
+
+  /// Opens the full-screen pattern editor on [id].
+  ///
+  /// The editor writes straight through to the engine, so `onChanged` only has
+  /// to re-render and re-swap the loop — there is no edit buffer to merge back,
+  /// which is what keeps "edit while it plays" working.
+  Future<void> _openPatternEditor(String id) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showLoopPatternEditor(
+      context,
+      engine: _engine,
+      initialTrackId: id,
+      labelOf: (tid) => _trackLabel(l10n, tid),
+      playStep: _hlStep,
+      onChanged: () {
+        if (!mounted) return;
+        setState(() {});
+        _restartGroove();
+      },
+    );
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _setSwing(double value) {
@@ -4248,6 +4339,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             toggleJam();
           case 'follow':
             toggleFollow();
+          case 'songbook':
+            unawaited(_loadFromSongBook());
           case 'tracker':
             unawaited(_openInTracker());
           case 'workshop':
@@ -4317,6 +4410,20 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           ),
         const PopupMenuDivider(),
         _menuSectionHeader(l10n.loopMixerGroupShare),
+        // The music library, reachable from Loop Studio at last. Every other
+        // authoring surface could already pull a score in; this one had no
+        // route to the Song Book or the catalog at all, only to instruments.
+        PopupMenuItem<String>(
+          value: 'songbook',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.library_music_outlined, size: 18),
+              const SizedBox(width: 10),
+              Flexible(child: Text(l10n.musicPickerTitle)),
+            ],
+          ),
+        ),
         PopupMenuItem<String>(
           value: 'tracker',
           enabled: hasPitchedTrack,
