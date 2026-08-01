@@ -738,6 +738,37 @@ is recorded in [HISTORY.md](HISTORY.md).
     HairPin spanners across 1,500 files split exactly 28,226 `<next>` /
     28,226 `<prev>`, which is what makes document-order pairing sound.
 
+  - 📊 **ABC and GP censused too — the audit is now COMPLETE across all six
+    formats.** Both were measured the same way (real corpus files, element
+    frequency, diffed against our reader) rather than assumed.
+
+    ✅ **ABC (1,892 corpus files) is essentially complete.** Annotations, bars,
+    ties (1,890 files), slurs (1,090), tuplets (615), grace notes (444), broken
+    rhythm (440), chords (420), `!invertedfermata!` (350), dynamics, `!D.C.!`,
+    arpeggio, fermata, trill, tremolo, segno, fine — all read. **Only
+    `!invisible!` (26 files) is missing, and it is a rendering hint, not music.**
+
+    ⚠️ **GP handled every exotic guitar technique and NOT TIES** (`c3870ca`,
+    fixed). Bends, slides, harmonics, vibrato, palm-mute, let-ring, tapping,
+    fingering, whammy, brush, barre — all present; ties dropped in BOTH
+    directions. 📌 **The lesson: specialist coverage does not imply basic
+    coverage.** I nearly skipped GP on the grounds that its guitar work was
+    obviously thorough.
+    - Syntax was read off a real `.gp`, not guessed:
+      `<Tie origin destination/>` is a NOTE-level SIBLING of `<Properties>`,
+      not a `<Property>` — which is where I would have put it.
+    - Still missing in GP, all needing model concepts: `Chord`/`Diagram`
+      (10 files each — chord diagrams) and `Ottavia` (10).
+
+    📌 **Where the six formats now stand.** MusicXML: 2 gaps (`staccatissimo`
+    225 files, `cue` 102). MuseScore: `TextLine` 554, `Trill`-as-spanner 205,
+    `Glissando` 12. ABC: `!invisible!` 26. GP: chord diagrams + ottava, 10 each.
+    LilyPond: the table above (`\ficta` 1,800, melisma 1,429, `\breathe` 580).
+    **Every remaining gap needs a NEW MODEL CONCEPT — the pure codec gaps are
+    closed.** That is the natural stopping point for this arc: the next step is
+    model design, which deserves its own decision rather than being done
+    piecemeal mid-sweep.
+
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
