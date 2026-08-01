@@ -1902,19 +1902,16 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     A false-positive rate stated on silence and on backing-only input (the
     reference must not grade the band as the player).
 
-- ⬜ **BB-X6 — the chart explains itself.** `M`
-  - **Depends.** BB-D2. **Files.** reuse
-    `composition/score_analysis_view.dart` (the kids↔expert dial),
-    crisp_notation `theory/analysis.dart`, `roman_numeral.dart`.
-  - **Build.** Per bar: roman numeral, function, key-of-the-moment; per phrase:
-    ii–V chains, turnarounds, cadence type, modulation. Per chord: scale/mode
-    suggestions for soloing, guide-tone line, common reharmonisations (tritone
-    sub, relative ii–V, diminished passing). All at the existing kids↔expert
-    granularity dial.
-  - **Acceptance.** A table of known progressions → expected roman numerals and
-    expected ii–V detections. A secondary dominant reads as dominant, not as a
-    key change (`functionOf` already does this — assert it end-to-end).
-
+- ⬜ **BB-X6b — the analysis SURFACE.** `S` — *the engine is shipped; this is its UI.*
+  - ✅ **Engine DONE** (2026-08-01): `core/harmony/chart_analysis.dart`, 30 tests
+    — roman numerals, function, ii–V chains (found on the root interval, so an
+    APPLIED ii–V surfaces), cadences, turnarounds, per-chord scale and guide
+    tones. A secondary dominant reads as a dominant, asserted end to end.
+  - **Still to build.** Show it, at the existing kids↔expert granularity dial —
+    reuse `composition/score_analysis_view.dart` rather than inventing a second
+    analysis surface.
+  - 📌 Reharmonisation suggestions (tritone sub, relative ii–V, diminished
+    passing) are NOT built; they were the one part of the card left undone.
 - ⬜ **BB-X7 — a chart leaves as a project, not a bounce.** `M`
   - **Depends.** BB-A5, BB-D3. **Files.** `core/interop/project_bridge.dart`
     (**hot**), `shared/music_io/`.

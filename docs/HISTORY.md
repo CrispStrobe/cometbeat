@@ -227,6 +227,35 @@ rather than a throw — a stale index from a list widget must not end a gig.
 `core/harmony/setlist.dart` + `SetlistStore`, 24 tests. The SURFACE (gig mode,
 search, favourites) is carded separately as **BB-U4b**.
 
+### BB-X6 (engine) — the chart explains itself (2026-08-01)
+
+Per chord: roman numeral, harmonic function, a scale to solo on, guide tones.
+Per phrase: ii–V chains, cadences, turnarounds. None of the theory is
+reimplemented — `romanNumeralFor` and `functionOf` already do it, and doing it
+again would give the app two answers to the same question.
+
+🔴 **A secondary dominant is a DOMINANT, not a key change**, asserted end to
+end as the card asks. `A7` in C reads `V7/ii`, still functions as a dominant,
+and the key does not move; a whole chain (`E7 A7 D7 G7`) stays four dominants
+in C. A chart that redrew its key every time an applied dominant appeared would
+be unreadable.
+
+**ii–V detection works on the ROOT INTERVAL, not on the numerals** — which is
+what lets it find an *applied* ii–V: `Em7 A7` in C is a ii–V of D, and no
+numeral pair in C says so.
+
+⚠️ **The `m7♭5` representation caught me for the third time in this arc.**
+`Cm7♭5` is a MINOR triad carrying a ♭5, so `scaleFor`'s `triad == diminished`
+test gave it dorian instead of locrian. The score bridge and the scorer
+projection had already been bitten by the same thing in different ways — now
+written up as auto-memory `half-diminished-canonical-spelling` rather than a
+third local comment.
+
+Also corrected one of my own expectations rather than the code: the library
+renders a major seventh `IM7`, not `Imaj7`. The library is the authority on how
+a numeral prints. 30 tests. The SURFACE, and reharmonisation suggestions, are
+carded as **BB-X6b**.
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**
