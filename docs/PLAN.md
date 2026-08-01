@@ -809,11 +809,25 @@ is recorded in [HISTORY.md](HISTORY.md).
       = staccatissimo (20 of 800 `.krn`), comma = breath (469). `^^` was
       unavailable — kern already uses it for marcato.
 
-    ✅ **Correction to this plan's own earlier claim: MELISMA IS ALREADY
-    MODELLED.** `Lyric.extender` exists and MusicXML, MEI and LilyPond all use
-    it (LilyPond reads `__` correctly). It is a CODEC gap in MuseScore, ABC and
-    kern — not a model gap. The line above that listed it as "needs a model
-    concept" was wrong.
+    ✅ **MELISMA — DONE, and this plan was wrong about it TWICE.**
+    `Lyric.extender` already existed and MusicXML, MEI and LilyPond already used
+    it, so "needs a model concept" was wrong. Then the file counts were wrong
+    too. Corrected by measurement:
+    - **MuseScore: 895 of 1,500 files (60%) carry a melisma `<ticks>`** and we
+      dropped every one → **FIXED** (`3a1622d`). MuseScore stores the DURATION;
+      the model stores the FACT (as MusicXML's `<extend/>` and LilyPond's `__`
+      do), and the length is derived on the way out — a melisma runs to the next
+      syllable in the SAME verse, or to the end.
+    - ❌ **ABC: 0 of 1,500 corpus files have a `w:` lyric line AT ALL.** The
+      earlier "518 files" came from grepping `_`, which in an ABC BODY is a FLAT
+      ACCIDENTAL. Implementing ABC extenders would have been pure waste.
+    - ⚠️ kern: 1,411 files have `**text` spines but only **14** use `_` as an
+      extender — real, but ~1%, so not worth the codec work.
+
+    📌 **That is now FOUR census numbers that were false positives** (kern
+    `[-#n]i`, kern `H`, MuseScore style-block `staccatissimo`, ABC `_`).
+    **Always print the matched TEXT and confirm the construct is in the right
+    PART of the file before believing a count.**
 
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
