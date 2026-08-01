@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+#
+# Stop the analyzer reds that keep reaching main.
+#
+# WHY THIS EXISTS: `flutter analyze` is a HARD GATE in ci.yml and it runs
+# BEFORE the tests, so a single `info`-level lint takes the whole ~7,000-test
+# suite and the Chrome web-seam run down with it. That happened SIX times in
+# two days, each time a different agent, each time fixed by somebody else
+# minutes later. Twice the lint was also hiding a real test failure underneath,
+# which nobody could see until the gate was cleared.
+#
+# WHAT IT CHECKS: only the Dart files you actually staged.
+#   1. `dart format` — the same check ci.yml's "Verify formatting" step runs.
+#   2. `dart analyze` — the lints. `require_trailing_commas`,
+#      `prefer_const_constructors` and friends all live here.
+#
+# ⚠️ SCOPE, AND ITS LIMIT: staged-file analysis catches the per-file lint class
+# that has actually been reddening main, but it CANNOT see cross-file breakage
+# (change a signature in lib/, break a caller you did not stage). That is
+# deliberate: the whole-project `flutter analyze` takes ~93s here against ~17s
+# for a handful of files, and a two-minute pre-commit hook is one everybody
+# turns off. This is a fast filter, NOT a replacement for CI — CI still runs the
+# full analyze, and it is still the authority.
+#
+# INSTALL (once per clone; git worktrees share the repo config, so this covers
+# every sibling worktree too):
+#     git config core.hooksPath .githooks
+#
+# BYPASS when you genuinely need to (a WIP commit, a docs-only tree you know is
+# fine):
+#     git commit --no-verify
+#     SKIP_DART_CHECKS=1 git commit …
+
+set -u
+
+[ "${SKIP_DART_CHECKS:-}" = "1" ] && exit 0
+
+# Added/Copied/Modified/Renamed — never deletions, whose paths are gone.
+FILES=()
+while IFS= read -r f; do
+  [ -f "$f" ] && FILES+=("$f")
+done < <(git diff --cached --name-only --diff-filter=ACMR -- '*.dart')
+
+[ ${#FILES[@]} -eq 0 ] && exit 0
+
+if ! command -v dart >/dev/null 2>&1; then
+  echo "pre-commit: dart not on PATH — skipping checks (CI will still run them)."
+  exit 0
+fi
+
+remedy() {
+  echo
+  echo "  Fix it with, in this order:"
+  echo "      dart fix --apply && dart format . && flutter analyze"
+  echo
+  echo "  ⚠️  dart format ALONE does not fix lints like require_trailing_commas"
+  echo "      or prefer_const_constructors — dart fix does. Running only format"
+  echo "      is how every one of these reached main."
+  echo
+  echo "  Bypass with:  git commit --no-verify"
+}
+
+if ! dart format --output=none --set-exit-if-changed "${FILES[@]}" >/dev/null 2>&1; then
+  echo "✗ pre-commit: staged Dart files are not formatted."
+  echo "  ci.yml's 'Verify formatting' step would fail on this."
+  remedy
+  exit 1
+fi
+
+# ⚠️ `--fatal-infos` is LOAD-BEARING, do not drop it. Bare `dart analyze` exits
+# 0 on `info`-level issues, while `flutter analyze` (what ci.yml runs) exits 1
+# — and every red this hook exists to stop has been an `info`. Without the flag
+# the hook passes exactly what CI fails on, which is worse than no hook: it
+# hands you false confidence. Verified both directions before shipping it.
+if ! out=$(dart analyze --fatal-infos "${FILES[@]}" 2>&1); then
+  echo "✗ pre-commit: dart analyze found issues in your staged files."
+  echo "  ci.yml gates on this BEFORE running any tests, so the whole suite"
+  echo "  would be skipped."
+  echo
+  echo "$out" | sed 's/^/  /'
+  remedy
+  exit 1
+fi
+
+# Not a blocker: adding an ARB key without regenerating is easy to miss, but
+# flagging it as an ERROR would false-positive on a key added ahead of its use.
+if git diff --cached --name-only --diff-filter=ACMR -- 'lib/l10n/*.arb' | grep -q . &&
+  ! git diff --cached --name-only -- 'lib/l10n/app_localizations*.dart' | grep -q .; then
+  echo "⚠  pre-commit: you staged an .arb but no regenerated app_localizations*.dart."
+  echo "   If you added or changed a key, run: flutter gen-l10n   (committing anyway)"
+fi
+
+exit 0
