@@ -247,6 +247,12 @@ List<String> _scoreExtras(Score s) {
     for (final l in s.lyrics) 'lyric@${at(l.elementId)}:${l.verse}:${l.text}',
     for (final d in s.dynamics) 'dyn@${at(d.elementId)}:${d.level.name}',
     for (final a in s.annotations) 'ann@${at(a.elementId)}:${a.text}',
+    // Chord symbols were the last channel this signature did not look at, and
+    // that is exactly why three codecs could read them and silently drop them
+    // on write without a single cell going red.
+    for (final c in s.chordSymbols)
+      'chord@${at(c.elementId)}:${c.root.step.name}${c.root.alter}'
+          ':${c.quality.name}${c.bass == null ? '' : '/${c.bass!.step.name}'}',
     for (final sl in s.slurs) 'slur@${at(sl.startId)}-${at(sl.endId)}',
     for (final h in s.hairpins)
       'hairpin@${at(h.startId)}-${at(h.endId)}:${h.type.name}',
