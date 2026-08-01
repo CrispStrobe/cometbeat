@@ -687,16 +687,35 @@ is recorded in [HISTORY.md](HISTORY.md).
 
     | spanner | files | model support | note |
     |---|---|---|---|
-    | **Pedal** | **1,284** | ✅ `Pedal` class EXISTS, MusicXML reads it | pure codec gap |
-    | **Ottava** | **586** | ✅ MusicXML reads `octave-shift` | pure codec gap |
+    | **Pedal** | **1,284** | ✅ **DONE** `caadc69` | — |
+    | **Ottava** | **586** | ✅ **DONE** `caadc69` | — |
     | TextLine | 554 | ❌ | a text spanner; needs a model concept |
     | Trill (as a SPANNER) | 205 | ⚠️ `Ornament.trill` is per-note | a trill LINE is a different thing |
     | Glissando | 12 | ❌ | tiny |
 
-    📌 **Pedal and Ottava are the pick**: the model already carries both and
-    MusicXML already reads both, so it is a pure codec gap with a proven
-    pattern — they ride the SAME `<Spanner>`+`<next>`/`<prev>` mechanism as the
-    HairPin work in `9de639c`, including the sibling-vs-child trap.
+    ✅ **Pedal and Ottava DONE** (`caadc69`), riding the same `<Spanner>`
+    mechanism as the HairPin work.
+
+    📏 **MEASURED RECOVERY on 600 real corpus `.mscx`** (not synthetic):
+    **21,469 hairpins in 433 files · 1,205 pedals in 178 · 351 ottavas in 95** —
+    every one of them silently dropped before this session. Extrapolated over
+    the 8,445 `.mscx`, on the order of **300,000 hairpins**.
+
+    ⚠️ **The sibling-vs-child trap bit in BOTH directions and neither showed up
+    against a synthetic case:** reading, a pedal commonly anchors on a **REST**
+    (held through rests by definition), so attaching only on `<Chord>` read 0
+    from the very file that has one; writing, emitting the spanner INSIDE
+    `<Chord>`/`<Rest>` produced files our own reader could not read back.
+    Both now go through one `_voiceSpanners` / `attachPendingSpanners` pair.
+
+    ⚠️ **Before filing a "missing spanner" bug: `scoreFromMscx` reads STAFF 1
+    ONLY.** Coleridge-Taylor Op.57/1 keeps its pedal on staff 3 (piano bass), so
+    the single-Score entry point legitimately returns none while
+    `staffSystemFromMscx` shows it. I nearly filed that as a defect.
+
+    📌 **Validate a pairing assumption at scale before relying on it:** 56,453
+    HairPin spanners across 1,500 files split exactly 28,226 `<next>` /
+    28,226 `<prev>`, which is what makes document-order pairing sound.
 
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
