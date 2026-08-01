@@ -256,6 +256,23 @@ List<String> _scoreExtras(Score s) {
     for (final sl in s.slurs) 'slur@${at(sl.startId)}-${at(sl.endId)}',
     for (final h in s.hairpins)
       'hairpin@${at(h.startId)}-${at(h.endId)}:${h.type.name}',
+    // The rest of the general-notation channels. `Score` has 44 of them and
+    // this signature checked 6, which is how chord symbols could be dropped by
+    // five of the six codecs with every cell green — and, under the same
+    // blindness, how `\tempo` stayed write-only, how a glissando went out as
+    // MusicXML's `<slide>`, and how `cueNoteIds`/`portamentos` stayed dead.
+    // A concept nothing compares is a concept nothing protects.
+    for (final o in s.ottavas)
+      'ottava@${at(o.startId)}-${at(o.endId)}:${o.down}',
+    for (final p in s.pedals) 'pedal@${at(p.startId)}-${at(p.endId)}',
+    for (final t in s.trillExtensions)
+      'trillext@${at(t.startId)}-${at(t.endId)}',
+    for (final g in s.glissandos) 'gliss@${at(g.startId)}-${at(g.endId)}',
+    for (final p in s.portamentos) 'port@${at(p.startId)}-${at(p.endId)}',
+    for (final l in s.laissezVibrer) 'lv@${at(l.noteId)}',
+    for (final f in s.figuredBass) 'figbass@${at(f.noteId)}:${f.figures}',
+    for (final c in s.cueNoteIds) 'cue@${at(c)}',
+    if (s.tempo != null) 'tempo:${s.tempo!.quarterBpm}',
   ]..sort();
   return out;
 }
