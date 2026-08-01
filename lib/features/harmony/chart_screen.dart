@@ -19,11 +19,14 @@ import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_playback.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
+import 'package:comet_beat/features/harmony/chart_library_sheet.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Something to look at on first open. An empty grid teaches nothing, and a
 /// blues is the shortest form that shows sections, repeats and a turnaround.
@@ -51,6 +54,10 @@ class ChartScreen extends StatefulWidget {
 class _ChartScreenState extends State<ChartScreen> {
   late Chart _chart;
   ChartBarRef? _selected;
+
+  /// The name this chart was last opened or saved under, so the library does
+  /// not ask for it again.
+  String? _name;
   ChartBarRef? _playingBar;
 
   /// The transport clock. `playMixedTimedChords` renders a WAV and hands it to
@@ -60,13 +67,37 @@ class _ChartScreenState extends State<ChartScreen> {
   Stopwatch? _clock;
   ChartPlayback? _playback;
 
+  /// Null until SharedPreferences resolves. Every write goes through
+  /// [_persist], which is a no-op until then rather than a queue — losing the
+  /// first half-second of edits to a cold start is not a real failure mode, and
+  /// a queue would be a second source of truth.
+  ChartStore? _store;
+
   bool get _playing => _ticker != null;
 
   @override
   void initState() {
     super.initState();
+    // The chart the caller asked for, else whatever was on screen last time,
+    // else the starter. Restoring beats the starter: coming back to your own
+    // half-written tune is the whole point of the working slot.
     _chart = widget.initialChart ?? parseChartText(kStarterChartText).chart;
+    _restore();
   }
+
+  Future<void> _restore() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final store = ChartStore(prefs);
+    final working = widget.initialChart == null ? store.readWorking() : null;
+    setState(() {
+      _store = store;
+      if (working != null && !working.isEmpty) _chart = working;
+    });
+  }
+
+  /// Remembers the chart, so leaving the screen is not destructive.
+  void _persist() => unawaited(_store?.saveWorking(_chart) ?? Future.value());
 
   @override
   void dispose() {
@@ -163,6 +194,7 @@ class _ChartScreenState extends State<ChartScreen> {
       _chart = _replaceBar(_chart, ref, barWithChord(bar, chosen));
       _selected = null;
     });
+    _persist();
   }
 
   static Chart _replaceBar(Chart chart, ChartBarRef ref, ChartBar bar) {
@@ -198,6 +230,26 @@ class _ChartScreenState extends State<ChartScreen> {
     );
   }
 
+  Future<void> _openLibrary() async {
+    if (_playing) await _stop();
+    if (!mounted) return;
+    final result = await showChartLibrary(
+      context,
+      current: _chart,
+      currentName: _name,
+    );
+    if (!mounted || result == null) return;
+    switch (result) {
+      case ChartOpened(:final chart, :final name):
+        setState(() {
+          _chart = chart;
+          _name = name;
+          _selected = null;
+        });
+        _persist();
+    }
+  }
+
   Future<void> _editAsText() async {
     if (_playing) await _stop();
     if (!mounted) return;
@@ -209,6 +261,7 @@ class _ChartScreenState extends State<ChartScreen> {
 
     final result = parseChartText(edited, defaults: _chart);
     setState(() => _chart = result.chart);
+    _persist();
 
     // An unreadable chord is kept, so the chart is never silently shortened —
     // but the user has to be told which one, or they will not find it.
@@ -227,9 +280,12 @@ class _ChartScreenState extends State<ChartScreen> {
     }
   }
 
-  void _setTempo(int bpm) => setState(() {
-        _chart = _ChartHeader.withTempo(_chart, bpm.clamp(40, 300));
-      });
+  void _setTempo(int bpm) {
+    setState(() {
+      _chart = _ChartHeader.withTempo(_chart, bpm.clamp(40, 300));
+    });
+    _persist();
+  }
 
   // -------------------------------------------------------------------- build
 
@@ -242,6 +298,11 @@ class _ChartScreenState extends State<ChartScreen> {
       appBar: AppBar(
         title: Text(_chart.title.isEmpty ? l10n.gameChart : _chart.title),
         actions: [
+          IconButton(
+            tooltip: l10n.chartLibrary,
+            icon: const Icon(Icons.folder_open),
+            onPressed: _openLibrary,
+          ),
           IconButton(
             tooltip: l10n.chartEditAsText,
             icon: const Icon(Icons.edit_note),

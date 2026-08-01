@@ -3354,5 +3354,27 @@
   "chartKeypadBass": "Basston (Slash-Akkord)",
   "chartKeypadNone": "keiner",
   "conceptChordCharts": "Akkord-Charts lesen und schreiben",
-  "proseChordCharts": "Ein Akkord-Chart schreibt ein Lied als Takte mit Akkordsymbolen statt mit Noten — nur die Harmonie, also genau das, was eine Rhythmusgruppe wirklich liest. Jeder Takt sagt, welchen Akkord du wie lange spielst, so passt ein ganzes Lied auf eine Seite und jedes Instrument kann mitspielen."
+  "proseChordCharts": "Ein Akkord-Chart schreibt ein Lied als Takte mit Akkordsymbolen statt mit Noten — nur die Harmonie, also genau das, was eine Rhythmusgruppe wirklich liest. Jeder Takt sagt, welchen Akkord du wie lange spielst, so passt ein ganzes Lied auf eine Seite und jedes Instrument kann mitspielen.",
+  "chartSaveAs": "Name des Charts",
+  "chartSave": "Sichern",
+  "chartSaved": "„{name}“ gesichert",
+  "@chartSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chartNoneSaved": "Noch keine gesicherten Charts. Gib diesem einen Namen und sichere ihn.",
+  "chartLibrary": "Gesicherte Charts",
+  "chartDelete": "Löschen",
+  "chartBarCount": "{count,plural, =1{1 Takt}other{{count} Takte}}",
+  "@chartBarCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chartUnreadableSaved": "Dieses Chart wurde mit einer neueren Version gesichert und lässt sich nicht öffnen."
 }

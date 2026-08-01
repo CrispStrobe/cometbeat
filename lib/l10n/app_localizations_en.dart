@@ -9210,4 +9210,40 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get proseChordCharts =>
       'A chord chart writes a song as bars of chord symbols instead of notes — the harmony only, which is what a rhythm section actually reads. Each bar says which chord to play and for how long, so a whole song fits on one page and any instrument can join in.';
+
+  @override
+  String get chartSaveAs => 'Chart name';
+
+  @override
+  String get chartSave => 'Save';
+
+  @override
+  String chartSaved(String name) {
+    return 'Saved “$name”';
+  }
+
+  @override
+  String get chartNoneSaved =>
+      'No saved charts yet. Name this one and save it.';
+
+  @override
+  String get chartLibrary => 'Saved charts';
+
+  @override
+  String get chartDelete => 'Delete';
+
+  @override
+  String chartBarCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bars',
+      one: '1 bar',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chartUnreadableSaved =>
+      'This chart was saved by a newer version and cannot be opened.';
 }

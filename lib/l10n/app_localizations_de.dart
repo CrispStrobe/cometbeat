@@ -9261,4 +9261,40 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get proseChordCharts =>
       'Ein Akkord-Chart schreibt ein Lied als Takte mit Akkordsymbolen statt mit Noten — nur die Harmonie, also genau das, was eine Rhythmusgruppe wirklich liest. Jeder Takt sagt, welchen Akkord du wie lange spielst, so passt ein ganzes Lied auf eine Seite und jedes Instrument kann mitspielen.';
+
+  @override
+  String get chartSaveAs => 'Name des Charts';
+
+  @override
+  String get chartSave => 'Sichern';
+
+  @override
+  String chartSaved(String name) {
+    return '„$name“ gesichert';
+  }
+
+  @override
+  String get chartNoneSaved =>
+      'Noch keine gesicherten Charts. Gib diesem einen Namen und sichere ihn.';
+
+  @override
+  String get chartLibrary => 'Gesicherte Charts';
+
+  @override
+  String get chartDelete => 'Löschen';
+
+  @override
+  String chartBarCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Takte',
+      one: '1 Takt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chartUnreadableSaved =>
+      'Dieses Chart wurde mit einer neueren Version gesichert und lässt sich nicht öffnen.';
 }

@@ -3904,5 +3904,27 @@
   "chartKeypadBass": "Bass note (slash chord)",
   "chartKeypadNone": "none",
   "conceptChordCharts": "Reading and writing a chord chart",
-  "proseChordCharts": "A chord chart writes a song as bars of chord symbols instead of notes — the harmony only, which is what a rhythm section actually reads. Each bar says which chord to play and for how long, so a whole song fits on one page and any instrument can join in."
+  "proseChordCharts": "A chord chart writes a song as bars of chord symbols instead of notes — the harmony only, which is what a rhythm section actually reads. Each bar says which chord to play and for how long, so a whole song fits on one page and any instrument can join in.",
+  "chartSaveAs": "Chart name",
+  "chartSave": "Save",
+  "chartSaved": "Saved “{name}”",
+  "@chartSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chartNoneSaved": "No saved charts yet. Name this one and save it.",
+  "chartLibrary": "Saved charts",
+  "chartDelete": "Delete",
+  "chartBarCount": "{count,plural, =1{1 bar}other{{count} bars}}",
+  "@chartBarCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chartUnreadableSaved": "This chart was saved by a newer version and cannot be opened."
 }

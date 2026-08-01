@@ -16723,6 +16723,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A chord chart writes a song as bars of chord symbols instead of notes — the harmony only, which is what a rhythm section actually reads. Each bar says which chord to play and for how long, so a whole song fits on one page and any instrument can join in.'**
   String get proseChordCharts;
+
+  /// No description provided for @chartSaveAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Chart name'**
+  String get chartSaveAs;
+
+  /// No description provided for @chartSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get chartSave;
+
+  /// No description provided for @chartSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved “{name}”'**
+  String chartSaved(String name);
+
+  /// No description provided for @chartNoneSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved charts yet. Name this one and save it.'**
+  String get chartNoneSaved;
+
+  /// No description provided for @chartLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved charts'**
+  String get chartLibrary;
+
+  /// No description provided for @chartDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get chartDelete;
+
+  /// No description provided for @chartBarCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 bar}other{{count} bars}}'**
+  String chartBarCount(int count);
+
+  /// No description provided for @chartUnreadableSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'This chart was saved by a newer version and cannot be opened.'**
+  String get chartUnreadableSaved;
 }
 
 class _AppLocalizationsDelegate

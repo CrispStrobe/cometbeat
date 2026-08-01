@@ -2,11 +2,13 @@ import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/chord_spec.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
+import 'package:comet_beat/features/harmony/chart_library_sheet.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart' show Pitch, Step;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// The chart surface.
 ///
@@ -207,6 +209,8 @@ void main() {
     });
   });
 
+  group('library', _libraryTests);
+
   group('bar editing', () {
     test('replacing a chord keeps the rest of the bar', () {
       // A bar is more than its chords; rebuilding it on every edit would drop
@@ -228,5 +232,71 @@ void main() {
       const bar = ChartBar();
       expect(barWithChord(bar, null).chords, isEmpty);
     });
+  });
+}
+
+/// The library sheet, driven through its real entry point.
+///
+/// `showChartLibrary` resolves SharedPreferences itself, so the only honest way
+/// to exercise it is to open it from a real widget the way the screen does.
+void _libraryTests() {
+  testWidgets('saving puts the chart in the list, and opening returns it',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final chart = parseChartText('| Dm7 | G7 | Cmaj7 |').chart;
+    ChartLibraryResult? result;
+
+    await tester.pumpWidget(
+      host(
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              result = await showChartLibrary(context, current: chart);
+            },
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // Nothing saved yet.
+    expect(find.byKey(const Key('chartRow_Tune')), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('chartSaveName')), 'Tune');
+    await tester.tap(find.byKey(const Key('chartSaveButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('chartRow_Tune')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('chartRow_Tune')));
+    await tester.pumpAndSettle();
+
+    expect(result, isA<ChartOpened>());
+    final opened = result! as ChartOpened;
+    expect(opened.name, 'Tune');
+    expect(opened.chart.totalBars, 3);
+  });
+
+  testWidgets('an empty chart cannot be saved', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      host(
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showChartLibrary(context, current: const Chart()),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('chartSaveButton')),
+    );
+    expect(button.onPressed, isNull, reason: 'saving a blank grid is refused');
   });
 }
