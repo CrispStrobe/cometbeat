@@ -9297,4 +9297,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get chartUnreadableSaved =>
       'Dieses Chart wurde mit einer neueren Version gesichert und lässt sich nicht öffnen.';
+
+  @override
+  String get chartStyle => 'Stil';
+
+  @override
+  String get chartChoruses => 'Durchgänge';
 }

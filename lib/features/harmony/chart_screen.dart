@@ -14,10 +14,12 @@
 library;
 
 import 'dart:async';
-
+import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_playback.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
+import 'package:comet_beat/core/harmony/form_realizer.dart';
+import 'package:comet_beat/core/harmony/style_library.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
@@ -58,6 +60,10 @@ class _ChartScreenState extends State<ChartScreen> {
   /// The name this chart was last opened or saved under, so the library does
   /// not ask for it again.
   String? _name;
+
+  /// How many times through the form. Playback-only, so it is NOT stored on the
+  /// chart: it is how you want to practise today, not what the tune is.
+  int _choruses = 1;
   ChartBarRef? _playingBar;
 
   /// The transport clock. `playMixedTimedChords` renders a WAV and hands it to
@@ -66,6 +72,10 @@ class _ChartScreenState extends State<ChartScreen> {
   Timer? _ticker;
   Stopwatch? _clock;
   ChartPlayback? _playback;
+
+  /// The rendered band, when the band path is in use. Exactly one of this and
+  /// [_playback] is non-null while playing.
+  BandPerformance? _band;
 
   /// Null until SharedPreferences resolves. Every write goes through
   /// [_persist], which is a no-op until then rather than a queue — losing the
@@ -127,19 +137,34 @@ class _ChartScreenState extends State<ChartScreen> {
   // ---------------------------------------------------------------- transport
 
   Future<void> _play() async {
+    final audio = context.read<AudioService>();
+
+    // The band is the real path; the plain one is the fallback. A band that
+    // fails to assemble must degrade to something that plays, not to silence.
+    final band = renderBand(
+      _chart,
+      style: styleFor(_chart.styleId),
+      form: FormOptions(choruses: _choruses),
+    );
+
+    if (band != null) {
+      _band = band;
+      _clock = Stopwatch()..start();
+      _ticker =
+          Timer.periodic(const Duration(milliseconds: 50), (_) => _tick());
+      setState(() {});
+      await audio.playWavBytes(band.wav);
+      return;
+    }
+
     final playback = resolveChartPlayback(_chart);
     if (playback.isEmpty) return;
-
-    final audio = context.read<AudioService>();
     _playback = playback;
     _clock = Stopwatch()..start();
     // 60 Hz would be wasted: the highlight only changes on a bar boundary, and
     // at any sane tempo that is seconds apart.
     _ticker = Timer.periodic(const Duration(milliseconds: 50), (_) => _tick());
     setState(() {});
-
-    // Comp and bass as separate stems so the bass keeps its own level, plus a
-    // click so the chart is playable-along rather than just audible.
     await audio.playMixedTimedChords(
       [playback.comp, playback.bass],
       gains: const [0.85, 0.7],
@@ -148,11 +173,28 @@ class _ChartScreenState extends State<ChartScreen> {
   }
 
   void _tick() {
-    final playback = _playback;
     final clock = _clock;
-    if (playback == null || clock == null) return;
-
+    if (clock == null) return;
     final ms = clock.elapsedMilliseconds;
+
+    final band = _band;
+    if (band != null) {
+      if (ms >= band.totalMs) {
+        _stop();
+        return;
+      }
+      // A realised bar carries the DOCUMENT bar it came from, so the highlight
+      // lands on the bar the user is looking at even across repeats — and a
+      // generated bar (count-in, ending) highlights nothing, which is correct.
+      final source = band.barAt(ms)?.bar.sourceBar;
+      final ref =
+          source == null ? null : ChartBarRef(source.section, source.bar);
+      if (ref != _playingBar) setState(() => _playingBar = ref);
+      return;
+    }
+
+    final playback = _playback;
+    if (playback == null) return;
     if (ms >= playback.totalMs) {
       _stop();
       return;
@@ -186,6 +228,7 @@ class _ChartScreenState extends State<ChartScreen> {
     _ticker = null;
     _clock = null;
     _playback = null;
+    _band = null;
     if (mounted) setState(() => _playingBar = null);
     await context.read<AudioService>().stop();
   }
@@ -299,6 +342,11 @@ class _ChartScreenState extends State<ChartScreen> {
     }
   }
 
+  void _setStyle(String id) {
+    setState(() => _chart = _ChartHeader.withStyle(_chart, id));
+    _persist();
+  }
+
   void _setTempo(int bpm) {
     setState(() {
       _chart = _ChartHeader.withTempo(_chart, bpm.clamp(40, 300));
@@ -317,6 +365,39 @@ class _ChartScreenState extends State<ChartScreen> {
       appBar: AppBar(
         title: Text(_chart.title.isEmpty ? l10n.gameChart : _chart.title),
         actions: [
+          // The style belongs to the chart; the chorus count belongs to this
+          // playthrough. Both are disabled while playing, because the audio is
+          // already rendered and changing either would desync the highlight.
+          PopupMenuButton<String>(
+            key: const Key('chartStyleMenu'),
+            tooltip: l10n.chartStyle,
+            enabled: !_playing,
+            initialValue: styleFor(_chart.styleId).id,
+            onSelected: _setStyle,
+            itemBuilder: (context) => [
+              for (final style in kStyles)
+                PopupMenuItem(value: style.id, child: Text(style.name)),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Center(child: Text(styleFor(_chart.styleId).name)),
+            ),
+          ),
+          PopupMenuButton<int>(
+            key: const Key('chartChorusMenu'),
+            tooltip: l10n.chartChoruses,
+            enabled: !_playing,
+            initialValue: _choruses,
+            onSelected: (n) => setState(() => _choruses = n),
+            itemBuilder: (context) => [
+              for (final n in const [1, 2, 3, 4, 8])
+                PopupMenuItem(value: n, child: Text('×$n')),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Center(child: Text('×$_choruses')),
+            ),
+          ),
           IconButton(
             tooltip: l10n.chartLibrary,
             icon: const Icon(Icons.folder_open),
@@ -394,14 +475,18 @@ class _ChartScreenState extends State<ChartScreen> {
 /// no `copyWith`, and hand-rolling the full constructor at each call site is
 /// exactly how a field gets quietly dropped.
 class _ChartHeader {
-  static Chart withTempo(Chart chart, int bpm) => Chart(
+  static Chart withStyle(Chart chart, String id) => _copy(chart, styleId: id);
+
+  static Chart withTempo(Chart chart, int bpm) => _copy(chart, tempoBpm: bpm);
+
+  static Chart _copy(Chart chart, {String? styleId, int? tempoBpm}) => Chart(
         title: chart.title,
         composer: chart.composer,
         keyFifths: chart.keyFifths,
         minor: chart.minor,
         meter: chart.meter,
-        tempoBpm: bpm,
-        styleId: chart.styleId,
+        tempoBpm: tempoBpm ?? chart.tempoBpm,
+        styleId: styleId ?? chart.styleId,
         sections: chart.sections,
         pickupBeats: chart.pickupBeats,
         extra: chart.extra,

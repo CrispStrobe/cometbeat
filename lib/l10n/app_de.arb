@@ -3376,5 +3376,7 @@
       }
     }
   },
-  "chartUnreadableSaved": "Dieses Chart wurde mit einer neueren Version gesichert und lässt sich nicht öffnen."
+  "chartUnreadableSaved": "Dieses Chart wurde mit einer neueren Version gesichert und lässt sich nicht öffnen.",
+  "chartStyle": "Stil",
+  "chartChoruses": "Durchgänge"
 }

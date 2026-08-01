@@ -1,6 +1,7 @@
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/chord_spec.dart';
+import 'package:comet_beat/core/harmony/style_library.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
@@ -218,6 +219,8 @@ void main() {
   group('screen', _screenTests);
 
   group('autoscroll', _autoScrollTests);
+
+  group('band', _bandTests);
 
   group('bar editing', () {
     test('replacing a chord keeps the rest of the bar', () {
@@ -447,5 +450,62 @@ void _autoScrollTests() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  });
+}
+
+/// The band on the screen.
+void _bandTests() {
+  Widget screen() => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Provider<AudioService>(
+          create: (_) => AudioService(),
+          child: const ChartScreen(),
+        ),
+      );
+
+  testWidgets('the style picker offers every built-in style', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('chartStyleMenu')));
+    await tester.pumpAndSettle();
+    for (final style in kStyles) {
+      expect(find.text(style.name), findsWidgets, reason: style.id);
+    }
+  });
+
+  testWidgets('choosing a style stores it ON the chart', (tester) async {
+    // The style is part of the tune, so it must survive a save.
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('chartStyleMenu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bossa').last);
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(ChartStore(prefs).readWorking()?.styleId, 'bossa');
+  });
+
+  testWidgets('the chorus count is NOT stored on the chart', (tester) async {
+    // How you want to practise today is not what the tune is.
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('chartChorusMenu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('×3').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('×3'), findsWidgets);
+    final prefs = await SharedPreferences.getInstance();
+    final saved = ChartStore(prefs).readWorking();
+    // Nothing about choruses reached the document.
+    expect(saved?.extra?.containsKey('choruses') ?? false, isFalse);
   });
 }

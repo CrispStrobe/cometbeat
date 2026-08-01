@@ -16771,6 +16771,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This chart was saved by a newer version and cannot be opened.'**
   String get chartUnreadableSaved;
+
+  /// No description provided for @chartStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Style'**
+  String get chartStyle;
+
+  /// No description provided for @chartChoruses.
+  ///
+  /// In en, this message translates to:
+  /// **'Times through'**
+  String get chartChoruses;
 }
 
 class _AppLocalizationsDelegate

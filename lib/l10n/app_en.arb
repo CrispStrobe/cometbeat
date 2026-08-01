@@ -3926,5 +3926,7 @@
       }
     }
   },
-  "chartUnreadableSaved": "This chart was saved by a newer version and cannot be opened."
+  "chartUnreadableSaved": "This chart was saved by a newer version and cannot be opened.",
+  "chartStyle": "Style",
+  "chartChoruses": "Times through"
 }
