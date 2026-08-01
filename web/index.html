@@ -148,14 +148,17 @@
         }
       }, 100);
 
-      // A cold first visit really does pull ~10 MB. After 8 s, say so — the
-      // complaint is not the wait, it is not knowing whether anything is
-      // happening.
+      // After 8 s, explain the wait. The complaint this addresses is not the
+      // duration, it is not knowing whether anything is happening at all.
+      //
+      // Deliberately no megabyte figure: the payload changes with the renderer
+      // (skwasm vs canvaskit) and with compression, so a number baked in here
+      // would quietly go stale and start lying. Say what is being fetched.
       setTimeout(function () {
         if (!hint || !boot || boot.classList.contains('done')) return;
         hint.textContent = de
-          ? 'Der erste Besuch lädt etwa 10 MB (Notensatz + Audio-Engine). Danach startet die App deutlich schneller.'
-          : 'The first visit downloads about 10 MB (engraving + audio engine). Later visits start much faster.';
+          ? 'Beim ersten Besuch werden Notensatz und Audio-Engine geladen. Danach startet die App deutlich schneller.'
+          : 'The first visit downloads the engraving and audio engine. Later visits start much faster.';
         hint.classList.add('show');
       }, 8000);
     })();

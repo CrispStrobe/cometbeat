@@ -134,6 +134,61 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (editor-ux)** · 🚧 **Editor UX overhaul — branch
+  `feature/editor-ux-overhaul`, rebased onto `origin/main`.** Touching HOT
+  shared files: `loop_mixer_screen.dart`, `daw_screen.dart`,
+  `mixer_console_screen.dart`, `home_screen.dart`, `music_picker.dart`, both
+  ARBs, `test/loop_mixer_test.dart`. Say so here if you want any of them.
+  - **The Loop Studio pattern editor showed an empty grid for most parts most
+    of the time, and it was FOUR bugs, not one.** Worth knowing even if you
+    never touch that screen, because three of the four are invisible to any
+    test that only asks "did the widget build":
+    (1) it seeded from `LoopEngine.cellsFor`, which in progression mode returns
+    the four-bar RESOLVED shape, then rejected anything not exactly
+    `kPatternSteps` — and a progression is the NORMAL state of a groove, so
+    melody/chords/bass opened blank almost always;
+    (2) chord-follower tracks carry no `MelodicPattern` at all;
+    (3) the pitch rows were fixed at C4..C5 while `StepGridView` snaps to the
+    NEAREST row, so a bass part piled onto the bottom lane — present, but
+    unreadable;
+    (4) the beat grid drew 3 lanes out of a 12-voice `Drum` enum.
+    New `loop_pattern_editor.dart` holds all four fixes as PURE functions
+    (`seedCellsFor` / `pitchRowsFor` / `drumLanesFor`) so they are testable
+    without a widget, plus a full-screen editor with a Simple/Precise lens.
+  - ⚠️ **Three tests in `loop_mixer_test.dart` were pinning the OLD fixed-grid
+    behaviour** (exact row counts of 6 and 11). Pinning a count that is a
+    property of the bug makes the bug load-bearing; they now assert the
+    invariant (rows cover the notes that exist) instead. Same shape as the
+    `debugTuneRowCount` lesson — assert what must be true, not what happens to
+    be.
+  - **The mixer is no longer a sixth module.** `MixerConsoleScreen` gained an
+    `asSheet` form + `showMixerConsoleSheet`, and is now an overlay in Loop
+    Studio and the Audio Editor; the home authoring menu lost entry 9. Same
+    widget, same state, same `MixerConsoleTester` — only the chrome differs, so
+    `mixer_console_test.dart` is untouched and green.
+  - **Loop Studio could not reach the music library at all** (only instruments),
+    because its document is a 16-step grid rather than a score. New
+    `core/interop/score_to_loop.dart` makes that conversion explicit and
+    REPORTS what it gave up. ⚠️ Its melody-part rule is **register, not note
+    count** — counting notes picks the accompaniment on any voice-plus-piano
+    score, the same trap the corpus feature index hit.
+  - ⚠️ **The catalog sheet was `browse(limit: 1000)` with no query over ~38,900
+    items** — an arbitrary 2.5% slice with no way to ask for the rest. It has a
+    debounced search box now (the source already supported `query`; nothing
+    passed one).
+  - **Web:** `web/index.html` gets a CSS boot splash (the app painted NOTHING
+    until the engine loaded, which reads as a hang), and both deploy workflows
+    move to `--wasm`. ⚠️ The reason is the RENDERER, not the codegen: a wasm
+    build ships **skwasm (3.6 MB)** instead of **canvaskit (7.2 MB)**, taking
+    measured first-load transfer **4.86 MB → 3.86 MB brotli**. Measured, not
+    assumed — wasm's own module is slightly LARGER compressed than dart2js
+    (2.45 vs 2.19 MB), so "wasm is smaller" is only true via the renderer.
+  - ⚠️ **`--csp` builds are ~3× bigger and it is easy to measure the wrong
+    thing.** A stale local `build/web/main.dart.js` was 27.6 MB and I nearly
+    reported that as our bundle size; its dart2js banner said `csp`. A normal
+    release build of the same tree is 8.45 MB. Check the banner before quoting
+    a size.
+
 - **opus (ci-green)** · ✅ **SHIPPED (idle) — CI is green again.** Branch
   `feature/ci-green`, worktree `../mus-cifix`; I touched only what CI was
   actually red on, plus this board. **All nine workflows pass on their latest
