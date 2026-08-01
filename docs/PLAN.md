@@ -999,9 +999,9 @@ is recorded in [HISTORY.md](HISTORY.md).
     `mei_writer.dart` needed it again. Placement is preserved: above vs below is
     the difference between a chord symbol and a performance note. A `"` inside a
     mark is escaped, the same trap as the ABC delimiter.
-    ⚠️ **kern and MuseScore still drop annotations**, pinned by a test.
-    ⚠️ The ABC reader still files a quoted `"Eb"` under `annotations`, NOT
-    `chordSymbols` — decide deliberately before doing those two.
+    ⚠️ **kern still drops annotations**, pinned by a test (MuseScore now
+    carries them as `<StaffText>`). ✅ The ABC chord-symbol question below is
+    ANSWERED — chord symbols now reach `chordSymbols` in all six formats.
 
     🗄️ **Superseded note (kept for the reasoning) — annotations survive only
     MusicXML.** Measured on one real
@@ -1018,28 +1018,78 @@ is recorded in [HISTORY.md](HISTORY.md).
     the dataset creator's corruption, faithfully read. `file` calls it valid
     UTF-8 because it is.
 
-  - 🆕 **UNCLAIMED, and it needs a DECISION before any code: ABC files a chord
-    symbol as an ANNOTATION.** The reader already DETECTS the distinction and
-    then throws it away.
-    - ABC's rule: a bare `"Eb"` is a **chord symbol** (guitar chord over the
-      staff); one prefixed `^ _ < > @` is a **positioned annotation**.
-      `_readChordSymbol` strips the prefix — so it knows which is which — and
-      then files BOTH under `Score.annotations`. `Score.chordSymbols` gets
-      nothing from ABC at all.
-    - **Why it matters beyond tidiness:** the app's chord features
-      (ChordDetector, backing band, harmony analysis) read `chordSymbols`, so a
-      correct classification would light them up on 4,150 of the 10,000
-      held-control ABC files. It also decides what kern/MuseScore need to carry.
-    - ⚠️ **Why I did NOT just do it:** `ChordSymbol` stores `root`/`quality`/
-      `bass`, not text, so this needs a **chord-NAME parser** for standard
-      notation (`Ebmaj7`, `C#m7b5`, `G/B`) — and **none exists**. MusicXML reads
-      `<harmony>` structurally, MuseScore reads its own XML, and LilyPond's
-      `_parseChordText` handles LilyPond's COLON syntax (`c:maj7`), not chord
-      names. Plus it is a behaviour change for anything already consuming
-      `annotations`.
-    - **Suggested shape:** a `ChordSymbol.tryParse(String)` in `theory/`, used
-      by the ABC reader for unprefixed strings only, with prefixed ones staying
-      annotations. Test it against the 10k control, where chord names are dense.
+  - ✅ **DONE — CHORD SYMBOLS NOW SURVIVE ALL SIX FORMATS** (2026-08-01, opus;
+    `parseChordName` + the six-format wiring, on `crisp_notation@main`).
+    Supersedes the "needs a DECISION before any code" item that stood here.
+    - **The gap was far wider than ABC.** Chord symbols round-tripped in
+      **exactly one** format: MuseScore, LilyPond and ABC READ harmony and
+      dropped it again on write, MEI and kern never touched it. Every one of
+      these formats can express the concept (`<harmony>`, `<Harmony>`,
+      `\chordmode`, ABC's bare `"C"`, MEI `<harm>`, kern `**mxhm`), so it was a
+      neutral-model gap, not a format limit.
+    - ⚠️ **It was invisible because the cross-format signature did not look at
+      this channel** — notes, and under `--rich` lyrics/dynamics/annotations/
+      articulations/metadata, but never `chordSymbols`. It does now
+      (`chord@<pos>:<root><alter>:<quality>[/<bass>]`), which is how the rest
+      was found. **The lesson generalises: a concept the signature ignores can
+      be dropped by half the codecs with every cell green.**
+    - **`parseChordName` / `chordName`** (`lib/src/theory/chord_name.dart`) —
+      the shared text↔model pair every text-based codec now uses. Its alias
+      table DERIVES its canonical spellings from `ChordSymbolKind.suffix`, so it
+      cannot drift from the model; the alternates real charts use (`mi`/`min`/
+      `-`, `maj`/`M`/`Δ`, `+`/`5+`, `sus`, `o7`) are added on top.
+    - 📊 **Measured on the 10k held ABC control** (53,312 quoted tokens, 1,094
+      distinct): **94.7% of unprefixed tokens read as chords.** The remainder is
+      genuine prose — `tr`, `fine`, `langsam`, "Almost illegible", tune titles —
+      plus 730 tokens of BRACKETED alternative chords (`(G)`, `(D7)`), which
+      stay annotations on purpose so the brackets are not silently dropped.
+    - 🛑 **Two false-positive traps that only measuring caught, both deliberate
+      non-features now:**
+      - **Case carries meaning.** `CM7` is a MAJOR seventh, `Cm7` a minor one,
+        so a blind `toLowerCase()` flattens every major seventh to minor. Any
+        spelling that collides once lowered (`M`/`m`, `M7`/`m7`, `M6`/`m6`) is
+        excluded from the case-folding map; unambiguous ones still fold.
+      - **No bare `o` for diminished.** It is a real chart spelling, but it
+        turns the direction **"Go"** into G-diminished, and directions reach
+        the parser through the same quoted channel as chords. Worth 2 tokens in
+        53,312; the false positive is not.
+    - **Four codec defects found on the way, each of which also affects real
+      third-party files — not just our own output:**
+      1. **MuseScore writes NEITHER `<name>` NOR `<extension>` for a plain
+         major triad**, the commonest chord there is. The reader treated "no
+         quality stated" as "quality unknown" and dropped every one. *Absent*
+         and *unrecognised* are different answers; only the second is unknowable.
+      2. **The LilyPond lexer ended a word at `-`**, so `c:m7.5-` lost its
+         lowered fifth before the parser saw it — silently reading
+         half-diminished as a plain minor seventh, and leaving the reader's own
+         `m7.5-` case permanently unreachable. Fixed by keeping a `-`/`+` glued
+         to a token that contains `:` (only a chord token does), so
+         articulation shorthands and lyric hyphens are untouched.
+      3. **A skip in a LilyPond chord track read as a chord.** Note names are
+         a–g, so `s` can only be a placeholder; taking it for a root puts a
+         phantom major triad on every unharmonised beat — most of a chord track.
+      4. **LilyPond puts the duration on the ROOT** (`a4:m7`, never `a:m74`).
+         After the quality it glues to the modifier, which then matches nothing
+         and degrades to major, *and* the chord keeps the previous one's length,
+         shifting every later onset.
+    - **ABC classification, as decided:** an unprefixed quoted string is a chord
+      symbol by ABC's own rule; prefixed and non-chord text stays an
+      `Annotation`. **BOTH quoted-string paths classify** — the inline one and
+      the `s:` symbol table — since doing only one would make the same chord
+      harmony inline and text in an `s:` line (the documented two-emitter trap
+      in that file, hit again).
+    - **Writer side:** `_quoted`'s two shield reasons are now one rule — a
+      leading position marker, or an annotation whose text reads as a chord
+      name, both get an explicit `^`. A real chord symbol needs neither: it
+      belongs in the bare channel. Extra spines/blocks are emitted only when a
+      score HAS harmony, so files without it stay byte-identical (pinned).
+    - **`ChordSymbolKind` is missing kinds several formats can express**
+      (`power`, `major-ninth`, `minor-ninth`, 11ths, 13ths, `augmented-seventh`).
+      The parser deliberately refuses those spellings rather than emit a
+      near-miss quality — `A5` and `Gm9` stay annotations. Adding them is a
+      model change and a separate, deliberate decision.
+    - Tests: `chord_name_test.dart` (99), `chord_symbol_crossformat_test.dart`
+      (every quality × every format, plus a no-harmony byte-identity check).
 
   - ✅ **ANNOTATIONS NOW IN 5 OF 6 FORMATS** — MusicXML, LilyPond, MEI, ABC and
     MuseScore (`<StaffText>`, a voice-level sibling preceding its chord, the
