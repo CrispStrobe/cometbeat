@@ -872,6 +872,46 @@ is recorded in [HISTORY.md](HISTORY.md).
     phrase search, and the "all `<score>`" comparison figure it returned was
     unreliable enough not to quote.
 
+  - 🧪 **THE 10K ABC CONTROL, RUN THROUGH THE FULL HARNESS** — and it found
+    plenty, because it exercises constructs `music-db` has none of.
+
+    ⚠️ **FIRST, A TRAP THAT NEARLY PRODUCED A FALSE PASS: the harness deployed
+    on the VPS was STALE.** It predated GP, MIDI, `--rich`, `--voices`,
+    `--fixed-point` and `--walk`, so **the flags were silently ignored** — an
+    unknown flag FAILS OPEN — and only 6 of 8 formats ran. It reported
+    "42/42 cells perfect". The tell was arithmetic: 8 formats should give ~72
+    cells and 42 = 6 + 36. **Count the cells before believing a pass, and
+    `scp` the harness every time.**
+
+    ⚠️ **`--rich` did not compare METADATA at all**, so `ScoreMetadata.words`
+    was invisible to the very sweep meant to verify it. **A new model field is
+    only as tested as the signature that looks at it.** Title/composer/lyricist/
+    copyright and every `words` line are in the signature now.
+
+    ✅ **Two real ABC bugs fixed** (`crisp_notation`):
+    - **The writer DROPPED THE TITLE.** `scoreToAbc(score)` — the ordinary call
+      — emitted no `T:` at all, because the only source was the optional `title`
+      PARAMETER; `score.metadata.title` was never consulted. **Every ABC export
+      we have ever produced was untitled.** Composer had the same gap.
+    - **Blank `W:` lines were discarded.** They separate STANZAS, so dropping
+      them reflows a four-verse hymn into one block (21 → 16 lines).
+    ABC self round-trip on the sample file is now exact: 40 notes, 40 lyrics,
+    25 annotations, 21 verse lines, title intact.
+
+    🆕 **UNCLAIMED — annotations survive only MusicXML.** Measured on one real
+    file with 25 of them (ABC chord symbols like `"Eb"`): **musicxml 25/25;
+    lilypond, kern, MEI and MuseScore all 0/25.** `Score.chordSymbols` is
+    likewise written only by musicxml and abc. Four writer+reader gaps, each
+    small, and the model already carries both concepts. ⚠️ Note the ABC reader
+    files a quoted `"Eb"` under `annotations`, NOT `chordSymbols` — decide
+    deliberately whether that is right before implementing, since it changes
+    which of the two concepts the other codecs need.
+
+    📌 **Not a bug, do not chase: `T:001 - AntÃ­fona` is DOUBLE-ENCODED IN THE
+    SOURCE FILE.** Bytes `c3 83 c2 ad` are valid UTF-8 for "Ã" + soft hyphen —
+    the dataset creator's corruption, faithfully read. `file` calls it valid
+    UTF-8 because it is.
+
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
