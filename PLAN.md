@@ -2795,6 +2795,71 @@ Import/export is **DONE and at parity across native and web** (shipped
   and `ci.yml`'s `android-build` asserts the codec is actually inside the APK.
 
 ## Known constraints / follow-ups (not yet done)
+
+- **Editor UX overhaul (2026-08-01, `feature/editor-ux-overhaul`) — SHIPPED, with
+  three items still open.** Raised by the maintainer as "the UX must be severely
+  improved": a mixer that was a sixth module, a Loop Studio pattern editor that
+  showed nothing, a web first load that looked hung, a Loop↔Tracker timbre
+  mismatch, and a Song Book that most editors could not reach.
+  - ✅ **The "editor shows nothing for that voice" bug was FOUR bugs.** Worth
+    keeping because three of them are invisible to any test that only asks
+    whether the widget built:
+    (1) it seeded from `LoopEngine.cellsFor`, which in progression mode returns
+    the four-bar RESOLVED shape, then rejected anything not exactly
+    `kPatternSteps` long — and a progression is the NORMAL state of a groove, so
+    melody/chords/bass opened blank almost always;
+    (2) chord-follower tracks carry no `MelodicPattern` at all, so there was
+    nothing two-bar to find even in principle;
+    (3) pitch rows were fixed at C4..C5 while `StepGridView` snaps to the
+    NEAREST row, so a bass part piled onto the bottom lane — present, but
+    unreadable and untouchable;
+    (4) the beat grid drew 3 lanes out of a 12-voice `Drum` enum.
+    Fixed in `loop_pattern_editor.dart` as PURE functions (`seedCellsFor` /
+    `pitchRowsFor` / `drumLanesFor`) plus a full-screen overlay with a
+    Simple/Precise lens. 30 new tests.
+  - ⚠️ **Three `loop_mixer_test.dart` tests were pinning the OLD fixed grid**
+    (`expect(debugTuneRowCount, 6)`). A test that pins a count which is a
+    property of the bug makes the bug load-bearing. They now assert the
+    invariant (rows cover the notes that exist).
+  - ✅ **Mixer is no longer a top-level module** — `MixerConsoleScreen` gained an
+    `asSheet` form + `showMixerConsoleSheet`, hosted in Loop Studio and the Audio
+    Editor. Same widget/state/tester interface, so `mixer_console_test.dart` is
+    untouched and green.
+  - ✅ **Song Book reachable from Loop Studio** via new
+    `core/interop/score_to_loop.dart`. ⚠️ Its melody-part rule is **register,
+    not note count** — counting notes picks the accompaniment on any
+    voice-plus-piano score (the trap the corpus feature index already hit).
+    Catalog sheet gained search: it was `browse(limit: 1000)` over ~38,900 items,
+    an arbitrary 2.5% slice with no way to ask for the rest.
+  - ✅ **Web first paint** — `web/index.html` boot splash (verified in headless
+    Chrome in both themes, and it removes itself on `flutter-first-frame`), and
+    both deploy workflows moved to `--wasm`. ⚠️ **The reason is the RENDERER, not
+    the codegen:** a wasm build ships **skwasm (3.6 MB)** instead of **canvaskit
+    (7.2 MB)**, taking measured first-load transfer **4.86 MB → 3.86 MB brotli**.
+    The wasm module itself is slightly LARGER compressed than dart2js (2.45 vs
+    2.19 MB), so "wasm is smaller" is only true via the renderer.
+  - ⚠️ **Measurement trap:** a stale local `build/web/main.dart.js` read 27.6 MB
+    and was nearly reported as our bundle size. Its dart2js banner said `csp`;
+    a normal release build of the same tree is 8.45 MB. Check the banner before
+    quoting a size.
+  - ⬜ **OPEN 1 — Loop Studio and Tracker genuinely sound different, and it is
+    structural, not a bug.** `_openInTracker` converts NOTES ONLY (Loop →
+    `MultiPartScore` → `TrackerSong`); no timbre crosses. The two then render on
+    disjoint engines: Loop uses `mixStems`/`synth.dart` `Instrument` voices,
+    Tracker uses `TrackerInstrument` (additive / sfxr / FM / Karplus-Strong).
+    There is no shared voice identity to carry, so closing this needs a product
+    decision about what a loop voice MAPS TO in tracker terms — a mapping table,
+    or a shared voice model. Not a weight to tweak.
+  - ⬜ **OPEN 2 — no code splitting anywhere.** `grep -rn "deferred as" lib/` is
+    **0**, so all five 250 KB+ authoring screens (`advanced_tracker_screen`,
+    `loop_mixer_screen`, `daw_screen`, `composition_workshop_screen`,
+    `tab_workshop_screen`), `tracker_replayer.dart` (304 KB) and the 360 KB TTS
+    G2P dictionaries are all in the initial payload despite hanging off a popup
+    menu. This is the next real web perf lever now that the renderer is handled.
+  - ⬜ **OPEN 3 — the new overlays are test-verified, not eye-verified.** The
+    editor route pushes and the widgets build, but neither the pattern editor nor
+    the mixer sheet has been looked at on a phone-width viewport.
+
 - **Tracker→editors sweep — 2 items handed to `daw-suite`** ✅ **BOTH DONE**
   (2026-07-27, per maintainer; the sweep itself is in
   [docs/HISTORY.md](docs/HISTORY.md)). They lived in the DAW/export surface, so
