@@ -829,6 +829,44 @@ is recorded in [HISTORY.md](HISTORY.md).
     **Always print the matched TEXT and confirm the construct is in the right
     PART of the file before believing a count.**
 
+  - 📥 **NEW HELD CONTROL — ABC Notation Dataset (10k), Zenodo 17694747, CC BY
+    4.0, at VPS `/mnt/storage/abc10k/`.** 10,000 ABC files, ~900 MB.
+    **HELD, not a `db.json` candidate:** axis 1 is clean (CC BY 4.0) but the
+    depositor says nothing about axis 2 — who wrote the tunes — and the set is
+    described as code-to-image PAIRS for ML, not a curated tune corpus. Same
+    posture as the other held controls: outside `music-db`, no manifest, no
+    catalog. Its value is that our own ABC corpus turned out to be unusually
+    NARROW (see below), so this is the robustness material we lacked.
+    ⚠️ The Zenodo API returns a different shape from the VPS than from here —
+    build the URL list locally and `scp` it over, or the fetch silently writes
+    nothing and still reports success.
+
+  - ⚠️ **OUR ABC CORPUS IS NOT REPRESENTATIVE — a single hand-written tune found
+    two bugs it could never have caught** (`8850df1`). All 1,892 corpus `.abc`
+    carry **no trailing `%` comment on a header field** and **no lyrics of
+    either kind**. A user-supplied file had both:
+    - **`%` comments leaked into every header field.** A comment is legal at the
+      end of ANY line, header fields included, so `T:Dusty Miller % title`
+      imported the comment as part of the title and `C:Trad. % traditional`
+      likewise. Every commented ABC file was affected.
+    - **`W:` (uppercase) was dropped entirely.** It is NOT `w:` — lowercase
+      aligns syllables to notes, uppercase is the words as a BLOCK printed after
+      the tune, with no alignment at all. Kept as new `ScoreMetadata.words`
+      (document text, beside `lyricist`) rather than invented into aligned
+      lyrics. `extras` was rejected as a home: its contract says the library
+      never reads it, and the ABC writer would have to.
+    📌 **A scraped corpus and a user's file are different distributions.** Corpus
+    coverage says what the corpus contains, never what users will paste in.
+    ⚠️ The hostile-text matrix caught a REGRESSION from the comment fix within
+    minutes (a lyric containing `%` truncated on reread), so the writer now
+    escapes `%` in `w:` syllables and quoted annotations too.
+
+  - 📊 **Wikimedia `<score lang="ABC">` — measured, ~32 pages** across the major
+    wikis (de 12 · en 10 · fr 7 · it 2 · nl 1). ABC is RARE there; nearly all
+    Wikipedia `<score>` blocks are LilyPond. Treat as approximate — it is a
+    phrase search, and the "all `<score>`" comparison figure it returned was
+    unreliable enough not to quote.
+
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
