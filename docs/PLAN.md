@@ -769,6 +769,52 @@ is recorded in [HISTORY.md](HISTORY.md).
     model design, which deserves its own decision rather than being done
     piecemeal mid-sweep.
 
+  - 🧩 **FIRST MODEL CONCEPTS ADDED — `Articulation.staccatissimo` and
+    `Articulation.breath`** (`crisp_notation` `fb2e9aa`), chosen by measurement.
+
+    📐 **The rule I used, and would use again: a neutral model concept must be
+    expressed by SEVERAL formats.** A mark only one format has is a format
+    quirk, and giving it a model field just moves the loss to the first format
+    boundary. Measured before adding anything: staccatissimo in 103/1,500 `.mxl`
+    and 56/1,500 `.mscx`; breath in 196/1,500 `.mscx`, 88/1,500 `.mxl` and
+    580/4,106 `.ly`.
+
+    📌 **Both went into the existing `Articulation` enum rather than new
+    classes, because that is how the FORMATS model them** — MusicXML files both
+    under `<notations><articulations>`. Adding to an exhaustive enum also makes
+    the COMPILER enumerate every site that needs updating, which is how the
+    layout-glyph switch could not be silently missed. Wired through all six
+    notation formats both ways; GP excluded (a tab format has no equivalent),
+    stated rather than pretended.
+
+    ⚠️ **Two formats do NOT treat a breath as an articulation** and needed
+    separate handling: MEI has `<breath>` as a CONTROL EVENT (so BOTH of that
+    file's two emitters needed it), and MuseScore has a `<Breath>` element that
+    FOLLOWS its chord — it attaches BACKWARDS to the previous element, unlike
+    the spanners which are held for the element that follows.
+
+    ⚠️ **`abc_reader.dart` has TWO articulation tables** — inline `!…!`
+    decorations and `s:` symbol lines. A third "two tables in one file" trap
+    after `mei_writer` and the MuseScore spanner paths. **Grep for a sibling
+    table before adding any mark.**
+
+    ⚠️ **Measurement traps that would have produced wrong priorities:**
+    - **MuseScore DEFINES every articulation in its style block**, so grepping
+      the word finds files that merely COULD use one. Counting actual use
+      (`<subtype>articStaccatissimo…`) cut 837/1,200 to 56/1,500.
+    - Two kern patterns were pure false positives: `[-#n]i` matched
+      `!!!!SEGMENT` and `H` matched the layout hint `LO:HP:t=cres`. **Print the
+      matched TEXT before believing a census number.**
+    - Humdrum signifiers were verified against real files, not memory: backtick
+      = staccatissimo (20 of 800 `.krn`), comma = breath (469). `^^` was
+      unavailable — kern already uses it for marcato.
+
+    ✅ **Correction to this plan's own earlier claim: MELISMA IS ALREADY
+    MODELLED.** `Lyric.extender` exists and MusicXML, MEI and LilyPond all use
+    it (LilyPond reads `__` correctly). It is a CODEC gap in MuseScore, ABC and
+    kern — not a model gap. The line above that listed it as "needs a model
+    concept" was wrong.
+
   - 🔎 **Two greps worth running against any new codec:**
     `grep -rn 'measure\.tuplets\b' lib/src/ | grep -v tupletsForVoice` (only the
     LAYOUT engine legitimately wants every voice's spans), and anything that
