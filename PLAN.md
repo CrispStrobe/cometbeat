@@ -1539,29 +1539,6 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     the document — it is a flat beat-list built for *scoring a player*, and it
     should stay that. BB-T5 makes it a projection of `Chart`.
 
-- ⬜ **BB-D3 — chart ↔ score bridge (with a loss report).** `M`
-  - **Goal.** A chart prints, engraves and exports as a lead sheet; a score with
-    chord symbols imports as a chart.
-  - **Depends.** BB-D2.
-  - **Files.** New `lib/core/harmony/chart_score_bridge.dart`. Reads
-    crisp_notation `musicxml_reader.dart:877` / `musicxml_writer.dart:673`
-    (`<harmony>` both ways, already there), `model/element.dart:1603`.
-  - **Build.** Chart → `MultiPartScore` with slash-notation bars carrying
-    `ChordSymbol`s; score → chart by collecting `score.chordSymbols` per measure.
-    Emit a per-edge **loss report** in the `ProjectBridge` style: extensions
-    `ChordSymbolKind` cannot express, repeats the target format flattens.
-  - **Acceptance.** A chart → MusicXML → chart round-trip keeps every chord that
-    is representable and *reports* every one that is not. A real corpus
-    `.mxl`/`.mscz` carrying `<harmony>` imports as a chart with the right chord
-    per bar.
-  - ✅ **DECIDED (decision 7) — synthesise the anchor app-side.** `ChordSymbol` is
-    anchored to a **note element id** and a chart bar has chords and no notes. The
-    bridge therefore emits a slash/rhythm note per chord and anchors to that,
-    entirely inside this app: it needs no crisp_notation API change, and it is
-    *also* what makes the bar print. A measure-anchored chord symbol goes into the
-    library **only if a second consumer appears** — do not add public API to a
-    library for one caller. BB-U1 and BB-X7 can both assume the anchor exists.
-
 - ⬜ **BB-D4 — text in, text out.** `M` — **split: `BB-D4a` first, and early.**
   - ✅ **Decision 3 makes this the chart supply, not a convenience.** **`BB-D4a`
     is just the plain-text bar grid** (`S`) and it ships **with the first playable

@@ -117,6 +117,37 @@ semitone count cannot express that difference.
 24 model tests (including an exhaustive sweep of all 15 keys × 23 shifts) and 4
 widget tests.
 
+### BB-D3 — the chart ↔ score bridge, with a loss report (2026-08-01)
+
+A chart engraves and exports as a lead sheet; a score carrying `<harmony>`
+imports as a chart. The anchor is synthesised app-side (decision 7):
+`ChordSymbol` binds to a NOTE id and a chart bar has chords and no notes, so
+the bridge emits one rhythm note per chord — which is also what makes the bar
+print — and needs no crisp_notation API change.
+
+**The vocabularies are not the same size, and that is the whole point.**
+`ChordSpec` is compositional; `ChordSymbolKind` is a closed list of 15. `C13♯11`
+has no faithful kind, so the bridge picks the nearest **and reports what was
+lost**, per bar, in words a musician can act on. The chord is still written — a
+simplified chord beats a missing one — and the report is what makes that honest
+rather than silent.
+
+⚠️ **Two findings, the second more useful than the first:**
+
+- An alteration is only lost if the **chosen kind** does not already express it.
+  `Cm7♭5` parses as a MINOR triad with a ♭5, not a diminished one, so a naive
+  "a ♭5 is always dropped" reported a loss on a chord the vocabulary spells
+  exactly. The kind now decides what it absorbs.
+- **I nearly "fixed" a non-bug.** `chord_spec.dart`'s formatter prints both
+  (diminished, minor) and (diminished, diminished) as `dim7`, which looks wrong
+  until you read its line 338: half-diminished is **canonically** a minor core
+  with a flat five, so anything arriving as a diminished triad is a true
+  diminished spelling. The bridge had broken that invariant by mapping the kind
+  back to (diminished, minor); the fix belonged entirely in the bridge. Reading
+  the code rather than the output is what caught it.
+
+`lib/core/harmony/chart_score_bridge.dart`, 26 tests.
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**
