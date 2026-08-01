@@ -71,7 +71,8 @@ void main(List<String> args) {
       continue;
     }
     if (src == null) continue;
-    if (!src.measures.any((m) => m.elements.whereType<NoteElement>().isNotEmpty)) {
+    if (!src.measures
+        .any((m) => m.elements.whereType<NoteElement>().isNotEmpty)) {
       continue;
     }
     // Our own MIDI is the reference. It is written once per file and shared by
