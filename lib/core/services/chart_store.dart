@@ -24,6 +24,7 @@ import 'dart:convert';
 
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_codec.dart';
+import 'package:comet_beat/core/harmony/setlist.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// One saved chart, with the metadata a browser needs without decoding it.
@@ -167,5 +168,105 @@ class ChartStore {
       jsonEncode([for (final chart in charts) chart.toJson()]),
     );
     return charts;
+  }
+}
+
+/// Saved setlists, newest first.
+///
+/// A separate key and a separate class from [ChartStore], because a setlist
+/// REFERENCES charts by name rather than containing them — the two have
+/// different lifetimes, and deleting a chart must not silently rewrite every
+/// set that mentions it. A set whose chart is gone reports a gap instead (see
+/// [SetlistStore.missingCharts]).
+class SetlistStore {
+  SetlistStore(this._prefs);
+
+  final SharedPreferences _prefs;
+
+  static const _key = 'setlists_v1';
+  static const maxSetlists = 40;
+
+  /// Every saved setlist, newest first. Never throws.
+  List<({Setlist setlist, int savedAtMs})> list() {
+    final raw = _prefs.getString(_key);
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      final out = <({Setlist setlist, int savedAtMs})>[];
+      for (final entry in decoded) {
+        if (entry is! Map) continue;
+        final setlist = Setlist.fromJson(entry['setlist']);
+        if (setlist == null) continue;
+        final at = entry['savedAtMs'];
+        out.add((setlist: setlist, savedAtMs: at is int ? at : 0));
+      }
+      out.sort((a, b) => b.savedAtMs.compareTo(a.savedAtMs));
+      return out;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Setlist? find(String name) {
+    for (final row in list()) {
+      if (row.setlist.name == name) return row.setlist;
+    }
+    return null;
+  }
+
+  /// Saves [setlist], replacing any of the same name.
+  ///
+  /// An EMPTY set is allowed, unlike an empty chart: you build a set by making
+  /// it and then adding to it, so refusing the empty one would make it
+  /// impossible to start.
+  Future<List<({Setlist setlist, int savedAtMs})>> save(
+    Setlist setlist, {
+    int? nowMs,
+  }) async {
+    final name = setlist.name.trim();
+    if (name.isEmpty) return list();
+    final entry = (
+      setlist: setlist.copyWith(name: name),
+      savedAtMs: nowMs ?? DateTime.now().millisecondsSinceEpoch,
+    );
+    final kept = [
+      entry,
+      for (final row in list())
+        if (row.setlist.name != name) row,
+    ]..sort((a, b) => b.savedAtMs.compareTo(a.savedAtMs));
+    return _writeSetlists(kept.take(maxSetlists).toList());
+  }
+
+  Future<List<({Setlist setlist, int savedAtMs})>> remove(String name) =>
+      _writeSetlists([
+        for (final row in list())
+          if (row.setlist.name != name) row,
+      ]);
+
+  /// The entries of [setlist] whose chart no longer exists in [charts].
+  ///
+  /// Reported rather than pruned: a missing chart on a gig night is something
+  /// the player must SEE, and silently dropping the song from the set is the
+  /// worst possible response.
+  List<SetlistEntry> missingCharts(Setlist setlist, ChartStore charts) {
+    final known = {for (final saved in charts.list()) saved.name};
+    return [
+      for (final entry in setlist.entries)
+        if (!known.contains(entry.chartName)) entry,
+    ];
+  }
+
+  Future<List<({Setlist setlist, int savedAtMs})>> _writeSetlists(
+    List<({Setlist setlist, int savedAtMs})> rows,
+  ) async {
+    await _prefs.setString(
+      _key,
+      jsonEncode([
+        for (final row in rows)
+          {'setlist': row.setlist.toJson(), 'savedAtMs': row.savedAtMs},
+      ]),
+    );
+    return rows;
   }
 }
