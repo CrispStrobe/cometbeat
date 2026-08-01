@@ -200,6 +200,33 @@ tempo, so a chart → score → chart round trip silently reset to 120. Invisibl
 until a play-along, where the band plays at the wrong speed and drags the melody
 with it. Now carried both ways.
 
+### BB-U4 (model) — setlists, with the overrides in the SET (2026-08-01)
+
+🔴 **That placement is the whole design.** The same tune sits in two bands' sets
+at two different keys, and the singer's key is a property of the GIG rather than
+of the song. Writing it onto the chart would mean the second set silently
+re-keys the first — and worse, that opening a chart from one set and saving it
+corrupts the other. A `Setlist` never mutates a chart: it carries what to do TO
+one, and resolution happens at play time. Same reasoning as
+`ChartTransposition` (a capo belongs to the player, not the tune), one level up.
+
+The card's acceptance is asserted directly: one chart in two sets at two keys
+plays at each set's key, and the chart is unmoved afterwards — including after
+resolving it repeatedly.
+
+Two decisions worth keeping:
+
+- **An empty set is allowed where an empty chart is refused.** You build a set
+  by making it and then adding to it, so refusing the empty one makes it
+  impossible to start.
+- **A missing chart is REPORTED, never pruned.** On a gig night the player has
+  to see the gap; silently dropping the song is the worst possible response.
+
+Every mutator returns a new `Setlist`, and an out-of-range index is a no-op
+rather than a throw — a stale index from a list widget must not end a gig.
+`core/harmony/setlist.dart` + `SetlistStore`, 24 tests. The SURFACE (gig mode,
+search, favourites) is carded separately as **BB-U4b**.
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**

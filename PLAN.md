@@ -1764,24 +1764,19 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
   - **Acceptance.** A style change mid-playback lands on a bar line with no click
     (assert the seam sample). Role mute is instant and does not re-render.
 
-- ⬜ **BB-U4 — charts and setlists.** `M`
-  - **Depends.** BB-D2, BB-D4, and the §6 rights decision for the *sharing* half.
-  - **Files.** New `lib/features/harmony/chart_library.dart` + `setlist.dart`;
-    reuse `songs/user_songs_service.dart` persistence patterns.
-  - **Build.** A chart list searchable by key, tempo, style, form and tag;
-    favourites and recently played. **Setlists**: an ordered set where the
-    per-song key/tempo override lives **in the setlist, not in the chart** (so
-    the same chart sits in two sets at two keys). Gig mode: auto-advance, big
-    type, edits locked, screen kept awake.
-  - **Acceptance.** A chart in two setlists at two keys plays at each set's key
-    and the chart file is unchanged. Setlist export/import round-trips.
-  - ✅ **DECIDED (decision 4) — build all of it. Nothing here is blocked.**
-    Charts are local by default; a user hands one to someone as a `CB1.` token or
-    a file (BB-D4). There is **no hosted index and there never will be**, so this
-    card has no "phase 2" waiting behind it. Two rules that follow: a user's chart
-    **never** enters `db.json` or the HF catalog, and a chart *we* ship carries the
-    same per-file provenance every other asset row carries.
-
+- ⬜ **BB-U4b — the setlist SURFACE.** `M` — *the model is shipped; this is its UI.*
+  - ✅ **Model, persistence and codec DONE** (2026-08-01): `core/harmony/setlist.dart`
+    + `SetlistStore`, 24 tests. The card's invariant is asserted — one chart in
+    two sets at two keys plays at each set's key and the chart is unmoved.
+  - **Still to build.** A chart list searchable by key, tempo, style, form and
+    tag; favourites and recently played. Setlist screens: build, reorder, set
+    the per-song key/tempo. **Gig mode**: auto-advance, big type, edits locked,
+    screen kept awake.
+  - ⚠️ **Do not move the per-song override onto the chart when wiring the UI.**
+    That is the one thing the model exists to prevent, and it will look like a
+    simplification.
+  - 📌 A missing chart must stay VISIBLE in the set — `SetlistStore.missingCharts`
+    reports it and the entry is deliberately not pruned.
 - ⬜ **BB-U5 — the front door (DECIDED: library document, not a sixth mode).** `S`
   - ✅ **Decision 2 is made — this card implements it, it does not re-ask it.**
     A chart is a `ProjectTrack` document reached from where the music already
