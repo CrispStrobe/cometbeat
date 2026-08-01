@@ -173,7 +173,24 @@ List<String> _content(Score s) {
       if (bar.isNotEmpty) out.add('bar{$bar}');
     }
   }
-  if (_rich) out.addAll(_scoreExtras(s));
+  if (_rich) {
+    out.addAll(_scoreExtras(s));
+    // Metadata was NOT compared at all until now, so `ScoreMetadata.words`
+    // (ABC's `W:` verse text) was invisible the moment it was added — a new
+    // field is only as tested as the signature that looks at it.
+    final m = s.metadata;
+    for (final (k, v) in [
+      ('title', m.title),
+      ('composer', m.composer),
+      ('lyricist', m.lyricist),
+      ('copyright', m.copyright),
+    ]) {
+      if (v != null && v.isNotEmpty) out.add('meta:$k=$v');
+    }
+    for (final (i, w) in m.words.indexed) {
+      out.add('meta:words[$i]=$w');
+    }
+  }
   return out;
 }
 
