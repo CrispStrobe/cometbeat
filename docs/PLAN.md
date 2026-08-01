@@ -1091,6 +1091,56 @@ is recorded in [HISTORY.md](HISTORY.md).
     - Tests: `chord_name_test.dart` (99), `chord_symbol_crossformat_test.dart`
       (every quality × every format, plus a no-harmony byte-identity check).
 
+  - 🆕 **THE CHANNEL AUDIT — `Score` has 44 channels and the harness compared 6**
+    (2026-08-01, opus). The chord-symbol gap was not a one-off; it was a
+    *class*. Every channel the signature ignores can be silently dropped by any
+    codec with every cell green, and several were. The nine general-notation
+    channels, measured by round-tripping each one through all six codecs:
+
+    | channel | musicxml | mei | kern | abc | lilypond | musescore |
+    |---|---|---|---|---|---|---|
+    | tempo | ✅ | ✅ | ✅ | ✅ **fixed** | ✅ **fixed** | ✅ |
+    | glissandos | ✅ **fixed** | ✅ **new** | — | — | ✅ **new** | ✅ **new** |
+    | portamentos | ✅ **new** | ❌ | — | — | ❌ | ❌ |
+    | cueNoteIds | ✅ **new** | ❌ | — | — | ❌ | ❌ |
+    | ottavas | ✅ | ❌ | ❌ | — | ❌ | ✅ |
+    | pedals | ✅ | ❌ | ❌ | — | ❌ | ✅ |
+    | trillExtensions | ✅ | ❌ | ❌ | — | ❌ | ❌ |
+    | laissezVibrer | ✅ | ❌ | ❌ | — | ❌ | ❌ |
+    | figuredBass | ✅ | ❌ | ✅?* | — | ❌ | ❌ |
+
+    `—` = the format genuinely cannot express it (kern and ABC have no
+    glissando; ABC no ottava/pedal). `❌` = a real gap: **MEI has `<octave>`,
+    `<pedal>`, `<trill @endid>`, `<fb>`; LilyPond has `\ottava`,
+    `\sustainOn/Off`, `\startTrillSpan`, `\laissezVibrer`, `\figuremode`;
+    kern has `*8va` and a `**fb` spine.** *figuredBass in kern is untested.
+
+    - ✅ **Done in this pass** (details in the changelog): the LilyPond/ABC
+      tempo fixes, the MusicXML `<glissando>`-vs-`<slide>` split, `<cue/>`, and
+      glissandi in MEI/LilyPond/MuseScore. MusicXML now carries all nine.
+    - ✅ **The harness now compares all nine**, so none of them can regress
+      silently again. That is the durable half of this work — the individual
+      codec fixes are the visible half.
+    - 🛑 **Three traps worth carrying forward, each of which made a correct-
+      looking codec drop data:**
+      - **A self-consistent writer+reader pair is invisible to a round trip.**
+        We wrote a glissando as MusicXML `<slide>` and read `<slide>` back as a
+        glissando. Perfect round trip, wrong element, and every third-party
+        `<glissando>` dropped. Only a differential check against the SPEC (or a
+        real file) can see this class.
+      - **A write-only field is equally invisible.** LilyPond `\tempo` was
+        emitted for years and never read.
+      - **A guard listing which features are present will not be extended.**
+        The MuseScore writer skipped building its onset map unless the score had
+        a slur, hairpin, pedal or ottava — so a score with only glissandi
+        emitted no spans at all, with the emitting code correct. Removed rather
+        than extended.
+    - **Unclaimed, in rough value order:** ottava + pedal into MEI/LilyPond
+      (common in piano repertoire, and both already round-trip in two formats);
+      trill extensions into MEI/LilyPond; figured bass into LilyPond
+      `\figuremode` + a kern `**fb` spine (the corpus has real continuo);
+      laissez vibrer; cue notes beyond MusicXML.
+
   - ✅ **ANNOTATIONS NOW IN 5 OF 6 FORMATS** — MusicXML, LilyPond, MEI, ABC and
     MuseScore (`<StaffText>`, a voice-level sibling preceding its chord, the
     same shape as `<Dynamic>`/`<Harmony>`/the spanners). ⚠️ **kern still drops
