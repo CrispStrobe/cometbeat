@@ -948,9 +948,45 @@ is recorded in [HISTORY.md](HISTORY.md).
     `chart_codec`** (written for BB-D2, never used), so their round-trip
     assertions are load-bearing: split-bar beat positions, held bars, section
     repeats and meter all verified to survive.
+  - ✅ **AUTOSCROLL DONE** — the grid keeps one key per document bar and calls
+    `ensureVisible` on the real box, not a computed offset (which would have to
+    re-derive the responsive row count and drift the moment the breakpoint
+    changed). Fires only on a bar CHANGE, which is what "never scrolls during a
+    bar" means.
+  - ✅ **THE STYLED BAND IS IN — `BB-A2`·`A3`·`A4`·`A5`·`A6`·`A7` all shipped
+    and WIRED.** Press play and a kit, a bass and a comp arrive in the chart's
+    style, with a count-in, fills at phrase ends and an ending.
+    - `style_spec` + `style_library` (**A2/A7**) — six styles, patterns relative
+      to the harmony, intensity 0..3. Nothing downstream branches on a style id.
+    - `bass_generator` (**A3**) · `drum_generator` (**A4**) ·
+      `form_realizer` (**A5**) · `humanize` (**A6**) · `band_playback` (the
+      assembly → one WAV, via `playWavBytes`, leaving `AudioService` untouched).
+    - ⚠️ `chart_playback` is KEPT as the fallback: a band that fails to
+      assemble degrades to something that plays, not to silence.
+    - 📌 **Four findings worth not rediscovering:**
+      1. A style pattern is validated against its **longest** claimed meter and
+         truncated to the actual bar — my own `straight` claimed 2..7 while
+         writing 4-beat patterns, and the validator caught it. Truncation is an
+         author's judgement the validator cannot make: a pulse survives being
+         cut to three beats, a bossa clave does not.
+      2. `StyleHit.voice` is **required** because 0 is the kick — `dart fix`
+         stripped every `voice: _kick` as a redundant default, leaving drum
+         hits that read as *unspecified*.
+      3. The fill shape was `(seed + barIndex) % 4`, which is **degenerate
+         where it is used**: fills land on phrase ends, phrases are 4 or 8
+         bars, so every fill index is congruent mod 4 and the "varying" shape
+         was always the same. Bars 7/15/23/31 all gave shape 3. Now a mixing
+         hash.
+      4. Swing is the STYLE, not humanisation — `humanize: false` keeps the
+         swing, or it would silently straighten a swing chart.
+    - ⚠️ **Known limitation, documented not papered over:** per-note dynamics
+      reach the KIT (`renderDrumPattern` takes gains) but NOT comp/bass —
+      `Segment` is `(freqs, ms)` with no level field, so melodic dynamics come
+      only from the stem gain. Fixing it means changing `Segment` in the shared
+      `synth.dart`.
   - 📌 **Next on this surface (unclaimed):** a share token (the codec has JSON
-    only — no `KU1.`-style text token), autoscroll during playback, and the
-    styled band (`BB-A2`…`A6`) to replace one-hit-per-bar comping.
+    only — no `KU1.`-style text token); per-note melodic dynamics (needs the
+    `Segment` change above); and a solo/mute per role.
 
 - **opus (backing-band)** · ✅ **Workshop no longer drops a lead sheet's
   harmony.** `ScoreDocument` neither read nor wrote `Score.chordSymbols`, so
