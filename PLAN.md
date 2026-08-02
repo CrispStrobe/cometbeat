@@ -1771,11 +1771,10 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     quotes — and refuses to absorb the prose after it) · **ChordPro with section
     directives** (`chart_chordpro.dart`; a ChordPro file and a text grid import
     to the SAME chart, asserted) · MusicXML `<harmony>` both ways via BB-D3.
-  - **Still to build.** **Nashville numbers** (the analysis engine already
-    produces the numerals — `chart_analysis.dart` — so this is mostly a printer
-    and a reader over it) and **JAMS chord namespaces** (`songs/import/jams.dart`
-    already reads AND writes them in 5 dialects, so it is a converter, not a
-    parser).
+  - ✅ **Nashville numbers DONE** (`chart_nashville.dart`, both ways, 24 tests).
+  - **Still to build.** **JAMS chord namespaces** — `songs/import/jams.dart`
+    already reads AND writes them in 5 dialects, so this is a converter onto
+    `Chart`, not a parser.
   - 📌 **A deep link that opens a token** is also unbuilt. The token itself and
     both clipboard directions are shipped and wired to the chart screen.
   - ⚠️ ChordPro carries no barlines, so its import sets `barsAreInferred`. Any
