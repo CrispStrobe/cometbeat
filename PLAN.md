@@ -356,6 +356,10 @@ tuner's real-instrument pass recorded further down this file.
   network still tried first (so a published update is still picked up), and with
   nothing cached it reports the NETWORK failure rather than a cache miss the user
   cannot act on. With both cached, melodic search works offline end to end.
+  **Item PAYLOADS are cached too (2026-08-02)**, so opening a result works
+  offline as well — size-capped at 4 MB, because the same method serves a 20 KB
+  score and a 140 MB SoundFont, and keyed by download URL rather than item id
+  so a republish cannot serve stale bytes under a stable id.
 - **Anti-lock-in as an advertised feature** — per-edit local backups and a
   one-tap "download your whole library". We largely support this; they *say* it,
   which is the part that builds trust.
