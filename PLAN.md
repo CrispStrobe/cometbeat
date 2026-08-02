@@ -1960,16 +1960,15 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     A false-positive rate stated on silence and on backing-only input (the
     reference must not grade the band as the player).
 
-- ⬜ **BB-X6b — the analysis SURFACE.** `S` — *the engine is shipped; this is its UI.*
-  - ✅ **Engine DONE** (2026-08-01): `core/harmony/chart_analysis.dart`, 30 tests
-    — roman numerals, function, ii–V chains (found on the root interval, so an
-    APPLIED ii–V surfaces), cadences, turnarounds, per-chord scale and guide
-    tones. A secondary dominant reads as a dominant, asserted end to end.
-  - **Still to build.** Show it, at the existing kids↔expert granularity dial —
-    reuse `composition/score_analysis_view.dart` rather than inventing a second
-    analysis surface.
-  - 📌 Reharmonisation suggestions (tritone sub, relative ii–V, diminished
-    passing) are NOT built; they were the one part of the card left undone.
+- ⬜ **BB-X6c — reharmonisation suggestions.** `S` — *the last part of X6.*
+  - ✅ **Engine and surface DONE** (2026-08-01/02): `core/harmony/chart_analysis.dart`
+    + `features/harmony/chart_analysis_panel.dart`. Numerals, function colours,
+    ii–V chains, cadences, turnarounds, per-chord scale and guide tones, at the
+    shared `AnalysisDepth` dial.
+  - **Still to build.** Tritone sub, relative ii–V, diminished passing chord —
+    the one part of the original card left undone.
+  - 📌 Suggest, never rewrite: a reharmonisation is an OPTION shown beside the
+    chord, not an edit. The chart is the user's.
 - ⬜ **BB-X7 — a chart leaves as a project, not a bounce.** `M`
   - **Depends.** BB-A5, BB-D3. **Files.** `core/interop/project_bridge.dart`
     (**hot**), `shared/music_io/`.

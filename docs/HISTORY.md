@@ -256,6 +256,29 @@ renders a major seventh `IM7`, not `Imaj7`. The library is the authority on how
 a numeral prints. 30 tests. The SURFACE, and reharmonisation suggestions, are
 carded as **BB-X6b**.
 
+### BB-X6b — the chart explains itself, on screen (2026-08-02)
+
+A sheet showing the roman numerals, the harmonic function as a colour, the
+phrases, and — at expert depth — what scale to solo on.
+
+⚠️ **It does NOT reuse `ScoreAnalysisView`, and that departure is deliberate.**
+That view analyses NOTES — it runs `analyze(score)` over a melody. A chart has
+chords and no notes, and `chartToScore` gives it a monotone line of slashes, so
+feeding one in would analyse a single repeated pitch and say nothing true. It is
+the same structural mismatch the card's own decision 7 identified for
+`ChordSymbol`.
+
+What IS reused is what matters for consistency: the same `AnalysisDepth` dial
+and `harmonicFunctionColor`, the shared tonic/subdominant/dominant colours
+already used by the analysis view, the Workshop and the Loop Mixer. A second
+colour scheme would have been the real duplication.
+
+It explains what the grid SHOWS rather than what is stored, so a transposed
+reading is explained in the key the player is actually reading — otherwise the
+numerals contradict the chords in front of them. Asserted.
+
+Reharmonisation suggestions remain undone and are carded as **BB-X6c**.
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**
