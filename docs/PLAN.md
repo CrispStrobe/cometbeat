@@ -1140,7 +1140,8 @@ is recorded in [HISTORY.md](HISTORY.md).
     | start/endRepeat | ✅ | ✅ | ✅ | ✅ | ✅ **new** | ✅ |
     | tempoChange | ✅ | ✅ **new** | ✅ **new** | ❌ | ✅ **new** | ✅ **new** |
     | inlineClefs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-    | measureRepeat | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+    | measureRepeat | ✅ **new** | ❌ | ❌ | ❌ | ❌ | ❌ |
+    | multiRest | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
 
     - ✅ **`barline` DONE** (`319a51a`). It survived only MusicXML and ABC,
       despite a double bar or final bar being in nearly every piece. MEI writes
@@ -1151,9 +1152,16 @@ is recorded in [HISTORY.md](HISTORY.md).
         barline.** Reading our own output back therefore set `finalBar` on
         scores that never had one — `normal` in, `finalBar` out. Pre-existing,
         and invisible precisely because nothing compared the field.
-    - 🆕 **UNCLAIMED — `measureRepeat` (the `%` simile) survives NOTHING, not
-      even MusicXML**, which has `<measure-repeat>`. A dead channel like
-      `portamentos` and `cueNoteIds` were.
+    - ✅ **`measureRepeat` was the LAST dead channel — MusicXML now writes and
+      reads `<measure-repeat>`** (`6ad1f09`). Nothing wrote one, so anything the
+      app produced there was lost on every save. Its sibling
+      `<multiple-rest>` has been written all along, which is exactly what makes
+      the omission visible once the two sit side by side.
+      - 🆕 **UNCLAIMED, low priority:** both bar ABBREVIATIONS are still
+        MusicXML-only (`multiRest` also ABC). MEI has `<mRpt>`/`<multiRest>`,
+        LilyPond `\repeat percent` and `R1*5`, MuseScore `<RepeatMeasure>` —
+        all real, all unwritten. They abbreviate the page rather than carry
+        music, so they rank below every mark already done.
     - ✅ **`tempoChange` and `pickup` DONE** (`25a7945`), 5 of 6 and 6 of 6.
       - ⚠️ **LilyPond already WROTE `\partial` and its reader already USED it**
         — to preload elapsed time, so the anacrusis landed in the right place
