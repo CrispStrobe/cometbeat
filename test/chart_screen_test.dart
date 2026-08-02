@@ -1,4 +1,5 @@
 import 'package:comet_beat/core/harmony/chart.dart';
+import 'package:comet_beat/core/harmony/chart_share.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/chord_spec.dart';
 import 'package:comet_beat/core/harmony/style_library.dart';
@@ -11,6 +12,7 @@ import 'package:comet_beat/features/harmony/chord_keypad.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart' show Pitch, Step;
 import 'package:flutter/material.dart' hide Step;
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,6 +27,17 @@ Widget host(Widget child) => MaterialApp(
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(body: child),
     );
+
+/// Opens the chart screen's overflow menu and taps [key].
+///
+/// The bar holds only the band controls — everything else moved into a
+/// PopupMenuButton when five icons overflowed a 375px phone.
+Future<void> tapMenu(WidgetTester tester, Key key) async {
+  await tester.tap(find.byKey(const Key('chartMoreMenu')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(key));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   group('grid', () {
@@ -225,6 +238,8 @@ void main() {
   group('transpose', _transposeTests);
 
   group('explain', _explainTests);
+
+  group('share', _shareTests);
 
   group('bar editing', () {
     test('replacing a chord keeps the rest of the bar', () {
@@ -527,10 +542,8 @@ void _transposeTests() {
         ),
       );
 
-  Future<void> openSheet(WidgetTester tester) async {
-    await tester.tap(find.byKey(const Key('chartTransposeButton')));
-    await tester.pumpAndSettle();
-  }
+  Future<void> openSheet(WidgetTester tester) =>
+      tapMenu(tester, const Key('chartTransposeButton'));
 
   testWidgets('a reading transposition changes the GRID', (tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -624,8 +637,7 @@ void _explainTests() {
     await tester.pumpWidget(screen());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('chartExplainButton')));
-    await tester.pumpAndSettle();
+    await tapMenu(tester, const Key('chartExplainButton'));
 
     expect(find.text('ii7'), findsOneWidget);
     expect(find.text('V7'), findsOneWidget);
@@ -637,8 +649,7 @@ void _explainTests() {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(screen());
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('chartExplainButton')));
-    await tester.pumpAndSettle();
+    await tapMenu(tester, const Key('chartExplainButton'));
     expect(find.text('ii7'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.palette_outlined));
@@ -652,8 +663,7 @@ void _explainTests() {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(screen());
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('chartExplainButton')));
-    await tester.pumpAndSettle();
+    await tapMenu(tester, const Key('chartExplainButton'));
     expect(find.text('D dorian'), findsNothing);
 
     await tester.tap(find.byIcon(Icons.psychology_outlined));
@@ -669,18 +679,108 @@ void _explainTests() {
     await tester.pumpWidget(screen(chart: 'key: C\n| C | G7 |'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('chartTransposeButton')));
-    await tester.pumpAndSettle();
+    await tapMenu(tester, const Key('chartTransposeButton'));
     await tester.tap(find.byKey(const Key('transposeSounding_2')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('transposeApply')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('chartExplainButton')));
-    await tester.pumpAndSettle();
+    await tapMenu(tester, const Key('chartExplainButton'));
 
     // The chart now reads in D, so the tonic is D — and I is still I.
     expect(find.text('Key of D'), findsOneWidget);
     expect(find.text('I'), findsOneWidget);
+  });
+}
+
+/// Sharing a chart, both directions.
+void _shareTests() {
+  Widget screen({String chart = 'key: F\n| F | Bb | C7 |'}) => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Provider<AudioService>(
+          create: (_) => AudioService(),
+          child: ChartScreen(initialChart: parseChartText(chart).chart),
+        ),
+      );
+
+  /// A fake clipboard, since the real one is a platform channel.
+  ({List<String> written, void Function(String) put}) fakeClipboard(
+    WidgetTester tester,
+  ) {
+    final written = <String>[];
+    var contents = '';
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          contents = (call.arguments as Map)['text'] as String;
+          written.add(contents);
+        }
+        if (call.method == 'Clipboard.getData') return {'text': contents};
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    return (written: written, put: (t) => contents = t);
+  }
+
+  testWidgets('copying writes a CB1. token that decodes back', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final clipboard = fakeClipboard(tester);
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tapMenu(tester, const Key('chartShareButton'));
+    await tester.tap(find.byKey(const Key('chartCopyToken')));
+    await tester.pumpAndSettle();
+
+    expect(clipboard.written, hasLength(1));
+    final decoded = decodeChartToken(clipboard.written.single)!;
+    expect(
+      decoded.barsInPlayOrder
+          .map((b) => b.chordsInOrder.single.chord.text)
+          .toList(),
+      ['F', 'Bb', 'C7'],
+    );
+  });
+
+  testWidgets('pasting a token replaces the chart on screen', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final clipboard = fakeClipboard(tester);
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    expect(find.text('F'), findsOneWidget);
+
+    clipboard.put(
+      encodeChartToken(parseChartText('key: C\n| Dm7 | G7 |').chart),
+    );
+    await tapMenu(tester, const Key('chartShareButton'));
+    await tester.tap(find.byKey(const Key('chartPasteToken')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dm7'), findsOneWidget);
+    expect(find.text('F'), findsNothing);
+  });
+
+  testWidgets('a clipboard with no token says so rather than doing nothing',
+      (tester) async {
+    // A paste that silently fails reads as a broken button.
+    SharedPreferences.setMockInitialValues({});
+    final clipboard = fakeClipboard(tester);
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    clipboard.put('just some text I copied earlier');
+    await tapMenu(tester, const Key('chartShareButton'));
+    await tester.tap(find.byKey(const Key('chartPasteToken')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('No chart code'), findsOneWidget);
+    // …and the chart on screen is untouched.
+    expect(find.text('F'), findsOneWidget);
   });
 }

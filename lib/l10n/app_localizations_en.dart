@@ -9372,4 +9372,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chartAnalysisEmpty =>
       'Add some chords and this will explain them.';
+
+  @override
+  String get chartShare => 'Share';
+
+  @override
+  String get chartShareCopy => 'Copy the share code';
+
+  @override
+  String get chartShareCopyHint => 'A short code someone else can paste in';
+
+  @override
+  String get chartShareCopied => 'Share code copied';
+
+  @override
+  String get chartSharePaste => 'Open a share code';
+
+  @override
+  String get chartSharePasteHint => 'Reads a chart someone sent you';
+
+  @override
+  String get chartShareOpened => 'Chart opened';
+
+  @override
+  String get chartSharePasteFailed => 'No chart code found on the clipboard.';
 }

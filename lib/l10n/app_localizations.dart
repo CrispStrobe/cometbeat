@@ -16987,6 +16987,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add some chords and this will explain them.'**
   String get chartAnalysisEmpty;
+
+  /// No description provided for @chartShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get chartShare;
+
+  /// No description provided for @chartShareCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the share code'**
+  String get chartShareCopy;
+
+  /// No description provided for @chartShareCopyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A short code someone else can paste in'**
+  String get chartShareCopyHint;
+
+  /// No description provided for @chartShareCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Share code copied'**
+  String get chartShareCopied;
+
+  /// No description provided for @chartSharePaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a share code'**
+  String get chartSharePaste;
+
+  /// No description provided for @chartSharePasteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reads a chart someone sent you'**
+  String get chartSharePasteHint;
+
+  /// No description provided for @chartShareOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Chart opened'**
+  String get chartShareOpened;
+
+  /// No description provided for @chartSharePasteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'No chart code found on the clipboard.'**
+  String get chartSharePasteFailed;
 }
 
 class _AppLocalizationsDelegate

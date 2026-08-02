@@ -9423,4 +9423,31 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get chartAnalysisEmpty =>
       'Füge Akkorde hinzu, dann werden sie hier erklärt.';
+
+  @override
+  String get chartShare => 'Teilen';
+
+  @override
+  String get chartShareCopy => 'Teilen-Code kopieren';
+
+  @override
+  String get chartShareCopyHint =>
+      'Ein kurzer Code, den jemand anders einfügen kann';
+
+  @override
+  String get chartShareCopied => 'Teilen-Code kopiert';
+
+  @override
+  String get chartSharePaste => 'Teilen-Code öffnen';
+
+  @override
+  String get chartSharePasteHint =>
+      'Liest ein Chart, das dir jemand geschickt hat';
+
+  @override
+  String get chartShareOpened => 'Chart geöffnet';
+
+  @override
+  String get chartSharePasteFailed =>
+      'Kein Chart-Code in der Zwischenablage gefunden.';
 }

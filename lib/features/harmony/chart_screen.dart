@@ -18,6 +18,7 @@ import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_analysis.dart';
 import 'package:comet_beat/core/harmony/chart_playback.dart';
+import 'package:comet_beat/core/harmony/chart_share.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/chart_transpose.dart';
 import 'package:comet_beat/core/harmony/form_realizer.dart';
@@ -33,6 +34,7 @@ import 'package:comet_beat/features/harmony/chord_keypad.dart';
 import 'package:comet_beat/features/harmony/transpose_sheet.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -314,6 +316,75 @@ class _ChartScreenState extends State<ChartScreen> {
     );
   }
 
+  /// Copies the chart as a `CB1.` token, and offers to read one back.
+  ///
+  /// Both directions in one sheet because they are the same idea from two ends
+  /// — and because a "share" button with no "open" button leaves the receiving
+  /// half of the feature invisible.
+  Future<void> _share() async {
+    if (_playing) await _stop();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: const Key('chartCopyToken'),
+              leading: const Icon(Icons.copy_all_outlined),
+              title: Text(l10n.chartShareCopy),
+              subtitle: Text(l10n.chartShareCopyHint),
+              enabled: !_chart.isEmpty,
+              onTap: () async {
+                await Clipboard.setData(
+                  ClipboardData(text: encodeChartToken(_chart)),
+                );
+                if (sheet.mounted) Navigator.of(sheet).pop();
+                messenger.showSnackBar(
+                  SnackBar(content: Text(l10n.chartShareCopied)),
+                );
+              },
+            ),
+            ListTile(
+              key: const Key('chartPasteToken'),
+              leading: const Icon(Icons.content_paste_go_outlined),
+              title: Text(l10n.chartSharePaste),
+              subtitle: Text(l10n.chartSharePasteHint),
+              onTap: () async {
+                final data = await Clipboard.getData(Clipboard.kTextPlain);
+                final opened = decodeChartToken(data?.text ?? '');
+                if (sheet.mounted) Navigator.of(sheet).pop();
+                if (opened == null) {
+                  // Says WHY rather than doing nothing: a paste that silently
+                  // fails reads as a broken button.
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(l10n.chartSharePasteFailed)),
+                  );
+                  return;
+                }
+                if (!mounted) return;
+                setState(() {
+                  _chart = opened;
+                  _name = null;
+                  _selected = null;
+                });
+                _persist();
+                messenger.showSnackBar(
+                  SnackBar(content: Text(l10n.chartShareOpened)),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _explain() async {
     // Explains what the grid SHOWS, so a transposed reading is explained in
     // the key the player is actually reading.
@@ -473,27 +544,67 @@ class _ChartScreenState extends State<ChartScreen> {
               child: Center(child: Text('×$_choruses')),
             ),
           ),
-          IconButton(
-            key: const Key('chartExplainButton'),
-            tooltip: l10n.chartAnalysis,
-            icon: const Icon(Icons.lightbulb_outline),
-            onPressed: _explain,
-          ),
-          IconButton(
-            key: const Key('chartTransposeButton'),
-            tooltip: l10n.chartTranspose,
-            icon: const Icon(Icons.swap_vert),
-            onPressed: _transposeDialog,
-          ),
-          IconButton(
-            tooltip: l10n.chartLibrary,
-            icon: const Icon(Icons.folder_open),
-            onPressed: _openLibrary,
-          ),
-          IconButton(
-            tooltip: l10n.chartEditAsText,
-            icon: const Icon(Icons.edit_note),
-            onPressed: _editAsText,
+          // ⚠️ Only the BAND controls stay on the bar. Five icon buttons plus
+          // two text menus overflowed a 375px phone by 48px in both locales —
+          // caught by the layout audit — and the rest are occasional actions
+          // that read fine in an overflow menu.
+          PopupMenuButton<String>(
+            key: const Key('chartMoreMenu'),
+            icon: const Icon(Icons.more_vert),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                key: const Key('chartExplainButton'),
+                value: 'explain',
+                child: ListTile(
+                  leading: const Icon(Icons.lightbulb_outline),
+                  title: Text(l10n.chartAnalysis),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                key: const Key('chartTransposeButton'),
+                value: 'transpose',
+                child: ListTile(
+                  leading: const Icon(Icons.swap_vert),
+                  title: Text(l10n.chartTranspose),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                key: const Key('chartShareButton'),
+                value: 'share',
+                child: ListTile(
+                  leading: const Icon(Icons.ios_share),
+                  title: Text(l10n.chartShare),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                key: const Key('chartLibraryButton'),
+                value: 'library',
+                child: ListTile(
+                  leading: const Icon(Icons.folder_open),
+                  title: Text(l10n.chartLibrary),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                key: const Key('chartTextButton'),
+                value: 'text',
+                child: ListTile(
+                  leading: const Icon(Icons.edit_note),
+                  title: Text(l10n.chartEditAsText),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+            onSelected: (value) => switch (value) {
+              'explain' => _explain(),
+              'transpose' => _transposeDialog(),
+              'share' => _share(),
+              'library' => _openLibrary(),
+              _ => _editAsText(),
+            },
           ),
         ],
       ),

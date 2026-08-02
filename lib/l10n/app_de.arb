@@ -3436,5 +3436,13 @@
       }
     }
   },
-  "chartAnalysisEmpty": "Füge Akkorde hinzu, dann werden sie hier erklärt."
+  "chartAnalysisEmpty": "Füge Akkorde hinzu, dann werden sie hier erklärt.",
+  "chartShare": "Teilen",
+  "chartShareCopy": "Teilen-Code kopieren",
+  "chartShareCopyHint": "Ein kurzer Code, den jemand anders einfügen kann",
+  "chartShareCopied": "Teilen-Code kopiert",
+  "chartSharePaste": "Teilen-Code öffnen",
+  "chartSharePasteHint": "Liest ein Chart, das dir jemand geschickt hat",
+  "chartShareOpened": "Chart geöffnet",
+  "chartSharePasteFailed": "Kein Chart-Code in der Zwischenablage gefunden."
 }

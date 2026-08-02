@@ -1022,7 +1022,11 @@
   "musicPickerMelodyHint": "Tap the first few notes of the tune. Any key — we match the shape, not the pitch. ({count} pieces searchable.)",
   "@musicPickerMelodyHint": {
     "description": "Shown in the melody search before enough notes are entered. Says explicitly that the key does not matter, because a user who thinks it does will not try.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "dawInsertMusicTitle": "How should this music arrive?",
   "dawInsertMusicSymbolic": "Notation",
@@ -4002,5 +4006,13 @@
       }
     }
   },
-  "chartAnalysisEmpty": "Add some chords and this will explain them."
+  "chartAnalysisEmpty": "Add some chords and this will explain them.",
+  "chartShare": "Share",
+  "chartShareCopy": "Copy the share code",
+  "chartShareCopyHint": "A short code someone else can paste in",
+  "chartShareCopied": "Share code copied",
+  "chartSharePaste": "Open a share code",
+  "chartSharePasteHint": "Reads a chart someone sent you",
+  "chartShareOpened": "Chart opened",
+  "chartSharePasteFailed": "No chart code found on the clipboard."
 }
