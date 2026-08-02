@@ -1216,6 +1216,29 @@ is recorded in [HISTORY.md](HISTORY.md).
       files. MEI's multi-`mdiv` case was already handled (the layer search
       prefers a score that actually contains music).
 
+  - ✅ **PORTAMENTO AND CUE NOTES in MEI and MuseScore** (2026-08-02,
+    `eca76f4`). Both were DEAD channels before this arc and MusicXML-only after.
+    - ⚠️ **MEI spells a glissando and a portamento with the SAME `<gliss>`, and
+      MuseScore with the same Glissando spanner**, so each needs a
+      discriminator or the two concepts collapse: `@lform` (wavy vs solid) and
+      `<subtype>` (1 vs 0). Pinned by a test carrying one of each at once.
+    - Cue is `@cue="true"` in MEI and `<small>` in MuseScore — 3,060 of the
+      latter in the corpus, so the spelling is measured rather than guessed.
+      ⚠️ `<small>` is MuseScore's GENERIC draw-small flag: it also appears on
+      clefs, rests and text, so it is read only from a `<Chord>`. Verified on a
+      real file whose `<small>` is elsewhere — 0 cue notes, correctly.
+    - ⚠️ **LilyPond is left out ON PURPOSE**: it spells both marks
+      `\glissando` and has no per-note cue flag (`\cueDuring` quotes another
+      VOICE, a different thing). Omitted rather than approximated.
+    - ⚠️ **The corpus total went DOWN 25 (10,561 → 10,536) and that is
+      expected, not a regression**: we now READ cue notes from real MuseScore
+      files, and abc/kern/lilypond/gp/midi have no such concept, so those cells
+      newly fail on a channel that was previously empty. More information
+      carried, fewer formats able to hold it. `cue` 9 → 132.
+      - 🆕 A residue is unexplained: `mscx -> mei` appears in the cue list even
+        though MEI carries it and every synthetic case (voice 1, voice 2,
+        several per bar) round-trips. Worth one file-level bisect.
+
   - 📋 **COVERAGE AS IT NOW STANDS — what each format carries** (2026-08-02).
     `—` = the format has no notation for it; `❌` = a real, unclaimed gap.
 
@@ -1233,7 +1256,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     | **hairpins** | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
     | **ottava · pedal · trill span · glissando** | ✅ | ✅ | ❌ | — | ✅ | ✅ |
     | **let-ring** | ✅ | ✅ | ❌ | — | ✅ | ❌ |
-    | portamento · cue notes | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+    | **portamento · cue notes** | ✅ | ✅ | — | — | — | ✅ |
     | figured bass · inline clefs | ✅ | ❌ | ❌ | — | ❌ | ❌ |
     | measure repeat · multi-rest | ✅ | ❌ | ❌ | ❌ / ✅ | ❌ | ❌ |
     | common/cut meter glyph | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
