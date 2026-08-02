@@ -432,10 +432,29 @@ not "simplify" either back:**
   5.5→4.0%, 6-note 27.9→24.4%) because thin rows can tie; the long-query case
   goes from unusable to correct.
 
-**Next:** the mic plumbing itself — `microphone_pitch_service` readings →
-`PitchFrame` → `segmentNotes` → `melodyQueryFromNotes` → the existing lens. Plus
-an entry point that takes the query from a Workshop / Loop Studio selection
-instead of the keyboard.
+✅ **MODE 2 IS SHIPPED (2026-08-02)** — `sung_melody.dart` (the collector) +
+a mic button on the melody lens, with 8 widget tests driving it through an
+injected fake microphone.
+
+⚠️ **Three bugs the tests caught that no review would have, all worth keeping:**
+- **Frame timestamps belong to the SOURCE, not the consumer.** The sheet stamped
+  arrival from a `Stopwatch` — real time — while `pump()` advances FAKE time, so
+  every frame landed at ~0 ms, every note came out zero-length, and the duration
+  filter silently discarded the whole phrase. `MelodyMicrophone.readings` now
+  carries `timeMs`.
+- **`await subscription.cancel()` before releasing the mic never completed** with
+  buffered frames pending, so `stop()` was unreachable. In a test the second tap
+  did nothing; **in production that is a microphone held open.** Cancel and stop
+  are independent — fire cancel, do not await it.
+- **The same ordering swallowed the error message**: the catch awaited cancel
+  before `setState`, so a denied or busy mic reported nothing at all.
+- 📌 And the reason the seam exists: a widget test cannot open a microphone, so
+  without `MelodyMicrophone` the whole sung path would be verifiable only by
+  hand on a device — which is exactly how the melody UI shipped unverified the
+  first time.
+
+**Next:** an entry point that takes the query from a Workshop / Loop Studio
+selection instead of the keyboard or the mic.
 
 ⚠️ **Client-side search over the whole catalog needs the score shard**
 (2.68 MB gzipped, 30 MB raw) — which is the offline-archive item above, now with
