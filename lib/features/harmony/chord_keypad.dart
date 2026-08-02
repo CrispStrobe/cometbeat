@@ -93,13 +93,31 @@ Future<ChordKeypadResult?> showChordKeypad(
 }) {
   // The dial is read HERE rather than passed down from every call site, so a
   // new caller cannot forget it and silently get the expert keypad.
-  final resolved = level ?? context.read<SettingsService>().chartLevel;
+  final resolved = level ?? _levelOf(context);
   return showModalBottomSheet<ChordKeypadResult>(
     context: context,
     isScrollControlled: true,
     builder: (context) =>
         ChordKeypad(initial: initial, style: style, level: resolved),
   );
+}
+
+/// The dial from app settings, or the full keypad when there are none.
+///
+/// ⚠️ The fallback is not defensive padding — it is required. `ChartKeypad` is
+/// a public helper, and a host that has no `SettingsService` above it is a
+/// legitimate caller (a standalone embed, and `chart_screen_no_storage_test`,
+/// which pumps the screen with nothing but itself). Reading the provider
+/// unguarded turned that into a `ProviderNotFoundException`, and CI caught it.
+///
+/// `expert` is the right fallback because it is exactly what the keypad did
+/// before the dial existed: no settings, no narrowing.
+ChartLevel _levelOf(BuildContext context) {
+  try {
+    return context.read<SettingsService>().chartLevel;
+  } on ProviderNotFoundException {
+    return ChartLevel.expert;
+  }
 }
 
 /// The keypad body. Public so a widget test can drive it directly.

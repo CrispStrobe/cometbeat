@@ -174,4 +174,40 @@ void main() {
       expect(preview(tester), 'Cm7b9');
     });
   });
+
+  testWidgets('the keypad opens with NO SettingsService above it',
+      (tester) async {
+    // ⚠️ Regression, caught by CI and not by me. `showChordKeypad` reads the
+    // dial from app settings, and reading the provider unguarded threw
+    // `ProviderNotFoundException` for any host that has none — a standalone
+    // embed, or `chart_screen_no_storage_test`, which pumps the screen with
+    // nothing but itself. The fallback is the full keypad, which is exactly
+    // what it did before the dial existed.
+    ChordKeypadResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async {
+                result = await showChordKeypad(context);
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // It opened rather than throwing, and it opened UNNARROWED.
+    expect(find.byType(ChordKeypad), findsOneWidget);
+    expect(find.widgetWithText(InkWell, 'm7b5'), findsWidgets);
+    expect(result, isNull, reason: 'nothing chosen yet');
+  });
 }
