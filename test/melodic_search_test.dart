@@ -25,6 +25,9 @@ List<MelodicCandidate> get _pool => const [
     ];
 
 void main() {
+  sungQueryTests();
+  evidenceRankingTests();
+
   group('intervalsOf', () {
     test('is the diff, so it is one shorter than the input', () {
       expect(intervalsOf([60, 62, 64]), [2, 2]);
@@ -165,5 +168,145 @@ void main() {
     test('an empty side costs one indel per element', () {
       expect(melodicDistance(const [], [1, 2, 3]), 3 * kIndelCost);
     });
+  });
+}
+
+// --- mode 2: a SUNG query ---------------------------------------------------
+
+typedef _Note = ({int midi, double onMs, double offMs, double confidence});
+
+_Note _n(int midi, double on, double off, [double conf = 0.9]) =>
+    (midi: midi, onMs: on, offMs: off, confidence: conf);
+
+void sungQueryTests() {
+  group('a query longer than the incipit', () {
+    test('a perfect match still scores 1.0 past the incipit length', () {
+      // ⚠️ The regression this pins: `searchMelodies` used to truncate only the
+      // CANDIDATE. A sung query easily runs past the catalog's 16-note incipit,
+      // and every extra note then counted as an indel — a perfect match could
+      // not score above ~0.7, so sung search would have looked broken while the
+      // ranking was in fact right.
+      final pool = [
+        const MelodicCandidate('short', [60, 62, 64, 65]),
+      ];
+      final long = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79];
+      final hits = searchMelodies(long, pool);
+      expect(hits, isNotEmpty);
+      expect(hits.first.score, 1.0);
+    });
+
+    test('a long query still discriminates between candidates', () {
+      // Truncating to the common prefix must not make everything match.
+      final pool = [
+        const MelodicCandidate('right', [60, 62, 64, 65]),
+        const MelodicCandidate('wrong', [60, 55, 70, 51]),
+      ];
+      final hits = searchMelodies(
+        [60, 62, 64, 65, 67, 69, 71, 72],
+        pool,
+      );
+      expect(hits.first.id, 'right');
+      expect(hits.first.score, greaterThan(hits.last.score));
+    });
+  });
+
+  group('melodyQueryFromNotes', () {
+    test('keeps REPEATED pitches — they are the shape', () {
+      // "C C G" is [0, +7]; "C G" is [+7]. Ode to Joy and Twinkle both open by
+      // repeating a note, so collapsing repeats would delete their openings.
+      final q = melodyQueryFromNotes([
+        _n(60, 0, 400),
+        _n(60, 400, 800),
+        _n(67, 800, 1200),
+      ]);
+      expect(q, [60, 60, 67]);
+    });
+
+    test('drops the sub-100ms slides between pitches', () {
+      // A glide artefact inserts an interval PAIR — in and out again — which
+      // costs far more than the note is worth.
+      final q = melodyQueryFromNotes([
+        _n(60, 0, 400),
+        _n(63, 400, 430), // 30 ms slide
+        _n(67, 430, 900),
+      ]);
+      expect(q, [60, 67]);
+    });
+
+    test('drops low-confidence notes (breath, room noise)', () {
+      final q = melodyQueryFromNotes([
+        _n(60, 0, 400),
+        _n(48, 400, 900, 0.2),
+        _n(67, 900, 1400),
+      ]);
+      expect(q, [60, 67]);
+    });
+
+    test('caps the query at the incipit length', () {
+      final many = [
+        for (var i = 0; i < 40; i++)
+          _n(60 + (i % 5), i * 300.0, i * 300.0 + 250),
+      ];
+      expect(melodyQueryFromNotes(many).length, kMaxSungQueryNotes);
+    });
+
+    test('silence in, nothing out', () {
+      expect(melodyQueryFromNotes(const []), isEmpty);
+      expect(melodyQueryFromNotes([_n(60, 0, 20)]), isEmpty);
+    });
+  });
+
+  test('a sung Ode to Joy finds it end to end', () {
+    // The whole mode-2 path minus the microphone: notes as a transcriber would
+    // hand them over — transposed, with a slide artefact and a breath in it —
+    // through the bridge and into the search.
+    const ode = [64, 64, 65, 67, 67, 65, 64, 62];
+    final pool = [
+      const MelodicCandidate('ode', ode),
+      const MelodicCandidate('scale', [60, 62, 64, 65, 67, 69, 71, 72]),
+    ];
+    final sung = <_Note>[
+      _n(71, 0, 500), // sung a fifth up
+      _n(71, 500, 1000),
+      _n(74, 1000, 1020), // a slide, too short to count
+      _n(72, 1020, 1500),
+      _n(74, 1500, 2000),
+      _n(40, 2000, 2400, 0.1), // a breath the detector pitched
+      _n(74, 2400, 2900),
+      _n(72, 2900, 3400),
+      _n(71, 3400, 3900),
+      _n(69, 3900, 4400),
+    ];
+    final query = melodyQueryFromNotes(sung);
+    expect(query, [71, 71, 72, 74, 74, 72, 71, 69]);
+    expect(searchMelodies(query, pool).first.id, 'ode');
+  });
+}
+
+void evidenceRankingTests() {
+  test('a thinly-evidenced row does not out-rank a well-evidenced one', () {
+    // ⚠️ Measured, not hypothetical: scoring on the common prefix alone let
+    // rows with a two-note incipit (ONE interval, which anything matches) flood
+    // the top with 1.0s, and took an 8-note query from 51% top-1 to 34% on the
+    // real 38k catalog. Equal score with less evidence must rank lower.
+    final pool = [
+      const MelodicCandidate('thin', [60, 62]), // one interval
+      const MelodicCandidate('full', [60, 62, 64, 65, 67, 69]),
+    ];
+    final hits = searchMelodies([60, 62, 64, 65, 67, 69], pool);
+    expect(hits.first.id, 'full');
+    expect(hits.first.score, hits.last.score, reason: 'both match perfectly');
+    expect(hits.first.matched, greaterThan(hits.last.matched));
+  });
+
+  test('evidence never overrides a better score', () {
+    // The tie-break is a TIE-break. A long but wrong candidate must still lose
+    // to a short exact one.
+    final pool = [
+      const MelodicCandidate('longWrong', [60, 40, 75, 41, 79, 45]),
+      const MelodicCandidate('shortRight', [60, 62, 64]),
+    ];
+    final hits = searchMelodies([60, 62, 64], pool);
+    expect(hits.first.id, 'shortRight');
   });
 }
