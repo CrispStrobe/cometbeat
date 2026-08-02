@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
 import 'package:comet_beat/core/audio/tts/tts_engine.dart';
 import 'package:comet_beat/core/build_info.dart';
+import 'package:comet_beat/core/harmony/chart_level.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/debug_service.dart';
@@ -274,6 +275,38 @@ class SettingsScreen extends StatelessWidget {
                     // Off → drop the loaded model now so it takes effect at once.
                     if (!v) TabArranger.shared = null;
                   },
+                ),
+                const Divider(height: 0),
+                // BB-U6. A three-step dial rather than a switch, and phrased
+                // as DETAIL rather than as skill — nobody wants to tell an app
+                // they are a beginner. The note underneath is load-bearing: it
+                // is the promise that this narrows the keypad and nothing else.
+                ListTile(
+                  title: Text(l10n.chartLevelLabel),
+                  subtitle: Text(
+                    '${l10n.chartLevelSubtitle}\n${l10n.chartLevelNote}',
+                  ),
+                  isThreeLine: true,
+                  trailing: SegmentedButton<ChartLevel>(
+                    key: const ValueKey('chartLevelSelector'),
+                    segments: [
+                      ButtonSegment(
+                        value: ChartLevel.beginner,
+                        label: Text(l10n.chartLevelBeginner),
+                      ),
+                      ButtonSegment(
+                        value: ChartLevel.learner,
+                        label: Text(l10n.chartLevelLearner),
+                      ),
+                      ButtonSegment(
+                        value: ChartLevel.expert,
+                        label: Text(l10n.chartLevelExpert),
+                      ),
+                    ],
+                    selected: {settings.chartLevel},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (s) => settings.setChartLevel(s.first),
+                  ),
                 ),
                 const Divider(height: 0),
                 SwitchListTile(

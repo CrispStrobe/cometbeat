@@ -3,6 +3,7 @@
 // #3 of the TTS follow-up queue; there was no settings-persistence test before.
 
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
+import 'package:comet_beat/core/harmony/chart_level.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/shared/score_theme.dart';
@@ -105,5 +106,30 @@ void main() {
     final r = await _reload();
     expect(r.voiceId, Instrument.cello.name);
     expect(r.instrument, Instrument.cello);
+  });
+
+  test('the chart level round-trips, and defaults to learner', () async {
+    // BB-U6. Stored as the NAME, so a future reordering of the enum cannot
+    // reinterpret someone's saved setting as a different level.
+    expect((await _loaded()).chartLevel, ChartLevel.learner);
+
+    final s = await _loaded();
+    await s.setChartLevel(ChartLevel.beginner);
+    expect((await _reload()).chartLevel, ChartLevel.beginner);
+    await s.setChartLevel(ChartLevel.expert);
+    expect((await _reload()).chartLevel, ChartLevel.expert);
+  });
+
+  test('an unreadable stored level falls back to learner, not to beginner',
+      () async {
+    // A corrupt or future value must not silently drop an experienced player
+    // onto the most restricted surface.
+    // First prove the mechanism reads the store at all — otherwise the
+    // fallback assertion below would pass for the wrong reason.
+    SharedPreferences.setMockInitialValues({'chart_level': 'expert'});
+    expect((await _loaded()).chartLevel, ChartLevel.expert);
+
+    SharedPreferences.setMockInitialValues({'chart_level': 'wizard'});
+    expect((await _loaded()).chartLevel, ChartLevel.learner);
   });
 }

@@ -15,12 +15,15 @@
 library;
 
 import 'package:comet_beat/core/harmony/chart.dart';
+import 'package:comet_beat/core/harmony/chart_level.dart';
 import 'package:comet_beat/core/harmony/chord_spec.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart' show Pitch, Step;
 // Material exports a \`Step\` (the Stepper widget's); the musical one is what
 // this file is about.
 import 'package:flutter/material.dart' hide Step;
+import 'package:provider/provider.dart';
 
 /// What the keypad returns: a chord, an explicitly empty bar, or nothing.
 sealed class ChordKeypadResult {
@@ -86,11 +89,16 @@ Future<ChordKeypadResult?> showChordKeypad(
   BuildContext context, {
   ChordSpec? initial,
   ChordSymbolStyle style = ChordSymbolStyle.plain,
+  ChartLevel? level,
 }) {
+  // The dial is read HERE rather than passed down from every call site, so a
+  // new caller cannot forget it and silently get the expert keypad.
+  final resolved = level ?? context.read<SettingsService>().chartLevel;
   return showModalBottomSheet<ChordKeypadResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => ChordKeypad(initial: initial, style: style),
+    builder: (context) =>
+        ChordKeypad(initial: initial, style: style, level: resolved),
   );
 }
 
@@ -100,10 +108,16 @@ class ChordKeypad extends StatefulWidget {
     super.key,
     this.initial,
     this.style = ChordSymbolStyle.plain,
+    this.level = ChartLevel.expert,
   });
 
   final ChordSpec? initial;
   final ChordSymbolStyle style;
+
+  /// How much vocabulary to offer (BB-U6). Defaults to [ChartLevel.expert] so
+  /// a caller that has not been taught about the dial still gets the full
+  /// keypad — narrowing must be something you ASK for, never a silent default.
+  final ChartLevel level;
 
   @override
   State<ChordKeypad> createState() => _ChordKeypadState();
@@ -173,8 +187,15 @@ class _ChordKeypadState extends State<ChordKeypad> {
             const Divider(height: 24),
             _qualityGrid(),
             const SizedBox(height: 8),
-            _extrasToggle(theme),
-            if (_showExtras) _extras(theme),
+            // Below expert the extensions/alterations/bass panel is not
+            // offered. ⚠️ Hiding it does NOT strip anything: `_spec` is built
+            // from `_alterations` either way, so a beginner opening someone's
+            // `C7b9` keeps the ♭9, sees it in the preview, and hands it back
+            // untouched. The vocabulary is narrowed, the chord is not.
+            if (widget.level.offersExtras) ...[
+              _extrasToggle(theme),
+              if (_showExtras) _extras(theme),
+            ],
             const Divider(height: 24),
             _actions(),
           ],
@@ -221,30 +242,31 @@ class _ChordKeypadState extends State<ChordKeypad> {
         runSpacing: 6,
         children: [
           for (final (label, triad, seventh, implied) in _qualities)
-            _key(
-              // A bare major has no suffix, so the button needs a word or it
-              // reads as a blank key.
-              label: label.isEmpty ? 'maj' : label,
-              // Two qualities can share a triad and a seventh and differ only
-              // in what they imply (`m7` against `m7b5`), so the implied set
-              // is part of the identity check, not just of the tap.
-              selected: _triad == triad &&
-                  _seventh == seventh &&
-                  _alterations.intersection(_impliedByAnyQuality).length ==
-                      implied.length &&
-                  _alterations.containsAll(implied),
-              onTap: () => setState(() {
-                _triad = triad;
-                _seventh = seventh;
-                // Changing the quality drops an extension the new quality
-                // cannot carry, rather than silently keeping a 9 on a triad.
-                if (seventh == ChordSeventh.none) _extension = 0;
-                _alterations
-                  ..removeAll(_impliedByAnyQuality)
-                  ..addAll(implied);
-              }),
-              width: 74,
-            ),
+            if (widget.level.offersQuality(label))
+              _key(
+                // A bare major has no suffix, so the button needs a word or it
+                // reads as a blank key.
+                label: label.isEmpty ? 'maj' : label,
+                // Two qualities can share a triad and a seventh and differ only
+                // in what they imply (`m7` against `m7b5`), so the implied set
+                // is part of the identity check, not just of the tap.
+                selected: _triad == triad &&
+                    _seventh == seventh &&
+                    _alterations.intersection(_impliedByAnyQuality).length ==
+                        implied.length &&
+                    _alterations.containsAll(implied),
+                onTap: () => setState(() {
+                  _triad = triad;
+                  _seventh = seventh;
+                  // Changing the quality drops an extension the new quality
+                  // cannot carry, rather than silently keeping a 9 on a triad.
+                  if (seventh == ChordSeventh.none) _extension = 0;
+                  _alterations
+                    ..removeAll(_impliedByAnyQuality)
+                    ..addAll(implied);
+                }),
+                width: 74,
+              ),
         ],
       );
 

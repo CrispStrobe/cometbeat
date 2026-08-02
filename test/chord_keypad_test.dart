@@ -1,6 +1,9 @@
+import 'package:comet_beat/core/harmony/chart_level.dart';
+import 'package:comet_beat/core/harmony/chord_spec.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
-import 'package:flutter/material.dart';
+import 'package:crisp_notation_core/crisp_notation_core.dart' show Pitch, Step;
+import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
 
 /// The chord keypad.
@@ -13,10 +16,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// canonical `format()` of what the keypad currently holds. That is exactly
 /// what the player sees, so a test that passes here cannot be lying about the
 /// experience.
-Widget host() => const MaterialApp(
+Widget host({ChartLevel level = ChartLevel.expert}) => MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: ChordKeypad()),
+      home: Scaffold(body: ChordKeypad(level: level)),
     );
 
 String preview(WidgetTester tester) =>
@@ -99,5 +102,76 @@ void main() {
     expect(preview(tester), 'C7b9');
     await tapKey(tester, 'm7');
     expect(preview(tester), 'Cm7b9');
+  });
+
+  group('the beginner↔expert dial (BB-U6)', () {
+    testWidgets('a beginner is offered a short vocabulary', (tester) async {
+      await tester.pumpWidget(host(level: ChartLevel.beginner));
+      await tester.pumpAndSettle();
+
+      // Present: the chords a first song is made of.
+      for (final label in ['maj', 'm', '7', 'm7']) {
+        expect(
+          find.widgetWithText(InkWell, label),
+          findsWidgets,
+          reason: 'a beginner should still have "$label"',
+        );
+      }
+      // Absent: the vocabulary that arrives with function labels.
+      for (final label in ['m7b5', 'dim7', '7sus4', 'm6']) {
+        expect(
+          find.widgetWithText(InkWell, label),
+          findsNothing,
+          reason: '"$label" should not be offered to a beginner',
+        );
+      }
+      // …and there is no route to the extensions/alterations at all. Asserted
+      // on the KEYS rather than on "no TextButton" — the Clear/Cancel/OK row
+      // is made of TextButtons too, so that check passed for the wrong reason.
+      for (final label in ['♭9', '♯11', 'alt', '9', '13']) {
+        expect(
+          find.widgetWithText(InkWell, label),
+          findsNothing,
+          reason: '"$label" should be unreachable for a beginner',
+        );
+      }
+    });
+
+    testWidgets('an expert is offered the whole table', (tester) async {
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+      for (final label in ['maj', 'm7b5', 'dim7', '7sus4', 'aug', '5']) {
+        expect(find.widgetWithText(InkWell, label), findsWidgets);
+      }
+    });
+
+    testWidgets('a beginner KEEPS an alteration they cannot see',
+        (tester) async {
+      // The card's invariant at the widget level: narrowing the surface must
+      // not edit the music. Opening an expert's ♭9 chord on a beginner keypad
+      // shows it in the preview and hands it back untouched.
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ChordKeypad(
+              initial: ChordSpec(
+                root: Pitch(Step.c),
+                seventh: ChordSeventh.minor,
+                alterations: {ChordAlteration.flatNine},
+              ),
+              level: ChartLevel.beginner,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(preview(tester), 'C7b9', reason: 'the chord must still READ true');
+      // Changing quality keeps the alteration the player never saw.
+      await tapKey(tester, 'm7');
+      expect(preview(tester), 'Cm7b9');
+    });
   });
 }

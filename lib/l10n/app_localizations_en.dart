@@ -9443,4 +9443,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartImportBarsInferred => 'Bar lengths were guessed — check them';
+
+  @override
+  String get chartLevelLabel => 'Chord chart detail';
+
+  @override
+  String get chartLevelSubtitle =>
+      'How much chord vocabulary the keypad offers';
+
+  @override
+  String get chartLevelBeginner => 'Simple';
+
+  @override
+  String get chartLevelLearner => 'Standard';
+
+  @override
+  String get chartLevelExpert => 'Full';
+
+  @override
+  String get chartLevelNote =>
+      'Only changes what you can EDIT — every chart still opens and plays in full.';
 }

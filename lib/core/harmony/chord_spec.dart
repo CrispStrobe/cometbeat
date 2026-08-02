@@ -88,7 +88,13 @@ class ChordSymbolStyle {
   /// `♭`/`♯` instead of `b`/`#`.
   final bool unicodeAccidentals;
 
-  /// `∆` for a major seventh, `ø` for a half-diminished, `°` for a diminished.
+  /// `∆` for a major seventh and `°` for a diminished.
+  ///
+  /// ⚠️ NOT `ø` for a half-diminished, deliberately — that prints `m7♭5`, and
+  /// `chord_spec_test.dart` pins it. The parser DOES read `ø` (it is one of
+  /// the five accepted spellings), so this is an asymmetry on purpose: we
+  /// accept the engraved glyph and print the name more players can read.
+  /// Revisit only as a decision, not as a bug — see BB-U6.
   final bool jazzGlyphs;
 
   /// The German convention: the natural B prints as `H`, and B♭ prints as `B`.

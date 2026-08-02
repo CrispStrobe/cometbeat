@@ -8,6 +8,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/tracker_profile.dart';
 import 'package:comet_beat/core/audio/voice_options.dart';
+import 'package:comet_beat/core/harmony/chart_level.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ class SettingsService with ChangeNotifier {
   static const _showNoteNamesKey = 'show_note_names';
   static const _smartTabFingeringKey = 'smart_tab_fingering';
   static const _authenticSlidesKey = 'tracker_authentic_slides';
+  static const _chartLevelKey = 'chart_level';
 
   Locale? _locale;
   NoteNaming _noteNaming = NoteNaming.auto;
@@ -41,6 +43,7 @@ class SettingsService with ChangeNotifier {
   bool _showNoteNames = false;
   bool _smartTabFingering = true;
   bool _authenticSlides = true;
+  ChartLevel _chartLevel = ChartLevel.learner;
   Instrument _instrument = Instrument.piano;
   String _voiceId = Instrument.piano.name;
   TrackerInstrument? _voice;
@@ -148,6 +151,7 @@ class SettingsService with ChangeNotifier {
     _showNoteNames = prefs.getBool(_showNoteNamesKey) ?? false;
     _smartTabFingering = prefs.getBool(_smartTabFingeringKey) ?? true;
     _authenticSlides = prefs.getBool(_authenticSlidesKey) ?? true;
+    _chartLevel = ChartLevel.fromName(prefs.getString(_chartLevelKey));
     trackerAuthenticSlidesDefault = _authenticSlides;
     _applyScoreFont();
     // Voice: prefer the new full-palette key; migrate from the legacy 4-way
@@ -159,6 +163,21 @@ class SettingsService with ChangeNotifier {
     _instrument = resolved.instrument;
     _voice = resolved.voice;
     notifyListeners();
+  }
+
+  /// How much chart machinery to show (BB-U6). Defaults to [ChartLevel.learner]
+  /// — the common working vocabulary — so neither end of the range has to
+  /// change a setting before the feature is usable.
+  ///
+  /// ⚠️ Gates the chart SURFACE only. It never changes what a chart may hold or
+  /// how it plays; see `chart_level.dart` for why that line matters.
+  ChartLevel get chartLevel => _chartLevel;
+
+  Future<void> setChartLevel(ChartLevel level) async {
+    _chartLevel = level;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_chartLevelKey, level.name);
   }
 
   Future<void> setLocale(Locale? locale) async {

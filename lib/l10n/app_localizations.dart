@@ -17119,6 +17119,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bar lengths were guessed — check them'**
   String get chartImportBarsInferred;
+
+  /// No description provided for @chartLevelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord chart detail'**
+  String get chartLevelLabel;
+
+  /// No description provided for @chartLevelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How much chord vocabulary the keypad offers'**
+  String get chartLevelSubtitle;
+
+  /// No description provided for @chartLevelBeginner.
+  ///
+  /// In en, this message translates to:
+  /// **'Simple'**
+  String get chartLevelBeginner;
+
+  /// No description provided for @chartLevelLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get chartLevelLearner;
+
+  /// No description provided for @chartLevelExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get chartLevelExpert;
+
+  /// No description provided for @chartLevelNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Only changes what you can EDIT — every chart still opens and plays in full.'**
+  String get chartLevelNote;
 }
 
 class _AppLocalizationsDelegate

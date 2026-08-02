@@ -3465,5 +3465,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "chartLevelLabel": "Detailgrad für Akkordblätter",
+  "chartLevelSubtitle": "Wie viele Akkorde das Tastenfeld anbietet",
+  "chartLevelBeginner": "Einfach",
+  "chartLevelLearner": "Standard",
+  "chartLevelExpert": "Vollständig",
+  "chartLevelNote": "Ändert nur, was du BEARBEITEN kannst — jedes Stück öffnet und spielt vollständig."
 }

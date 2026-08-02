@@ -1,3 +1,4 @@
+import 'package:comet_beat/core/harmony/chart_level.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/debug_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
@@ -174,5 +175,54 @@ void main() {
     // (onnx/onnxFfi/crispasr) rendered as a single "Neural".
     expect(find.text('GGUF (native)'), findsWidgets);
     expect(find.text('ONNX (native)'), findsWidgets);
+  });
+
+  testWidgets('the chart-detail dial is on screen and changes the setting',
+      (tester) async {
+    // BB-U6. The dial only earns its keep if a player can reach it.
+    PackageInfo.setMockInitialValues(
+      appName: 'CometBeat',
+      packageName: 'com.crispstrobe.cometBeat',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsService();
+    await settings.load();
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider(create: (_) => SriService()),
+          ChangeNotifierProvider(create: (_) => DebugService()),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: [Locale('en'), Locale('de')],
+          home: SettingsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final dial = find.byKey(const ValueKey('chartLevelSelector'));
+    await tester.scrollUntilVisible(dial, 300);
+    await tester.pumpAndSettle();
+
+    expect(settings.chartLevel, ChartLevel.learner, reason: 'the default');
+    await tester.tap(find.text('Simple'));
+    await tester.pumpAndSettle();
+    expect(settings.chartLevel, ChartLevel.beginner);
+
+    await tester.tap(find.text('Full'));
+    await tester.pumpAndSettle();
+    expect(settings.chartLevel, ChartLevel.expert);
   });
 }

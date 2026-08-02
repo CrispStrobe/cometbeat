@@ -9496,4 +9496,23 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get chartImportBarsInferred =>
       'Taktlängen wurden geraten — bitte prüfen';
+
+  @override
+  String get chartLevelLabel => 'Detailgrad für Akkordblätter';
+
+  @override
+  String get chartLevelSubtitle => 'Wie viele Akkorde das Tastenfeld anbietet';
+
+  @override
+  String get chartLevelBeginner => 'Einfach';
+
+  @override
+  String get chartLevelLearner => 'Standard';
+
+  @override
+  String get chartLevelExpert => 'Vollständig';
+
+  @override
+  String get chartLevelNote =>
+      'Ändert nur, was du BEARBEITEN kannst — jedes Stück öffnet und spielt vollständig.';
 }

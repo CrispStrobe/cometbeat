@@ -4035,5 +4035,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "chartLevelLabel": "Chord chart detail",
+  "chartLevelSubtitle": "How much chord vocabulary the keypad offers",
+  "chartLevelBeginner": "Simple",
+  "chartLevelLearner": "Standard",
+  "chartLevelExpert": "Full",
+  "chartLevelNote": "Only changes what you can EDIT — every chart still opens and plays in full."
 }

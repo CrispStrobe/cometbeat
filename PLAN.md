@@ -1948,7 +1948,38 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     says this earned it. Deciding not to add a mode is reversible; adding one is
     not.
 
-- ⬜ **BB-U6 — the beginner↔expert dial.** `S`
+- ✅ **BB-U6 — the beginner↔expert dial. DONE.** `S`
+  - ✅ **Shipped:** `core/harmony/chart_level.dart` (`ChartLevel`
+    beginner/learner/expert + a policy extension), persisted as
+    `SettingsService.chartLevel`, a **Settings** segmented control, and the
+    keypad narrowed by it. 19 tests across `chart_level_test.dart`,
+    `chord_keypad_test.dart` and `settings_service_test.dart`.
+  - **The dial is read inside `showChordKeypad`, not passed from call sites** —
+    a new caller cannot forget it and silently get the expert keypad.
+  - **Persisted by NAME, defaulting to `learner`.** An unreadable value must not
+    drop an experienced player onto the most restricted surface, and an index
+    would let a future reorder reinterpret everyone's setting.
+  - ⚠️ **Hiding the extras panel must not STRIP anything** — `_spec` builds from
+    `_alterations` either way, so a beginner opening someone's `C7b9` keeps the
+    ♭9, sees it in the preview and hands it back untouched. Asserted.
+  - ⚠️ **`stylesFrom` keeps the chart's CURRENT style even when it is off the
+    narrowed list** — otherwise opening a bossa chart on a beginner device would
+    silently re-style it, which is gating the music.
+  - 📌 **Honest scope of the invariant test.** `ChartLevel` is not a parameter of
+    the parser, the codec or `resolveChartPlayback`, and THAT is what enforces
+    rule 5 — not a test. A loop calling the same function once per level looks
+    like proof and asserts nothing; I wrote one, caught it, and replaced it with
+    an assertion that the hard chart plays in full (every bar sounds, the ♭9 is
+    really in the voicing, exact integer-beat arithmetic).
+  - 📌 **`ø` is NOT emitted, deliberately** — found while wiring the print
+    convention. `chord_spec.dart`'s doc promised `∆`, `ø` and `°`; the formatter
+    only ever emits two, and `chord_spec_test.dart` explicitly pins `F♯m7♭5` for
+    jazz style. The parser DOES read `ø`, so the asymmetry is: accept the
+    engraved glyph, print the name more players can read. The over-promising doc
+    is fixed. Flipping the behaviour is a DECISION, not a bug fix — left alone.
+  - **Superseded card text below (kept for its reasoning).**
+
+- ⬜ **BB-U6 (original) — the beginner↔expert dial.** `S`
   - ✅ **This card IS decision 1's other half.** Rule 5 says the model stays full
     and the surface gets gated; without this card the gating never happens and the
     feature silently becomes an adults-only one.
