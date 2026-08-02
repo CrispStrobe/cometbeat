@@ -1172,6 +1172,43 @@ is recorded in [HISTORY.md](HISTORY.md).
     - Tests: `chord_name_test.dart` (99), `chord_symbol_crossformat_test.dart`
       (every quality × every format, plus a no-harmony byte-identity check).
 
+  - 📊 **THE RICH SWEEP IS NOW A RANKED WORK LIST** (2026-08-02, opus). A
+    `--rich` corpus run compares every channel, so one percentage mixes real
+    defects with channels a format simply cannot carry — 61% reads as alarming
+    when most of it is kern having no way to write an annotation. The harness
+    now tallies **which channel diverged first**, per cell (`74a863e6`+).
+
+    Sample: 400 files/extension, 2,680 sources, 48 shared cells.
+
+    | channel | first-divergence failures | reading |
+    |---|---|---|
+    | note | 4,886 | almost all `-> gp` / `-> midi`, the two known-bad columns |
+    | bar | 1,854 | measure structure — meter spelling (`C` vs `4/4`), volta |
+    | ann | 1,823 | kern carries no annotations at all; ABC flattens whitespace |
+    | lyric | 941 | alignment and verse numbering |
+    | hairpin | 826 | **endpoint drift** — `@10-15` vs `@12-15`, some `@-1-…` |
+    | dyn | 506 | |
+    | meta | 349 | |
+    | slur | 246 | |
+    | **chord · tempo · ottava · trillext · cue · pedal · port · lv · gliss** | **187 TOTAL** | everything this session ADDED, ~2% of all failures |
+
+    - ✅ **The channels added this arc are ~98% clean at corpus scale**, which is
+      the check the synthetic tests could not give.
+    - 🆕 **Best remaining REAL-bug bucket: `hairpin` (826).** Not a "format
+      cannot carry it" case — several do. The examples show ENDPOINT
+      MIS-PAIRING (`hairpin@175-178:crescendo` → `@177-178:diminuendo`) and
+      spans whose start is not in the note index at all (`hairpin@-1-304`).
+      Same index-pairing fragility the MuseScore pedal/ottava readers use.
+      Pre-existing; unclaimed.
+    - ⚠️ `bar` is partly a SPELLING difference, not loss: `time:C` vs `time:4/4`
+      and `time:C|` vs `time:4/4`. Whether common time should round-trip as `C`
+      is a decision, not obviously a bug.
+    - ⚠️ **Compare no more precisely than the target format can carry.** The
+      signature checked tempo exactly and reported a false failure on every
+      score whose tempo came from MuseScore's quarters-per-second float
+      (1.5333 × 60 = 91.9998) — LilyPond CANNOT hold that, since a fractional
+      `\tempo` is a syntax error there. Now compared to the nearest bpm.
+
   - 🆕 **THE MEASURE-LEVEL AUDIT — the signature compared 8 of `Measure`'s 20
     fields** (2026-08-01/02, opus). Third level of the same question, and it
     paid again.
