@@ -2,7 +2,10 @@
 // tuning, always sounding the right pitch classes with the root in the bass.
 
 import 'package:comet_beat/features/games/composition/tab_chord_builder.dart';
-import 'package:crisp_notation/crisp_notation.dart';
+// `chordName` collides: this file wants the app's
+// `chordName(rootPc, label)` from tab_chord_builder.dart, while
+// crisp_notation now exports a `chordName(ChordSymbol)` of its own.
+import 'package:crisp_notation/crisp_notation.dart' hide chordName;
 import 'package:flutter_test/flutter_test.dart';
 
 /// The distinct pitch classes a voicing sounds on [tuning] (muted = -1 skipped).

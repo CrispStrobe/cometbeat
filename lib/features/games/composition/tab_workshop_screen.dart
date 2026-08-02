@@ -54,7 +54,10 @@ import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:comet_beat/shared/widgets/tray_panel.dart';
-import 'package:crisp_notation/crisp_notation.dart';
+// `chordName` collides: this file wants the app's
+// `chordName(rootPc, label)` from tab_chord_builder.dart, while
+// crisp_notation now exports a `chordName(ChordSymbol)` of its own.
+import 'package:crisp_notation/crisp_notation.dart' hide chordName;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
