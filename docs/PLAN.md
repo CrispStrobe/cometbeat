@@ -1226,7 +1226,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 
     | channel | first-divergence failures | reading |
     |---|---|---|
-    | note | 4,886 | almost all `-> gp` / `-> midi`, the two known-bad columns |
+    | note | 4,886 | **note-ATTACHED marks, not pitch/rhythm** — see below |
     | bar | 1,854 | measure structure — meter spelling (`C` vs `4/4`), volta |
     | ann | 1,823 | kern carries no annotations at all; ABC flattens whitespace |
     | lyric | 941 | alignment and verse numbering |
@@ -1235,6 +1235,30 @@ is recorded in [HISTORY.md](HISTORY.md).
     | meta | 349 | |
     | slur | 246 | |
     | **chord · tempo · ottava · trillext · cue · pedal · port · lv · gliss** | **187 TOTAL** | everything this session ADDED, ~2% of all failures |
+
+    - 📌 **`note` does NOT mean wrong pitches.** The PLAIN signature is
+      15,960/15,960, so pitch and rhythm are verified clean; every `note`
+      divergence under `--rich` is a note-ATTACHED mark. Measured across all
+      ten of them:
+
+      | mark | musicxml | mei | kern | abc | lilypond | musescore |
+      |---|---|---|---|---|---|---|
+      | articulations · ornaments · grace | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+      | fingering | ✅ | ✅ **new** | — | — | ✅ **new** | ✅ **new** |
+      | tremolo | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+      | arpeggio | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+      | notehead | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+    - ✅ **Fingering DONE** (`af04b6c`) — piano, string and pedagogical scores,
+      which is this app's repertoire. ⚠️ LilyPond's `-` is a symbol prefix, so
+      `c4-1` split into a note, a `-` and a stray `1` and the finger number
+      vanished silently; the lexer now keeps `-` with a following DIGIT, which
+      no articulation shorthand uses. MEI takes `<fing>`; MuseScore a
+      `<Fingering>` CHILD of `<Note>`, not a sibling of the chord.
+    - 🆕 **UNCLAIMED: `arpeggio` and `notehead` are still MusicXML-only**, and
+      `tremolo` is missing from kern/ABC/LilyPond. All expressible — MEI
+      `<arpeg>` and `@head.shape`, LilyPond `\arpeggio` and
+      `\tweak NoteHead.style`, MuseScore `<Arpeggio>` and `<head>`.
 
     - ✅ **The channels added this arc are ~98% clean at corpus scale**, which is
       the check the synthetic tests could not give.
