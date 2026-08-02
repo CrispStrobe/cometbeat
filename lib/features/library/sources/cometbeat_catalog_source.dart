@@ -390,5 +390,78 @@ class CometbeatCatalogSource implements ContentSource {
   }
 
   @override
-  Future<Uint8List> fetch(LibraryItem item) => _http(item.downloadUrl);
+  Future<Uint8List> fetch(LibraryItem item) async {
+    final key = _payloadKey(item);
+    final cache = _cache ??= createTtsAssetCache();
+    if (key != null) {
+      try {
+        final hit = await cache.read(key);
+        if (hit != null && hit.isNotEmpty) return hit;
+      } catch (_) {/* unreadable cache — fall through to the network */}
+    }
+
+    final bytes = await _http(item.downloadUrl);
+    if (key != null && bytes.length <= kMaxCachedPayloadBytes) {
+      try {
+        await _prunePayloads(cache, incoming: bytes.length);
+        await cache.write(key, bytes);
+      } catch (_) {/* cache is a nicety, not a requirement */}
+    }
+    return bytes;
+  }
+
+  /// Where [item]'s bytes are kept, or null when it must not be cached.
+  ///
+  /// ⚠️ Keyed by the DOWNLOAD URL, not the item id. Catalog ids are stable but
+  /// a republish can repoint one at different bytes, and serving the old file
+  /// for a new URL is a silent wrong-content bug rather than a miss.
+  String? _payloadKey(LibraryItem item) {
+    final url = item.downloadUrl.toString();
+    if (url.isEmpty) return null;
+    // A filesystem-safe, collision-resistant name. `hashCode` alone is 32-bit
+    // and would collide across ~38k items sooner than is comfortable, so the
+    // length goes in too.
+    return 'payload/${url.hashCode.toRadixString(16)}-${url.length}';
+  }
+
+  /// The biggest payload worth keeping.
+  ///
+  /// ⚠️ This method serves BOTH a 20 KB score and a 140 MB SoundFont. Caching
+  /// by default is right for the first and ruinous for the second — a user who
+  /// auditions a few instruments would fill their disk without ever asking for
+  /// an offline library. 4 MB comfortably covers every score and tracker module
+  /// in the catalog while excluding the sample and soundfont payloads, which
+  /// have their own deliberate download flow.
+  static const int kMaxCachedPayloadBytes = 4 * 1024 * 1024;
+
+  /// How much catalog cache to keep on disk in total.
+  ///
+  /// ⚠️ Measured against the WHOLE cache, not just payloads — the shards live
+  /// there too (the score shard alone is ~2.7 MB gzipped) and pretending
+  /// otherwise would let the real footprint drift past whatever number this
+  /// claims. Only payloads are evicted, because the shards are what make the
+  /// library work offline at all and are cheap by comparison.
+  static const int kCatalogCacheBudgetBytes = 64 * 1024 * 1024;
+
+  /// Drops cached payloads until [incoming] fits inside the budget.
+  ///
+  /// Eviction order is arbitrary (the cache exposes no timestamps), which is
+  /// honest rather than pretending to be an LRU: every entry is re-fetchable,
+  /// so the cost of evicting the wrong one is one download, not a loss.
+  Future<void> _prunePayloads(
+    TtsAssetCache cache, {
+    required int incoming,
+  }) async {
+    final keys = (await cache.keys()).where((k) => k.startsWith('payload/'));
+    var total = await cache.totalBytes();
+    if (total + incoming <= kCatalogCacheBudgetBytes) return;
+    for (final k in keys) {
+      if (total + incoming <= kCatalogCacheBudgetBytes) return;
+      try {
+        final bytes = await cache.read(k);
+        await cache.delete(k);
+        total -= bytes?.length ?? 0;
+      } catch (_) {/* skip what will not budge */}
+    }
+  }
 }

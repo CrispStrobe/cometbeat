@@ -63,6 +63,125 @@ HttpGet _fakeHttp(Map<String, String> byUrl) => (Uri url) async {
 void main() {
   const indexUrl = 'https://h/catalog/index.json';
 
+  group('payload cache', () {
+    Future<CometbeatCatalogSource> srcWith(
+      _MemCache cache,
+      List<Uri> log, {
+      String payload = 'SF2',
+    }) async {
+      return CometbeatCatalogSource(
+        (Uri url) async {
+          log.add(url);
+          final body = {
+            indexUrl: _index,
+            'https://h/catalog/soundfont.json': _soundfontShard,
+            'https://h/assets/sf2/FluidR3_GM.sf2': payload,
+          }[url.toString()];
+          if (body == null) throw Exception('404 $url');
+          return _b(body);
+        },
+        indexUrl: indexUrl,
+        cache: cache,
+      );
+    }
+
+    test('a fetched payload is served from cache next time', () async {
+      final cache = _MemCache();
+      final log = <Uri>[];
+      final a = await srcWith(cache, log);
+      final item = (await a.browse()).single;
+      expect(await a.fetch(item), _b('SF2'));
+      final afterFirst = log.length;
+
+      // A new instance = a new launch.
+      final b = await srcWith(cache, log);
+      final item2 = (await b.browse()).single;
+      final before = log.length;
+      expect(await b.fetch(item2), _b('SF2'));
+      expect(log.length, before, reason: 'payload came from cache');
+      expect(afterFirst, greaterThan(0));
+    });
+
+    test('the payload is available with the network GONE', () async {
+      final cache = _MemCache();
+      final log = <Uri>[];
+      final online = await srcWith(cache, log);
+      final item = (await online.browse()).single;
+      await online.fetch(item);
+
+      final offline = CometbeatCatalogSource(
+        (Uri url) async => throw Exception('offline'),
+        indexUrl: indexUrl,
+        cache: cache,
+      );
+      final offlineItem = (await offline.browse()).single;
+      expect(await offline.fetch(offlineItem), _b('SF2'));
+    });
+
+    test('a payload over the cap is NOT cached', () async {
+      // ⚠️ The single most important behaviour here: this method serves both a
+      // 20 KB score and a 140 MB SoundFont. Caching by default is right for the
+      // first and ruinous for the second — someone auditioning instruments
+      // would fill their disk without ever asking for an offline library.
+      final cache = _MemCache();
+      final log = <Uri>[];
+      final big = 'x' * (CometbeatCatalogSource.kMaxCachedPayloadBytes + 1);
+      final src = await srcWith(cache, log, payload: big);
+      final item = (await src.browse()).single;
+      await src.fetch(item);
+      expect(
+        cache.store.keys.where((k) => k.startsWith('payload/')),
+        isEmpty,
+      );
+    });
+
+    test('a different URL is a different entry, even for the same id',
+        () async {
+      // Keyed by download URL, not item id: a republish can repoint a stable id
+      // at different bytes, and serving the old file would be a silent
+      // wrong-content bug rather than a miss.
+      final cache = _MemCache();
+      final log = <Uri>[];
+      final first = await srcWith(cache, log);
+      await first.fetch((await first.browse()).single);
+      final keysAfterFirst =
+          cache.store.keys.where((k) => k.startsWith('payload/')).toSet();
+      expect(keysAfterFirst, hasLength(1));
+
+      final moved = _soundfontShard.replaceAll(
+        'sf2/FluidR3_GM.sf2',
+        'sf2/FluidR3_GM_v2.sf2',
+      );
+      final second = CometbeatCatalogSource(
+        (Uri url) async {
+          final body = {
+            indexUrl: _index.replaceAll('"version":"t"', '"version":"t2"'),
+            'https://h/catalog/soundfont.json': moved,
+            'https://h/assets/sf2/FluidR3_GM_v2.sf2': 'NEW',
+          }[url.toString()];
+          if (body == null) throw Exception('404 $url');
+          return _b(body);
+        },
+        indexUrl: indexUrl,
+        cache: cache,
+      );
+      expect(await second.fetch((await second.browse()).single), _b('NEW'));
+    });
+
+    test('a broken cache still fetches', () async {
+      final src = CometbeatCatalogSource(
+        _fakeHttp({
+          indexUrl: _index,
+          'https://h/catalog/soundfont.json': _soundfontShard,
+          'https://h/assets/sf2/FluidR3_GM.sf2': 'SF2',
+        }),
+        indexUrl: indexUrl,
+        cache: _BrokenCache(),
+      );
+      expect(await src.fetch((await src.browse()).single), _b('SF2'));
+    });
+  });
+
   group('offline start', () {
     // ⚠️ The shard cache had been on disk for a while and was UNREACHABLE
     // offline, because `_load` fetched the index first with no recovery. One
