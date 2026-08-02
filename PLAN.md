@@ -412,9 +412,30 @@ eligibility rule is testable without a network or a widget.
   find the right key will not try, and the whole point of interval matching is
   that they do not have to.
 
-**Next:** mode 2 (sung) — it only has to feed the same function from the existing
-pitch chain, plus an entry point that takes notes from a Workshop / Loop Studio
-selection instead of the keyboard.
+✅ **Mode 2's BRIDGE shipped (2026-08-02):** `melodyQueryFromNotes` takes the
+exact record shape `segmentNotes` (the shipped note-HMM) already returns, so
+the only thing left between the search and a hummed tune is mic plumbing + a
+"sing it" affordance.
+
+⚠️ **Wiring mode 2 exposed a mode-1 defect that mode 1 could not feel, and the
+first fix for it made things worse — both measured on the live catalog, so do
+not "simplify" either back:**
+- `searchMelodies` truncated only the CANDIDATE to the query length. Incipits
+  stop at 16 notes and a SUNG query runs past that, so every extra note counted
+  as an indel: **a perfect match could not score above ~0.7.**
+- Comparing the COMMON PREFIX fixed that and broke ranking: a two-note incipit
+  is judged on ONE interval, which anything matches, so thin rows flooded the
+  top with 1.0s — **8-note top-1 fell 51% → 34%.**
+- The resolution is `MelodicMatch.matched` (how many intervals the score rests
+  on) as a TIE-BREAK: same score, less evidence, lower rank. Restored
+  **51.2% top-1 / 89.1% top-10**. Short queries pay a little for it (4-note
+  5.5→4.0%, 6-note 27.9→24.4%) because thin rows can tie; the long-query case
+  goes from unusable to correct.
+
+**Next:** the mic plumbing itself — `microphone_pitch_service` readings →
+`PitchFrame` → `segmentNotes` → `melodyQueryFromNotes` → the existing lens. Plus
+an entry point that takes the query from a Workshop / Loop Studio selection
+instead of the keyboard.
 
 ⚠️ **Client-side search over the whole catalog needs the score shard**
 (2.68 MB gzipped, 30 MB raw) — which is the offline-archive item above, now with
