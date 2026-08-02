@@ -1553,7 +1553,31 @@ is recorded in [HISTORY.md](HISTORY.md).
       `\figuremode` + a kern `**fb` spine (the corpus has real continuo);
       laissez vibrer; cue notes beyond MusicXML.
 
-  - ✅ **ANNOTATIONS NOW IN 5 OF 6 FORMATS** — MusicXML, LilyPond, MEI, ABC and
+  - ✅ **ANNOTATIONS NOW IN ALL SIX — kern carries them as LOCAL COMMENTS**
+    (2026-08-02, opus, `2ff7aca` + `8b4abf2`). The note below said kern needed
+    a parallel text spine, "a bigger change than the sibling-element pattern
+    the other five share". It does not: Humdrum attaches a local comment
+    (`!text`) to the NEXT data record in its spine, which is exactly what a
+    text mark on a note is.
+    - 📊 **`abc -> kern` 64% → 99.5%; the `ann` bucket 1,734 → 1,141 (−34%);
+      sweep totals 10,137 → 10,413.**
+    - ⚠️ **The first cut REGRESSED the corpus by 204 and the sweep said so
+      immediately** — totals fell to 9,933 while `ann` ROSE to 1,961 — because
+      it read EVERY local comment as an annotation. Measured before choosing
+      the fix: across 3,000 corpus `.krn` files there are **68,161 `!LO:…`
+      layout directives against 58 plain local comments**, and those 58 are
+      `null` and `.`. Local comments in real Humdrum are essentially all
+      structured directives.
+    - So a comment whose body opens `Xxx:` is skipped, and the writer puts a
+      SPACE after the `!` when a text mark would otherwise read as one
+      (`Note: play softly` is indistinguishable from `!LO:` once written). No
+      real directive carries a space, so that is what tells them apart.
+    - 📌 **`hairpin` 420 → 632 and `lyric` 956 → 1,032 in the same run with
+      nothing regressed** — first-divergence attribution again: once `ann` stops
+      being the first thing to differ, whatever is next inherits the cell.
+      Totals are the regression signal; channel counts are a work list.
+
+  - 🗄️ **Superseded (kept for the reasoning) — ANNOTATIONS IN 5 OF 6 FORMATS** — MusicXML, LilyPond, MEI, ABC and
     MuseScore (`<StaffText>`, a voice-level sibling preceding its chord, the
     same shape as `<Dynamic>`/`<Harmony>`/the spanners). ⚠️ **kern still drops
     them**: it would need a parallel spine for text, a bigger change than the
