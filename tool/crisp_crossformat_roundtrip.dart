@@ -335,11 +335,25 @@ void main(List<String> rawArgs) {
   // makes it indistinguishable from a hang. One line per 2,000 files is enough
   // to see it moving and to spot a pair going bad early.
   var seen = 0;
+  // ⚠️ A per-2,000-file heartbeat cannot tell a slow stretch from a HANG. One
+  // corpus file spun a codec for 5.5 hours at full CPU inside a single such
+  // block, and the log looked identical to "still working" the whole time —
+  // there was no way to learn even which file it was without re-running.
+  //
+  // The current file goes to a sidecar, overwritten each time, so the answer is
+  // always one `cat` away and costs nothing to keep.
+  final marker =
+      File(args.length > 1 ? '${args[1]}.current' : '/tmp/xrt.current');
   for (final f in files) {
     if (++seen % 2000 == 0) {
       final ok = passed.values.fold(0, (a, b) => a + b);
       final n = tried.values.fold(0, (a, b) => a + b);
       stdout.writeln('… $seen/${files.length} files, $ok/$n round trips');
+    }
+    try {
+      marker.writeAsStringSync('$seen\t${f.path}\n');
+    } catch (_) {
+      // A sidecar that cannot be written must never stop the sweep.
     }
     Score? src;
     try {
