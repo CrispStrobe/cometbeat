@@ -1216,6 +1216,32 @@ is recorded in [HISTORY.md](HISTORY.md).
       files. MEI's multi-`mdiv` case was already handled (the layer search
       prefers a score that actually contains music).
 
+  - 📋 **COVERAGE AS IT NOW STANDS — what each format carries** (2026-08-02).
+    `—` = the format has no notation for it; `❌` = a real, unclaimed gap.
+
+    | concept | musicxml | mei | kern | abc | lilypond | musescore |
+    |---|---|---|---|---|---|---|
+    | notes · rhythm · voices · tuplets | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+    | articulations · ornaments · grace | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+    | lyrics · dynamics · slurs | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+    | **annotations** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+    | **chord symbols** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+    | **tempo · mid-score tempo** | ✅ | ✅ | ✅ | ✅ / ❌ | ✅ | ✅ |
+    | **barlines · repeats · pickup** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+    | **fingering** | ✅ | ✅ | — | — | ✅ | ✅ |
+    | **arpeggio · notehead · tremolo** | ✅ | ✅ | — | — | ✅ | ✅ |
+    | **hairpins** | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+    | **ottava · pedal · trill span · glissando** | ✅ | ✅ | ❌ | — | ✅ | ✅ |
+    | **let-ring** | ✅ | ✅ | ❌ | — | ✅ | ❌ |
+    | portamento · cue notes | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+    | figured bass · inline clefs | ✅ | ❌ | ❌ | — | ❌ | ❌ |
+    | measure repeat · multi-rest | ✅ | ❌ | ❌ | ❌ / ✅ | ❌ | ❌ |
+    | common/cut meter glyph | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+    Bold rows are what this arc closed. The rich sweep went **9,810 →
+    10,561 / 16,080** over the same period, and the channels it added sit at
+    ~2% of what remains.
+
   - 📊 **THE RICH SWEEP IS NOW A RANKED WORK LIST** (2026-08-02, opus). A
     `--rich` corpus run compares every channel, so one percentage mixes real
     defects with channels a format simply cannot carry — 61% reads as alarming
@@ -1255,10 +1281,22 @@ is recorded in [HISTORY.md](HISTORY.md).
       vanished silently; the lexer now keeps `-` with a following DIGIT, which
       no articulation shorthand uses. MEI takes `<fing>`; MuseScore a
       `<Fingering>` CHILD of `<Note>`, not a sibling of the chord.
-    - 🆕 **UNCLAIMED: `arpeggio` and `notehead` are still MusicXML-only**, and
-      `tremolo` is missing from kern/ABC/LilyPond. All expressible — MEI
-      `<arpeg>` and `@head.shape`, LilyPond `\arpeggio` and
-      `\tweak NoteHead.style`, MuseScore `<Arpeggio>` and `<head>`.
+    - ✅ **ALL TEN NOTE MARKS NOW ROUND-TRIP IN EVERY FORMAT THAT CAN SPELL
+      THEM** (`f3d9a16`). MEI `<arpeg order>` + `@head.shape`; LilyPond
+      `\arpeggio` (arrow = a sticky CONTEXT property), `\tweak
+      NoteHead.style`, and `c4:32` — a tremolo there is a duration SUFFIX, not
+      a script; MuseScore `<Arpeggio><subtype>` (0 = the plain roll, 7,173 of
+      7,597 in the corpus; 2 = downward) and `<head>` on the note.
+      - ⚠️ MuseScore's reader ALREADY read a notehead — but only from the
+        DRUMSET, so a shape on an ordinary staff was read by nothing and
+        written by nothing.
+      - ⚠️ **The tremolo suffix is restricted to POWERS OF TWO from 8 up, and
+        the suite is what caught why**: a bare `:N` also spells a CHORD in
+        `\chordmode` (`c:7` a dominant seventh, `c:9` a ninth), so matching
+        those turned every chord in a chord track into a note with a tremolo.
+        Chord modifiers are 5, 6, 7, 9, 11, 13; no subdivision is one, so the
+        sets do not overlap. Three chord-track tests went red on the first cut.
+      - 📊 Corpus: `note` 4,882 → 4,683; totals 10,413 → **10,561**.
 
     - ✅ **The channels added this arc are ~98% clean at corpus scale**, which is
       the check the synthetic tests could not give.
