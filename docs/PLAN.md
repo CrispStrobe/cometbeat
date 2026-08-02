@@ -1124,6 +1124,40 @@ is recorded in [HISTORY.md](HISTORY.md).
     - Tests: `chord_name_test.dart` (99), `chord_symbol_crossformat_test.dart`
       (every quality × every format, plus a no-harmony byte-identity check).
 
+  - 🆕 **THE MEASURE-LEVEL AUDIT — the signature compared 8 of `Measure`'s 20
+    fields** (2026-08-01/02, opus). Third level of the same question, and it
+    paid again.
+
+    | field | musicxml | mei | kern | abc | lilypond | musescore |
+    |---|---|---|---|---|---|---|
+    | barline (double/final) | ✅ | ✅ **new** | ✅ **new** | ✅ | ✅ **new** | ✅ **new** |
+    | pickup | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+    | tempoChange | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+    | inlineClefs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+    | measureRepeat | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+    - ✅ **`barline` DONE** (`319a51a`). It survived only MusicXML and ABC,
+      despite a double bar or final bar being in nearly every piece. MEI writes
+      `@right`, kern the `=` token itself, LilyPond `\bar "…"`, MuseScore a
+      `<BarLine>` inside the last voice. In all four the repeat and the style
+      share one slot, so the repeat wins it.
+      - ⚠️ **kern closed EVERY export with a hard-coded `==`, which IS a final
+        barline.** Reading our own output back therefore set `finalBar` on
+        scores that never had one — `normal` in, `finalBar` out. Pre-existing,
+        and invisible precisely because nothing compared the field.
+    - 🆕 **UNCLAIMED — `measureRepeat` (the `%` simile) survives NOTHING, not
+      even MusicXML**, which has `<measure-repeat>`. A dead channel like
+      `portamentos` and `cueNoteIds` were.
+    - 🆕 **UNCLAIMED — `tempoChange` and `inlineClefs` are MusicXML-only.**
+      Mid-score tempo is expressible everywhere (`\tempo` mid-piece is already
+      READ by the LilyPond reader as of `b65f7d0` — the writer just never emits
+      one); mid-bar clef has its own note in `workshop-musicxml-writer-gaps`.
+    - 🆕 **UNCLAIMED — LilyPond repeats are READ-ONLY.** Its reader handles
+      `\repeat volta`; its writer emits no repeat structure at all, so
+      `startRepeat`/`endRepeat` are lost on export. The exact mirror of the
+      `\tempo` write-only asymmetry, found by the same audit. `\bar ".|:"` /
+      `":|."` is the cheap fix and slots into the barline code just added.
+
   - 🆕 **UNCLAIMED — `scoreFromMidi` HANGS FOREVER on a meter finer than a
     sixteenth. Belongs with the existing scoreToMidi/scoreFromMidi item, and it
     is more severe than note loss: it is an app freeze on MIDI import.**
