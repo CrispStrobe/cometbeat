@@ -224,6 +224,8 @@ void main() {
 
   group('transpose', _transposeTests);
 
+  group('explain', _explainTests);
+
   group('bar editing', () {
     test('replacing a chord keeps the rest of the bar', () {
       // A bar is more than its chords; rebuilding it on every edit would drop
@@ -600,5 +602,85 @@ void _transposeTests() {
     await tester.pumpAndSettle();
 
     expect(find.text('C'), findsOneWidget, reason: 'B♭ up a tone');
+  });
+}
+
+/// The explain sheet.
+void _explainTests() {
+  Widget screen({String? chart}) => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Provider<AudioService>(
+          create: (_) => AudioService(),
+          child: ChartScreen(
+            initialChart:
+                parseChartText(chart ?? 'key: C\n| Dm7 | G7 | Cmaj7 |').chart,
+          ),
+        ),
+      );
+
+  testWidgets('it explains the chart in roman numerals', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('chartExplainButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ii7'), findsOneWidget);
+    expect(find.text('V7'), findsOneWidget);
+    // The row reads 'Bars 1–3 — ii–V–I in C', so match the phrase within it.
+    expect(find.textContaining('ii–V–I in C'), findsOneWidget);
+  });
+
+  testWidgets('the depth dial hides the numerals at colours', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('chartExplainButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('ii7'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.palette_outlined));
+    await tester.pumpAndSettle();
+    // Colours only: the chord names stay, the analysis goes.
+    expect(find.text('ii7'), findsNothing);
+    expect(find.text('Dm7'), findsWidgets);
+  });
+
+  testWidgets('expert adds the soloing advice', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('chartExplainButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('D dorian'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.psychology_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('D dorian'), findsOneWidget);
+  });
+
+  testWidgets('it explains what the grid SHOWS, not the stored key',
+      (tester) async {
+    // A transposed reading must be explained in the key the player is reading,
+    // or the numerals contradict the chords in front of them.
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen(chart: 'key: C\n| C | G7 |'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('chartTransposeButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('transposeSounding_2')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('transposeApply')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('chartExplainButton')));
+    await tester.pumpAndSettle();
+
+    // The chart now reads in D, so the tonic is D — and I is still I.
+    expect(find.text('Key of D'), findsOneWidget);
+    expect(find.text('I'), findsOneWidget);
   });
 }

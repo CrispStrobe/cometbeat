@@ -9398,4 +9398,29 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get chartTransposeReset => 'Zurücksetzen';
+
+  @override
+  String get chartAnalysis => 'Erklären';
+
+  @override
+  String chartAnalysisKey(String key) {
+    return 'Tonart $key';
+  }
+
+  @override
+  String get chartAnalysisPhrases => 'Phrasen';
+
+  @override
+  String chartAnalysisBar(int bar) {
+    return 'Takt $bar';
+  }
+
+  @override
+  String chartAnalysisBars(int from, int to) {
+    return 'Takte $from–$to';
+  }
+
+  @override
+  String get chartAnalysisEmpty =>
+      'Füge Akkorde hinzu, dann werden sie hier erklärt.';
 }

@@ -3406,5 +3406,35 @@
   "chartTransposeReading": "Was du liest",
   "chartTransposeReadingHelp": "Ändert nur die gedruckten Akkorde — die Band bleibt unberührt.",
   "chartTransposeCapo": "Kapodaster",
-  "chartTransposeReset": "Zurücksetzen"
+  "chartTransposeReset": "Zurücksetzen",
+  "chartAnalysis": "Erklären",
+  "chartAnalysisKey": "Tonart {key}",
+  "@chartAnalysisKey": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "chartAnalysisPhrases": "Phrasen",
+  "chartAnalysisBar": "Takt {bar}",
+  "@chartAnalysisBar": {
+    "placeholders": {
+      "bar": {
+        "type": "int"
+      }
+    }
+  },
+  "chartAnalysisBars": "Takte {from}–{to}",
+  "@chartAnalysisBars": {
+    "placeholders": {
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      }
+    }
+  },
+  "chartAnalysisEmpty": "Füge Akkorde hinzu, dann werden sie hier erklärt."
 }

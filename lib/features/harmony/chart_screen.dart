@@ -16,6 +16,7 @@ library;
 import 'dart:async';
 import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
+import 'package:comet_beat/core/harmony/chart_analysis.dart';
 import 'package:comet_beat/core/harmony/chart_playback.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/chart_transpose.dart';
@@ -23,6 +24,9 @@ import 'package:comet_beat/core/harmony/form_realizer.dart';
 import 'package:comet_beat/core/harmony/style_library.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
+import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
+    show AnalysisDepth;
+import 'package:comet_beat/features/harmony/chart_analysis_panel.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
 import 'package:comet_beat/features/harmony/chart_library_sheet.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
@@ -310,6 +314,49 @@ class _ChartScreenState extends State<ChartScreen> {
     );
   }
 
+  Future<void> _explain() async {
+    // Explains what the grid SHOWS, so a transposed reading is explained in
+    // the key the player is actually reading.
+    final analysis = analyzeChart(_printed);
+    var depth = AnalysisDepth.learner;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SegmentedButton<AnalysisDepth>(
+                key: const Key('chartAnalysisDepth'),
+                segments: const [
+                  ButtonSegment(
+                    value: AnalysisDepth.colours,
+                    icon: Icon(Icons.palette_outlined),
+                  ),
+                  ButtonSegment(
+                    value: AnalysisDepth.learner,
+                    icon: Icon(Icons.school_outlined),
+                  ),
+                  ButtonSegment(
+                    value: AnalysisDepth.expert,
+                    icon: Icon(Icons.psychology_outlined),
+                  ),
+                ],
+                selected: {depth},
+                onSelectionChanged: (s) => setSheetState(() => depth = s.first),
+              ),
+              Flexible(
+                child: ChartAnalysisPanel(analysis: analysis, depth: depth),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _transposeDialog() async {
     // A SOUNDING change alters the audio, which is already rendered, so the
     // sheet is closed while playing exactly like the style and chorus pickers.
@@ -425,6 +472,12 @@ class _ChartScreenState extends State<ChartScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Center(child: Text('×$_choruses')),
             ),
+          ),
+          IconButton(
+            key: const Key('chartExplainButton'),
+            tooltip: l10n.chartAnalysis,
+            icon: const Icon(Icons.lightbulb_outline),
+            onPressed: _explain,
           ),
           IconButton(
             key: const Key('chartTransposeButton'),

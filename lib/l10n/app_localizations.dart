@@ -16951,6 +16951,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset'**
   String get chartTransposeReset;
+
+  /// No description provided for @chartAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Explain'**
+  String get chartAnalysis;
+
+  /// No description provided for @chartAnalysisKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Key of {key}'**
+  String chartAnalysisKey(String key);
+
+  /// No description provided for @chartAnalysisPhrases.
+  ///
+  /// In en, this message translates to:
+  /// **'Phrases'**
+  String get chartAnalysisPhrases;
+
+  /// No description provided for @chartAnalysisBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Bar {bar}'**
+  String chartAnalysisBar(int bar);
+
+  /// No description provided for @chartAnalysisBars.
+  ///
+  /// In en, this message translates to:
+  /// **'Bars {from}–{to}'**
+  String chartAnalysisBars(int from, int to);
+
+  /// No description provided for @chartAnalysisEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Add some chords and this will explain them.'**
+  String get chartAnalysisEmpty;
 }
 
 class _AppLocalizationsDelegate

@@ -9347,4 +9347,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartTransposeReset => 'Reset';
+
+  @override
+  String get chartAnalysis => 'Explain';
+
+  @override
+  String chartAnalysisKey(String key) {
+    return 'Key of $key';
+  }
+
+  @override
+  String get chartAnalysisPhrases => 'Phrases';
+
+  @override
+  String chartAnalysisBar(int bar) {
+    return 'Bar $bar';
+  }
+
+  @override
+  String chartAnalysisBars(int from, int to) {
+    return 'Bars $from–$to';
+  }
+
+  @override
+  String get chartAnalysisEmpty =>
+      'Add some chords and this will explain them.';
 }

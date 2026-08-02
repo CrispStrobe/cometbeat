@@ -3972,5 +3972,35 @@
   "chartTransposeReading": "What you read",
   "chartTransposeReadingHelp": "Changes the printed chords only — the band is unaffected.",
   "chartTransposeCapo": "Capo",
-  "chartTransposeReset": "Reset"
+  "chartTransposeReset": "Reset",
+  "chartAnalysis": "Explain",
+  "chartAnalysisKey": "Key of {key}",
+  "@chartAnalysisKey": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "chartAnalysisPhrases": "Phrases",
+  "chartAnalysisBar": "Bar {bar}",
+  "@chartAnalysisBar": {
+    "placeholders": {
+      "bar": {
+        "type": "int"
+      }
+    }
+  },
+  "chartAnalysisBars": "Bars {from}–{to}",
+  "@chartAnalysisBars": {
+    "placeholders": {
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      }
+    }
+  },
+  "chartAnalysisEmpty": "Add some chords and this will explain them."
 }
