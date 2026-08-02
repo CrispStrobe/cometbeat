@@ -1760,29 +1760,23 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     the document — it is a flat beat-list built for *scoring a player*, and it
     should stay that. BB-T5 makes it a projection of `Chart`.
 
-- ⬜ **BB-D4 — text in, text out.** `M` — **split: `BB-D4a` first, and early.**
-  - ✅ **Decision 3 makes this the chart supply, not a convenience.** **`BB-D4a`
-    is just the plain-text bar grid** (`S`) and it ships **with the first playable
-    increment**, ahead of the keypad: a musician already stores changes as text, so
-    paste-a-grid is the cheapest possible path from "nothing" to "a real tune
-    playing". `BB-D4b` is everything else in this card and follows at leisure.
-  - **Goal.** Getting changes *into* the app is the adoption gate. Support the
-    ways musicians already have them.
-  - **Depends.** BB-D2.
-  - **Files.** New `lib/core/harmony/chart_text_codec.dart`; extend
-    `features/games/songs/import/jams.dart` (already reads **and writes** chord
-    annotations in 5 dialects — a genuine head start).
-  - **Build.** Import + export: the plain-text bar grid (`| Cm7 | F7 | Bbmaj7 . |`
-    with `%`, section headers, `x4`), ChordPro **with** section directives (the
-    existing `chordpro.dart` reads only lyric lines), Nashville numbers, MusicXML
-    `<harmony>` (via BB-D3), JAMS chord namespaces. Plus a compact **share
-    token** — `CB1.` + base64 of the chart JSON, exactly the `KU1.` `GrooveSpec`
-    precedent — and a deep link that opens it.
-  - **Acceptance.** A hand-written text grid, a ChordPro file and a JAMS
-    annotation each import to the same `Chart` for the same tune. Token
-    round-trips. A malformed grid reports *which line* it could not read and
-    imports the rest.
-
+- ⬜ **BB-D4b — the remaining import formats.** `S` — *most of D4 is shipped.*
+  - ✅ **DONE:** the plain-text bar grid (`chart_text.dart`, round-trips, reports
+    WHICH LINE it could not read and imports the rest) · the **`CB1.` share
+    token** (`chart_share.dart`, survives mail wrapping, reply quotes and smart
+    quotes — and refuses to absorb the prose after it) · **ChordPro with section
+    directives** (`chart_chordpro.dart`; a ChordPro file and a text grid import
+    to the SAME chart, asserted) · MusicXML `<harmony>` both ways via BB-D3.
+  - **Still to build.** **Nashville numbers** (the analysis engine already
+    produces the numerals — `chart_analysis.dart` — so this is mostly a printer
+    and a reader over it) and **JAMS chord namespaces** (`songs/import/jams.dart`
+    already reads AND writes them in 5 dialects, so it is a converter, not a
+    parser).
+  - 📌 **A deep link that opens a token** is also unbuilt. The token itself and
+    both clipboard directions are shipped and wired to the chart screen.
+  - ⚠️ ChordPro carries no barlines, so its import sets `barsAreInferred`. Any
+    new format that also lacks bar structure should do the same rather than
+    claiming one.
 ### Phase 2 — the arranger (fixes G2; this is the product)
 
 - ⬜ **BB-A0 (original) — drive the EXISTING groove engine from a `Chart`.** `S` ⭐ *pull this

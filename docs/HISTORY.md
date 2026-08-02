@@ -328,6 +328,31 @@ what a coarse check misses. Covered: 3/4, 6/8, 5/4, 12/8, 7/8, a mid-chart meter
 change, and the card's requirement that 4/4 at an integral tempo is unchanged.
 `LoopTiming` was not touched.
 
+### BB-D4a/b — text in, text out (2026-08-01/02)
+
+Getting changes INTO the app is the adoption gate, so most of this card is now
+shipped:
+
+- **The plain-text bar grid** (`chart_text.dart`) — round-trips, so the text
+  view is an editor and not an importer, and an unreadable chord is kept and
+  reported with the LINE it was on rather than dropped.
+- **The `CB1.` share token** (`chart_share.dart`) — the same mechanism the
+  groove engine uses, so there is one idea to learn. ⚠️ The hard part was
+  transit, not encoding: the obvious "skip whitespace so a wrapped token
+  rejoins" makes `CB1.abc what do you think?` absorb the prose, because "what",
+  "do" and "you" are all valid base64. The contiguous run is tried FIRST and the
+  line-rejoining repair only reached when that fails, so an intact token can
+  never be corrupted by the repair path.
+- **ChordPro with section directives** (`chart_chordpro.dart`) — the existing
+  `songs/import/chordpro.dart` reads the format into lyric lines and DROPS the
+  directives, which are the one thing a chart needs, so this reads the source
+  itself. ⚠️ ChordPro has no barlines: the rule is one chord, one bar, and
+  `barsAreInferred` says so on the result rather than claiming a structure the
+  source never had.
+- **MusicXML `<harmony>`** both ways, via BB-D3.
+
+Nashville numbers and JAMS import remain, carded as **BB-D4b**.
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**
