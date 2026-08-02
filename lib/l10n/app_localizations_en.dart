@@ -9463,4 +9463,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chartLevelNote =>
       'Only changes what you can EDIT — every chart still opens and plays in full.';
+
+  @override
+  String get songbookPlayWithBand => 'Play with band';
+
+  @override
+  String get songbookNoChordsFound => 'No chords could be read from this song.';
 }

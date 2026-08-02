@@ -8,6 +8,7 @@ import 'package:comet_beat/features/games/songs/song_screen.dart'
     show SongListScreen;
 import 'package:comet_beat/features/games/songs/songbook_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/harmony/chart_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -21,6 +22,18 @@ const _xml = '''
 <attributes><divisions>1</divisions><key><fifths>0</fifths></key>
 <time><beats>4</beats><beat-type>4</beat-type></time>
 <clef><sign>G</sign><line>2</line></clef></attributes>
+<note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration>
+<type>whole</type></note></measure></part></score-partwise>''';
+
+/// The same song WITH a chord symbol, so the band affordance has something to
+/// derive from. `<harmony>` is MusicXML's own element for a chord.
+const _xmlWithChords = '''
+<score-partwise version="4.0"><part-list><score-part id="P1">
+<part-name>M</part-name></score-part></part-list><part id="P1"><measure number="1">
+<attributes><divisions>1</divisions><key><fifths>0</fifths></key>
+<time><beats>4</beats><beat-type>4</beat-type></time>
+<clef><sign>G</sign><line>2</line></clef></attributes>
+<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>
 <note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration>
 <type>whole</type></note></measure></part></score-partwise>''';
 
@@ -171,5 +184,93 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('open'), findsOneWidget);
     expect(songs.collections, isEmpty);
+  });
+
+  testWidgets('a song with chords offers a band; one without does NOT',
+      (tester) async {
+    // BB-U5's acceptance, verbatim: a library item with no derived chart shows
+    // no dead "play with band" affordance. Both songs are in the same book, so
+    // the difference can only be the chords.
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final songs = UserSongsService()
+      ..addSong(const ImportedSong(id: 'plain', title: 'Plain', musicXml: _xml))
+      ..addSong(
+        const ImportedSong(
+          id: 'chords',
+          title: 'Chords',
+          musicXml: _xmlWithChords,
+        ),
+      );
+    songs.createCollection('My Book', id: 'book');
+    songs.addSongToCollection('book', 'plain');
+    songs.addSongToCollection('book', 'chords');
+
+    await tester.pumpWidget(
+      _host(songs, const SongbookScreen(collectionId: 'book')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Plain'), findsOneWidget);
+    expect(find.text('Chords'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('playWithBand_chords')),
+      findsOneWidget,
+      reason: 'a song WITH chords should offer the band',
+    );
+    expect(
+      find.byKey(const ValueKey('playWithBand_plain')),
+      findsNothing,
+      reason: 'a song with no chords must not show a dead affordance',
+    );
+  });
+
+  test('the chord gate reads the XML rather than parsing it', () {
+    // It is a cheap marker check by design — `score` re-parses on every call,
+    // so asking it once per row would reparse a whole book on every rebuild.
+    expect(
+      const ImportedSong(id: 'a', title: 'A', musicXml: _xmlWithChords)
+          .mayHaveChords,
+      isTrue,
+    );
+    expect(
+      const ImportedSong(id: 'b', title: 'B', musicXml: _xml).mayHaveChords,
+      isFalse,
+    );
+  });
+
+  testWidgets('tapping the band button opens the chart with the song chords',
+      (tester) async {
+    // The affordance has to LAND somewhere: on the full chart surface, with
+    // the chords derived from the song rather than a blank starter chart.
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final songs = UserSongsService()
+      ..addSong(
+        const ImportedSong(
+          id: 'chords',
+          title: 'Chords',
+          musicXml: _xmlWithChords,
+        ),
+      );
+    songs.createCollection('My Book', id: 'book');
+    songs.addSongToCollection('book', 'chords');
+
+    await tester.pumpWidget(
+      _host(songs, const SongbookScreen(collectionId: 'book')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('playWithBand_chords')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChartScreen), findsOneWidget);
+    // The C major from the song's <harmony>, not the starter chart.
+    expect(find.text('C'), findsWidgets);
   });
 }

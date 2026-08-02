@@ -9515,4 +9515,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get chartLevelNote =>
       'Ändert nur, was du BEARBEITEN kannst — jedes Stück öffnet und spielt vollständig.';
+
+  @override
+  String get songbookPlayWithBand => 'Mit Band spielen';
+
+  @override
+  String get songbookNoChordsFound =>
+      'Aus diesem Stück ließen sich keine Akkorde lesen.';
 }

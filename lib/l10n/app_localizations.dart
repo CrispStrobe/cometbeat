@@ -17155,6 +17155,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Only changes what you can EDIT — every chart still opens and plays in full.'**
   String get chartLevelNote;
+
+  /// No description provided for @songbookPlayWithBand.
+  ///
+  /// In en, this message translates to:
+  /// **'Play with band'**
+  String get songbookPlayWithBand;
+
+  /// No description provided for @songbookNoChordsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No chords could be read from this song.'**
+  String get songbookNoChordsFound;
 }
 
 class _AppLocalizationsDelegate

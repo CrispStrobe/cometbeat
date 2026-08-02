@@ -1923,7 +1923,28 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     simplification.
   - 📌 A missing chart must stay VISIBLE in the set — `SetlistStore.missingCharts`
     reports it and the entry is deliberately not pruned.
-- ⬜ **BB-U5 — the front door (DECIDED: library document, not a sixth mode).** `S`
+- 🔶 **BB-U5 — the front door.** `S` — *two of three entry points shipped.*
+  - ✅ **(a) The home tile** — a `chart` `GameInfo` in `game_registry.dart` with
+    its `chord_charts` placement in `concept_map.dart`.
+  - ✅ **(b) "Play with band" on a Song Book item** (2026-08-02). The chord
+    symbols already live in the imported MusicXML, so it DERIVES rather than
+    asks, and lands the player on the full chart surface — transpose, styles,
+    count-in — instead of a one-off playback.
+    - ⚠️ **The gate is a cheap marker check (`<harmony` in the raw XML), NOT a
+      parse.** `ImportedSong.score` re-parses on EVERY call, so asking it once
+      per row would reparse a whole book on every rebuild. `<harmony>` is
+      MusicXML's own element for a chord symbol, so this is structural evidence
+      rather than a guess — but it is only a gate, and the handler still
+      handles an empty derivation, because a file can carry `<harmony>` and
+      yield nothing usable.
+    - **Acceptance asserted both ways:** a song with chords offers the band, a
+      song without shows NO dead affordance, and tapping it opens the chart
+      carrying the song's own chords rather than the starter chart.
+  - ⬜ **(c) Loop Studio** — an open chart appearing as a band you can drive.
+    Still to build; `BB-A0` is the cheap version of the same idea.
+  - **Superseded card text below (kept for its reasoning).**
+
+- ⬜ **BB-U5 (original) — the front door (DECIDED: library document, not a sixth mode).** `S`
   - ✅ **Decision 2 is made — this card implements it, it does not re-ask it.**
     A chart is a `ProjectTrack` document reached from where the music already
     lives. **No sixth top-level mode.** `Project` + its codec registry already
@@ -1971,6 +1992,20 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     like proof and asserts nothing; I wrote one, caught it, and replaced it with
     an assertion that the hard chart plays in full (every bar sounds, the ♭9 is
     really in the voicing, exact integer-beat arithmetic).
+  - 🛑 **CI caught a bug I shipped, and the lesson is about the PROCESS.**
+    `showChordKeypad` reads `SettingsService`, and
+    `chart_screen_no_storage_test` pumps `ChartScreen` with nothing above it
+    *on purpose* — so the read threw `ProviderNotFoundException`. Fixed with a
+    guarded read falling back to `ChartLevel.expert`, which is exactly what the
+    keypad did before the dial existed, so it cannot regress anyone. Pinned by
+    a test that pumps the helper with NO provider, and that test was verified
+    to FAIL without the fix.
+    - **Why it got through:** I ran the ~350 tests in files I had touched, and
+      the blast radius of a provider dependency is by definition in files you
+      did NOT touch. Two full-suite runs had timed out under machine load and I
+      shipped on the targeted ones. Saying so in the commit message is not a
+      substitute for running them. Auto-memory
+      `provider-read-in-shared-helper` carries the grep that finds the hosts.
   - 📌 **`ø` is NOT emitted, deliberately** — found while wiring the print
     convention. `chord_spec.dart`'s doc promised `∆`, `ø` and `°`; the formatter
     only ever emits two, and `chord_spec_test.dart` explicitly pins `F♯m7♭5` for

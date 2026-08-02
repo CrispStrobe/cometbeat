@@ -3471,5 +3471,7 @@
   "chartLevelBeginner": "Einfach",
   "chartLevelLearner": "Standard",
   "chartLevelExpert": "Vollständig",
-  "chartLevelNote": "Ändert nur, was du BEARBEITEN kannst — jedes Stück öffnet und spielt vollständig."
+  "chartLevelNote": "Ändert nur, was du BEARBEITEN kannst — jedes Stück öffnet und spielt vollständig.",
+  "songbookPlayWithBand": "Mit Band spielen",
+  "songbookNoChordsFound": "Aus diesem Stück ließen sich keine Akkorde lesen."
 }

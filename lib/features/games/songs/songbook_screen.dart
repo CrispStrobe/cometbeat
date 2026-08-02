@@ -6,10 +6,12 @@
 // library), added from a picker, and the book renamed or deleted. Tapping a
 // song opens it in the shared player.
 
+import 'package:comet_beat/core/harmony/chart_score_bridge.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart'
     show Song, kSongs;
 import 'package:comet_beat/features/games/songs/song_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/harmony/chart_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/key_signature_label.dart';
 import 'package:crisp_notation/crisp_notation.dart' show scoreToMusicXml;
@@ -102,6 +104,17 @@ class SongbookScreen extends StatelessWidget {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // BB-U5: the "play with band" front door. Shown only
+                        // when the song looks like it HAS chords — the card
+                        // asks specifically that a song with no derivable
+                        // chart shows no dead affordance.
+                        if (song.mayHaveChords)
+                          IconButton(
+                            key: ValueKey('playWithBand_${song.id}'),
+                            icon: const Icon(Icons.groups_outlined),
+                            tooltip: l.songbookPlayWithBand,
+                            onPressed: () => _playWithBand(context, song),
+                          ),
                         IconButton(
                           icon: const Icon(Icons.remove_circle_outline),
                           tooltip: l.songbookRemoveFromBook,
@@ -282,4 +295,32 @@ String? _metaLine(ImportedSong song) {
     if (song.tempoBpm != null) tempoLabel(song.tempoBpm!),
   ];
   return parts.isEmpty ? null : parts.join(' · ');
+}
+
+/// Opens [song]'s chords as a chart with a backing band (BB-U5).
+///
+/// The chord symbols already live in the MusicXML, so this derives rather than
+/// asks — and lands the player on the full chart surface (transpose, styles,
+/// count-in) instead of a one-off playback.
+Future<void> _playWithBand(BuildContext context, ImportedSong song) async {
+  final l = AppLocalizations.of(context)!;
+  final messenger = ScaffoldMessenger.of(context);
+  final navigator = Navigator.of(context);
+
+  // `mayHaveChords` is only a cheap gate: a file can carry `<harmony>` and
+  // still yield nothing usable. Say so rather than push an empty chart.
+  final derived = chartFromScore(song.score);
+  final chart = derived.value;
+  if (chart.isEmpty) {
+    messenger.showSnackBar(
+      SnackBar(content: Text(l.songbookNoChordsFound)),
+    );
+    return;
+  }
+
+  await navigator.push(
+    MaterialPageRoute<void>(
+      builder: (_) => ChartScreen(initialChart: chart),
+    ),
+  );
 }

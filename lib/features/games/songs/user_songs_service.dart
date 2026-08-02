@@ -92,6 +92,18 @@ class ImportedSong {
   /// The first part as a single [Score] (karaoke/play-along/analysis use this).
   Score get score => scoreFromMusicXml(musicXml);
 
+  /// Whether this song looks like it carries chord symbols, and so is worth
+  /// offering a backing band for (BB-U5).
+  ///
+  /// ⚠️ Deliberately a CHEAP marker check on the raw XML, not a parse. [score]
+  /// re-parses on every call, so asking it once per row would reparse every
+  /// song in a book on every rebuild. `<harmony` is MusicXML's own element for
+  /// a chord symbol, so this is structural evidence rather than a guess — but
+  /// it is only a gate: a file can carry `<harmony>` elements that yield no
+  /// usable chords, so the caller must still handle an empty derivation rather
+  /// than assume this promised one.
+  bool get mayHaveChords => musicXml.contains('<harmony');
+
   /// EVERY part (all instruments/staves) — a transcription or ensemble keeps its
   /// voices here. Single-part songs parse to a one-part [MultiPartScore].
   MultiPartScore get multiPart => multiPartScoreFromMusicXml(musicXml);
