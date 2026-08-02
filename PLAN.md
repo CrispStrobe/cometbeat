@@ -1776,26 +1776,6 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     round-trips. A malformed grid reports *which line* it could not read and
     imports the rest.
 
-- ⬜ **BB-D5 — meter beyond 4/4.** `M`
-  - **Goal.** Waltz, 6/8, 5/4, 12/8 and a mid-chart meter change.
-  - **Depends.** BB-D2.
-  - **Files.** `core/audio/loop_engine.dart:81-84` (`LoopTiming`) — **hot shared
-    file, claim it on the board**; new `lib/core/harmony/chart_clock.dart`.
-  - **Build.** `LoopTiming.beatsPerBar` is `static const 4` and `stepsPerBar`
-    derives from it, so 4/4 is compiled in and `kPatternSteps` (16) is two 4/4
-    bars. The chart clock does **not** try to generalise `LoopTiming` in place —
-    it owns its own bar→step→sample mapping, taking meter and
-    subdivision (8ths, triplet-8ths for a 12/8 or swung feel) per bar.
-  - **Acceptance.** A 3/4, a 6/8 and a 5/4 chart each render with the right bar
-    length and the right number of beats. **A 4/4 chart renders byte-identically
-    to before this card.** Every existing loop/tracker/groove test stays green —
-    if `LoopTiming` must change at all, the change is additive.
-  - ⚠️ Sample-integrality: the loop engine's seam is click-free because 75/100/120
-    BPM keep an eighth-step integral in **both** ms and samples. An arbitrary
-    chart tempo does not. Accumulate fractional sample offsets with **error
-    diffusion** across the bar rather than rounding per step, or a long chart
-    drifts audibly against its own click.
-
 ### Phase 2 — the arranger (fixes G2; this is the product)
 
 - ⬜ **BB-A0 (original) — drive the EXISTING groove engine from a `Chart`.** `S` ⭐ *pull this

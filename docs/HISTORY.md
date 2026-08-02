@@ -303,6 +303,31 @@ chord want to move" teaches the substitution; "tritone sub" only labels it.
 
 `lib/core/harmony/chart_reharm.dart`, 20 tests. **This closes the BB-X6 family.**
 
+### BB-D5 — meters beyond 4/4, and a clock that does not drift (2026-08-02)
+
+The chart clock already owned its own bar→ms mapping rather than generalising
+`LoopTiming` — the card's central instruction — so this was mostly about proving
+it and fixing the one thing that was wrong.
+
+⚠️ **The bug.** Bar STARTS came from an exactly-accumulated double (no drift),
+but each bar's DURATION was rounded independently. Those look equivalent and are
+not: at a tempo whose bar is not a whole number of milliseconds — most of them;
+137bpm gives 1751.8ms — `startMs + durationMs` misses the next `startMs`,
+leaving a gap in which `barAt` returns **nothing**. The playhead would blink out
+mid-piece.
+
+Now the exact edges are accumulated and each bar's length is the DIFFERENCE
+between two rounded edges, so every boundary is exact by construction and the
+rounding error is absorbed by the bar instead of accumulating — the error
+diffusion the card predicted would be needed.
+
+📌 **The tests were checked against the OLD code and fail on it** ("gap at bar 3,
+137 bpm"), so they measure the defect rather than restating the fix. They also
+sweep `barAt` across every 7ms of a 137bpm performance, because a gap is exactly
+what a coarse check misses. Covered: 3/4, 6/8, 5/4, 12/8, 7/8, a mid-chart meter
+change, and the card's requirement that 4/4 at an integral tempo is unchanged.
+`LoopTiming` was not touched.
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**
