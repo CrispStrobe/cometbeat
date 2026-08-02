@@ -1269,9 +1269,20 @@ is recorded in [HISTORY.md](HISTORY.md).
         carries none), `lyric` 950, `dyn` 571, `hairpin` 416 (mostly kern/ABC
         carrying none), `meta` 349, `slur` 348. **Everything this arc added
         totals 187 (~2%).**
-    - ⚠️ `bar` is partly a SPELLING difference, not loss: `time:C` vs `time:4/4`
-      and `time:C|` vs `time:4/4`. Whether common time should round-trip as `C`
-      is a decision, not obviously a bug.
+    - ✅ **`bar`'s meter-spelling half was a real LOSS, now fixed for LilyPond**
+      (`bf702f6`). LilyPond draws 4/4 as C and 2/2 as cut-C BY DEFAULT — the
+      numerals appear only after `\numericTimeSignature`, which is STICKY until
+      `\defaultTimeSignature`. The reader knew neither, so every common-time
+      score (most 4/4 music there is) came back numeric. `bar` 1,854 → 1,841.
+      - ⚠️ **MuseScore still loses it and is deliberately NOT guessed at.** 300
+        corpus `.mscx` files write only `<sigN>`/`<sigD>`, with no element for
+        the glyph anywhere, so inventing an encoding would round-trip with
+        ourselves and mislead against real MuseScore. Same rule the `<Harmony>`
+        reader already follows — omit rather than guess. MusicXML, MEI, kern
+        and ABC all carry it correctly.
+      - 🆕 The REST of `bar` (1,841) is measure-STRUCTURE divergence, not
+        spelling: `bar{clef:bass}` against a note means the two sides disagree
+        on how many bars there are. Unclaimed, and a different problem.
     - ⚠️ **Compare no more precisely than the target format can carry.** The
       signature checked tempo exactly and reported a false failure on every
       score whose tempo came from MuseScore's quarters-per-second float
