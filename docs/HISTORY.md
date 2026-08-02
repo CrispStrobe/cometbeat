@@ -279,6 +279,30 @@ numerals contradict the chords in front of them. Asserted.
 
 Reharmonisation suggestions remain undone and are carded as **BB-X6c**.
 
+### BB-X6c — reharmonisation, as suggestions (2026-08-02)
+
+🔴 **Suggest, never rewrite.** Every function returns options; nothing edits a
+chart. A reharmonisation is a musical opinion and the chart belongs to whoever
+wrote it, so the first test asserts that asking for suggestions changes nothing.
+
+Three substitutions, each resting on a **different mechanism** rather than three
+flavours of one:
+
+- **Tritone sub** — dominants only, because it works on the tritone between the
+  third and the seventh, which a triad or a major seventh does not have.
+  Spelled with FLATS, as ♭II7 conventionally is.
+- **Relative ii–V** — adds a chord rather than replacing one, and is not offered
+  where the ii is already written; suggesting what is already there is noise.
+- **Passing diminished** — only between roots a whole tone apart, spelled with
+  SHARPS because it walks the bass up.
+
+`isInsertion` distinguishes the two shapes, which matters to a caller: an
+insertion needs a bar with room in it. Each suggestion carries a `why` stating
+the MECHANISM rather than the name — "it keeps the same two notes that make the
+chord want to move" teaches the substitution; "tritone sub" only labels it.
+
+`lib/core/harmony/chart_reharm.dart`, 20 tests. **This closes the BB-X6 family.**
+
 ### The cards, as they were written
 
 - ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**
