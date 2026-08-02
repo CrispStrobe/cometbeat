@@ -9522,4 +9522,67 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get songbookNoChordsFound =>
       'Aus diesem Stück ließen sich keine Akkorde lesen.';
+
+  @override
+  String get setlistTitle => 'Setlisten';
+
+  @override
+  String get setlistNew => 'Neue Setliste';
+
+  @override
+  String get setlistNamePrompt => 'Name der Setliste';
+
+  @override
+  String get setlistEmpty =>
+      'Noch keine Setlisten. Leg eine für den nächsten Auftritt an.';
+
+  @override
+  String get setlistNoSongs => 'Noch keine Stücke — tippe auf Hinzufügen.';
+
+  @override
+  String get setlistAdd => 'Stücke hinzufügen';
+
+  @override
+  String get setlistDelete => 'Setliste löschen';
+
+  @override
+  String get setlistRemoveSong => 'Aus der Setliste entfernen';
+
+  @override
+  String get setlistMissingChart => 'Stück fehlt';
+
+  @override
+  String get setlistMissingHint =>
+      'Dieses Stück ist nicht mehr gespeichert. Es bleibt hier stehen, damit du es siehst.';
+
+  @override
+  String get setlistEntryKey => 'Tonart';
+
+  @override
+  String get setlistEntryTempo => 'Tempo';
+
+  @override
+  String get setlistEntryNote => 'Hinweis';
+
+  @override
+  String get setlistEntryUseChart => 'Wie notiert';
+
+  @override
+  String get setlistOverrideHint =>
+      'Nur für diesen Auftritt — das Stück selbst bleibt unverändert.';
+
+  @override
+  String setlistSongCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Stücke',
+      one: '1 Stück',
+      zero: 'keine Stücke',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chartOpenFailed => 'Dieses Stück konnte nicht geöffnet werden.';
 }

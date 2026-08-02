@@ -3473,5 +3473,29 @@
   "chartLevelExpert": "Vollständig",
   "chartLevelNote": "Ändert nur, was du BEARBEITEN kannst — jedes Stück öffnet und spielt vollständig.",
   "songbookPlayWithBand": "Mit Band spielen",
-  "songbookNoChordsFound": "Aus diesem Stück ließen sich keine Akkorde lesen."
+  "songbookNoChordsFound": "Aus diesem Stück ließen sich keine Akkorde lesen.",
+  "setlistTitle": "Setlisten",
+  "setlistNew": "Neue Setliste",
+  "setlistNamePrompt": "Name der Setliste",
+  "setlistEmpty": "Noch keine Setlisten. Leg eine für den nächsten Auftritt an.",
+  "setlistNoSongs": "Noch keine Stücke — tippe auf Hinzufügen.",
+  "setlistAdd": "Stücke hinzufügen",
+  "setlistDelete": "Setliste löschen",
+  "setlistRemoveSong": "Aus der Setliste entfernen",
+  "setlistMissingChart": "Stück fehlt",
+  "setlistMissingHint": "Dieses Stück ist nicht mehr gespeichert. Es bleibt hier stehen, damit du es siehst.",
+  "setlistEntryKey": "Tonart",
+  "setlistEntryTempo": "Tempo",
+  "setlistEntryNote": "Hinweis",
+  "setlistEntryUseChart": "Wie notiert",
+  "setlistOverrideHint": "Nur für diesen Auftritt — das Stück selbst bleibt unverändert.",
+  "setlistSongCount": "{count, plural, =0{keine Stücke} =1{1 Stück} other{{count} Stücke}}",
+  "@setlistSongCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chartOpenFailed": "Dieses Stück konnte nicht geöffnet werden."
 }

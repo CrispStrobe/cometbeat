@@ -33,6 +33,7 @@ import 'package:comet_beat/features/harmony/chart_analysis_panel.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
 import 'package:comet_beat/features/harmony/chart_library_sheet.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
+import 'package:comet_beat/features/harmony/setlist_screen.dart';
 import 'package:comet_beat/features/harmony/transpose_sheet.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -608,6 +609,15 @@ class _ChartScreenState extends State<ChartScreen> {
                 ),
               ),
               PopupMenuItem(
+                key: const Key('chartSetlistsButton'),
+                value: 'setlists',
+                child: ListTile(
+                  leading: const Icon(Icons.queue_music),
+                  title: Text(l10n.setlistTitle),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
                 key: const Key('chartTextButton'),
                 value: 'text',
                 child: ListTile(
@@ -622,6 +632,11 @@ class _ChartScreenState extends State<ChartScreen> {
               'transpose' => _transposeDialog(),
               'share' => _share(),
               'library' => _openLibrary(),
+              'setlists' => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SetlistScreen(),
+                  ),
+                ),
               _ => _editAsText(),
             },
           ),

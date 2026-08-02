@@ -9469,4 +9469,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get songbookNoChordsFound => 'No chords could be read from this song.';
+
+  @override
+  String get setlistTitle => 'Setlists';
+
+  @override
+  String get setlistNew => 'New setlist';
+
+  @override
+  String get setlistNamePrompt => 'Name this setlist';
+
+  @override
+  String get setlistEmpty => 'No setlists yet. Make one for your next gig.';
+
+  @override
+  String get setlistNoSongs => 'No songs yet — tap Add to pick charts.';
+
+  @override
+  String get setlistAdd => 'Add songs';
+
+  @override
+  String get setlistDelete => 'Delete setlist';
+
+  @override
+  String get setlistRemoveSong => 'Remove from setlist';
+
+  @override
+  String get setlistMissingChart => 'Chart missing';
+
+  @override
+  String get setlistMissingHint =>
+      'This chart is no longer saved. It is kept here so you can see it is gone.';
+
+  @override
+  String get setlistEntryKey => 'Key';
+
+  @override
+  String get setlistEntryTempo => 'Tempo';
+
+  @override
+  String get setlistEntryNote => 'Cue';
+
+  @override
+  String get setlistEntryUseChart => 'As written';
+
+  @override
+  String get setlistOverrideHint =>
+      'Set just for this gig — the chart itself is unchanged.';
+
+  @override
+  String setlistSongCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count songs',
+      one: '1 song',
+      zero: 'no songs',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get chartOpenFailed => 'This chart could not be opened.';
 }

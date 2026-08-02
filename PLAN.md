@@ -1910,7 +1910,38 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
   - **Acceptance.** A style change mid-playback lands on a bar line with no click
     (assert the seam sample). Role mute is instant and does not re-render.
 
-- ⬜ **BB-U4b — the setlist SURFACE.** `M` — *the model is shipped; this is its UI.*
+- 🔶 **BB-U4b — the setlist SURFACE.** `M` — *the editor is shipped; gig mode and search remain.*
+  - ✅ **Shipped (2026-08-02):** `features/harmony/setlist_screen.dart` —
+    the setlist list, and one set's songs with reorder, remove, per-song
+    key/tempo/cue, and multi-select add from the chart library. Reachable from
+    the chart menu (`chartSetlistsButton`). 9 tests.
+  - ✅ **The card's invariant is the load-bearing test and it holds:** setting a
+    gig key and tempo through the UI leaves the saved chart **byte-identical**
+    on disk. Everything routes through `resolveEntry`, which returns a NEW
+    chart; nothing in the screen can write an override back to `ChartStore`.
+    The override sheet says so to the user too.
+  - ✅ **A missing chart is flagged on the LIST as well as inside the set** — a
+    player scanning their sets before a gig should see it without opening each
+    one. Shown in the error colour, not playable, no override editor.
+  - ⚠️ **`chartFromJson` takes an ALREADY-DECODED object and returns null for a
+    String** — `chartFromJsonString` parses text. Passing the raw JSON made a
+    tap do nothing at all, with no error anywhere. The null path now tells the
+    user; the silence is what hid it. Same shape as the other tolerant-reader
+    bugs this arc.
+  - ⚠️ **The reorder test drives the list's CALLBACK, not a synthesized drag** —
+    `ReorderableListView`'s recognizer would not reproduce under `tester.drag`
+    or `startGesture`. What can actually be got wrong is the wiring:
+    `onReorderItem` already adjusts for the removed item, while the deprecated
+    `onReorder` reports the index BEFORE removal and needs the off-by-one
+    undone by hand. Verified the test fails against the wrong contract.
+  - ⬜ **Still to build.** **Gig mode**: auto-advance, big type, edits locked,
+    screen kept awake. And the chart list searchable by key/tempo/style/form/
+    tag, with favourites and recently played.
+  - ⚠️ **Do not move the per-song override onto the chart.** Still the one thing
+    the model exists to prevent, and it will still look like a simplification.
+  - **Superseded card text below (kept for its reasoning).**
+
+- ⬜ **BB-U4b (original) — the setlist SURFACE.** `M` — *the model is shipped; this is its UI.*
   - ✅ **Model, persistence and codec DONE** (2026-08-01): `core/harmony/setlist.dart`
     + `SetlistStore`, 24 tests. The card's invariant is asserted — one chart in
     two sets at two keys plays at each set's key and the chart is unmoved.

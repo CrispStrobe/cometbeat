@@ -17167,6 +17167,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No chords could be read from this song.'**
   String get songbookNoChordsFound;
+
+  /// No description provided for @setlistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Setlists'**
+  String get setlistTitle;
+
+  /// No description provided for @setlistNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New setlist'**
+  String get setlistNew;
+
+  /// No description provided for @setlistNamePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Name this setlist'**
+  String get setlistNamePrompt;
+
+  /// No description provided for @setlistEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No setlists yet. Make one for your next gig.'**
+  String get setlistEmpty;
+
+  /// No description provided for @setlistNoSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'No songs yet — tap Add to pick charts.'**
+  String get setlistNoSongs;
+
+  /// No description provided for @setlistAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add songs'**
+  String get setlistAdd;
+
+  /// No description provided for @setlistDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete setlist'**
+  String get setlistDelete;
+
+  /// No description provided for @setlistRemoveSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from setlist'**
+  String get setlistRemoveSong;
+
+  /// No description provided for @setlistMissingChart.
+  ///
+  /// In en, this message translates to:
+  /// **'Chart missing'**
+  String get setlistMissingChart;
+
+  /// No description provided for @setlistMissingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This chart is no longer saved. It is kept here so you can see it is gone.'**
+  String get setlistMissingHint;
+
+  /// No description provided for @setlistEntryKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Key'**
+  String get setlistEntryKey;
+
+  /// No description provided for @setlistEntryTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo'**
+  String get setlistEntryTempo;
+
+  /// No description provided for @setlistEntryNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Cue'**
+  String get setlistEntryNote;
+
+  /// No description provided for @setlistEntryUseChart.
+  ///
+  /// In en, this message translates to:
+  /// **'As written'**
+  String get setlistEntryUseChart;
+
+  /// No description provided for @setlistOverrideHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Set just for this gig — the chart itself is unchanged.'**
+  String get setlistOverrideHint;
+
+  /// No description provided for @setlistSongCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{no songs} =1{1 song} other{{count} songs}}'**
+  String setlistSongCount(int count);
+
+  /// No description provided for @chartOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This chart could not be opened.'**
+  String get chartOpenFailed;
 }
 
 class _AppLocalizationsDelegate
