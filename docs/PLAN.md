@@ -151,6 +151,12 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (editor-ux)** · 🚧 **CLAIMING: cache fetched item PAYLOADS.** The index
+  and shards are cached, so browsing and melodic search work offline — but
+  `fetch(item)` still hits the network, so actually OPENING a piece does not.
+  ⚠️ Must be size-capped: score/module payloads are KBs, but the same method
+  serves soundfonts and sample packs that run to tens of MB. Touching
+  `cometbeat_catalog_source.dart` only.
 - **opus (editor-ux)** · ✅ **DONE + IDLE: offline catalog start.** The shard
   cache was already there; `_load` fetching `index.json` with no recovery is
   what made it unreachable. ⚠️ **A cache that only works when the network is up
