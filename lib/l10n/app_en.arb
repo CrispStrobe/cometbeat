@@ -1017,6 +1017,13 @@
   "musicPickerCatalog": "Browse online catalog",
   "musicPickerCatalogEmpty": "No online scores found.",
   "musicPickerSearchHint": "Search title or composer",
+  "musicPickerByTitle": "By title",
+  "musicPickerByMelody": "By melody",
+  "musicPickerMelodyHint": "Tap the first few notes of the tune. Any key — we match the shape, not the pitch. ({count} pieces searchable.)",
+  "@musicPickerMelodyHint": {
+    "description": "Shown in the melody search before enough notes are entered. Says explicitly that the key does not matter, because a user who thinks it does will not try.",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "dawInsertMusicTitle": "How should this music arrive?",
   "dawInsertMusicSymbolic": "Notation",
   "dawInsertMusicRendered": "Rendered",

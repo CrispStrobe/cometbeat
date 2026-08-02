@@ -4202,6 +4202,24 @@ abstract class AppLocalizations {
   /// **'Search title or composer'**
   String get musicPickerSearchHint;
 
+  /// No description provided for @musicPickerByTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'By title'**
+  String get musicPickerByTitle;
+
+  /// No description provided for @musicPickerByMelody.
+  ///
+  /// In en, this message translates to:
+  /// **'By melody'**
+  String get musicPickerByMelody;
+
+  /// Shown in the melody search before enough notes are entered. Says explicitly that the key does not matter, because a user who thinks it does will not try.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the first few notes of the tune. Any key — we match the shape, not the pitch. ({count} pieces searchable.)'**
+  String musicPickerMelodyHint(int count);
+
   /// No description provided for @dawInsertMusicTitle.
   ///
   /// In en, this message translates to:

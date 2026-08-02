@@ -2287,6 +2287,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get musicPickerSearchHint => 'Titel oder Komponist suchen';
 
   @override
+  String get musicPickerByTitle => 'Nach Titel';
+
+  @override
+  String get musicPickerByMelody => 'Nach Melodie';
+
+  @override
+  String musicPickerMelodyHint(int count) {
+    return 'Tippe die ersten Töne der Melodie. Egal in welcher Tonart — wir vergleichen den Verlauf, nicht die Tonhöhe. ($count Stücke durchsuchbar.)';
+  }
+
+  @override
   String get dawInsertMusicTitle => 'Wie soll diese Musik ankommen?';
 
   @override

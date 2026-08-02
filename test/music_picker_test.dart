@@ -3,16 +3,19 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/music/melodic_search.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToMidi;
 import 'package:comet_beat/features/library/content_source.dart'
-    show LibraryItem;
+    show LibraryItem, MusicInfo;
 import 'package:comet_beat/shared/music/music_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Uint8List _b(String s) => Uint8List.fromList(utf8.encode(s));
 
 void main() {
+  melodyTests();
+
   test('decodes ABC text into a score with notes', () {
     const abc = 'X:1\nT:Scale\nM:4/4\nL:1/4\nK:C\nC D E F|';
     final score = decodeMusicFile('scale.abc', _b(abc));
@@ -110,5 +113,74 @@ void main() {
       () => decodeMusicFile('song.xyz', Uint8List(0)),
       throwsA(isA<FormatException>()),
     );
+  });
+}
+
+// --- find by melody ---------------------------------------------------------
+//
+// The picker's melodic lens. `searchMelodies` itself is covered in
+// melodic_search_test; what is worth pinning HERE is the join between the
+// catalog and the search — which rows are eligible, and that a hit can be
+// turned back into the item the user then picks.
+
+LibraryItem _item(String id, List<int> incipit) => LibraryItem(
+      sourceId: 'test',
+      sourceName: 'Test',
+      id: id,
+      title: id,
+      composer: '',
+      collection: 'score',
+      declaredLicense: 'CC0',
+      downloadUrl: Uri.parse('https://example.invalid/$id'),
+      format: 'abc',
+      music: MusicInfo(incipit: incipit),
+    );
+
+void melodyTests() {
+  group('melodicPoolFrom', () {
+    test('a row with fewer than two notes is not searchable', () {
+      // One note is ZERO intervals — no shape. Left in the pool it would sit
+      // there matching every query equally, which is worse than being absent.
+      final built = melodicPoolFrom([
+        _item('none', const []),
+        _item('one', const [60]),
+        _item('two', const [60, 62]),
+      ]);
+      expect(built.pool.map((c) => c.id), ['two']);
+      expect(built.byId.keys, ['two']);
+    });
+
+    test('a hit maps back to the item the user picks', () {
+      final ode = _item('ode', const [64, 64, 65, 67, 67, 65, 64, 62]);
+      final built = melodicPoolFrom([
+        _item('other', const [60, 60, 60, 60]),
+        ode,
+      ]);
+      final hits = searchMelodies(
+        // Transposed: the user hums wherever their voice sits.
+        const [70, 70, 71, 73, 73, 71, 70, 68],
+        built.pool,
+      );
+      expect(hits.first.id, 'ode');
+      expect(built.byId[hits.first.id]!.title, 'ode');
+    });
+
+    test('a row whose incipit is missing entirely is skipped, not crashed on',
+        () {
+      final built = melodicPoolFrom([
+        LibraryItem(
+          sourceId: 'test',
+          sourceName: 'Test',
+          id: 'nomusic',
+          title: 'no music object',
+          composer: '',
+          collection: 'score',
+          declaredLicense: 'CC0',
+          downloadUrl: Uri.parse('https://example.invalid/x'),
+          format: 'abc',
+        ),
+      ]);
+      expect(built.pool, isEmpty);
+    });
   });
 }

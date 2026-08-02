@@ -2277,6 +2277,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get musicPickerSearchHint => 'Search title or composer';
 
   @override
+  String get musicPickerByTitle => 'By title';
+
+  @override
+  String get musicPickerByMelody => 'By melody';
+
+  @override
+  String musicPickerMelodyHint(int count) {
+    return 'Tap the first few notes of the tune. Any key — we match the shape, not the pitch. ($count pieces searchable.)';
+  }
+
+  @override
   String get dawInsertMusicTitle => 'How should this music arrive?';
 
   @override

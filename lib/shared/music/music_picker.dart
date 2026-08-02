@@ -13,6 +13,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/tracker_song_module.dart'
     show songFromModuleBytes;
 import 'package:comet_beat/core/licensing/license_obligations.dart';
+import 'package:comet_beat/core/music/melodic_search.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiTrackMidiToMultiPart;
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
@@ -263,6 +264,26 @@ class _MusicPickerSheet extends StatelessWidget {
       );
 }
 
+/// Catalog rows → a searchable melodic pool, plus the way back to the row.
+///
+/// Pulled out of the sheet so the RULE is testable without a network or a
+/// widget: a row is searchable only if its incipit has at least two notes,
+/// because one note is zero intervals and therefore no shape at all — such a
+/// row would otherwise sit in the pool matching everything equally.
+({List<MelodicCandidate> pool, Map<String, LibraryItem> byId}) melodicPoolFrom(
+  Iterable<LibraryItem> items,
+) {
+  final pool = <MelodicCandidate>[];
+  final byId = <String, LibraryItem>{};
+  for (final i in items) {
+    final incipit = i.music?.incipit ?? const <int>[];
+    if (incipit.length < 2) continue;
+    pool.add(MelodicCandidate(i.id, incipit));
+    byId[i.id] = i;
+  }
+  return (pool: pool, byId: byId);
+}
+
 /// Lists the CometBeat catalog's CC0/PD scores; tapping one fetches + decodes it
 /// and pops with the [MultiPartScore]. Network-backed, so it loads lazily.
 class _CatalogMusicSheet extends StatefulWidget {
@@ -338,6 +359,50 @@ class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
     }
   }
 
+  // --- find by melody -------------------------------------------------------
+
+  /// Which lens the sheet is searching through — words or notes.
+  bool _byMelody = false;
+
+  /// The notes tapped so far, as absolute MIDI. Absolute is what the user
+  /// entered; the search derives intervals itself, so nothing here has to be
+  /// normalised or transposed.
+  final List<int> _melody = [];
+
+  /// Every searchable row, loaded once. Melodic search cannot work on a PAGE —
+  /// ranking 300 arbitrary rows out of 38k would almost never contain the piece
+  /// being hummed. The source keeps the shard in memory after the first fetch,
+  /// so asking for all of it costs no extra network.
+  List<MelodicCandidate>? _pool;
+  Map<String, LibraryItem> _byId = const {};
+  bool _poolLoading = false;
+
+  Future<void> _ensurePool() async {
+    if (_pool != null || _poolLoading) return;
+    setState(() => _poolLoading = true);
+    try {
+      final built = melodicPoolFrom(await _source.browse(limit: 100000));
+      if (!mounted) return;
+      setState(() {
+        _pool = built.pool;
+        _byId = built.byId;
+        _poolLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _poolLoading = false);
+    }
+  }
+
+  /// The current ranked hits, or null when there is nothing to rank yet.
+  List<LibraryItem>? get _melodyHits {
+    final pool = _pool;
+    if (pool == null || _melody.length < 2) return null;
+    return [
+      for (final h in searchMelodies(_melody, pool, limit: 40))
+        if (_byId[h.id] != null) _byId[h.id]!,
+    ];
+  }
+
   Future<void> _pick(LibraryItem item) async {
     if (_fetching) return;
     setState(() => _fetching = true);
@@ -395,73 +460,237 @@ class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
                 ],
               ),
             ),
+            // Two lenses on the same catalog: what a piece is CALLED, and how it
+            // GOES. The second is the one that helps when the title is exactly
+            // what you cannot remember.
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: TextField(
-                controller: _searchController,
-                onChanged: _onQueryChanged,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  hintText: l10n.musicPickerSearchHint,
-                  border: const OutlineInputBorder(),
-                  suffixIcon: _searchController.text.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            _onQueryChanged('');
-                          },
-                        ),
-                ),
+              child: SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment<bool>(
+                    value: false,
+                    icon: const Icon(Icons.search, size: 18),
+                    label: Text(l10n.musicPickerByTitle),
+                  ),
+                  ButtonSegment<bool>(
+                    value: true,
+                    icon: const Icon(Icons.piano, size: 18),
+                    label: Text(l10n.musicPickerByMelody),
+                  ),
+                ],
+                selected: {_byMelody},
+                showSelectedIcon: false,
+                onSelectionChanged: (v) {
+                  setState(() => _byMelody = v.first);
+                  if (v.first) unawaited(_ensurePool());
+                },
               ),
             ),
-            if (_fetching) const LinearProgressIndicator(),
-            Expanded(
-              child: _failed
-                  ? Center(child: Text(l10n.musicPickerCatalogFailed))
-                  : items == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : items.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Text(
-                                  _query.isEmpty
-                                      ? l10n.musicPickerCatalogEmpty
-                                      : l10n.musicPickerNoMatch,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: items.length,
-                              itemBuilder: (_, i) {
-                                final it = items[i];
-                                return ListTile(
-                                  dense: true,
-                                  leading: Icon(
-                                    it.collection == 'module'
-                                        ? Icons.grid_on
-                                        : Icons.music_note,
-                                  ),
-                                  title: Text(it.title),
-                                  subtitle: Text(
-                                    [
-                                      if (it.composer.isNotEmpty) it.composer,
-                                      it.declaredLicense,
-                                    ].join(' · '),
-                                  ),
-                                  trailing: Text(it.format.toUpperCase()),
-                                  onTap: () => _pick(it),
-                                );
-                              },
-                            ),
-            ),
+            if (!_byMelody)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onQueryChanged,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    hintText: l10n.musicPickerSearchHint,
+                    border: const OutlineInputBorder(),
+                    suffixIcon: _searchController.text.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              _onQueryChanged('');
+                            },
+                          ),
+                  ),
+                ),
+              )
+            else
+              _MelodyQueryBar(
+                notes: _melody,
+                onAdd: (m) => setState(() => _melody.add(m)),
+                onBackspace:
+                    _melody.isEmpty ? null : () => setState(_melody.removeLast),
+                onClear: _melody.isEmpty ? null : () => setState(_melody.clear),
+              ),
+            if (_fetching || (_byMelody && _poolLoading))
+              const LinearProgressIndicator(),
+            Expanded(child: _results(l10n, items)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _results(AppLocalizations l10n, List<LibraryItem>? items) {
+    if (_failed) {
+      return Center(child: Text(l10n.musicPickerCatalogFailed));
+    }
+
+    if (_byMelody) {
+      if (_pool == null) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      final hits = _melodyHits;
+      // Two notes is one interval. Below that there is no shape to search on,
+      // so say what to do rather than showing a ranked list of nothing.
+      if (hits == null) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              l10n.musicPickerMelodyHint(_pool!.length),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        );
+      }
+      return _tiles(hits);
+    }
+
+    if (items == null) return const Center(child: CircularProgressIndicator());
+    if (items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            _query.isEmpty
+                ? l10n.musicPickerCatalogEmpty
+                : l10n.musicPickerNoMatch,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return _tiles(items);
+  }
+
+  Widget _tiles(List<LibraryItem> items) => ListView.builder(
+        itemCount: items.length,
+        itemBuilder: (_, i) {
+          final it = items[i];
+          return ListTile(
+            dense: true,
+            leading: Icon(
+              it.collection == 'module' ? Icons.grid_on : Icons.music_note,
+            ),
+            title: Text(it.title),
+            subtitle: Text(
+              [
+                if (it.composer.isNotEmpty) it.composer,
+                it.declaredLicense,
+              ].join(' · '),
+            ),
+            trailing: Text(it.format.toUpperCase()),
+            onTap: () => _pick(it),
+          );
+        },
+      );
+}
+
+/// Tap the opening notes of a tune.
+///
+/// A keyboard rather than a text field because the input is a MELODY, and
+/// because nothing here has to be in the right key — the search compares
+/// intervals, so the user can start wherever the shape feels right. Two octaves
+/// so a tune that leaps still fits without an octave control to discover.
+class _MelodyQueryBar extends StatelessWidget {
+  const _MelodyQueryBar({
+    required this.notes,
+    required this.onAdd,
+    required this.onBackspace,
+    required this.onClear,
+  });
+
+  final List<int> notes;
+  final ValueChanged<int> onAdd;
+  final VoidCallback? onBackspace;
+  final VoidCallback? onClear;
+
+  static const _names = [
+    'C',
+    'C♯',
+    'D',
+    'D♯',
+    'E',
+    'F',
+    'F♯',
+    'G',
+    'G♯',
+    'A',
+    'A♯',
+    'B',
+  ];
+
+  static String nameOf(int midi) => '${_names[midi % 12]}${(midi ~/ 12) - 1}';
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  notes.isEmpty ? '—' : notes.map(nameOf).join(' '),
+                  style: Theme.of(context).textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.backspace_outlined, size: 18),
+                onPressed: onBackspace,
+                visualDensity: VisualDensity.compact,
+              ),
+              IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: onClear,
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (var midi = 60; midi <= 83; midi++)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: SizedBox(
+                      width: 40,
+                      child: FilledButton.tonal(
+                        onPressed: () => onAdd(midi),
+                        style: FilledButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          // Black keys read darker so the row scans like a
+                          // keyboard rather than 24 identical buttons.
+                          backgroundColor: _names[midi % 12].length > 1
+                              ? scheme.surfaceContainerHighest
+                              : null,
+                        ),
+                        child: Text(
+                          _names[midi % 12],
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
