@@ -2770,7 +2770,31 @@ Nothing in `BB-H1`–`H3` or `BB-H6` depends on which way this goes; it gates
   - A pinned audio fingerprint per style at a fixed seed, plus the byte-identical
     guard (rule 1). A style edit that changes another style's output fails.
 
-- ⬜ **BB-Q3 — the symbol corpus test.** `S`
+- ✅ **BB-Q3 — the symbol corpus test. DONE, and the CORPUS half found two
+  parser gaps the hand-written rows could not.** `S`
+  - The 160 hand-written rows in `chord_spec_test.dart` (input → canonical
+    print → intervals, grouped by family) were already there and passing. The
+    card's other half — *"extend it from the corpus"* — is now done against the
+    reachable one: **the chord-shape databases the app itself browses, 1,380
+    names across guitar and ukulele.**
+  - 🐛 **14 names in our OWN shipped data did not parse.** All one suffix:
+    `minor` spelled out, which `assets/chords/ukulele.json` uses. The parser
+    took `min`, `mi` and `-` but not `minor` — matching is longest-token-first,
+    so `min` matched and left a stranded `or`.
+  - 🐛 **And a subtler asymmetry that fixing the first one exposed.**
+    `Cminor7` composes correctly (the `minor` token sets the triad, so a
+    following `7` reads as a minor seventh ON a minor triad) but `Cmajor7`
+    did NOT: `major` deliberately sets nothing (`CMaj` really is just C), so it
+    fell through to a dominant `C7`. `major7` needs its own token beside
+    `maj7` — spelled-out and abbreviated forms must mean the same chord.
+  - **Also asserts a ROUND TRIP over the whole shipped set**, which is stronger
+    than "it parses": what we PRINT must read back as the same chord, or the
+    chord browser and the chart disagree about a shape the user is looking at.
+  - 📌 **The lesson the card was right about:** a hand-written corpus cannot
+    find either of these. It contains what its author thought of. Only real
+    data contains what it actually contains.
+
+- ⬜ **BB-Q3 (original) — the symbol corpus test.** `S`
   - ≥150 real-world chord strings → expected pitch sets and canonical prints,
     including the ugly ones. Extend it from the corpus: every distinct
     `<harmony>` and JAMS label we can reach becomes a row. **A symbol that fails

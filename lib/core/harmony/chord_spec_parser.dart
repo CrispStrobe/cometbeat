@@ -353,6 +353,12 @@ final List<_Token> _tokens = () {
     _Token('°', (b) => b.triad = ChordTriad.diminished),
 
     // major seventh, spelled out
+    // ⚠️ `major7` needs its OWN token, unlike `minor7`. `minor` sets the triad
+    // and a following `7` then reads as a minor seventh on a minor triad,
+    // which is right — but `major` deliberately sets NOTHING (`CMaj` is just
+    // C), so `Cmajor7` would fall through to a dominant `C7`. Spelled-out and
+    // abbreviated forms must mean the same chord.
+    _Token('major7', (b) => b.seventh = ChordSeventh.major),
     _Token('maj7', (b) => b.seventh = ChordSeventh.major),
     _Token('maj9', _majorTo(9)),
     _Token('maj11', _majorTo(11)),
@@ -427,6 +433,12 @@ final List<_Token> _tokens = () {
     _Token('2', (b) => b.triad = ChordTriad.sus2),
 
     // plain qualities last: these are prefixes of the tokens above
+    // Spelled out in full. Matching is longest-token-first, so these are
+    // picked ahead of `maj`/`min` rather than leaving a stranded "or" — which
+    // is exactly how `Cminor` used to fail while `Cmin` parsed. Our OWN
+    // shipped `assets/chords/ukulele.json` uses the suffix `minor`.
+    _Token('major', (b) {}),
+    _Token('minor', (b) => b.triad = ChordTriad.minor),
     _Token('maj', (b) {}), // `CMaj` is just C
     _Token('min', (b) => b.triad = ChordTriad.minor),
     _Token('mi', (b) => b.triad = ChordTriad.minor),

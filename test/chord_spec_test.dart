@@ -13,6 +13,7 @@
 // parser". The card says an unparseable symbol is a test case, not a crash, and
 // the last group here pins that behaviour.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:comet_beat/core/harmony/chord_spec.dart';
@@ -600,5 +601,74 @@ void main() {
         }
       });
     }
+  });
+
+  group('BB-Q3 — the corpus we actually ship', () {
+    // The card asks that the hand-written rows above be EXTENDED from real
+    // data: "every distinct <harmony> and JAMS label we can reach becomes a
+    // row". The reachable corpus in this repo is the chord-shape databases the
+    // app itself browses — 1,380 names across guitar and ukulele.
+    //
+    // ⚠️ This found a real gap on its first run. `assets/chords/ukulele.json`
+    // uses the suffix `minor` spelled out, and the parser accepted `min`, `mi`
+    // and `-` but not `minor`: matching is longest-token-first, so `min`
+    // matched and left a stranded "or". Fourteen names in our OWN shipped data
+    // did not parse. A hand-written corpus cannot find that — only the real
+    // data can, which is the whole point of this group.
+    List<String> namesFrom(String instrument) {
+      final decoded = jsonDecode(
+        File('assets/chords/$instrument.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final chords = decoded['chords'] as Map<String, dynamic>;
+      return [
+        for (final entries in chords.values)
+          for (final entry in entries as List)
+            '${(entry as Map<String, dynamic>)['key']}'
+                '${entry['suffix'] == 'major' ? '' : entry['suffix']}',
+      ];
+    }
+
+    for (final instrument in ['guitar', 'ukulele']) {
+      test('every $instrument chord name we ship parses', () {
+        final names = namesFrom(instrument);
+        expect(names, isNotEmpty, reason: 'the database should not be empty');
+        final unparsed = <String>{
+          for (final name in names)
+            if (parseChordSpec(name) == null) name,
+        };
+        expect(
+          unparsed,
+          isEmpty,
+          reason: 'names in our own shipped data that will not parse',
+        );
+      });
+
+      test('every $instrument chord name round-trips through its print', () {
+        // Stronger than "it parses": what we print must read back as the same
+        // chord, or the browser and the chart would disagree about a shape the
+        // user is looking at.
+        for (final name in namesFrom(instrument).toSet()) {
+          final parsed = parseChordSpec(name);
+          if (parsed == null) continue; // covered by the test above
+          expect(
+            parseChordSpec(parsed.text),
+            parsed,
+            reason: '$name printed as "${parsed.text}" and read back different',
+          );
+        }
+      });
+    }
+
+    test('the spelled-out qualities parse, and mean what they say', () {
+      // Pinned separately from the sweep so the intent survives even if the
+      // shipped data changes.
+      expect(parseChordSpec('Cminor')?.text, 'Cm');
+      expect(parseChordSpec('Cmajor')?.text, 'C');
+      expect(parseChordSpec('C#minor')?.text, 'C#m');
+      expect(parseChordSpec('Bbminor')?.text, 'Bbm');
+      // …and they compose with what follows, rather than swallowing it.
+      expect(parseChordSpec('Cminor7')?.text, 'Cm7');
+      expect(parseChordSpec('Cmajor7')?.text, 'Cmaj7');
+    });
   });
 }
