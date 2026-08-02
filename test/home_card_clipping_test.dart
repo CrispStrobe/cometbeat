@@ -63,16 +63,26 @@ List<String> _clippedParagraphs(WidgetTester tester) {
   void visit(RenderObject node) {
     if (node is RenderParagraph) {
       final allowed = node.constraints.maxHeight;
-      // `didExceedMaxLines` means the text ellipsized, which is FINE — that is
-      // the visible, intentional truncation. What is not fine is a paragraph
-      // laid out TALLER than the box it must paint inside, because the excess
-      // is silently cut.
-      if (allowed.isFinite && node.size.height > allowed + 0.5) {
+      // ⚠️ CORRECTION: this used to compare `size.height > constraints.maxHeight`,
+      // which CANNOT BE TRUE — a RenderBox is always sized within its
+      // constraints, so the check never fired and the test passed vacuously.
+      // (Its teeth check appeared to work only because the companion assertion,
+      // that subtitles are still SHOWN, failed at the same time.)
+      //
+      // The real condition is that the paragraph WANTS more height than the box
+      // it was painted into: `getMaxIntrinsicHeight` is what the text needs at
+      // this width, already limited by its own maxLines.
+      if (node.text.toPlainText().trim().isEmpty) return;
+      if (!allowed.isFinite || node.size.width <= 0 || node.size.height <= 0) {
+        return;
+      }
+      final wanted = node.getMaxIntrinsicHeight(node.size.width);
+      if (wanted > allowed + 1.0 && wanted - node.size.height > 1.0) {
         final text = node.text.toPlainText();
         bad.add(
           '"${text.length > 40 ? '${text.substring(0, 40)}…' : text}" '
-          'laid out ${node.size.height.toStringAsFixed(1)} in '
-          '${allowed.toStringAsFixed(1)}',
+          '(needs ${wanted.toStringAsFixed(0)}px, '
+          'painted into ${node.size.height.toStringAsFixed(0)}px)',
         );
       }
     }
