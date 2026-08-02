@@ -1019,6 +1019,10 @@
   "musicPickerSearchHint": "Search title or composer",
   "musicPickerByTitle": "By title",
   "musicPickerByMelody": "By melody",
+  "musicPickerSingIt": "Sing or hum it",
+  "musicPickerStopSinging": "Stop and search",
+  "musicPickerListening": "Listening — sing the opening…",
+  "musicPickerMicFailed": "Couldn't use the microphone.",
   "musicPickerMelodyHint": "Tap the first few notes of the tune. Any key — we match the shape, not the pitch. ({count} pieces searchable.)",
   "@musicPickerMelodyHint": {
     "description": "Shown in the melody search before enough notes are entered. Says explicitly that the key does not matter, because a user who thinks it does will not try.",

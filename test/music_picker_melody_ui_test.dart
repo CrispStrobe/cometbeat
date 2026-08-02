@@ -10,6 +10,8 @@
 // used to construct its own network-backed source inline, so every behaviour in
 // it was reachable only over the real catalog.
 
+import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/features/library/content_source.dart';
@@ -124,6 +126,8 @@ Future<void> _switchToMelody(WidgetTester tester, AppLocalizations l10n) async {
 }
 
 void main() {
+  sungUiTests();
+
   testWidgets('the melody lens is offered and can be entered', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -223,5 +227,148 @@ void main() {
       await _tapKey(tester, midi);
     }
     expect(find.text('Ode to Joy'), findsOneWidget);
+  });
+}
+
+/// A microphone that replays a scripted phrase. The seam exists so this test
+/// can exist at all — a widget test cannot open a real microphone, and without
+/// it the entire sung path would be verifiable only by hand on a device.
+class _FakeMic implements MelodyMicrophone {
+  _FakeMic(this.phrase, {this.failOnStart = false});
+
+  /// Frames as the pitch detector would emit them, each with its own time.
+  final List<({double frequency, double clarity, double timeMs})> phrase;
+  final bool failOnStart;
+
+  final _controller = StreamController<
+      ({double frequency, double clarity, double timeMs})>.broadcast();
+  bool started = false;
+  bool stopped = false;
+
+  @override
+  Stream<({double frequency, double clarity, double timeMs})> get readings =>
+      _controller.stream;
+
+  @override
+  Future<void> start() async {
+    if (failOnStart) throw StateError('no microphone');
+    started = true;
+    for (final f in phrase) {
+      _controller.add(f);
+    }
+  }
+
+  @override
+  Future<void> stop() async => stopped = true;
+}
+
+double _hz(int midi) => 440 * math.pow(2, (midi - 69) / 12).toDouble();
+
+/// A sung phrase as frames: each note held, with a gap after it.
+///
+/// ⚠️ Frames carry their OWN time. `pump()` advances fake time, so a consumer
+/// stamping arrival from a Stopwatch would put every frame at ~0 ms — which is
+/// exactly the bug that moved timestamps into the source.
+List<({double frequency, double clarity, double timeMs})> _sung(
+  List<int> midis, {
+  double hopMs = 11,
+}) {
+  final out = <({double frequency, double clarity, double timeMs})>[];
+  var t = 0.0;
+  for (final m in midis) {
+    for (var i = 0; i < 36; i++, t += hopMs) {
+      out.add((frequency: _hz(m), clarity: 0.95, timeMs: t));
+    }
+    for (var i = 0; i < 8; i++, t += hopMs) {
+      out.add((frequency: 0.0, clarity: 0.0, timeMs: t));
+    }
+  }
+  return out;
+}
+
+/// Pumps until the async mic lifecycle has settled.
+///
+/// The fake emits hundreds of frames, each a microtask, and `_listening` only
+/// flips after `start()` completes — two pumps is not reliably enough, and the
+/// symptom of under-pumping is that the SECOND tap starts a new capture instead
+/// of stopping the first.
+Future<void> _settle(WidgetTester tester) async {
+  for (var i = 0; i < 8; i++) {
+    await tester.pump(const Duration(milliseconds: 20));
+  }
+}
+
+void sungUiTests() {
+  Future<void> open(WidgetTester tester, _FakeMic mic) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      _wrap(
+        CatalogMusicSheet(source: _FakeSource(_catalog), microphone: mic),
+      ),
+    );
+    await tester.pump();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await _switchToMelody(tester, l10n);
+  }
+
+  testWidgets('singing a tune fills the query and finds it', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    // Ode to Joy, sung a minor third up — the transposition is the point.
+    final mic = _FakeMic(_sung(const [67, 67, 68, 70, 70, 68, 67, 65]));
+    await open(tester, mic);
+
+    await tester.tap(find.byKey(const Key('melody-listen')));
+    await _settle(tester);
+    expect(mic.started, isTrue);
+
+    // Stopping is what runs the search.
+    await tester.tap(find.byKey(const Key('melody-listen')));
+    await _settle(tester);
+    expect(mic.stopped, isTrue);
+
+    expect(find.text('G4 G4 G♯4 A♯4 A♯4 G♯4 G4 F4'), findsOneWidget);
+    expect(find.text('Ode to Joy'), findsOneWidget);
+  });
+
+  testWidgets('a microphone that will not start says so and stays usable',
+      (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final mic = _FakeMic(const [], failOnStart: true);
+    await open(tester, mic);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byKey(const Key('melody-listen')));
+    await _settle(tester);
+
+    expect(find.text(l10n.musicPickerMicFailed), findsOneWidget);
+    // Crucially the keyboard still works — a denied mic must not strand the
+    // user in a mode with no way to enter anything.
+    await _tapKey(tester, 60);
+    await _tapKey(tester, 62);
+    expect(find.text('C4 D4'), findsOneWidget);
+  });
+
+  testWidgets('too little singing leaves the query alone', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    // A couple of frames is noise; ranking 38k pieces against noise would give
+    // confident-looking nonsense instead of an obvious no-op.
+    final mic = _FakeMic(const [
+      (frequency: 440.0, clarity: 0.9, timeMs: 0.0),
+      (frequency: 440.0, clarity: 0.9, timeMs: 11.0),
+    ]);
+    await open(tester, mic);
+
+    await _tapKey(tester, 60);
+    // Two matches: the readout and the keyboard key both read "C4".
+    expect(find.text('C4'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('melody-listen')));
+    await _settle(tester);
+    await tester.tap(find.byKey(const Key('melody-listen')));
+    await _settle(tester);
+
+    // The tapped note is still there — a failed hum did not wipe it. Two
+    // matches: the readout and the keyboard key both read "C4".
+    expect(find.text('C4'), findsWidgets);
   });
 }

@@ -10,10 +10,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/tracker_song_module.dart'
     show songFromModuleBytes;
 import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/music/melodic_search.dart';
+import 'package:comet_beat/core/music/sung_melody.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiTrackMidiToMultiPart;
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
@@ -264,6 +266,63 @@ class _MusicPickerSheet extends StatelessWidget {
       );
 }
 
+/// A live source of pitch readings for the "sing it" search.
+///
+/// An interface rather than the plugin directly, for one reason that matters:
+/// the sheet is otherwise untestable. A widget test cannot open a microphone,
+/// so without this seam the entire sung path would be verifiable only by hand
+/// on a device — which is how a feature ends up shipped unverified.
+abstract class MelodyMicrophone {
+  Future<void> start();
+
+  /// Frequency in Hz (0 for silence), a 0..1 clarity, and WHEN the frame
+  /// occurred, one per analysis frame.
+  ///
+  /// ⚠️ `timeMs` belongs to the SOURCE, not to the consumer. The sheet used to
+  /// stamp arrival times from a `Stopwatch`, which is real time — and under a
+  /// widget test `pump()` advances FAKE time, so every frame landed at ~0 ms,
+  /// every note came out zero-length, and the duration filter silently threw
+  /// the whole phrase away. A capture source always knows its own frame times;
+  /// asking the consumer to guess them was the bug.
+  Stream<({double frequency, double clarity, double timeMs})> get readings;
+
+  Future<void> stop();
+}
+
+/// The real microphone, wrapping the app's shared pitch service.
+class _RealMelodyMicrophone implements MelodyMicrophone {
+  final MicrophonePitchService _service = MicrophonePitchService();
+  final Stopwatch _clock = Stopwatch();
+
+  @override
+  Stream<({double frequency, double clarity, double timeMs})> get readings =>
+      _service.readings.map(
+        (r) => (
+          frequency: r.frequency,
+          clarity: r.clarity,
+          // `PitchReading` carries no time of its own, so the capture stamps
+          // arrival — which is right HERE, where the clock and the audio run on
+          // the same real timeline.
+          timeMs: _clock.elapsedMilliseconds.toDouble(),
+        ),
+      );
+
+  @override
+  Future<void> start() {
+    _clock
+      ..reset()
+      ..start();
+    return _service.start();
+  }
+
+  @override
+  Future<void> stop() async {
+    _clock.stop();
+    await _service.stop();
+    await _service.dispose();
+  }
+}
+
 /// Catalog rows → a searchable melodic pool, plus the way back to the row.
 ///
 /// Pulled out of the sheet so the RULE is testable without a network or a
@@ -293,9 +352,12 @@ class _MusicPickerSheet extends StatelessWidget {
 /// only over the real network, i.e. not testable. Production callers pass
 /// nothing and get exactly what they got before.
 class CatalogMusicSheet extends StatefulWidget {
-  const CatalogMusicSheet({super.key, this.source});
+  const CatalogMusicSheet({super.key, this.source, this.microphone});
 
   final ContentSource? source;
+
+  /// Injected for tests; production passes nothing and gets the real mic.
+  final MelodyMicrophone? microphone;
 
   @override
   State<CatalogMusicSheet> createState() => _CatalogMusicSheetState();
@@ -337,6 +399,9 @@ class _CatalogMusicSheetState extends State<CatalogMusicSheet> {
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
+    // Release the microphone even if the sheet is dismissed mid-phrase.
+    unawaited(_micSub?.cancel());
+    if (_listening) unawaited(_mic.stop());
     super.dispose();
   }
 
@@ -399,6 +464,81 @@ class _CatalogMusicSheetState extends State<CatalogMusicSheet> {
     } catch (_) {
       if (mounted) setState(() => _poolLoading = false);
     }
+  }
+
+  // --- "sing it" ------------------------------------------------------------
+
+  late final MelodyMicrophone _mic =
+      widget.microphone ?? _RealMelodyMicrophone();
+  StreamSubscription<({double frequency, double clarity, double timeMs})>?
+      _micSub;
+  SungMelodyCollector? _collector;
+  bool _listening = false;
+  String? _micError;
+
+  /// Starts (or stops) listening. Stopping is what runs the search: a live
+  /// re-rank on every frame would flicker the list under the user's hand while
+  /// they are still singing the phrase that decides it.
+  Future<void> _toggleListening() async {
+    if (_listening) {
+      await _stopListening();
+      return;
+    }
+    setState(() {
+      _micError = null;
+      _collector = SungMelodyCollector();
+    });
+    try {
+      _micSub = _mic.readings.listen((r) {
+        _collector?.add(
+          frequency: r.frequency,
+          clarity: r.clarity,
+          timeMs: r.timeMs,
+        );
+      });
+      await _mic.start();
+      if (mounted) setState(() => _listening = true);
+    } catch (e) {
+      // Same rule as in `_stopListening`: do not make TELLING THE USER wait on
+      // a subscription cancel. A denied or busy microphone is exactly when the
+      // message matters, and awaiting cancel here swallowed it entirely.
+      final sub = _micSub;
+      _micSub = null;
+      unawaited(sub?.cancel());
+      if (mounted) {
+        setState(() {
+          _listening = false;
+          _micError = '$e';
+        });
+      }
+    }
+  }
+
+  Future<void> _stopListening() async {
+    // ⚠️ Cancel is NOT awaited before releasing the microphone. The two are
+    // independent, and ordering them the other way makes releasing the device
+    // hostage to a subscription that may still be draining buffered frames —
+    // which in a widget test never completed at all, and in production would
+    // mean a held-open mic.
+    final sub = _micSub;
+    _micSub = null;
+    unawaited(sub?.cancel());
+    try {
+      await _mic.stop();
+    } catch (_) {
+      // Already stopped, or the platform tore the recorder down first — the
+      // query is in hand either way, so this must not lose it.
+    }
+    final query = _collector?.toQuery() ?? const [];
+    if (!mounted) return;
+    setState(() {
+      _listening = false;
+      if (query.isNotEmpty) {
+        _melody
+          ..clear()
+          ..addAll(query);
+      }
+    });
   }
 
   /// The current ranked hits, or null when there is nothing to rank yet.
@@ -521,10 +661,13 @@ class _CatalogMusicSheetState extends State<CatalogMusicSheet> {
             else
               _MelodyQueryBar(
                 notes: _melody,
+                listening: _listening,
+                error: _micError,
                 onAdd: (m) => setState(() => _melody.add(m)),
                 onBackspace:
                     _melody.isEmpty ? null : () => setState(_melody.removeLast),
                 onClear: _melody.isEmpty ? null : () => setState(_melody.clear),
+                onToggleListening: () => unawaited(_toggleListening()),
               ),
             if (_fetching || (_byMelody && _poolLoading))
               const LinearProgressIndicator(),
@@ -611,15 +754,21 @@ class _CatalogMusicSheetState extends State<CatalogMusicSheet> {
 class _MelodyQueryBar extends StatelessWidget {
   const _MelodyQueryBar({
     required this.notes,
+    required this.listening,
+    required this.error,
     required this.onAdd,
     required this.onBackspace,
     required this.onClear,
+    required this.onToggleListening,
   });
 
   final List<int> notes;
+  final bool listening;
+  final String? error;
   final ValueChanged<int> onAdd;
   final VoidCallback? onBackspace;
   final VoidCallback? onClear;
+  final VoidCallback onToggleListening;
 
   static const _names = [
     'C',
@@ -641,6 +790,7 @@ class _MelodyQueryBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Column(
@@ -650,24 +800,51 @@ class _MelodyQueryBar extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  notes.isEmpty ? '—' : notes.map(nameOf).join(' '),
-                  style: Theme.of(context).textTheme.titleSmall,
+                  listening
+                      ? l10n.musicPickerListening
+                      : (notes.isEmpty ? '—' : notes.map(nameOf).join(' ')),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: listening ? scheme.primary : null,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              // Sing it. Stopping is what runs the search — re-ranking live
+              // would flicker the list under the user's hand mid-phrase.
+              IconButton(
+                key: const Key('melody-listen'),
+                icon: Icon(listening ? Icons.stop_circle : Icons.mic, size: 20),
+                color: listening ? scheme.primary : null,
+                tooltip: listening
+                    ? l10n.musicPickerStopSinging
+                    : l10n.musicPickerSingIt,
+                onPressed: onToggleListening,
+                visualDensity: VisualDensity.compact,
+              ),
               IconButton(
                 icon: const Icon(Icons.backspace_outlined, size: 18),
-                onPressed: onBackspace,
+                onPressed: listening ? null : onBackspace,
                 visualDensity: VisualDensity.compact,
               ),
               IconButton(
                 icon: const Icon(Icons.clear, size: 18),
-                onPressed: onClear,
+                onPressed: listening ? null : onClear,
                 visualDensity: VisualDensity.compact,
               ),
             ],
           ),
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                l10n.musicPickerMicFailed,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: scheme.error),
+              ),
+            ),
           SizedBox(
             height: 44,
             child: ListView(

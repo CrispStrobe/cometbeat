@@ -2283,6 +2283,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get musicPickerByMelody => 'By melody';
 
   @override
+  String get musicPickerSingIt => 'Sing or hum it';
+
+  @override
+  String get musicPickerStopSinging => 'Stop and search';
+
+  @override
+  String get musicPickerListening => 'Listening — sing the opening…';
+
+  @override
+  String get musicPickerMicFailed => 'Couldn\'t use the microphone.';
+
+  @override
   String musicPickerMelodyHint(int count) {
     return 'Tap the first few notes of the tune. Any key — we match the shape, not the pitch. ($count pieces searchable.)';
   }

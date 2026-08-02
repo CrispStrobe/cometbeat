@@ -2293,6 +2293,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get musicPickerByMelody => 'Nach Melodie';
 
   @override
+  String get musicPickerSingIt => 'Sing oder summ sie';
+
+  @override
+  String get musicPickerStopSinging => 'Stoppen und suchen';
+
+  @override
+  String get musicPickerListening => 'Ich höre zu — sing den Anfang…';
+
+  @override
+  String get musicPickerMicFailed =>
+      'Das Mikrofon konnte nicht genutzt werden.';
+
+  @override
   String musicPickerMelodyHint(int count) {
     return 'Tippe die ersten Töne der Melodie. Egal in welcher Tonart — wir vergleichen den Verlauf, nicht die Tonhöhe. ($count Stücke durchsuchbar.)';
   }

@@ -4214,6 +4214,30 @@ abstract class AppLocalizations {
   /// **'By melody'**
   String get musicPickerByMelody;
 
+  /// No description provided for @musicPickerSingIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Sing or hum it'**
+  String get musicPickerSingIt;
+
+  /// No description provided for @musicPickerStopSinging.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop and search'**
+  String get musicPickerStopSinging;
+
+  /// No description provided for @musicPickerListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening — sing the opening…'**
+  String get musicPickerListening;
+
+  /// No description provided for @musicPickerMicFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t use the microphone.'**
+  String get musicPickerMicFailed;
+
   /// Shown in the melody search before enough notes are entered. Says explicitly that the key does not matter, because a user who thinks it does will not try.
   ///
   /// In en, this message translates to:
