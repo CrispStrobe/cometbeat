@@ -18,6 +18,8 @@ import 'package:comet_beat/core/audio/wav_io.dart'
     show readWavPcm16, wavToMonoFloat;
 import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/interop/project_bridge.dart';
+import 'package:comet_beat/core/interop/score_to_loop.dart'
+    show melodyQueryFromScore;
 import 'package:comet_beat/core/notation/guitar_score_fingering.dart'
     show barresFor, fingerFrettings;
 import 'package:comet_beat/core/project/project_link.dart';
@@ -50,6 +52,8 @@ import 'package:comet_beat/features/workshop/model/score_document.dart'
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
+import 'package:comet_beat/shared/music/music_picker.dart'
+    show showMelodicSearch;
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
@@ -1211,6 +1215,36 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   @override
   bool isSoloed(int track) => _tracks[track].soloed;
 
+  /// Ask the library what the tab in this editor IS.
+  ///
+  /// ⚠️ Searches `_bandScore()`, which applies the CAPO. A tab's written frets
+  /// are relative to the capo, so the un-transposed pitches are not what the
+  /// instrument sounds — and a search on them would be asking about a
+  /// transposition of the real music. Interval matching would forgive it, but
+  /// only by accident.
+  Future<void> _findThisTune() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final query = melodyQueryFromScore(_bandScore());
+    if (query.length < 2) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.musicPickerFindTuneTooShort)),
+      );
+      return;
+    }
+    final picked = await showMelodicSearch(context, melody: query);
+    if (picked == null || !mounted || picked.score.parts.isEmpty) return;
+    // Onto the ACTIVE track, the same way the Song Book route lands a song —
+    // one loading path for library music, not two that can drift apart.
+    setState(() {
+      _tracks[_active].doc =
+          TabDocument.fromScore(picked.score.parts.first, _doc.tuning);
+      _selCol = 0;
+      _selString = 0;
+      _clearHistory();
+    });
+  }
+
   /// The whole band as a [MultiPartScore] (one part per track), transposed by
   /// the capo so exports and hand-offs match what the editor plays.
   MultiPartScore _bandScore() =>
@@ -1895,6 +1929,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   openAudioRecording();
                 case 'songbook':
                   _openFromSongBook();
+                case 'findTune':
+                  unawaited(_findThisTune());
                 case 'shareTune':
                   shareMelody();
                 case 'loadTune':
@@ -1971,6 +2007,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 'songbook',
                 Icons.library_music_outlined,
                 l10n.tabOpenSongBook,
+              ),
+              _menuItem(
+                'findTune',
+                Icons.travel_explore,
+                l10n.musicPickerFindThisTune,
               ),
               _menuItem(
                 'save',

@@ -29,6 +29,8 @@ import 'package:comet_beat/core/games/highway/highway_chart.dart'
     show highwayChartFromScore;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/interop/drag_payload.dart';
+import 'package:comet_beat/core/interop/score_to_loop.dart'
+    show melodyQueryFromScore;
 import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/notation/bowed_arranger.dart'
     show BowedInstrument, BowedSkill;
@@ -65,7 +67,7 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
-    show showMusicPickerWithLicense;
+    show showMelodicSearch, showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/score_theme.dart';
@@ -2853,6 +2855,32 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     }
   }
 
+  /// Ask the library what the music in this editor IS.
+  ///
+  /// The query comes from the score itself, so the user enters nothing. Uses
+  /// `melodyQueryFromScore`, which picks the melody part by REGISTER — counting
+  /// notes would fingerprint a piano accompaniment instead of the tune sitting
+  /// above it.
+  Future<void> _findThisTune() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final query = melodyQueryFromScore(_mpd.buildMultiPart());
+    if (query.length < 2) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.musicPickerFindTuneTooShort)),
+      );
+      return;
+    }
+    final picked = await showMelodicSearch(context, melody: query);
+    if (picked == null || !mounted) return;
+    noteProvenance(picked.provenance);
+    // Loaded as a multi-part document whatever its part count — unlike
+    // `_loadFromMusicLibrary`, which merges a single part into the active one.
+    // A search result is a DIFFERENT piece, so replacing is right; merging it
+    // into whatever was being edited would splice two works together.
+    setState(() => _mpd.loadMultiPart(picked.score, autoClef: true));
+  }
+
   /// Loads a melody from the shared music library (built-ins, saved songs,
   /// catalog, or an imported notation file) into this editor.
   Future<void> _loadFromMusicLibrary() async {
@@ -4813,6 +4841,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                               _open();
                             case 'loadLibrary':
                               _loadFromMusicLibrary();
+                            case 'findTune':
+                              unawaited(_findThisTune());
                             case 'paste':
                               _pasteTokens();
                             case 'scan':
@@ -4873,6 +4903,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                             'loadLibrary',
                             Icons.library_music_outlined,
                             l10n.workshopLoadFromLibrary,
+                            true,
+                          ),
+                          _menuItem(
+                            'findTune',
+                            Icons.travel_explore,
+                            l10n.musicPickerFindThisTune,
                             true,
                           ),
                           _menuItem(
