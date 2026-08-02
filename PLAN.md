@@ -336,6 +336,16 @@ notes are indexed.** Nothing in the app reads `incipitIntervals` today.
   antiphon). They DO have ambitus and incipit, so they are searchable — do not
   assume the `music` object is uniform across formats.
 
+🔬 **HUMAN-GATED, and the one thing none of this proves.** Every mode is
+verified against synthesised or scripted input — the plumbing, the state
+machine and the ranking are solid. What is NOT verified is the real MPM
+detector on an actual hummed voice through a phone mic: octave errors, breath,
+and room noise are precisely what a synthetic stream cannot reproduce. Protocol:
+hum a known tune from the corpus into Loop Studio's melody lens and check it
+appears in the top ten; note where it fails (register, tempo, how many notes are
+needed in practice vs the 8 the corpus probe suggests). Same posture as the
+tuner's real-instrument pass recorded further down this file.
+
 **Adjacent ideas from the same review, worth their own decisions:**
 - **Offline-first archive.** `CometbeatCatalogSource` is network-backed; the
   competitor ships its archive for offline use. Search especially wants this.
@@ -453,8 +463,29 @@ injected fake microphone.
   hand on a device — which is exactly how the melody UI shipped unverified the
   first time.
 
-**Next:** an entry point that takes the query from a Workshop / Loop Studio
-selection instead of the keyboard or the mic.
+✅ **MODE 3 SHIPPED (2026-08-02) — all three query modes are now live.**
+`melodyQueryFromScore` (in `score_to_loop.dart`, reusing `melodyPartOf`) +
+`showMelodicSearch` + a "What is this tune?" entry in Loop Studio's overflow.
+The user enters nothing: the query comes from the part being edited.
+
+⚠️ **Two traps, both avoided deliberately — do not "simplify" either:**
+- **Do NOT route a search query through the loop conversion.** That path
+  quantises onto eighths and windows to two bars because a LOOP must; a search
+  wants the written opening, and going through it silently drops everything past
+  bar two — exactly what a search needs most. Pinned by a test (a six-bar melody
+  must yield twelve notes).
+- **Loop Studio searches SOUNDING pitches, not the authored-C cells.** Cells are
+  written in C and shifted by `pitchTranspose` at render. It happens not to
+  matter — the search compares intervals, which survive transposition — but
+  relying on that breaks the moment anything stops being a rigid transposition.
+- 📌 And the rule shared with mode 3's extractor: **a chord contributes its TOP
+  note**, for the same reason melody detection uses register. A tune sits above
+  its own harmonisation, so the lowest or average pitch searches for the
+  accompaniment.
+
+**Next:** the same entry point in the Score Workshop and the Tab Workshop —
+`melodyQueryFromScore` already takes a `MultiPartScore`, so each is a menu item
+plus one call. And the human-gated check below.
 
 ⚠️ **Client-side search over the whole catalog needs the score shard**
 (2.68 MB gzipped, 30 MB raw) — which is the offline-archive item above, now with
