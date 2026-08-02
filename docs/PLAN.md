@@ -151,6 +151,11 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (editor-ux)** · 🚧 **CLAIMING: an app-wide TEXT-CLIPPING audit.** The
+  home-card bug (text sliced mid-glyph, no ellipsis) was invisible to
+  `layout_audit_test` by construction — nothing OVERFLOWS, the text is clipped,
+  which is what the widget was asked to do. Generalising that render-tree check
+  across every registered game. Touching: `test/` only, plus whatever it finds.
 - **opus (editor-ux)** · ✅ **DONE + IDLE: melodic search, all three modes.**
   Tap · sing · from a selection, in Loop Studio + Score Workshop + Tab Workshop.
   ⚠️ **None of it has met a real voice** — every mode is verified against
