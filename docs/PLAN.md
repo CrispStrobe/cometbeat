@@ -1312,6 +1312,23 @@ is recorded in [HISTORY.md](HISTORY.md).
         though MEI carries it and every synthetic case (voice 1, voice 2,
         several per bar) round-trips. Worth one file-level bisect.
 
+  - ✅ **FIGURED BASS in MEI, kern, LilyPond and MuseScore** (2026-08-03,
+    `4dc72b1`). Thoroughbass reached only MusicXML, and the corpus holds real
+    continuo. MEI `<harm><fb><f>`; a kern `**fb` spine beside `**mxhm` and
+    `**text`; LilyPond `\new FiguredBass \figuremode`; MuseScore
+    `<FiguredBass><FiguredBassItem><digit>`.
+    - ⚠️ **MEI spells a chord symbol and a figure with the SAME `<harm>`** — a
+      label is text inside it, a figure an `<fb>` element — so the reader must
+      look at the CONTENT, not the tag. Pinned by a test carrying one of each.
+    - ⚠️ A skip in a LilyPond figure track can arrive as an `LyWord` (`s4`)
+      rather than an `LyNote`; without a branch for it the cursor never
+      advanced past one and every later stack anchored a note EARLY. The
+      chord-track walker has the same branch for the same reason.
+    - 📊 **Corpus effect ≈ nil (10,618 → 10,609)** and that is expected: only
+      84 `<FiguredBass>` elements in 2,000 sampled `.mscx`. The capability is
+      real, the sample barely contains it. Worth stating so the flat number is
+      not read as the work being pointless.
+
   - ✅ **MID-BAR CLEFS in kern and MuseScore** (2026-08-02, `f367d78`). Not
     cosmetic: a clef written at the barline instead of its real onset RE-CLEFS
     every note before it, so those notes read at the wrong pitch on the page.
@@ -1354,7 +1371,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     | **let-ring** | ✅ | ✅ | ❌ | — | ✅ | ❌ |
     | **portamento · cue notes** | ✅ | ✅ | — | — | — | ✅ |
     | **inline (mid-bar) clefs** | ✅ | ❌ | ✅ **new** | — | write-only | ✅ **new** |
-    | figured bass | ✅ | ❌ | ❌ | — | ❌ | ❌ |
+    | **figured bass** | ✅ | ✅ **new** | ✅ **new** | — | ✅ **new** | ✅ **new** |
     | measure repeat · multi-rest | ✅ | ❌ | ❌ | ❌ / ✅ | ❌ | ❌ |
     | common/cut meter glyph | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 
