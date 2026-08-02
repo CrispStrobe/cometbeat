@@ -1287,6 +1287,29 @@ is recorded in [HISTORY.md](HISTORY.md).
         though MEI carries it and every synthetic case (voice 1, voice 2,
         several per bar) round-trips. Worth one file-level bisect.
 
+  - ✅ **MID-BAR CLEFS in kern and MuseScore** (2026-08-02, `f367d78`). Not
+    cosmetic: a clef written at the barline instead of its real onset RE-CLEFS
+    every note before it, so those notes read at the wrong pitch on the page.
+    kern places `*clefX` between data records, MuseScore a `<Clef>` inside the
+    voice — 12,539 of them in the corpus. **Corpus `bar` 1,852 → 1,695; totals
+    10,536 → 10,618.**
+    - ⚠️ **POSITION decides which kind a clef is, and must be tested FIRST.**
+      MuseScore's `_leadingSet` stays false for the whole of measure 0, so
+      testing it before position swallowed a mid-bar clef there as the score's
+      opening clef. Pinned.
+    - 🛑 **LilyPond: the READ side was attempted and REVERTED** (`ba263e5`) —
+      recorded here so it is not retried blind. `scoreFromLilyPond` walks nodes
+      across STAFF boundaries, so a multi-staff file's other staves' `\clef`
+      commands reach the same measure builder: recording them produced **510
+      clef changes and 277 MID-BAR ones across 250 choral files that have one
+      clef each**, and cost **477 corpus round trips** (10,536 → 10,059).
+      Gating on "no music read yet" fixed only the first of them. The fix
+      belongs in how the reader walks staves, not at the point of use.
+      Its WRITER emits both correctly, so a score that has them prints them.
+    - 📌 **The corpus caught this within one sweep**, as it did the kern
+      local-comment mistake. Both were net-negative changes that looked right
+      in a unit test; only the totals showed it.
+
   - 📋 **COVERAGE AS IT NOW STANDS — what each format carries** (2026-08-02).
     `—` = the format has no notation for it; `❌` = a real, unclaimed gap.
 
@@ -1305,7 +1328,8 @@ is recorded in [HISTORY.md](HISTORY.md).
     | **ottava · pedal · trill span · glissando** | ✅ | ✅ | ❌ | — | ✅ | ✅ |
     | **let-ring** | ✅ | ✅ | ❌ | — | ✅ | ❌ |
     | **portamento · cue notes** | ✅ | ✅ | — | — | — | ✅ |
-    | figured bass · inline clefs | ✅ | ❌ | ❌ | — | ❌ | ❌ |
+    | **inline (mid-bar) clefs** | ✅ | ❌ | ✅ **new** | — | write-only | ✅ **new** |
+    | figured bass | ✅ | ❌ | ❌ | — | ❌ | ❌ |
     | measure repeat · multi-rest | ✅ | ❌ | ❌ | ❌ / ✅ | ❌ | ❌ |
     | common/cut meter glyph | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 
