@@ -189,13 +189,50 @@ class CometbeatCatalogSource implements ContentSource {
     return bytes;
   }
 
+  /// Where the last good index is kept, so a later start can proceed offline.
+  ///
+  /// NOT versioned like the shards are: the index is what CARRIES the version,
+  /// so there is nothing to key it by. One slot, overwritten on every
+  /// successful fetch.
+  static const _kIndexCacheKey = 'catalog/index.json';
+
+  /// The catalog index — from the network, falling back to the last good copy.
+  ///
+  /// ⚠️ This fallback is what makes the shard cache USABLE. Shards have been
+  /// cached on disk for a while, but `_load` fetched the index first with no
+  /// recovery, so one failed request made every cached shard unreachable and
+  /// the library read as empty offline — a cache that only worked when it was
+  /// not needed.
+  ///
+  /// The network is still tried FIRST, and a fresh index is still what decides
+  /// whether cached shards are current. Only an actual failure reaches for the
+  /// copy, so a published catalog update is picked up exactly as before.
+  Future<Uint8List> _indexBytes() async {
+    final cache = _cache ??= createTtsAssetCache();
+    try {
+      final fresh = await _http(Uri.parse(_indexUrl));
+      try {
+        await cache.write(_kIndexCacheKey, fresh);
+      } catch (_) {/* cache is a nicety, not a requirement */}
+      return fresh;
+    } catch (_) {
+      try {
+        final hit = await cache.read(_kIndexCacheKey);
+        if (hit != null && hit.isNotEmpty) return hit;
+      } catch (_) {/* unreadable cache — report the ORIGINAL failure */}
+      // Nothing cached: the real problem is the network, and saying so is more
+      // useful than reporting a cache miss the user cannot act on.
+      rethrow;
+    }
+  }
+
   Future<List<LibraryItem>> _load() async {
     if (_catalog != null) return _catalog!;
     if (_shareable) {
       final hit = _sharedCache[_cacheKey];
       if (hit != null) return _catalog = hit;
     }
-    final index = _json(await _http(Uri.parse(_indexUrl)), 'catalog index');
+    final index = _json(await _indexBytes(), 'catalog index');
     final baseUrl = (index['baseUrl'] as String?) ?? '';
     // The index is the ~1 KB file we always fetch; its `version` is what decides
     // whether a persisted shard is still current.

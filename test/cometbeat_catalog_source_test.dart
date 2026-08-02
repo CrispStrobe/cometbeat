@@ -63,6 +63,88 @@ HttpGet _fakeHttp(Map<String, String> byUrl) => (Uri url) async {
 void main() {
   const indexUrl = 'https://h/catalog/index.json';
 
+  group('offline start', () {
+    // ⚠️ The shard cache had been on disk for a while and was UNREACHABLE
+    // offline, because `_load` fetched the index first with no recovery. One
+    // failed request made every cached shard useless — a cache that only
+    // worked when it was not needed.
+
+    test('a second start works with the network gone', () async {
+      final cache = _MemCache();
+      final urls = {
+        indexUrl: _index,
+        'https://h/catalog/soundfont.json': _soundfontShard,
+      };
+      // First run: online, fills the cache.
+      final online = CometbeatCatalogSource(
+        _fakeHttp(urls),
+        indexUrl: indexUrl,
+        cache: cache,
+      );
+      expect(await online.browse(), hasLength(1));
+
+      // Second run: the network is gone entirely.
+      final offline = CometbeatCatalogSource(
+        (Uri url) async => throw Exception('offline'),
+        indexUrl: indexUrl,
+        cache: cache,
+      );
+      final items = await offline.browse();
+      expect(items, hasLength(1));
+      expect(items.single.title, 'FluidR3 GM');
+    });
+
+    test('the network is still tried FIRST, so updates are picked up',
+        () async {
+      // The fallback must not become a stale-forever cache: a reachable
+      // catalog is always authoritative.
+      final cache = _MemCache();
+      await CometbeatCatalogSource(
+        _fakeHttp({
+          indexUrl: _index,
+          'https://h/catalog/soundfont.json': _soundfontShard,
+        }),
+        indexUrl: indexUrl,
+        cache: cache,
+      ).browse();
+
+      final renamed = _soundfontShard.replaceAll('FluidR3 GM', 'Renamed GM');
+      final fresh = CometbeatCatalogSource(
+        _fakeHttp({
+          // A NEW version, so the cached shard is not reused either.
+          indexUrl: _index.replaceAll('"version":"t"', '"version":"t2"'),
+          'https://h/catalog/soundfont.json': renamed,
+        }),
+        indexUrl: indexUrl,
+        cache: cache,
+      );
+      expect((await fresh.browse()).single.title, 'Renamed GM');
+    });
+
+    test('with nothing cached it reports the NETWORK failure', () async {
+      // A cache miss is not something the user can act on; "we could not reach
+      // the catalog" is.
+      final src = CometbeatCatalogSource(
+        (Uri url) async => throw Exception('offline'),
+        indexUrl: indexUrl,
+        cache: _MemCache(),
+      );
+      await expectLater(src.browse(), throwsA(isA<Exception>()));
+    });
+
+    test('a broken cache still browses online', () async {
+      final src = CometbeatCatalogSource(
+        _fakeHttp({
+          indexUrl: _index,
+          'https://h/catalog/soundfont.json': _soundfontShard,
+        }),
+        indexUrl: indexUrl,
+        cache: _BrokenCache(),
+      );
+      expect(await src.browse(), hasLength(1));
+    });
+  });
+
   test('sounds source reads index → soundfont shard, maps download URL',
       () async {
     final src = CometbeatCatalogSource(
@@ -231,6 +313,13 @@ void main() {
 // `urlGz`; these lock in that we prefer it, inflate it, persist by catalog
 // version, and never let a cache fault break browsing.
 
+/// The SHARD keys in a cache, ignoring the index copy.
+///
+/// The index is cached too (so a later start works offline), so a bare
+/// `store.keys` no longer isolates shard behaviour.
+List<String> _shardKeys(_MemCache c) =>
+    c.store.keys.where((k) => k != 'catalog/index.json').toList();
+
 /// An in-memory [TtsAssetCache] that records what it was asked to do.
 class _MemCache implements TtsAssetCache {
   final Map<String, Uint8List> store = {};
@@ -327,7 +416,10 @@ void _gzMain() {
       indexUrl: indexUrl,
       cache: cache,
     ).browse();
-    expect(cache.writes, 1);
+    // ⚠️ Two writes now, not one: the index is cached too, so a later start
+    // can proceed offline. What this test is ABOUT is the shard, so assert
+    // that directly rather than a total that conflates the two.
+    expect(_shardKeys(cache), hasLength(1));
     final afterFirst = log.length;
 
     // a NEW instance = a new launch; the in-process cache is gone
@@ -339,7 +431,11 @@ void _gzMain() {
     // only the ~1 KB index was fetched the second time
     expect(log.length - afterFirst, 1);
     expect(log.last.path, endsWith('/catalog/index.json'));
-    expect(cache.writes, 1, reason: 'shard was served from cache');
+    expect(
+      _shardKeys(cache),
+      hasLength(1),
+      reason: 'shard was served from cache, not written again',
+    );
   });
 
   test('a new catalog version evicts the old shard copy', () async {
@@ -356,7 +452,7 @@ void _gzMain() {
       indexUrl: indexUrl,
       cache: cache,
     ).browse();
-    expect(cache.store.keys.single, 'catalog/soundfont-v1.json.gz');
+    expect(_shardKeys(cache).single, 'catalog/soundfont-v1.json.gz');
 
     await CometbeatCatalogSource(
       httpWith(
@@ -370,7 +466,7 @@ void _gzMain() {
       cache: cache,
     ).browse();
     // one copy per shard, not one per publish
-    expect(cache.store.keys.single, 'catalog/soundfont-v2.json.gz');
+    expect(_shardKeys(cache).single, 'catalog/soundfont-v2.json.gz');
     expect(cache.deletes, 1);
   });
 
