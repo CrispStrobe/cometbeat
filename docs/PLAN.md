@@ -1199,6 +1199,22 @@ is recorded in [HISTORY.md](HISTORY.md).
       `bin/merge_features.py`, which already asserts the write is additive) and
       re-emitting the catalog. **NOT done here** — `db.json` is shared, locked
       and behind a publish gate (auto-memory `music-db-publish-gate`).
+    - ✅ **The other tunes are now ADDRESSABLE** (`2bbf7b7`): `abcTuneCount(abc)`
+      and `scoreFromAbc(abc, tune: i)`, with tune 0 the default so nothing
+      existing changes. Stopping at the second `X:` alone would have made the
+      read correct and left tunes 2..N unreachable — an ingest that wants to
+      split a book into rows needs them. **A decision for the maintainer:
+      whether a 17-tune file should stay ONE db.json row (showing only tune 1)
+      or become 17.**
+    - ⚠️ **Corpus effect is modest and that is expected**: `abc -> *` cells
+      moved a few points each (`-> musescore` 392→395, `-> musicxml` 391→394,
+      `-> mei` 397→398) because a first tune often reads the same either way in
+      the NOTE channel — the damage was concentrated in `ann` and `bar`. The
+      real value of this fix is the DATA, not the percentage.
+    - ✅ **Checked: no other format has the problem.** 43,465 `.krn`, 259
+      `.musicxml` and 23 `.xml` scanned — zero multi-segment or multi-score
+      files. MEI's multi-`mdiv` case was already handled (the layer search
+      prefers a score that actually contains music).
 
   - 📊 **THE RICH SWEEP IS NOW A RANKED WORK LIST** (2026-08-02, opus). A
     `--rich` corpus run compares every channel, so one percentage mixes real
