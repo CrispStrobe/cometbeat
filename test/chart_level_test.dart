@@ -60,11 +60,16 @@ void main() {
         expect(midis, isNotEmpty, reason: 'a silent bar means a dropped chord');
         expect(ms, greaterThan(0));
       }
-      // 8 bars x 5 beats. Derived from the engine's own `beatMs` rather than
-      // from 60000/132, because that is 454.54… and the engine works in whole
-      // milliseconds — asserting the real arithmetic instead of a tolerance.
-      expect(playback.beatMs, (60000 / 132).round());
-      expect(playback.totalMs, playback.beatMs * 8 * 5);
+      // 8 bars x 5 beats at 132bpm. Asserted against the EXACT clock, not
+      // against `beatMs * 40`.
+      //
+      // ⚠️ It used to say `beatMs * 40` = 18200, which encoded the DRIFT as the
+      // expectation: the integer 455ms beat is 0.455ms fast, so forty of them
+      // overshoot the true 18181.8ms by 18ms. BB-Q4's error-diffusion fix made
+      // this test fail, correctly. A test written against a buggy
+      // implementation defends the bug.
+      expect(playback.beatMs, (60000 / 132).round(), reason: 'the click');
+      expect(playback.totalMs, (8 * 5 * 60000 / 132).round());
       // The ♭9 really is in the voicing — the altered note is not smoothed
       // away by the voice-leading, which would be a silent quality loss.
       final firstBar = playback.comp.first.$1.map((m) => m % 12).toSet();

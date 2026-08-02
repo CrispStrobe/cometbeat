@@ -93,6 +93,31 @@ is recorded in [HISTORY.md](HISTORY.md).
 > - **A change whose risk lives in files you did not touch is not shippable on
 >   targeted tests.** I shipped one on ~350 and CI found it at 7,612.
 
+> ⚠️ **`test/on_screen_midi_test.dart` is FLAKY, and here is the exact cause —
+> for whoever owns WS-X5 (2026-08-02, opus/backing-band).** *"⚠️ without this
+> the note would ring forever"* fails roughly 1 run in 3, on an unchanged tree.
+> Verified not caused by any of my work: it fails and passes both with and
+> without my `chart_playback` change.
+>
+> **The mechanism:** `setUp` builds `OnScreenMidi(noteLength: 50ms)` and the
+> helper `settle()` waits a fixed **80ms of WALL CLOCK** (`Future.delayed`),
+> while the note-off is scheduled on a real `Timer`. The margin is therefore
+> **30ms**, plus a broadcast-stream delivery hop — which a GC pause or a busy
+> machine eats. It is a race, not an assertion failure.
+>
+> **The fix is a few lines:** poll for the expected state instead of sleeping a
+> guessed interval — fast when things work, robust when they do not:
+> ```dart
+> Future<void> until(bool Function() done, {int maxMs = 2000}) async {
+>   final sw = Stopwatch()..start();
+>   while (!done() && sw.elapsedMilliseconds < maxMs) {
+>     await Future<void>.delayed(const Duration(milliseconds: 5));
+>   }
+> }
+> ```
+> Left for its owner rather than edited mid-work; shout if you would rather I
+> just did it.
+
 > ⚠️ **`test/loop_mixer_test.dart` is TIME-flaky, and it is not an assertion
 > failure — for whoever owns Loop Studio (2026-08-01, opus/backing-band).**
 > Three runs, three DIFFERENT failing tests, every one of them reporting *"did

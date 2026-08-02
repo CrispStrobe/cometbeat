@@ -2776,7 +2776,33 @@ Nothing in `BB-H1`–`H3` or `BB-H6` depends on which way this goes; it gates
     `<harmony>` and JAMS label we can reach becomes a row. **A symbol that fails
     to parse is a test case, not a crash.**
 
-- ⬜ **BB-Q4 — timing invariants.** `S`
+- ✅ **BB-Q4 — timing invariants. DONE, and it found a real bug on its first
+  run.** `S` (`test/chart_timing_invariants_test.dart`, 6 tests)
+  - 🐛 **`resolveChartPlayback` DRIFTED.** It rounded the beat ONCE and
+    multiplied every bar by it: at 132bpm a 455ms beat against a true 454.545 is
+    0.455ms fast per beat, i.e. **362ms over a 200-bar chart in 4/4 and 543ms in
+    12/8**. Nothing missing, no bar wrong, every seam continuous — the music was
+    simply ahead of where it claimed to be. And `slot.ms` is a DURATION, so the
+    drift was in the scheduled audio, not only the highlight.
+  - **The diagnostic that named it as accumulation, not a constant offset: the
+    drift GREW with length** — 4ms at 25 bars, 70ms at 400. Any per-unit
+    rounding has that signature.
+  - **Fixed by error diffusion**, the technique `band_playback` already used:
+    carry the exact edge at full precision, round each boundary from it, derive
+    each duration as the difference of two rounded edges. Worst case is now
+    **0.5ms** — the floor for millisecond rounding — so the test asserts **1ms**,
+    not a loose bound that would guard nothing.
+  - ⚠️ **A test of mine had encoded the bug as its expectation.**
+    `chart_level_test` asserted `totalMs == beatMs * 40` (18200); the true
+    duration is 18182. It failed when the fix landed, correctly. **A test
+    written against a buggy implementation defends the bug** — and I had
+    described that assertion as "the engine's exact arithmetic" at the time.
+  - Sweep: 7 meters × 13 tempos (mostly chosen NOT to divide 60000, since a
+    tempo that divides evenly hides every rounding bug there is) × 200 bars,
+    asserting seam continuity, `barAt` coverage, total == last edge, no
+    zero-length bar, drift bound, and drift-does-not-grow.
+
+- ⬜ **BB-Q4 (original) — timing invariants.** `S`
   - Assert sample-integrality and drift bounds across the full tempo range and
     every shipped meter: a 200-bar chart's last downbeat must land within a
     stated sample tolerance of where the clock says it should, and every window

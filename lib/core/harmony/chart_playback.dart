@@ -103,7 +103,17 @@ ChartPlayback resolveChartPlayback(
 }) {
   final bars = chart.barsInPlayOrder;
   final bpm = chart.tempoBpm < 1 ? 1 : chart.tempoBpm;
-  final beatMs = (60000 / bpm).round();
+
+  // ⚠️ TWO beat durations, deliberately. `exactBeatMs` is the real one and is
+  // never rounded; `beatMs` is the integer the metronome click interval wants.
+  //
+  // Rounding the beat ONCE and multiplying every bar by it accumulates: at
+  // 132bpm the integer beat is 455ms against a true 454.545, which is 0.455ms
+  // fast per beat — 364ms over a 200-bar chart, and worse in 12/8. Nothing is
+  // missing and no bar is wrong; the music simply drifts, which is exactly the
+  // failure `chart_timing_invariants_test` exists to catch.
+  final exactBeatMs = 60000 / bpm;
+  final beatMs = exactBeatMs.round();
 
   if (bars.isEmpty) {
     return ChartPlayback(
@@ -132,6 +142,12 @@ ChartPlayback resolveChartPlayback(
   // sounding chord across empty bars.
   final slots = <({ChordSpec chord, int ms})>[];
   final spans = <ChartBarSpan>[];
+  // ERROR DIFFUSION: the exact edge is carried in full precision and each
+  // boundary is rounded from it, so a bar's duration is the DIFFERENCE of two
+  // exact edges. Individual bars differ by a millisecond, which is inaudible;
+  // what matters is that the error never accumulates. Rounding each duration
+  // independently and summing them is the bug this replaces.
+  var edge = 0.0;
   var cursorMs = 0;
   ChordSpec? held;
 
@@ -139,24 +155,30 @@ ChartPlayback resolveChartPlayback(
     final bar = bars[i];
     final meter = bar.meterChange ?? chart.meter;
     final beats = barBeats(meter);
-    final barMs = (beats * beatMs).round();
+    final nextEdge = edge + beats * exactBeatMs;
+    final startMs = edge.round();
+    // At an absurd tempo two edges can round to the same millisecond; a
+    // zero-length bar would make `barAt` skip it and let two events share a
+    // timestamp, so it keeps one.
+    final barMs = (nextEdge.round() - startMs).clamp(1, 1 << 30);
 
     spans.add(
       ChartBarSpan(
         index: i,
-        startMs: cursorMs,
+        startMs: startMs,
         durationMs: barMs,
         sectionIndex: origin[i].$1,
         pass: origin[i].$2,
       ),
     );
 
-    slots.addAll(_barEvents(bar, beatMs, barMs, held));
+    slots.addAll(_barEvents(bar, exactBeatMs, barMs, held));
     final last =
         bar.chordsInOrder.isEmpty ? null : bar.chordsInOrder.last.chord;
     if (last != null) held = last;
 
-    cursorMs += barMs;
+    edge = nextEdge;
+    cursorMs = startMs + barMs;
   }
 
   // Pass 2 — voice the whole chart at once, so voice leading is chosen across
@@ -199,7 +221,7 @@ ChartPlayback resolveChartPlayback(
 /// richer belongs to the style model (BB-A2).
 List<({ChordSpec chord, int ms})> _barEvents(
   ChartBar bar,
-  int beatMs,
+  double beatMs,
   int barMs,
   ChordSpec? held,
 ) {
