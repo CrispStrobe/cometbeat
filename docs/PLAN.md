@@ -1228,12 +1228,30 @@ is recorded in [HISTORY.md](HISTORY.md).
         opened a new one and killed it on the spot while the one that should
         have ended there dangled and was dropped. Real corpus token:
         `d'2)\>\!`. **8 of 213 hairpins lost on a `.ly` round trip → 0.**
-      - 🆕 **STILL UNCLAIMED: ~785 remain, concentrated in `.ly` and `.mscx`
-        SOURCES.** The two fixes above moved the corpus bucket only 826 → 785,
-        because most failures are not in the MusicXML reader at all. The
-        LilyPond side measured clean on cross-voice and backwards spans, so
-        the remaining cause is something else again — worth the same
-        source-file bisect that found these two.
+      - ✅ **THE DOMINANT CAUSE, and it broke FOUR codecs for THREE unrelated
+        reasons** (`123dfad`). An ordinary phrase shaped `<` then `>` shares
+        one note: it ends the first hairpin and starts the second.
+        - **LilyPond** wrote `\>\!` — open before close (`417340c`).
+        - **MusicXML** emitted NO `number`, and the reader keys open wedges by
+          it, so the new start overwrote the old entry. Slurs have numbered
+          this way all along; wedges and octave shifts never did.
+        - **MuseScore's** reader held ONE pending hairpin while the shared note
+          carries two `<Spanner>` siblings — the same single-slot bug as the
+          ABC pending-annotation one earlier this arc.
+        📊 **Corpus bucket 785 → 416 (−47%)**, and `ly -> lilypond` left the
+        list entirely.
+      - ⚠️ **kern and ABC carry NO hairpins at all** — unimplemented channel,
+        not a defect, and most of the remaining 416 is exactly that
+        (`-> abc`, `-> kern`). kern has `**dynam`, ABC `!crescendo(!`.
+      - ⚠️ **The tally is FIRST-divergence, so fixing one channel RAISES
+        another's count.** `slur` went 265 → 349 in the same run, not because
+        anything regressed but because it is now the first thing to differ in
+        cells hairpin used to claim. Read the tally as "what to look at next",
+        never as a regression signal.
+      - 🆕 **`slur` (349) is the next bucket, and plausibly the SAME shape** —
+        a note that ends one slur and starts another. Worth checking the four
+        codecs for the identical three failure modes before assuming anything
+        new.
     - ⚠️ `bar` is partly a SPELLING difference, not loss: `time:C` vs `time:4/4`
       and `time:C|` vs `time:4/4`. Whether common time should round-trip as `C`
       is a decision, not obviously a bug.
