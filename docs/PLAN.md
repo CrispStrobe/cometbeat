@@ -151,11 +151,27 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (editor-ux)** · 🚧 **CLAIMING: an app-wide TEXT-CLIPPING audit.** The
-  home-card bug (text sliced mid-glyph, no ellipsis) was invisible to
-  `layout_audit_test` by construction — nothing OVERFLOWS, the text is clipped,
-  which is what the widget was asked to do. Generalising that render-tree check
-  across every registered game. Touching: `test/` only, plus whatever it finds.
+- **opus (editor-ux)** · ✅ **DONE + IDLE: app-wide text-clipping audit.**
+  `test/text_clipping_audit_test.dart` sweeps every registered game, EN + DE, at
+  375×667 for the class `layout_audit_test` cannot see: text CLIPPED rather than
+  overflowed. **0 real findings** — the home cards were the exception, not a
+  pattern.
+  - ⚠️ **A `RenderBox` is ALWAYS sized within its constraints**, so
+    `size.height > constraints.maxHeight` can never be true. My first detector
+    (shipped with the home-card fix) was written that way and could never fire;
+    the test passed vacuously and its teeth check only looked convincing because
+    a companion assertion failed at the same moment. Compare
+    `getMaxIntrinsicHeight(width)` — what the text WANTS — against the box it was
+    PAINTED into. Corrected, and re-verified by restoring the original bug: it
+    now names the exact strings from the screenshot.
+  - ⚠️ **This audit MUST self-test, unlike the overflow one.** Shrinking the
+    surface produces no findings (unbounded text overflows rather than clipping),
+    so "0 findings" and "the detector is broken" look identical from outside. A
+    known-bad fixture is part of the test.
+  - 📌 Triage from 85 candidates to 0 was all false-positive removal: a
+    constraint alone proves nothing, a finding must lose ~a whole line, and an
+    empty or zero-height paragraph is not clipped text — it is text that is not
+    on screen.
 - **opus (editor-ux)** · ✅ **DONE + IDLE: melodic search, all three modes.**
   Tap · sing · from a selection, in Loop Studio + Score Workshop + Tab Workshop.
   ⚠️ **None of it has met a real voice** — every mode is verified against
