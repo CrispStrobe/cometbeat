@@ -1124,6 +1124,55 @@ is recorded in [HISTORY.md](HISTORY.md).
     - Tests: `chord_name_test.dart` (99), `chord_symbol_crossformat_test.dart`
       (every quality × every format, plus a no-harmony byte-identity check).
 
+  - 🆕 **UNCLAIMED — `scoreFromMidi` HANGS FOREVER on a meter finer than a
+    sixteenth. Belongs with the existing scoreToMidi/scoreFromMidi item, and it
+    is more severe than note loss: it is an app freeze on MIDI import.**
+    - **Mechanism, exactly.** The MIDI reader's whole internal grid is
+      SIXTEENTH-NOTE UNITS — `_decomposeUnits` in `midi_reader.dart` bottoms out
+      at `1` = a sixteenth. A bar whose length rounds to **zero** units makes
+      the packing loop advance by zero and spin at 100% CPU forever.
+    - **Boundary, measured** (one whole note, timeout by exit code):
+
+      | meter | 16th-units/bar | result |
+      |---|---|---|
+      | 4/4 · 16/32 · 1/16 · 2/32 · 4/64 | ≥1 | ok |
+      | **1/32 · 3/64 · 1/64** | **0** | **hangs** |
+
+      So the condition is exactly `beats * 16 ~/ beatUnit == 0`.
+    - ⚠️ **The reader ALREADY knows this hazard and guards the wrong half of
+      it.** The `type == 0x58` branch says in so many words *"rather than build
+      a meter whose zero measure-capacity would hang the packing loop below"* —
+      but it only rejects a corrupt beat-unit EXPONENT (outside 1…16). A
+      perfectly legal `1/32` sails through and hangs.
+    - 📌 **Probable trigger: raising the `TimeSignature` beat-unit cap.** It was
+      capped at 16 and was raised to 256 so a legal `16/32` would stop being
+      rejected as corrupt — correct in itself, but it let meters finer than the
+      MIDI reader's grid reach a reader that cannot represent them.
+    - **Real corpus file, not a synthetic:** `cpdl/files/images/11 for pdf with
+      custom ambitus.ly` carries `\time 1/32` five times. That is NOT a
+      misread — early-music editions use a tiny meter so the custom **ambitus**
+      (the range indicator printed before each part) is not barred. Our
+      LilyPond reader reads it correctly; the MIDI reader chokes on it.
+    - **Cost so far:** it froze a full corpus sweep for **5.5 hours** at 100%
+      CPU on a shared 2-core box before anyone noticed, because the harness's
+      heartbeat prints every 2,000 files and a hang looks exactly like a slow
+      stretch. The harness now writes the current file to `<report>.current`
+      (`74a863e6`) and skips the midi hop on a zero-capacity meter — **remove
+      that skip when this is fixed**, it is suppressing real measurement.
+    - Shape of the fix, for whoever takes it: either refuse a meter with zero
+      capacity the way the corrupt-exponent branch already does, or make the
+      grid finer than a sixteenth. The first is one line and matches the
+      existing guard; the second is the real answer, since a 1/32 bar is
+      legitimate music that we currently cannot import at all.
+
+  - 🆕 **UNCLAIMED — our GPIF writer emits a meter our own GPIF reader
+    rejects.** `scoreFromGpif(scoreToGpif(s))` on the same file throws
+    `FormatException: invalid GPIF time signature "1/32"` from `_parseTime`
+    (`gpif.dart:1227`). Self-inconsistency in one codec pair, so a round trip of
+    our own output is exactly what catches it — this one was found in ~300 ms
+    while chasing the hang above. Same root as the item above: the beat-unit cap
+    moved in the model and `_parseTime` was not moved with it.
+
   - ✅ **A FORCED OR CAUTIONARY ACCIDENTAL DELETED ITS NOTE IN LILYPOND**
     (2026-08-01, opus, `1b6117f`). `c'4 d'!4 e'!4 f'?4` read as **ONE** note,
     not four.
