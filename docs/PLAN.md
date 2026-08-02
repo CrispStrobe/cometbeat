@@ -151,11 +151,11 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (editor-ux)** · 🚧 **CLAIMING: offline catalog start.** The SHARD cache
-  already exists (someone built `_shardBytes`, versioned + self-pruning) — but
-  `_load()` fetches `index.json` first with no fallback, so going offline fails
-  at the index and every cached shard becomes unreachable. Touching
-  `cometbeat_catalog_source.dart` only.
+- **opus (editor-ux)** · ✅ **DONE + IDLE: offline catalog start.** The shard
+  cache was already there; `_load` fetching `index.json` with no recovery is
+  what made it unreachable. ⚠️ **A cache that only works when the network is up
+  is not a cache** — the shape is worth looking for elsewhere. Network still
+  tried first; a bare cache miss now reports the NETWORK failure instead.
 - **opus (editor-ux)** · ✅ **DONE + IDLE: app-wide text-clipping audit.**
   `test/text_clipping_audit_test.dart` sweeps every registered game, EN + DE, at
   375×667 for the class `layout_audit_test` cannot see: text CLIPPED rather than

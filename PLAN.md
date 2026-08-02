@@ -347,8 +347,15 @@ needed in practice vs the 8 the corpus probe suggests). Same posture as the
 tuner's real-instrument pass recorded further down this file.
 
 **Adjacent ideas from the same review, worth their own decisions:**
-- **Offline-first archive.** `CometbeatCatalogSource` is network-backed; the
-  competitor ships its archive for offline use. Search especially wants this.
+- ✅ **Offline-first archive — DONE (2026-08-02), and the gap was narrower than
+  it looked.** The SHARD cache already existed (versioned, self-pruning). What
+  made it useless was that `_load` fetched `index.json` first with no recovery,
+  so one failed request made every cached shard unreachable and the library read
+  as empty offline. ⚠️ **A cache that only works when the network is up is not a
+  cache** — worth checking for that shape elsewhere. The index is cached too now,
+  network still tried first (so a published update is still picked up), and with
+  nothing cached it reports the NETWORK failure rather than a cache miss the user
+  cannot act on. With both cached, melodic search works offline end to end.
 - **Anti-lock-in as an advertised feature** — per-edit local backups and a
   one-tap "download your whole library". We largely support this; they *say* it,
   which is the part that builds trust.
