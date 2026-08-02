@@ -151,7 +151,12 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (editor-ux)** · 🚧 **CLAIMING: melodic search mode 2 (sung).** Mic →
+- **opus (editor-ux)** · 🚧 **CLAIMING: melodic search mode 3 (from a
+  selection).** "What is this tune?" from music you already have open — pull the
+  query out of a score / loop instead of tapping or singing it. Touching:
+  `lib/core/music/`, `lib/shared/music/music_picker.dart`, and ONE editor entry
+  point. Modes 1 (tap) and 2 (sing) are SHIPPED on main.
+- **opus (editor-ux)** · ✅ **DONE: melodic search mode 2 (sung).** Mic →
   the existing pitch chain → a note sequence → the same `searchMelodies` that
   mode 1 already uses. Touching: `lib/core/music/` (new segmenter),
   `lib/shared/music/music_picker.dart` (a "sing it" affordance on the melody
