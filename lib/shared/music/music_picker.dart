@@ -22,7 +22,7 @@ import 'package:comet_beat/features/games/songs/song_book.dart' show kSongs;
 import 'package:comet_beat/features/games/songs/user_songs_service.dart'
     show UserSongsService;
 import 'package:comet_beat/features/library/content_source.dart'
-    show LibraryItem;
+    show ContentSource, LibraryItem;
 import 'package:comet_beat/features/library/source_registry.dart'
     show defaultHttpGet;
 import 'package:comet_beat/features/library/sources/cometbeat_catalog_source.dart'
@@ -166,7 +166,7 @@ class _MusicPickerSheet extends StatelessWidget {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) => const _CatalogMusicSheet(),
+      builder: (_) => const CatalogMusicSheet(),
     );
     if (picked != null && context.mounted) Navigator.of(context).pop(picked);
   }
@@ -286,17 +286,25 @@ class _MusicPickerSheet extends StatelessWidget {
 
 /// Lists the CometBeat catalog's CC0/PD scores; tapping one fetches + decodes it
 /// and pops with the [MultiPartScore]. Network-backed, so it loads lazily.
-class _CatalogMusicSheet extends StatefulWidget {
-  const _CatalogMusicSheet();
+///
+/// [source] exists so a test can drive this sheet at all. It used to construct
+/// its own `CometbeatCatalogSource` inline, which made every behaviour here —
+/// the search box, the melody lens, the empty states, picking a row — reachable
+/// only over the real network, i.e. not testable. Production callers pass
+/// nothing and get exactly what they got before.
+class CatalogMusicSheet extends StatefulWidget {
+  const CatalogMusicSheet({super.key, this.source});
+
+  final ContentSource? source;
 
   @override
-  State<_CatalogMusicSheet> createState() => _CatalogMusicSheetState();
+  State<CatalogMusicSheet> createState() => _CatalogMusicSheetState();
 }
 
-class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
+class _CatalogMusicSheetState extends State<CatalogMusicSheet> {
   // A MUSIC picker: only songs + tracker modules, so it never fetches the
   // instrument/sample/soundfont shards (the display already filters to these).
-  final _source =
+  late final ContentSource _source = widget.source ??
       CometbeatCatalogSource(defaultHttpGet, kinds: const {'score', 'module'});
   List<LibraryItem>? _items;
   bool _failed = false;
@@ -663,6 +671,7 @@ class _MelodyQueryBar extends StatelessWidget {
           SizedBox(
             height: 44,
             child: ListView(
+              key: const Key('melody-keyboard'),
               scrollDirection: Axis.horizontal,
               children: [
                 for (var midi = 60; midi <= 83; midi++)
@@ -671,6 +680,10 @@ class _MelodyQueryBar extends StatelessWidget {
                     child: SizedBox(
                       width: 40,
                       child: FilledButton.tonal(
+                        // Keyed by pitch: the readout renders the SAME note
+                        // names as the buttons, so finding a key by its text
+                        // is ambiguous the moment a note has been entered.
+                        key: ValueKey('melody-key-$midi'),
                         onPressed: () => onAdd(midi),
                         style: FilledButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -680,9 +693,15 @@ class _MelodyQueryBar extends StatelessWidget {
                               ? scheme.surfaceContainerHighest
                               : null,
                         ),
+                        // ⚠️ Labelled WITH the octave. Two octaves of bare
+                        // note names give the row two identical "C" buttons
+                        // and no way to tell which is which — a tap then lands
+                        // an octave from where the user meant, which for an
+                        // interval search is not a near miss but a different
+                        // shape. (A widget test hit exactly this.)
                         child: Text(
-                          _names[midi % 12],
-                          style: const TextStyle(fontSize: 11),
+                          nameOf(midi),
+                          style: const TextStyle(fontSize: 10),
                         ),
                       ),
                     ),
