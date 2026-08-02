@@ -671,6 +671,33 @@ void _explainTests() {
     expect(find.text('D dorian'), findsOneWidget);
   });
 
+  testWidgets('substitutions appear only at expert depth', (tester) async {
+    // They are options a player weighs, not something a learner should read as
+    // instruction — so they must not show at the learner setting.
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen(chart: 'key: C\n| Dm7 | G7 | Cmaj7 |'));
+    await tester.pumpAndSettle();
+    await tapMenu(tester, const Key('chartExplainButton'));
+
+    expect(find.textContaining('tritone sub'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.psychology_outlined));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('tritone sub'), findsOneWidget);
+    expect(find.textContaining('G7 → Db7'), findsOneWidget);
+  });
+
+  testWidgets('a chart with nothing to substitute shows no section',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen(chart: 'key: C\n| C | F | C |'));
+    await tester.pumpAndSettle();
+    await tapMenu(tester, const Key('chartExplainButton'));
+    await tester.tap(find.byIcon(Icons.psychology_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('You could also play'), findsNothing);
+  });
+
   testWidgets('it explains what the grid SHOWS, not the stored key',
       (tester) async {
     // A transposed reading must be explained in the key the player is reading,

@@ -17071,6 +17071,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No chart code found on the clipboard.'**
   String get chartSharePasteFailed;
+
+  /// No description provided for @chartReharm.
+  ///
+  /// In en, this message translates to:
+  /// **'You could also play'**
+  String get chartReharm;
 }
 
 class _AppLocalizationsDelegate

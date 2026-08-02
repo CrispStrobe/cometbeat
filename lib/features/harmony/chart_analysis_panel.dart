@@ -16,6 +16,7 @@
 library;
 
 import 'package:comet_beat/core/harmony/chart_analysis.dart';
+import 'package:comet_beat/core/harmony/chart_reharm.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
     show AnalysisDepth, harmonicFunctionColor;
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -60,6 +61,9 @@ class ChartAnalysisPanel extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _chordRows(context),
+          // Substitutions are an EXPERT layer: they are options a player
+          // weighs, not something a learner should read as instruction.
+          if (depth == AnalysisDepth.expert) _suggestions(context, l10n),
           if (depth != AnalysisDepth.colours &&
               analysis.phrases.isNotEmpty) ...[
             const SizedBox(height: 20),
@@ -83,6 +87,45 @@ class ChartAnalysisPanel extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+
+  /// What you could play instead — never applied, only shown.
+  Widget _suggestions(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    final suggestions = suggestReharmonisations(analysis);
+    if (suggestions.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Text(l10n.chartReharm, style: theme.textTheme.titleSmall),
+        const SizedBox(height: 6),
+        for (final suggestion in suggestions)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${l10n.chartAnalysisBar(suggestion.barNumber)} — '
+                  '${suggestion.original} → ${suggestion.replacement}'
+                  '  (${suggestion.label})',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                // The reason is the point: it teaches the substitution rather
+                // than just naming it.
+                Text(
+                  suggestion.why,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 

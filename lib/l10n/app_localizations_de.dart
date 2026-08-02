@@ -9470,4 +9470,7 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get chartSharePasteFailed =>
       'Kein Chart-Code in der Zwischenablage gefunden.';
+
+  @override
+  String get chartReharm => 'Du könntest auch spielen';
 }

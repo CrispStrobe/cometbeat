@@ -4020,5 +4020,6 @@
   "chartSharePaste": "Open a share code",
   "chartSharePasteHint": "Reads a chart someone sent you",
   "chartShareOpened": "Chart opened",
-  "chartSharePasteFailed": "No chart code found on the clipboard."
+  "chartSharePasteFailed": "No chart code found on the clipboard.",
+  "chartReharm": "You could also play"
 }

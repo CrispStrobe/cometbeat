@@ -9415,4 +9415,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartSharePasteFailed => 'No chart code found on the clipboard.';
+
+  @override
+  String get chartReharm => 'You could also play';
 }

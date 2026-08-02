@@ -3450,5 +3450,6 @@
   "chartSharePaste": "Teilen-Code öffnen",
   "chartSharePasteHint": "Liest ein Chart, das dir jemand geschickt hat",
   "chartShareOpened": "Chart geöffnet",
-  "chartSharePasteFailed": "Kein Chart-Code in der Zwischenablage gefunden."
+  "chartSharePasteFailed": "Kein Chart-Code in der Zwischenablage gefunden.",
+  "chartReharm": "Du könntest auch spielen"
 }
