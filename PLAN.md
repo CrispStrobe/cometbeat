@@ -2761,7 +2761,38 @@ Nothing in `BB-H1`–`H3` or `BB-H6` depends on which way this goes; it gates
 
 ### Phase 6 — the gates
 
-- ⬜ **BB-Q1 — render → listen → assert.** `S`
+- ✅ **BB-Q1 — render → listen → assert. DONE.** `S`
+  (`test/band_acceptance_test.dart`, 6 tests)
+  - Renders a chart with `renderBand`, decodes the WAV and runs it back through
+    our own `ChordDetector`. **In-process on the detector rather than shelling
+    out to `bin/listen.dart`** — same signal, no subprocess, runs in CI.
+  - **It is the only test that asserts the band SOUNDS like the chart.**
+    Everything else in the harmony suite asserts data structures, and every
+    silent failure this arc left a perfectly well-formed structure behind: a
+    voicing that drops the third, a bass on the wrong root, a stem that never
+    gets mixed in.
+  - ⚠️ **Three of my first assertions were WRONG, and each failure was the
+    music being right.** Recorded because the same traps are waiting for the
+    next audio test:
+    1. **Indexing `performance.bars[0..3]` read the whole progression shifted
+       by one** — `renderBand` realises a FORM, so `bars[0]` is the COUNT-IN.
+       It looked exactly like a transposition bug. Filter on `BarRole.tune`.
+    2. **"The root is in the bass" read a third.** `straight`'s intensity
+       levels run root → twoFeel → **walking**, and a walking line is SUPPOSED
+       to leave the root. Narrowing to the downbeat then read the approach note
+       bleeding in from the count-in. Asserting a **chord tone** is the
+       musically true invariant; narrowing the window further would have been
+       tuning the test until it agreed with me.
+    3. **Chord NAMES are the wrong assertion for transposition** — expected `A`,
+       got `E`, its fifth, because a chromagram cannot reliably name a two-bar
+       excerpt. Replaced by a detector-independent claim: the D chart's chroma
+       must be the C chart's **rotated by two semitones**, and that rotation
+       must be the best of all twelve.
+  - 📌 **Verified non-vacuous with a negative control**: rendering the SAME
+    chart into both slots gives a best rotation of 0, so the test fails when
+    transposition breaks.
+
+- ⬜ **BB-Q1 (original) — render → listen → assert.** `S`
   - The repo's proven acceptance pattern, applied here: render a chart, run
     `dart run bin/listen.dart --wav` / `bin/transcribe_chords.dart`, assert the
     detected chords and bass notes are the generated ones. Runs headless in CI.
