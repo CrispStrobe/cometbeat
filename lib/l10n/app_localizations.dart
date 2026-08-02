@@ -17051,13 +17051,13 @@ abstract class AppLocalizations {
   /// No description provided for @chartSharePaste.
   ///
   /// In en, this message translates to:
-  /// **'Open a share code'**
+  /// **'Paste a chart'**
   String get chartSharePaste;
 
   /// No description provided for @chartSharePasteHint.
   ///
   /// In en, this message translates to:
-  /// **'Reads a chart someone sent you'**
+  /// **'A share code, a chord grid, ChordPro, numbers or JAMS'**
   String get chartSharePasteHint;
 
   /// No description provided for @chartShareOpened.
@@ -17069,7 +17069,7 @@ abstract class AppLocalizations {
   /// No description provided for @chartSharePasteFailed.
   ///
   /// In en, this message translates to:
-  /// **'No chart code found on the clipboard.'**
+  /// **'Nothing on the clipboard looked like a chart.'**
   String get chartSharePasteFailed;
 
   /// No description provided for @chartReharm.
@@ -17077,6 +17077,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You could also play'**
   String get chartReharm;
+
+  /// No description provided for @chartImportOpenedAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened {format}'**
+  String chartImportOpenedAs(String format);
+
+  /// No description provided for @chartImportFormatToken.
+  ///
+  /// In en, this message translates to:
+  /// **'a share code'**
+  String get chartImportFormatToken;
+
+  /// No description provided for @chartImportFormatTextGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'a chord grid'**
+  String get chartImportFormatTextGrid;
+
+  /// No description provided for @chartImportFormatChordPro.
+  ///
+  /// In en, this message translates to:
+  /// **'a ChordPro file'**
+  String get chartImportFormatChordPro;
+
+  /// No description provided for @chartImportFormatNashville.
+  ///
+  /// In en, this message translates to:
+  /// **'Nashville numbers'**
+  String get chartImportFormatNashville;
+
+  /// No description provided for @chartImportFormatJams.
+  ///
+  /// In en, this message translates to:
+  /// **'a JAMS annotation'**
+  String get chartImportFormatJams;
+
+  /// No description provided for @chartImportBarsInferred.
+  ///
+  /// In en, this message translates to:
+  /// **'Bar lengths were guessed — check them'**
+  String get chartImportBarsInferred;
 }
 
 class _AppLocalizationsDelegate

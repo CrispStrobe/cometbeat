@@ -1764,22 +1764,46 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     the document — it is a flat beat-list built for *scoring a player*, and it
     should stay that. BB-T5 makes it a projection of `Chart`.
 
-- ⬜ **BB-D4b — the remaining import formats.** `S` — *most of D4 is shipped.*
-  - ✅ **DONE:** the plain-text bar grid (`chart_text.dart`, round-trips, reports
-    WHICH LINE it could not read and imports the rest) · the **`CB1.` share
-    token** (`chart_share.dart`, survives mail wrapping, reply quotes and smart
-    quotes — and refuses to absorb the prose after it) · **ChordPro with section
-    directives** (`chart_chordpro.dart`; a ChordPro file and a text grid import
-    to the SAME chart, asserted) · MusicXML `<harmony>` both ways via BB-D3.
-  - ✅ **Nashville numbers DONE** (`chart_nashville.dart`, both ways, 24 tests).
-  - **Still to build.** **JAMS chord namespaces** — `songs/import/jams.dart`
-    already reads AND writes them in 5 dialects, so this is a converter onto
-    `Chart`, not a parser.
-  - 📌 **A deep link that opens a token** is also unbuilt. The token itself and
-    both clipboard directions are shipped and wired to the chart screen.
-  - ⚠️ ChordPro carries no barlines, so its import sets `barsAreInferred`. Any
-    new format that also lacks bar structure should do the same rather than
-    claiming one.
+- ✅ **BB-D4b — the remaining import formats. DONE.** `S`
+  - ✅ **All five formats import, and the app SNIFFS which one it got**
+    (`chart_import.dart`): the plain-text bar grid (`chart_text.dart`) · the
+    **`CB1.` share token** (`chart_share.dart`) · **ChordPro with section
+    directives** (`chart_chordpro.dart`) · **Nashville numbers** both ways
+    (`chart_nashville.dart`, 24 tests) · **JAMS chord annotations** in all five
+    dialects (`chart_jams.dart`). MusicXML `<harmony>` both ways via BB-D3.
+    Acceptance asserted end to end: all five sources give the SAME chart for the
+    same tune.
+  - **One paste button reads all of them.** Which dialect the clipboard holds is
+    a fact about the text, not a question to put to the user — so the chart
+    screen sniffs it, then NAMES what it read rather than reinterpreting
+    silently.
+  - ⚠️ **The sniffer must be STRICTER than the editor, and this is the trap.**
+    `parseChartText` is lenient by design — an unreadable cell is kept as a
+    visible best guess, which is right while a user is typing. Applied to a
+    pasted paragraph it is not: *"just some words about a song"* parses to six
+    chords, every one flagged. So the text-grid fallback demands a barline AND
+    at least one cell that parsed without complaint. Any future format added
+    here needs the same asymmetry considered.
+  - ⚠️ **The one genuine ambiguity is `B7` against `b7`** — a chord name and a
+    Nashville flat-seventh, differing only in case. Decided on a MAJORITY of
+    cells, not the first one (a number chart may open on `%`), with ties going
+    to the text grid.
+  - ⚠️ **`[Dm7]` alone on a line is ambiguous too** — a ChordPro chord carrying
+    no lyric, or a text-grid section label, and `[A]` reads as both. Broken by
+    the fact that a text grid needs BARLINES to carry music: with brackets and
+    no `|` anywhere, ChordPro is the only reading that yields a tune. Found by
+    probing the sniffer rather than by a failing test — `[Dm7]\n[G7]` had been
+    importing as NOTHING.
+  - ⚠️ **JAMS costs more than ChordPro does.** Beyond having no barlines, its
+    `_collapseRuns` keeps chord CHANGES — so a chord held over four bars arrives
+    as ONE. Pinned by a test. Recovering real bar lengths needs a tempo and a
+    meter, which a chord annotation does not carry on its own; the chord
+    SEQUENCE is the part JAMS gives reliably.
+  - 📌 **A deep link that opens a token is still unbuilt** — carded on to
+    `BB-U6`. The token itself and both clipboard directions are shipped.
+  - ⚠️ ChordPro and JAMS carry no barlines, so both set `barsAreInferred`, and
+    the paste says so on screen. Any new format that also lacks bar structure
+    should do the same rather than claiming one.
 ### Phase 2 — the arranger (fixes G2; this is the product)
 
 - ⬜ **BB-A0 (original) — drive the EXISTING groove engine from a `Chart`.** `S` ⭐ *pull this

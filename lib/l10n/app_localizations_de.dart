@@ -9458,19 +9458,42 @@ class AppLocalizationsDe extends AppLocalizations {
   String get chartShareCopied => 'Teilen-Code kopiert';
 
   @override
-  String get chartSharePaste => 'Teilen-Code öffnen';
+  String get chartSharePaste => 'Ein Stück einfügen';
 
   @override
   String get chartSharePasteHint =>
-      'Liest ein Chart, das dir jemand geschickt hat';
+      'Code, Akkordraster, ChordPro, Zahlen oder JAMS';
 
   @override
   String get chartShareOpened => 'Chart geöffnet';
 
   @override
-  String get chartSharePasteFailed =>
-      'Kein Chart-Code in der Zwischenablage gefunden.';
+  String get chartSharePasteFailed => 'In der Zwischenablage war kein Stück.';
 
   @override
   String get chartReharm => 'Du könntest auch spielen';
+
+  @override
+  String chartImportOpenedAs(String format) {
+    return 'Geöffnet: $format';
+  }
+
+  @override
+  String get chartImportFormatToken => 'ein Freigabe-Code';
+
+  @override
+  String get chartImportFormatTextGrid => 'ein Akkordraster';
+
+  @override
+  String get chartImportFormatChordPro => 'eine ChordPro-Datei';
+
+  @override
+  String get chartImportFormatNashville => 'Nashville-Zahlen';
+
+  @override
+  String get chartImportFormatJams => 'eine JAMS-Datei';
+
+  @override
+  String get chartImportBarsInferred =>
+      'Taktlängen wurden geraten — bitte prüfen';
 }

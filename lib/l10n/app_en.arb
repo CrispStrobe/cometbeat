@@ -4017,9 +4017,23 @@
   "chartShareCopy": "Copy the share code",
   "chartShareCopyHint": "A short code someone else can paste in",
   "chartShareCopied": "Share code copied",
-  "chartSharePaste": "Open a share code",
-  "chartSharePasteHint": "Reads a chart someone sent you",
+  "chartSharePaste": "Paste a chart",
+  "chartSharePasteHint": "A share code, a chord grid, ChordPro, numbers or JAMS",
   "chartShareOpened": "Chart opened",
-  "chartSharePasteFailed": "No chart code found on the clipboard.",
-  "chartReharm": "You could also play"
+  "chartSharePasteFailed": "Nothing on the clipboard looked like a chart.",
+  "chartReharm": "You could also play",
+  "chartImportOpenedAs": "Opened {format}",
+  "chartImportFormatToken": "a share code",
+  "chartImportFormatTextGrid": "a chord grid",
+  "chartImportFormatChordPro": "a ChordPro file",
+  "chartImportFormatNashville": "Nashville numbers",
+  "chartImportFormatJams": "a JAMS annotation",
+  "chartImportBarsInferred": "Bar lengths were guessed — check them",
+  "@chartImportOpenedAs": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  }
 }

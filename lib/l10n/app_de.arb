@@ -3447,9 +3447,23 @@
   "chartShareCopy": "Teilen-Code kopieren",
   "chartShareCopyHint": "Ein kurzer Code, den jemand anders einfügen kann",
   "chartShareCopied": "Teilen-Code kopiert",
-  "chartSharePaste": "Teilen-Code öffnen",
-  "chartSharePasteHint": "Liest ein Chart, das dir jemand geschickt hat",
+  "chartSharePaste": "Ein Stück einfügen",
+  "chartSharePasteHint": "Code, Akkordraster, ChordPro, Zahlen oder JAMS",
   "chartShareOpened": "Chart geöffnet",
-  "chartSharePasteFailed": "Kein Chart-Code in der Zwischenablage gefunden.",
-  "chartReharm": "Du könntest auch spielen"
+  "chartSharePasteFailed": "In der Zwischenablage war kein Stück.",
+  "chartReharm": "Du könntest auch spielen",
+  "chartImportOpenedAs": "Geöffnet: {format}",
+  "chartImportFormatToken": "ein Freigabe-Code",
+  "chartImportFormatTextGrid": "ein Akkordraster",
+  "chartImportFormatChordPro": "eine ChordPro-Datei",
+  "chartImportFormatNashville": "Nashville-Zahlen",
+  "chartImportFormatJams": "eine JAMS-Datei",
+  "chartImportBarsInferred": "Taktlängen wurden geraten — bitte prüfen",
+  "@chartImportOpenedAs": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  }
 }

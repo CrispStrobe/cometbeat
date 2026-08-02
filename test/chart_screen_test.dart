@@ -793,7 +793,7 @@ void _shareTests() {
     expect(find.text('F'), findsNothing);
   });
 
-  testWidgets('a clipboard with no token says so rather than doing nothing',
+  testWidgets('a clipboard with no chart says so rather than doing nothing',
       (tester) async {
     // A paste that silently fails reads as a broken button.
     SharedPreferences.setMockInitialValues({});
@@ -806,8 +806,46 @@ void _shareTests() {
     await tester.tap(find.byKey(const Key('chartPasteToken')));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('No chart code'), findsOneWidget);
+    expect(find.textContaining('looked like a chart'), findsOneWidget);
     // …and the chart on screen is untouched.
     expect(find.text('F'), findsOneWidget);
+  });
+
+  testWidgets('pasting works for a format that is not our own', (tester) async {
+    // The button reads whatever the text turns out to be; the user does not
+    // have to say which of five formats they copied.
+    SharedPreferences.setMockInitialValues({});
+    final clipboard = fakeClipboard(tester);
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    clipboard.put('{title: Borrowed}\n[Dm7]one [G7]two [Cmaj7]three');
+    await tapMenu(tester, const Key('chartShareButton'));
+    await tester.tap(find.byKey(const Key('chartPasteToken')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dm7'), findsOneWidget);
+    expect(find.text('Cmaj7'), findsOneWidget);
+    // It NAMES what it read, and warns that the bars are its own reading —
+    // ChordPro carries no barlines.
+    expect(find.textContaining('ChordPro'), findsOneWidget);
+    expect(find.textContaining('guessed'), findsOneWidget);
+  });
+
+  testWidgets('pasting Nashville numbers realises them in the key',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final clipboard = fakeClipboard(tester);
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    clipboard.put('key: C\n| 1 | 6 | 2m7 | 57 |');
+    await tapMenu(tester, const Key('chartShareButton'));
+    await tester.tap(find.byKey(const Key('chartPasteToken')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('C'), findsOneWidget);
+    expect(find.text('Am'), findsOneWidget);
+    expect(find.text('G7'), findsOneWidget);
   });
 }

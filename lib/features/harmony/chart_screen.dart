@@ -14,9 +14,11 @@
 library;
 
 import 'dart:async';
+
 import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_analysis.dart';
+import 'package:comet_beat/core/harmony/chart_import.dart';
 import 'package:comet_beat/core/harmony/chart_playback.dart';
 import 'package:comet_beat/core/harmony/chart_share.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
@@ -357,7 +359,11 @@ class _ChartScreenState extends State<ChartScreen> {
               subtitle: Text(l10n.chartSharePasteHint),
               onTap: () async {
                 final data = await Clipboard.getData(Clipboard.kTextPlain);
-                final opened = decodeChartToken(data?.text ?? '');
+                // Reads whatever format the text turns out to be — a share
+                // code, a chord grid, ChordPro, Nashville numbers or a JAMS
+                // annotation. Which one it is is a fact about the text, not a
+                // question to put to the user.
+                final opened = importChart(data?.text ?? '');
                 if (sheet.mounted) Navigator.of(sheet).pop();
                 if (opened == null) {
                   // Says WHY rather than doing nothing: a paste that silently
@@ -369,13 +375,26 @@ class _ChartScreenState extends State<ChartScreen> {
                 }
                 if (!mounted) return;
                 setState(() {
-                  _chart = opened;
+                  _chart = opened.chart;
                   _name = null;
                   _selected = null;
                 });
                 _persist();
+                // Names the format it read: a paste that quietly reinterprets
+                // is worse than one that reports. And when the source carried
+                // no barlines, say the bars are a guess rather than let them
+                // look authoritative.
                 messenger.showSnackBar(
-                  SnackBar(content: Text(l10n.chartShareOpened)),
+                  SnackBar(
+                    content: Text(
+                      opened.barsAreInferred
+                          ? '${l10n.chartImportOpenedAs(_formatName(l10n, opened.format))}'
+                              ' · ${l10n.chartImportBarsInferred}'
+                          : l10n.chartImportOpenedAs(
+                              _formatName(l10n, opened.format),
+                            ),
+                    ),
+                  ),
                 );
               },
             ),
@@ -743,3 +762,13 @@ class _ChartTextDialogState extends State<_ChartTextDialog> {
     );
   }
 }
+
+/// The name of an import format, for the "opened as …" report.
+String _formatName(AppLocalizations l10n, ChartFormat format) =>
+    switch (format) {
+      ChartFormat.token => l10n.chartImportFormatToken,
+      ChartFormat.textGrid => l10n.chartImportFormatTextGrid,
+      ChartFormat.chordPro => l10n.chartImportFormatChordPro,
+      ChartFormat.nashville => l10n.chartImportFormatNashville,
+      ChartFormat.jams => l10n.chartImportFormatJams,
+    };

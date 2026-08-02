@@ -9405,17 +9405,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartShareCopied => 'Share code copied';
 
   @override
-  String get chartSharePaste => 'Open a share code';
+  String get chartSharePaste => 'Paste a chart';
 
   @override
-  String get chartSharePasteHint => 'Reads a chart someone sent you';
+  String get chartSharePasteHint =>
+      'A share code, a chord grid, ChordPro, numbers or JAMS';
 
   @override
   String get chartShareOpened => 'Chart opened';
 
   @override
-  String get chartSharePasteFailed => 'No chart code found on the clipboard.';
+  String get chartSharePasteFailed =>
+      'Nothing on the clipboard looked like a chart.';
 
   @override
   String get chartReharm => 'You could also play';
+
+  @override
+  String chartImportOpenedAs(String format) {
+    return 'Opened $format';
+  }
+
+  @override
+  String get chartImportFormatToken => 'a share code';
+
+  @override
+  String get chartImportFormatTextGrid => 'a chord grid';
+
+  @override
+  String get chartImportFormatChordPro => 'a ChordPro file';
+
+  @override
+  String get chartImportFormatNashville => 'Nashville numbers';
+
+  @override
+  String get chartImportFormatJams => 'a JAMS annotation';
+
+  @override
+  String get chartImportBarsInferred => 'Bar lengths were guessed — check them';
 }
