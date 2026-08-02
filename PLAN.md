@@ -399,10 +399,22 @@ query — "Ode to Joy" transposed up a tritone — returns *Ode an die Freude*,
 *Oda do radości* and *Odo al ĝojo*: the same tune across languages and
 arrangements, which is exactly the use case.
 
-**Next:** the UI. Natural home is the music picker (a "find by melody" tab beside
-the search box), taking notes from a Workshop/Loop selection or a tapped
-keyboard. Mode 2 (sung) then only has to feed the same function from the
-existing pitch chain.
+✅ **The UI SHIPPED too (2026-08-02).** The catalog sheet has a
+Title / Melody segmented lens; melody mode offers a two-octave tap keyboard and
+runs `searchMelodies` over the whole catalog. `melodicPoolFrom` is public so the
+eligibility rule is testable without a network or a widget.
+- ⚠️ **The pool must be the WHOLE catalog, not the page.** Text search shows 300
+  rows because that is a readable list; ranking 300 arbitrary rows out of 38k
+  would almost never contain the tune being hummed. The source keeps the shard
+  in memory after the first fetch, so this costs no extra network — but the pool
+  is built lazily, only when the melody lens is first opened.
+- ⚠️ **The UI has to SAY the key does not matter.** A user who believes they must
+  find the right key will not try, and the whole point of interval matching is
+  that they do not have to.
+
+**Next:** mode 2 (sung) — it only has to feed the same function from the existing
+pitch chain, plus an entry point that takes notes from a Workshop / Loop Studio
+selection instead of the keyboard.
 
 ⚠️ **Client-side search over the whole catalog needs the score shard**
 (2.68 MB gzipped, 30 MB raw) — which is the offline-archive item above, now with
