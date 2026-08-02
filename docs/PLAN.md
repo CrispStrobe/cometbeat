@@ -1216,11 +1216,24 @@ is recorded in [HISTORY.md](HISTORY.md).
         note index runs measure → voice → position, so a span that legitimately
         crosses voices reads as end-before-start. The proof is the round-trip
         LOSS, not the ordering.
-      - **The rule a fix needs:** a wedge's stop attaches to the last note read
-        *in the voice its start landed in*, not the last note read overall.
-        Note the start may sit in an earlier measure, so the search cannot be
-        confined to the measure being built — which is what makes this more
-        than a one-line change.
+      - ✅ **FIXED for MusicXML** (`63d54d2`). A start now BINDS when the next
+        NOTE arrives, recording its voice; a stop takes the last note read in
+        that same voice — which also makes a backwards span impossible, since
+        the start note is itself in that voice. Applied to pedals and octave
+        shifts too: identical prediction, identical bug.
+        On the piano file: 12 read, 0 crossing, 0 unresolved, **all 12 survive**.
+      - ✅ **A SECOND, unrelated cause FIXED for LilyPond** (`417340c`): a note
+        that ends one hairpin and starts the next was written `\>\!` — open
+        then close. `\!` terminates the hairpin currently RUNNING, so that
+        opened a new one and killed it on the spot while the one that should
+        have ended there dangled and was dropped. Real corpus token:
+        `d'2)\>\!`. **8 of 213 hairpins lost on a `.ly` round trip → 0.**
+      - 🆕 **STILL UNCLAIMED: ~785 remain, concentrated in `.ly` and `.mscx`
+        SOURCES.** The two fixes above moved the corpus bucket only 826 → 785,
+        because most failures are not in the MusicXML reader at all. The
+        LilyPond side measured clean on cross-voice and backwards spans, so
+        the remaining cause is something else again — worth the same
+        source-file bisect that found these two.
     - ⚠️ `bar` is partly a SPELLING difference, not loss: `time:C` vs `time:4/4`
       and `time:C|` vs `time:4/4`. Whether common time should round-trip as `C`
       is a decision, not obviously a bug.
