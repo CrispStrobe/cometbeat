@@ -483,9 +483,18 @@ The user enters nothing: the query comes from the part being edited.
   its own harmonisation, so the lowest or average pitch searches for the
   accompaniment.
 
-**Next:** the same entry point in the Score Workshop and the Tab Workshop —
-`melodyQueryFromScore` already takes a `MultiPartScore`, so each is a menu item
-plus one call. And the human-gated check below.
+✅ **All three editors wired (2026-08-02):** Loop Studio, Score Workshop and Tab
+Workshop each offer "What is this tune?". Two per-editor decisions that are NOT
+shared and should not be flattened:
+- **Tab searches `_bandScore()`, which applies the CAPO.** Written frets are
+  relative to the capo, so un-transposed pitches are not what the instrument
+  sounds. Interval matching forgives it — but by accident.
+- **Score REPLACES rather than merges.** `_loadFromMusicLibrary` merges a single
+  part into the part being edited, which is right when adding to your own
+  arrangement; a search result is a DIFFERENT piece, and merging would splice
+  two works together.
+
+**Next:** the human-gated check above — nothing here has met a real voice.
 
 ⚠️ **Client-side search over the whole catalog needs the score shard**
 (2.68 MB gzipped, 30 MB raw) — which is the offline-archive item above, now with

@@ -151,8 +151,14 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (editor-ux)** · 🚧 **CLAIMING: melodic search mode 3 (from a
-  selection).** "What is this tune?" from music you already have open — pull the
+- **opus (editor-ux)** · ✅ **DONE + IDLE: melodic search, all three modes.**
+  Tap · sing · from a selection, in Loop Studio + Score Workshop + Tab Workshop.
+  ⚠️ **None of it has met a real voice** — every mode is verified against
+  synthesised or scripted input, so the plumbing and ranking are solid but the
+  MPM detector on a hummed voice through a phone mic is untested (octave errors,
+  breath, room noise are exactly what a synthetic stream cannot reproduce). The
+  protocol is in the root PLAN.md.
+- **opus (editor-ux)** · (was) **mode 3 (from a selection)** "What is this tune?" from music you already have open — pull the
   query out of a score / loop instead of tapping or singing it. Touching:
   `lib/core/music/`, `lib/shared/music/music_picker.dart`, and ONE editor entry
   point. Modes 1 (tap) and 2 (sing) are SHIPPED on main.
