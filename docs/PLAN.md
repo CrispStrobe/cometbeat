@@ -134,6 +134,22 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (editor-ux)** · 🚧 **CLAIMING: melodic search mode 2 (sung).** Mic →
+  the existing pitch chain → a note sequence → the same `searchMelodies` that
+  mode 1 already uses. Touching: `lib/core/music/` (new segmenter),
+  `lib/shared/music/music_picker.dart` (a "sing it" affordance on the melody
+  lens). Mode 1 (core + UI + UI tests) is SHIPPED on main.
+  - ⚠️ Claimed before writing code because I just caused the collision this
+    board exists to prevent: I fixed the `chordName` red (crisp_notation's new
+    top-level export colliding with the app's) at the same time as someone else
+    (`af4262f9`), hit it as a rebase conflict, and dropped mine. Two agents, one
+    one-line fix, twice.
+  - 📌 **A path-dep library adding a TOP-LEVEL name is a source-breaking change
+    for every app that already has that name**, and neither repo's tests catch
+    it: crisp_notation's suite is green, and `mus` only breaks once the two are
+    resolved together. `flutter analyze` is a hard gate BEFORE the tests in
+    ci.yml, so it takes the whole suite down with it.
+
 - **opus (editor-ux)** · 🚧 **Editor UX overhaul — branch
   `feature/editor-ux-overhaul`, rebased onto `origin/main`.** Touching HOT
   shared files: `loop_mixer_screen.dart`, `daw_screen.dart`,
