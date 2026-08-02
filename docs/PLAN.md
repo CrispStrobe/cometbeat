@@ -1136,9 +1136,9 @@ is recorded in [HISTORY.md](HISTORY.md).
     | field | musicxml | mei | kern | abc | lilypond | musescore |
     |---|---|---|---|---|---|---|
     | barline (double/final) | ✅ | ✅ **new** | ✅ **new** | ✅ | ✅ **new** | ✅ **new** |
-    | pickup | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+    | pickup | ✅ | ✅ | ✅ | ✅ | ✅ **fixed** | ✅ |
     | start/endRepeat | ✅ | ✅ | ✅ | ✅ | ✅ **new** | ✅ |
-    | tempoChange | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+    | tempoChange | ✅ | ✅ **new** | ✅ **new** | ❌ | ✅ **new** | ✅ **new** |
     | inlineClefs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
     | measureRepeat | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
@@ -1154,10 +1154,21 @@ is recorded in [HISTORY.md](HISTORY.md).
     - 🆕 **UNCLAIMED — `measureRepeat` (the `%` simile) survives NOTHING, not
       even MusicXML**, which has `<measure-repeat>`. A dead channel like
       `portamentos` and `cueNoteIds` were.
-    - 🆕 **UNCLAIMED — `tempoChange` and `inlineClefs` are MusicXML-only.**
-      Mid-score tempo is expressible everywhere (`\tempo` mid-piece is already
-      READ by the LilyPond reader as of `b65f7d0` — the writer just never emits
-      one); mid-bar clef has its own note in `workshop-musicxml-writer-gaps`.
+    - ✅ **`tempoChange` and `pickup` DONE** (`25a7945`), 5 of 6 and 6 of 6.
+      - ⚠️ **LilyPond already WROTE `\partial` and its reader already USED it**
+        — to preload elapsed time, so the anacrusis landed in the right place
+        and then lost the flag saying it WAS one. *Reading* a construct is not
+        the same as *recording* it, and only a field-by-field comparison shows
+        the difference.
+      - ⚠️ **POSITION decides whether a tempo mark is the score's or a change,
+        not the order it is seen in.** kern and MuseScore both asked "is this
+        the first one?", which files a piece whose ONLY marking is a mid-score
+        change as the initial tempo. Pinned in both directions.
+      - 🆕 **ABC mid-tune `Q:` still UNCLAIMED** — unlike the header `Q:`
+        (fixed in `b65f7d0`), it is injected into the body TEXT stream as an
+        annotation, so at read time there is no measure to attach it to. Needs
+        the body parser to understand an inline field, not a reader tweak.
+      - `inlineClefs` stays MusicXML-only; see `workshop-musicxml-writer-gaps`.
     - ✅ **LilyPond repeats were READ-ONLY — FIXED** (`468b9e2`). Its reader has
       always handled `\repeat volta`; its writer emitted no repeat structure at
       all, so every export lost `startRepeat`/`endRepeat`. The exact mirror of
