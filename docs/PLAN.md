@@ -1194,12 +1194,33 @@ is recorded in [HISTORY.md](HISTORY.md).
 
     - ✅ **The channels added this arc are ~98% clean at corpus scale**, which is
       the check the synthetic tests could not give.
-    - 🆕 **Best remaining REAL-bug bucket: `hairpin` (826).** Not a "format
-      cannot carry it" case — several do. The examples show ENDPOINT
-      MIS-PAIRING (`hairpin@175-178:crescendo` → `@177-178:diminuendo`) and
-      spans whose start is not in the note index at all (`hairpin@-1-304`).
-      Same index-pairing fragility the MuseScore pedal/ottava readers use.
-      Pre-existing; unclaimed.
+    - 🆕 **UNCLAIMED, and now DIAGNOSED — `hairpin` (826), the largest
+      tractable bucket. The MusicXML reader anchors a wedge without regard to
+      VOICE.**
+      - `_handleWedge` predicts ids: a start becomes `e{nextId}` (the next note
+        READ) and a stop `e{nextId-1}` (the last note read). Neither asks which
+        voice that note is in.
+      - In any staff with a `<backup>` — i.e. every piano score — the stream
+        between a start and its stop crosses into another voice, so the span
+        ends up running from a note in one voice to a note in another.
+      - 📊 **Measured on `schirmerslibrary00unse.036-038.musicxml` (a real
+        two-staff piano OMR file): 12 hairpins read, of which 7 CROSS VOICES,
+        and a `musicxml -> musicxml` round trip returns only 9.** Our own
+        writer cannot re-emit a cross-voice span, so three vanish. That is why
+        the SELF cell sits at 92.3%.
+      - ⚠️ **Ruled out, do not re-investigate:** `<staff>` filtering is fine —
+        `case 'direction'` already does `if (!_isForStaff(node)) break;`, and
+        the file's parallel staff-1/staff-2 wedges are separated correctly. The
+        confusion is between VOICES inside one staff.
+      - ⚠️ **A "backwards" span in the signature is not proof on its own.** The
+        note index runs measure → voice → position, so a span that legitimately
+        crosses voices reads as end-before-start. The proof is the round-trip
+        LOSS, not the ordering.
+      - **The rule a fix needs:** a wedge's stop attaches to the last note read
+        *in the voice its start landed in*, not the last note read overall.
+        Note the start may sit in an earlier measure, so the search cannot be
+        confined to the measure being built — which is what makes this more
+        than a one-line change.
     - ⚠️ `bar` is partly a SPELLING difference, not loss: `time:C` vs `time:4/4`
       and `time:C|` vs `time:4/4`. Whether common time should round-trip as `C`
       is a decision, not obviously a bug.
