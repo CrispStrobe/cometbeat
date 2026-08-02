@@ -44,23 +44,42 @@ const _roots = [Step.c, Step.d, Step.e, Step.f, Step.g, Step.a, Step.b];
 
 /// The qualities on the main grid, in rough order of how often a chart uses
 /// them. Every one is a single tap once a root is chosen.
-const _qualities = <(String label, ChordTriad triad, ChordSeventh seventh)>[
-  ('', ChordTriad.major, ChordSeventh.none),
-  ('m', ChordTriad.minor, ChordSeventh.none),
-  ('7', ChordTriad.major, ChordSeventh.minor),
-  ('m7', ChordTriad.minor, ChordSeventh.minor),
-  ('maj7', ChordTriad.major, ChordSeventh.major),
-  ('6', ChordTriad.major, ChordSeventh.sixth),
-  ('m6', ChordTriad.minor, ChordSeventh.sixth),
-  ('sus4', ChordTriad.sus4, ChordSeventh.none),
-  ('sus2', ChordTriad.sus2, ChordSeventh.none),
-  ('7sus4', ChordTriad.sus4, ChordSeventh.minor),
-  ('dim', ChordTriad.diminished, ChordSeventh.none),
-  ('dim7', ChordTriad.diminished, ChordSeventh.diminished),
-  ('m7b5', ChordTriad.diminished, ChordSeventh.minor),
-  ('aug', ChordTriad.augmented, ChordSeventh.none),
-  ('5', ChordTriad.fifthOnly, ChordSeventh.none),
+/// A quality is a triad, a seventh AND any alteration the NAME already
+/// implies. That third field is not decoration: a half-diminished is a MINOR
+/// core with a flattened fifth, and `chord_spec.dart` is explicit that it is
+/// NOT merged with a diminished seventh. Building `m7b5` as a diminished triad
+/// made the keypad hand back `Cdim7` — a different chord (B♭♭, not B♭) — under
+/// a button labelled `m7b5`.
+const _qualities = <(
+  String label,
+  ChordTriad triad,
+  ChordSeventh seventh,
+  Set<ChordAlteration> implied,
+)>[
+  ('', ChordTriad.major, ChordSeventh.none, {}),
+  ('m', ChordTriad.minor, ChordSeventh.none, {}),
+  ('7', ChordTriad.major, ChordSeventh.minor, {}),
+  ('m7', ChordTriad.minor, ChordSeventh.minor, {}),
+  ('maj7', ChordTriad.major, ChordSeventh.major, {}),
+  ('6', ChordTriad.major, ChordSeventh.sixth, {}),
+  ('m6', ChordTriad.minor, ChordSeventh.sixth, {}),
+  ('sus4', ChordTriad.sus4, ChordSeventh.none, {}),
+  ('sus2', ChordTriad.sus2, ChordSeventh.none, {}),
+  ('7sus4', ChordTriad.sus4, ChordSeventh.minor, {}),
+  ('dim', ChordTriad.diminished, ChordSeventh.none, {}),
+  ('dim7', ChordTriad.diminished, ChordSeventh.diminished, {}),
+  ('m7b5', ChordTriad.minor, ChordSeventh.minor, {ChordAlteration.flatFive}),
+  ('aug', ChordTriad.augmented, ChordSeventh.none, {}),
+  ('5', ChordTriad.fifthOnly, ChordSeventh.none, {}),
 ];
+
+/// Every alteration that some quality button implies. Switching quality clears
+/// these and re-applies the new one's, so a ♭5 cannot outlive the `m7b5` that
+/// brought it — while an alteration the PLAYER chose is left alone, because
+/// that one is theirs.
+final _impliedByAnyQuality = <ChordAlteration>{
+  for (final (_, _, _, implied) in _qualities) ...implied,
+};
 
 /// Chord entry for one bar. Returns null if dismissed without choosing.
 Future<ChordKeypadResult?> showChordKeypad(
@@ -201,18 +220,28 @@ class _ChordKeypadState extends State<ChordKeypad> {
         spacing: 6,
         runSpacing: 6,
         children: [
-          for (final (label, triad, seventh) in _qualities)
+          for (final (label, triad, seventh, implied) in _qualities)
             _key(
               // A bare major has no suffix, so the button needs a word or it
               // reads as a blank key.
               label: label.isEmpty ? 'maj' : label,
-              selected: _triad == triad && _seventh == seventh,
+              // Two qualities can share a triad and a seventh and differ only
+              // in what they imply (`m7` against `m7b5`), so the implied set
+              // is part of the identity check, not just of the tap.
+              selected: _triad == triad &&
+                  _seventh == seventh &&
+                  _alterations.intersection(_impliedByAnyQuality).length ==
+                      implied.length &&
+                  _alterations.containsAll(implied),
               onTap: () => setState(() {
                 _triad = triad;
                 _seventh = seventh;
                 // Changing the quality drops an extension the new quality
                 // cannot carry, rather than silently keeping a 9 on a triad.
                 if (seventh == ChordSeventh.none) _extension = 0;
+                _alterations
+                  ..removeAll(_impliedByAnyQuality)
+                  ..addAll(implied);
               }),
               width: 74,
             ),
