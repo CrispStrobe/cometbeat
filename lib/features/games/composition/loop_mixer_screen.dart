@@ -62,6 +62,8 @@ import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/interop/score_to_loop.dart'
     show loopCellsFromScore;
+import 'package:comet_beat/core/music/melodic_search.dart'
+    show melodyQueryFromPitches;
 import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
@@ -99,7 +101,7 @@ import 'package:comet_beat/shared/keymap/keymap_service.dart';
 import 'package:comet_beat/shared/keymap/keymap_sheet.dart';
 import 'package:comet_beat/shared/music/drum_labels.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
-    show showMusicPickerWithLicense;
+    show showMelodicSearch, showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:comet_beat/shared/music_io/export_sheet.dart';
@@ -1817,6 +1819,55 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         ),
       ),
     );
+  }
+
+  /// Ask the library what the part being edited IS.
+  ///
+  /// Takes the query from the tune target's own notes — the third way into
+  /// melodic search, beside tapping and singing, and the only one where the
+  /// user has to do nothing at all.
+  ///
+  /// ⚠️ Uses the SOUNDING pitches, not the authored-C cells. Cells are written
+  /// in C and shifted by `pitchTranspose` at render; a search on the authored
+  /// values would ask about a transposition of what is actually playing. It
+  /// happens not to matter — the search compares intervals, which survive
+  /// transposition — but relying on that would silently break the moment
+  /// anything here stops being a rigid transposition.
+  Future<void> _findThisTune() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final cells = _targetCells() ?? const <PatternCell>[];
+    final transpose = _engine.pitchTranspose;
+    final pitches = <int>[
+      for (final c in cells)
+        // A chord's TOP note: a melody sits above its own harmonisation, so the
+        // lowest or average pitch would search for the accompaniment.
+        if (c.midis != null && c.midis!.isNotEmpty)
+          c.midis!.reduce((a, b) => a > b ? a : b) + transpose,
+    ];
+    final query = melodyQueryFromPitches(pitches);
+    if (query.length < 2) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.musicPickerFindTuneTooShort)),
+      );
+      return;
+    }
+    final picked = await showMelodicSearch(context, melody: query);
+    if (picked == null || !mounted) return;
+    // Picking a result loads it, the same as any other library route.
+    final converted = loopCellsFromScore(picked.score);
+    if (converted == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.loopMixerSongBookSilent)),
+      );
+      return;
+    }
+    setState(() {
+      _engine.setUserTrack(converted.cells, instrument: Instrument.musicBox);
+      _engine.enabled.add(LoopEngine.userTrackId);
+      _tuneTarget = LoopEngine.userTrackId;
+    });
+    _restartGroove();
   }
 
   /// The capture always spans 2 straight bars at the current tempo (what a
@@ -4349,6 +4400,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             toggleJam();
           case 'follow':
             toggleFollow();
+          case 'findtune':
+            unawaited(_findThisTune());
           case 'songbook':
             unawaited(_loadFromSongBook());
           case 'tracker':
@@ -4420,6 +4473,20 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           ),
         const PopupMenuDivider(),
         _menuSectionHeader(l10n.loopMixerGroupShare),
+        // "What is this tune?" — ask the library about the part being edited,
+        // instead of tapping or singing a query that is already on screen.
+        PopupMenuItem<String>(
+          value: 'findtune',
+          enabled: hasPitchedTrack,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.travel_explore, size: 18),
+              const SizedBox(width: 10),
+              Flexible(child: Text(l10n.musicPickerFindThisTune)),
+            ],
+          ),
+        ),
         // The music library, reachable from Loop Studio at last. Every other
         // authoring surface could already pull a score in; this one had no
         // route to the Song Book or the catalog at all, only to instruments.

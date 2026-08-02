@@ -1020,6 +1020,8 @@
   "musicPickerByTitle": "By title",
   "musicPickerByMelody": "By melody",
   "musicPickerSingIt": "Sing or hum it",
+  "musicPickerFindThisTune": "What is this tune?",
+  "musicPickerFindTuneTooShort": "Not enough notes yet to search for a tune.",
   "musicPickerStopSinging": "Stop and search",
   "musicPickerListening": "Listening — sing the opening…",
   "musicPickerMicFailed": "Couldn't use the microphone.",

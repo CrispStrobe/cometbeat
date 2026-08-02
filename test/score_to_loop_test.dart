@@ -7,6 +7,8 @@
 // notice afterwards: which part is the melody, and what a tie means.
 
 import 'package:comet_beat/core/interop/score_to_loop.dart';
+import 'package:comet_beat/core/music/melodic_search.dart'
+    show kMaxSungQueryNotes;
 import 'package:crisp_notation_core/crisp_notation_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,6 +20,8 @@ Score _part(List<MusicElement> elements, {Clef clef = Clef.treble}) =>
     Score(clef: clef, measures: [Measure(elements)]);
 
 void main() {
+  melodyQueryTests();
+
   group('melodyPartOf', () {
     test('picks by register, NOT by note count', () {
       // The trap this exists for: a broken-chord accompaniment routinely has
@@ -181,6 +185,96 @@ void main() {
           ]),
         ),
         isNull,
+      );
+    });
+  });
+}
+
+void melodyQueryTests() {
+  group('melodyQueryFromScore', () {
+    test('takes the melody part, not the busier accompaniment', () {
+      // Same rule as the loop conversion, and reused rather than re-derived:
+      // two answers to "which part is the tune" eventually disagree.
+      final accompaniment = _part([
+        for (var i = 0; i < 8; i++)
+          NoteElement.note(const Pitch(Step.c, octave: 3), _eighth),
+      ]);
+      final tune = _part([
+        NoteElement.note(const Pitch(Step.g, octave: 5), _quarter),
+        NoteElement.note(const Pitch(Step.e, octave: 5), _quarter),
+      ]);
+      expect(
+        melodyQueryFromScore(MultiPartScore([accompaniment, tune])),
+        [79, 76],
+      );
+    });
+
+    test('is NOT windowed to two bars like the loop path', () {
+      // ⚠️ The loop conversion quantises to eighths and stops at bar two
+      // because a loop must. A search wants the written opening — running the
+      // query through the loop path would drop everything past bar two, which
+      // is exactly what a search needs most.
+      final long = Score(
+        clef: Clef.treble,
+        measures: [
+          for (var m = 0; m < 6; m++)
+            Measure([
+              for (var i = 0; i < 2; i++)
+                NoteElement.note(
+                  Pitch(Step.values[(m * 2 + i) % 7], octave: 5),
+                  _half,
+                ),
+            ]),
+        ],
+      );
+      final q = melodyQueryFromScore(MultiPartScore([long]));
+      expect(q.length, 12, reason: 'all six bars, not the first two');
+    });
+
+    test('a tie does not repeat the note', () {
+      final s = _part([
+        const NoteElement(
+          pitches: [Pitch(Step.c)],
+          duration: _quarter,
+          tieToNext: true,
+        ),
+        NoteElement.note(const Pitch(Step.c), _quarter),
+        NoteElement.note(const Pitch(Step.e), _quarter),
+      ]);
+      expect(melodyQueryFromScore(MultiPartScore([s])), [60, 64]);
+    });
+
+    test('a chord contributes its TOP note', () {
+      // A melody sits above its own harmonisation; the lowest or average pitch
+      // would search for the accompaniment.
+      final s = _part([
+        const NoteElement(
+          pitches: [Pitch(Step.c), Pitch(Step.e), Pitch(Step.g)],
+          duration: _quarter,
+        ),
+      ]);
+      expect(melodyQueryFromScore(MultiPartScore([s])), [67]);
+    });
+
+    test('a silent score yields no query', () {
+      expect(
+        melodyQueryFromScore(
+          MultiPartScore([
+            _part([const RestElement(_quarter)]),
+          ]),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('the query is capped', () {
+      final many = _part([
+        for (var i = 0; i < 60; i++)
+          NoteElement.note(const Pitch(Step.c), _eighth),
+      ]);
+      expect(
+        melodyQueryFromScore(MultiPartScore([many])).length,
+        kMaxSungQueryNotes,
       );
     });
   });

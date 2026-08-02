@@ -2296,6 +2296,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get musicPickerSingIt => 'Sing oder summ sie';
 
   @override
+  String get musicPickerFindThisTune => 'Welches Stück ist das?';
+
+  @override
+  String get musicPickerFindTuneTooShort =>
+      'Noch zu wenige Töne, um nach einem Stück zu suchen.';
+
+  @override
   String get musicPickerStopSinging => 'Stoppen und suchen';
 
   @override

@@ -4220,6 +4220,18 @@ abstract class AppLocalizations {
   /// **'Sing or hum it'**
   String get musicPickerSingIt;
 
+  /// No description provided for @musicPickerFindThisTune.
+  ///
+  /// In en, this message translates to:
+  /// **'What is this tune?'**
+  String get musicPickerFindThisTune;
+
+  /// No description provided for @musicPickerFindTuneTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough notes yet to search for a tune.'**
+  String get musicPickerFindTuneTooShort;
+
   /// No description provided for @musicPickerStopSinging.
   ///
   /// In en, this message translates to:

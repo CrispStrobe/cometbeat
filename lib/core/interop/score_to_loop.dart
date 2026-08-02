@@ -24,6 +24,8 @@
 
 import 'package:comet_beat/core/audio/loop_engine.dart'
     show PatternCell, kPatternSteps;
+import 'package:comet_beat/core/music/melodic_search.dart'
+    show kMaxSungQueryNotes, melodyQueryFromPitches;
 import 'package:comet_beat/core/services/melody_bridge.dart'
     show patternCellsFromMidiRows;
 import 'package:comet_beat/shared/step_duration.dart' show durationToSteps;
@@ -164,4 +166,40 @@ int _topMidi(NoteElement note) {
     cells: patternCellsFromMidiRows(walked.rows, steps: steps),
     report: walked.report,
   );
+}
+
+/// The opening of [mp]'s melody, as a melodic-search query.
+///
+/// Reuses [melodyPartOf] rather than re-deriving "which part is the tune" —
+/// that rule (highest by MEAN pitch, never note count) is the same question
+/// whether the destination is a loop or a search, and having two answers to it
+/// would eventually give two different ones.
+///
+/// ⚠️ Ties are NOT taken from the loop grid. Loop conversion quantises onto
+/// eighths and windows to two bars because a loop must; a search wants the
+/// written pitches in order and nothing else, so it walks the part directly.
+/// Running a query through the loop path would silently drop everything past
+/// bar two — and the opening is exactly what a search needs most.
+List<int> melodyQueryFromScore(
+  MultiPartScore mp, {
+  int maxNotes = kMaxSungQueryNotes,
+}) {
+  final part = melodyPartOf(mp);
+  if (part == null) return const [];
+  final pitches = <int>[];
+  var tiedIn = false;
+  for (final measure in part.measures) {
+    for (final element in measure.elements) {
+      if (element is NoteElement) {
+        if (element.pitches.isEmpty) continue;
+        // A tied continuation is the same sounding note, not a new one.
+        if (!tiedIn) pitches.add(_topMidi(element));
+        tiedIn = element.tieToNext;
+        if (pitches.length >= maxNotes) return pitches;
+      } else if (element is RestElement) {
+        tiedIn = false;
+      }
+    }
+  }
+  return melodyQueryFromPitches(pitches, maxNotes: maxNotes);
 }

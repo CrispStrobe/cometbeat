@@ -824,6 +824,8 @@
   "musicPickerByTitle": "Nach Titel",
   "musicPickerByMelody": "Nach Melodie",
   "musicPickerSingIt": "Sing oder summ sie",
+  "musicPickerFindThisTune": "Welches Stück ist das?",
+  "musicPickerFindTuneTooShort": "Noch zu wenige Töne, um nach einem Stück zu suchen.",
   "musicPickerStopSinging": "Stoppen und suchen",
   "musicPickerListening": "Ich höre zu — sing den Anfang…",
   "musicPickerMicFailed": "Das Mikrofon konnte nicht genutzt werden.",

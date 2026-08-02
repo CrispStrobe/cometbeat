@@ -211,3 +211,26 @@ List<int> melodyQueryFromNotes(
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Mode 3 — a query taken from music the user already has
+// ---------------------------------------------------------------------------
+
+/// The opening pitches of [pitchesInOrder] as a melodic query.
+///
+/// The caller supplies the notes in sounding order — from a score's melody
+/// part, a loop's cells, a tab, a selection. This deliberately takes plain MIDI
+/// rather than any editor's document type: every surface has its own, and a
+/// query is just pitches.
+///
+/// ⚠️ Chords are the caller's problem, and the right answer is the TOP note.
+/// A melody sits on top of its own harmonisation, so taking a chord's lowest or
+/// average pitch searches for the accompaniment — the same trap that makes
+/// note-count melody detection pick the left hand.
+List<int> melodyQueryFromPitches(
+  List<int> pitchesInOrder, {
+  int maxNotes = kMaxSungQueryNotes,
+}) =>
+    pitchesInOrder.length > maxNotes
+        ? pitchesInOrder.sublist(0, maxNotes)
+        : List.of(pitchesInOrder);

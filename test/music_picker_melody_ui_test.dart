@@ -127,6 +127,7 @@ Future<void> _switchToMelody(WidgetTester tester, AppLocalizations l10n) async {
 
 void main() {
   sungUiTests();
+  seededQueryTests();
 
   testWidgets('the melody lens is offered and can be entered', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -370,5 +371,42 @@ void sungUiTests() {
     // The tapped note is still there — a failed hum did not wipe it. Two
     // matches: the readout and the keyboard key both read "C4".
     expect(find.text('C4'), findsWidgets);
+  });
+}
+
+void seededQueryTests() {
+  testWidgets('opening with a melody searches immediately', (tester) async {
+    // Mode 3: the query comes from music already on screen, so the user should
+    // arrive at ANSWERS, not at an empty keyboard they have to re-enter it on.
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      _wrap(
+        CatalogMusicSheet(
+          source: _FakeSource(_catalog),
+          // Ode to Joy, in a key nobody wrote it in.
+          initialMelody: const [67, 67, 68, 70, 70, 68, 67, 65],
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // It opened on the melody lens, not the title one.
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('G4 G4 G♯4 A♯4 A♯4 G♯4 G4 F4'), findsOneWidget);
+    expect(find.text('Ode to Joy'), findsOneWidget);
+  });
+
+  testWidgets('opening without a melody behaves exactly as before',
+      (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      _wrap(CatalogMusicSheet(source: _FakeSource(_catalog))),
+    );
+    await tester.pump();
+    // The default is still the title lens with its search box.
+    expect(find.byType(TextField), findsOneWidget);
   });
 }

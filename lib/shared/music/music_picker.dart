@@ -133,6 +133,25 @@ Future<PickedMusic?> showMusicPickerWithLicense(BuildContext context) {
   );
 }
 
+/// "What is this tune?" — opens the catalog straight onto the melody lens with
+/// [melody] already entered, and searches immediately.
+///
+/// The third way into melodic search, beside tapping it and singing it: the
+/// query comes from music the user ALREADY has open. Skipping the outer picker
+/// sheet is deliberate — they are not choosing a source, they are asking a
+/// question about something in front of them.
+Future<PickedMusic?> showMelodicSearch(
+  BuildContext context, {
+  required List<int> melody,
+}) {
+  return showModalBottomSheet<PickedMusic>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (_) => CatalogMusicSheet(initialMelody: melody),
+  );
+}
+
 /// Pick music, ignoring provenance — for callers that don't export.
 Future<MultiPartScore?> showMusicPicker(BuildContext context) async =>
     (await showMusicPickerWithLicense(context))?.score;
@@ -352,9 +371,17 @@ class _RealMelodyMicrophone implements MelodyMicrophone {
 /// only over the real network, i.e. not testable. Production callers pass
 /// nothing and get exactly what they got before.
 class CatalogMusicSheet extends StatefulWidget {
-  const CatalogMusicSheet({super.key, this.source, this.microphone});
+  const CatalogMusicSheet({
+    super.key,
+    this.source,
+    this.microphone,
+    this.initialMelody,
+  });
 
   final ContentSource? source;
+
+  /// Opens on the melody lens with these notes already entered.
+  final List<int>? initialMelody;
 
   /// Injected for tests; production passes nothing and gets the real mic.
   final MelodyMicrophone? microphone;
@@ -393,6 +420,14 @@ class _CatalogMusicSheetState extends State<CatalogMusicSheet> {
   void initState() {
     super.initState();
     _load();
+    final seed = widget.initialMelody;
+    if (seed != null && seed.isNotEmpty) {
+      _byMelody = true;
+      _melody.addAll(seed);
+      // The pool is what the seeded query is ranked against, so it has to be
+      // fetched now rather than on the lens being opened by hand.
+      unawaited(_ensurePool());
+    }
   }
 
   @override
