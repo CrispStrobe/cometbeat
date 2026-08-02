@@ -1248,10 +1248,27 @@ is recorded in [HISTORY.md](HISTORY.md).
         anything regressed but because it is now the first thing to differ in
         cells hairpin used to claim. Read the tally as "what to look at next",
         never as a regression signal.
-      - 🆕 **`slur` (349) is the next bucket, and plausibly the SAME shape** —
-        a note that ends one slur and starts another. Worth checking the four
-        codecs for the identical three failure modes before assuming anything
-        new.
+      - ✅ **`slur` WAS the same shape, and LilyPond had it on BOTH sides**
+        (`c39fa77`). The writer emitted `()` — open then close — and the reader
+        took the open first, where `??=` is a no-op because a slur is already
+        running, so the close cleared it. Even correct input lost the second of
+        a chained pair.
+        ⚠️ **CLOSE BEFORE OPEN is now the rule on both sides for both marks.**
+        Worth applying to any future span written as a bare DELIMITER rather
+        than with an id or a number — that is the whole class.
+      - ⚠️ **But the corpus bucket moved 349 → 348, and that is the honest
+        result.** The remaining slur failures are `abc -> *` and `krn -> *`:
+        both spell slurs as NESTING PARENTHESES, so a note cannot close one and
+        open another without repeating itself. Format limit, not a bug.
+        Verified separately that ABC round-trips every ordinary shape —
+        adjacent, nested, disjoint — so the ABC self-cell failures are
+        something else in real files, not this.
+      - 📊 **Where the rich sweep stands: 10,093/16,080.** Ranked remainder:
+        `note` 4,886 (almost all the known-bad `-> gp`/`-> midi` columns),
+        `bar` 1,854 (partly meter SPELLING, `C` vs `4/4`), `ann` 1,768 (kern
+        carries none), `lyric` 950, `dyn` 571, `hairpin` 416 (mostly kern/ABC
+        carrying none), `meta` 349, `slur` 348. **Everything this arc added
+        totals 187 (~2%).**
     - ⚠️ `bar` is partly a SPELLING difference, not loss: `time:C` vs `time:4/4`
       and `time:C|` vs `time:4/4`. Whether common time should round-trip as `C`
       is a decision, not obviously a bug.
