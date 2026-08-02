@@ -1172,6 +1172,34 @@ is recorded in [HISTORY.md](HISTORY.md).
     - Tests: `chord_name_test.dart` (99), `chord_symbol_crossformat_test.dart`
       (every quality × every format, plus a no-harmony byte-identity check).
 
+  - 🚨 **AN ABC TUNEBOOK WAS READ AS ONE GIANT CONCATENATED TUNE — FIXED, BUT
+    285 SHIPPED ROWS CARRY WRONG FEATURE DATA** (2026-08-02, opus, `b584436`).
+    - An ABC file is a TUNEBOOK: `X:` opens a tune, the next `X:` opens the
+      following one. Nothing stopped at the second, so every later tune's
+      HEADER and BODY were read as the first tune's body.
+    - **What made it loud rather than merely wrong:** a header line reaching
+      the body parser puts its text into the music stream, and
+      `T:K\"onigs Quadrille` — the LaTeX umlaut the German corpora are full of
+      — drops a bare `"` there. That opens a quoted string running until the
+      next `"` several tunes away, swallowing all the music between into one
+      annotation. `id_2-17_Koenigs_Quadrille.abc` (13 tunes) came back with six
+      annotations of raw tune text; it now reads 29 bars, 156 notes, one
+      annotation.
+    - 📊 **571 of 1,892 corpus `.abc` files (30.2%) hold more than one tune**,
+      up to 17. Mostly Dahlhoff (284) and `_score_stage_clean` (285).
+    - 🚨 **FOR THE MAINTAINER — `db.json` needs a re-index, not a code fix.**
+      **285 shipped rows** whose `.abc` holds several tunes had their `music`
+      object computed by the OLD reader, so `notes` and `bars` count EVERY tune
+      in the file: `id_1-109a_Tanz_mit_mir.abc` (17 tunes) is recorded as 1,318
+      notes / 202 bars. `ambitus` will be too wide for the same reason; `key`
+      may be wrong where later tunes change it. `incipit` is taken from the
+      start and is probably fine.
+      The remedy is re-running the existing feature backfill over the `.abc`
+      rows (`/mnt/volume1/featgen/run_backfill.sh`, merge via
+      `bin/merge_features.py`, which already asserts the write is additive) and
+      re-emitting the catalog. **NOT done here** — `db.json` is shared, locked
+      and behind a publish gate (auto-memory `music-db-publish-gate`).
+
   - 📊 **THE RICH SWEEP IS NOW A RANKED WORK LIST** (2026-08-02, opus). A
     `--rich` corpus run compares every channel, so one percentage mixes real
     defects with channels a format simply cannot carry — 61% reads as alarming
