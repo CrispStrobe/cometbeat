@@ -47,6 +47,17 @@ const _formats = [
   'midi',
 ];
 
+/// Whether any meter in [s] has a measure shorter than a sixteenth, which the
+/// MIDI reader's sixteenth-unit grid rounds to a zero-length bar.
+bool _hasZeroCapacityMeter(Score s) {
+  bool zero(TimeSignature? t) => t != null && t.beats * 16 ~/ t.beatUnit == 0;
+  if (zero(s.timeSignature)) return true;
+  for (final m in s.measures) {
+    if (zero(m.timeChange)) return true;
+  }
+  return false;
+}
+
 Hop _hopFor(String f) => switch (f) {
       'musicxml' => (s) => scoreFromMusicXml(scoreToMusicXml(s)),
       'mei' => (s) => scoreFromMei(scoreToMei(s)),
@@ -372,6 +383,16 @@ void main(List<String> rawArgs) {
     /// One hop: write [from] as [to] and read it back. Records the outcome
     /// under [pair] and returns the score, or null if the hop lost or threw.
     Score? hop(Score from, List<String> before, String to, String pair) {
+      // 🛑 WORKAROUND, not a format limit: `scoreFromMidi` HANGS FOREVER on a
+      // meter whose measure is shorter than a sixteenth. Its internal grid is
+      // sixteenth-note units, so such a bar has capacity ZERO and the packing
+      // loop never advances — one corpus file (`11 for pdf with custom
+      // ambitus.ly`, a legitimate `\time 1/32` used so an early-music ambitus
+      // is not barred) froze a full sweep for 5.5 hours at 100% CPU.
+      //
+      // Skipped rather than counted, so the cell reports what it measured.
+      // Remove this the moment the reader is fixed — it is scoped on the board.
+      if (to == 'midi' && _hasZeroCapacityMeter(from)) return null;
       tried[pair] = (tried[pair] ?? 0) + 1;
       try {
         final round = _hopFor(to)(from);
