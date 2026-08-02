@@ -4084,5 +4084,10 @@
         "type": "int"
       }
     }
-  }
+  },
+  "chartSearch": "Search saved charts",
+  "chartSearchNone": "Nothing matches that.",
+  "chartFavourites": "Starred only",
+  "chartFavourite": "Star this chart",
+  "chartUnfavourite": "Remove star"
 }

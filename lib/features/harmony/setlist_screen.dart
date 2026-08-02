@@ -14,7 +14,6 @@
 // vanishing from the set is the worst possible response.
 library;
 
-import 'package:comet_beat/core/harmony/chart_codec.dart';
 import 'package:comet_beat/core/harmony/setlist.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_screen.dart';
@@ -210,10 +209,11 @@ class _SetlistDetailScreenState extends State<SetlistDetailScreen> {
     final saved = _savedChart(charts, entry.chartName);
     if (saved == null) return; // Missing charts are shown, not playable.
 
-    // ⚠️ `chartFromJsonString`, not `chartFromJson` — the latter takes an
-    // ALREADY-DECODED object and returns null for a String, silently. Passing
-    // the raw text made this tap do nothing at all, with no error anywhere.
-    final chart = chartFromJsonString(saved.json);
+    // `SavedChart.chart` decodes and documents the null contract, so callers
+    // cannot repeat the mistake of handing raw JSON text to `chartFromJson`
+    // (which takes an already-DECODED object and returns null for a String,
+    // silently — that made this tap do nothing at all, with no error).
+    final chart = saved.chart;
     if (chart == null) {
       // A chart that will not parse is a real problem the player must see;
       // returning quietly is what hid the bug above.

@@ -9,6 +9,7 @@
 library;
 
 import 'package:comet_beat/core/harmony/chart.dart';
+import 'package:comet_beat/core/harmony/chart_search.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -64,6 +65,9 @@ class _ChartLibrarySheet extends StatefulWidget {
 
 class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
   late List<SavedChart> _saved = widget.store.list();
+  late Set<String> _favourites = widget.store.favourites();
+  late final TextEditingController _query = TextEditingController();
+  var _favouritesOnly = false;
   late final TextEditingController _name = TextEditingController(
     // The chart's own title is the name the user already chose; making them
     // type it again is the fastest way to end up with "Untitled".
@@ -73,7 +77,26 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
   @override
   void dispose() {
     _name.dispose();
+    _query.dispose();
     super.dispose();
+  }
+
+  /// The rows to show. Decoded ONCE per rebuild and handed to the filter,
+  /// rather than decoding inside the match — a keystroke must not reparse the
+  /// whole library.
+  List<SavedChart> get _visible => filterCharts(
+        _saved,
+        nameOf: (row) => row.name,
+        chartOf: (row) => row.chart,
+        isFavourite: (row) => _favourites.contains(row.name),
+        query: _query.text,
+        favouritesOnly: _favouritesOnly,
+      );
+
+  Future<void> _toggleFavourite(SavedChart chart) async {
+    final next = await widget.store.toggleFavourite(chart.name);
+    if (!mounted) return;
+    setState(() => _favourites = next);
   }
 
   Future<void> _save() async {
@@ -90,7 +113,11 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
   Future<void> _delete(SavedChart chart) async {
     final saved = await widget.store.remove(chart.name);
     if (!mounted) return;
-    setState(() => _saved = saved);
+    // The store drops the star with the chart; re-read so the UI agrees.
+    setState(() {
+      _saved = saved;
+      _favourites = widget.store.favourites();
+    });
   }
 
   void _open(SavedChart saved) {
@@ -145,6 +172,38 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
               ],
             ),
             const SizedBox(height: 12),
+            // Search + starred-only. Hidden until there is enough to search:
+            // a filter bar above three rows is clutter, not a feature.
+            if (_saved.length > 3) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      key: const Key('chartSearchField'),
+                      controller: _query,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: l10n.chartSearch,
+                        prefixIcon: const Icon(Icons.search),
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    key: const Key('chartFavouritesOnly'),
+                    isSelected: _favouritesOnly,
+                    tooltip: l10n.chartFavourites,
+                    icon: const Icon(Icons.star_border),
+                    selectedIcon: const Icon(Icons.star),
+                    onPressed: () =>
+                        setState(() => _favouritesOnly = !_favouritesOnly),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
             if (_saved.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
@@ -156,27 +215,55 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
                   ),
                 ),
               )
+            else if (_visible.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  l10n.chartSearchNone,
+                  key: const Key('chartSearchNone'),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              )
             else
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: _saved.length,
+                  itemCount: _visible.length,
                   itemBuilder: (context, i) {
-                    final saved = _saved[i];
+                    final saved = _visible[i];
                     final chart = saved.chart;
+                    final starred = _favourites.contains(saved.name);
                     return ListTile(
                       key: Key('chartRow_${saved.name}'),
                       title: Text(saved.name),
                       subtitle: Text(
                         chart == null
                             ? l10n.chartUnreadableSaved
-                            : l10n.chartBarCount(chart.totalBars),
+                            : _rowSummary(l10n, chart),
                       ),
                       onTap: () => _open(saved),
-                      trailing: IconButton(
-                        tooltip: l10n.chartDelete,
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _delete(saved),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            key: Key('chartStar_${saved.name}'),
+                            tooltip: starred
+                                ? l10n.chartUnfavourite
+                                : l10n.chartFavourite,
+                            icon: Icon(
+                              starred ? Icons.star : Icons.star_border,
+                            ),
+                            onPressed: () => _toggleFavourite(saved),
+                          ),
+                          IconButton(
+                            tooltip: l10n.chartDelete,
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () => _delete(saved),
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -187,4 +274,15 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
       ),
     );
   }
+}
+
+/// Key · tempo · bars. The row shows what the search matches on, so a player
+/// can see why a result came back.
+String _rowSummary(AppLocalizations l10n, Chart chart) {
+  final key = keyNameOf(chart.keyFifths, minor: chart.minor);
+  return [
+    if (key != null) key,
+    '${chart.tempoBpm} bpm',
+    l10n.chartBarCount(chart.totalBars),
+  ].join(' · ');
 }

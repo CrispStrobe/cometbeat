@@ -78,6 +78,27 @@ class ChartStore {
 
   static const _key = 'charts_v1';
   static const _workingKey = 'chart_working_v1';
+  static const _favouritesKey = 'chart_favourites_v1';
+
+  /// The names the player has starred.
+  ///
+  /// Kept as NAMES rather than as a flag on `SavedChart`, so starring does not
+  /// rewrite the chart row — a favourite is a fact about the player, not about
+  /// the music, and re-saving the chart must not silently clear it.
+  Set<String> favourites() {
+    final raw = _prefs.getStringList(_favouritesKey);
+    return raw == null ? <String>{} : raw.toSet();
+  }
+
+  bool isFavourite(String name) => favourites().contains(name);
+
+  /// Stars or unstars [name]; returns the new set.
+  Future<Set<String>> toggleFavourite(String name) async {
+    final next = favourites();
+    if (!next.remove(name)) next.add(name);
+    await _prefs.setStringList(_favouritesKey, next.toList()..sort());
+    return next;
+  }
 
   /// How many are kept, oldest dropped. Same reasoning as the sibling stores:
   /// SharedPreferences is not a database, and a list nobody can scroll is not a
@@ -137,10 +158,16 @@ class ChartStore {
   }
 
   /// Forget the chart called [name].
-  Future<List<SavedChart>> remove(String name) => _write([
-        for (final saved in list())
-          if (saved.name != name) saved,
-      ]);
+  Future<List<SavedChart>> remove(String name) async {
+    // Drop the star too, or the favourites set grows without bound as names
+    // come and go — and a chart the player deleted should not quietly come
+    // back starred if they later save something under the same name.
+    if (isFavourite(name)) await toggleFavourite(name);
+    return _write([
+      for (final saved in list())
+        if (saved.name != name) saved,
+    ]);
+  }
 
   /// The chart that was on screen last time, or null.
   Chart? readWorking() {

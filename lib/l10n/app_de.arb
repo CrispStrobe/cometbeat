@@ -3514,5 +3514,10 @@
         "type": "int"
       }
     }
-  }
+  },
+  "chartSearch": "Gespeicherte Stücke suchen",
+  "chartSearchNone": "Dazu passt nichts.",
+  "chartFavourites": "Nur markierte",
+  "chartFavourite": "Stück markieren",
+  "chartUnfavourite": "Markierung entfernen"
 }

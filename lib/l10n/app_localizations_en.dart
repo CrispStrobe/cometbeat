@@ -9554,4 +9554,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gigLocked => 'Editing is off in gig mode';
+
+  @override
+  String get chartSearch => 'Search saved charts';
+
+  @override
+  String get chartSearchNone => 'Nothing matches that.';
+
+  @override
+  String get chartFavourites => 'Starred only';
+
+  @override
+  String get chartFavourite => 'Star this chart';
+
+  @override
+  String get chartUnfavourite => 'Remove star';
 }

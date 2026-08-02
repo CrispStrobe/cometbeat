@@ -1953,10 +1953,31 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
       way out — a phone that never sleeps again after one gig is a bug the user
       rightly blames on the app. **To finish: pick the plugin, implement one
       subclass, pass it in. This screen does not change.**
-  - ⬜ **Still to build.** **Auto-advance** — needs band PLAYBACK inside gig
-    mode, not just display, so it is a real slice rather than a flag. And the
-    chart list searchable by key/tempo/style/form/tag, with favourites and
-    recently played.
+  - ✅ **SEARCH + FAVOURITES SHIPPED** (`core/harmony/chart_search.dart` +
+    the library sheet; 20 pure-Dart tests + 3 through the UI).
+    - **One free-text box, not five filter controls** — that is how a player
+      asks for a tune ("that F blues", "the bossa at 140"). It matches name,
+      title, composer, key, tempo, meter, style and section labels.
+    - ⚠️ **Every token must match SOMETHING — an AND of ORs.** `f 180` finds the
+      fast F blues and EXCLUDES the slow one. A token that matches nothing
+      eliminates the row rather than being ignored, or the search would quietly
+      WIDEN as the query got longer, which is the opposite of what typing more
+      words means. That is the property tested hardest.
+    - ⚠️ **Favourites are stored as NAMES, not as a flag on the chart row.** A
+      star is a fact about the player, not about the music, so re-saving a
+      chart must not clear it. The converse is also asserted: deleting a chart
+      DOES drop its star, or the set grows unbounded and a deleted tune could
+      come back starred under a reused name.
+    - The filter bar is hidden below four rows (clutter, not a feature), and
+      each row shows **key · tempo · bars** — what the search matches on should
+      be visible, so a player can see WHY a result came back.
+    - Matching is pure Dart so its edge cases are testable without pumping a
+      sheet.
+  - ⬜ **Still to build, and both need MODEL work rather than UI.**
+    **Auto-advance** — needs band PLAYBACK inside gig mode, not just display,
+    so it is a real slice rather than a flag. **Tags** — `Chart` has no tag
+    field. **"Recently played"** — needs tracking distinct from `savedAtMs`,
+    which records when a chart was SAVED, not when it was played.
   - ⚠️ **Do not move the per-song override onto the chart.** Still the one thing
     the model exists to prevent, and it will still look like a simplification.
   - **Superseded card text below (kept for its reasoning).**

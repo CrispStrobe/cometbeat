@@ -9609,4 +9609,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get gigLocked => 'Im Auftritts-Modus ist Bearbeiten aus';
+
+  @override
+  String get chartSearch => 'Gespeicherte Stücke suchen';
+
+  @override
+  String get chartSearchNone => 'Dazu passt nichts.';
+
+  @override
+  String get chartFavourites => 'Nur markierte';
+
+  @override
+  String get chartFavourite => 'Stück markieren';
+
+  @override
+  String get chartUnfavourite => 'Markierung entfernen';
 }

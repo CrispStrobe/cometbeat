@@ -848,4 +848,115 @@ void _shareTests() {
     expect(find.text('Am'), findsOneWidget);
     expect(find.text('G7'), findsOneWidget);
   });
+
+  group('the chart library: search and favourites (BB-U4b)', () {
+    /// Saves [n] charts so the filter bar appears — it is hidden below four
+    /// rows, where a filter is clutter rather than a feature.
+    Future<void> seed(WidgetTester tester) async {
+      final prefs = await SharedPreferences.getInstance();
+      final store = ChartStore(prefs);
+      await store.save(
+        'Slow Blues',
+        parseChartText('key: F\ntempo: 90\n| F7 |').chart,
+      );
+      await store.save(
+        'Fast Blues',
+        parseChartText('key: F\ntempo: 180\n| F7 |').chart,
+      );
+      await store.save(
+        'The Waltz',
+        parseChartText('meter: 3/4\nkey: C\n| C |').chart,
+      );
+      await store.save(
+        'Bossa',
+        parseChartText('key: C\ntempo: 140\n| C |').chart,
+      );
+    }
+
+    Future<void> openLibrary(WidgetTester tester) async {
+      await tapMenu(tester, const Key('chartLibraryButton'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a query narrows the list, and says when nothing matches',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await seed(tester);
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      await openLibrary(tester);
+
+      expect(find.byKey(const Key('chartRow_Bossa')), findsOneWidget);
+
+      // Two words NARROW: "f 180" is the fast one only.
+      await tester.enterText(
+        find.byKey(const Key('chartSearchField')),
+        'f 180',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('chartRow_Fast Blues')), findsOneWidget);
+      expect(find.byKey(const Key('chartRow_Slow Blues')), findsNothing);
+      expect(find.byKey(const Key('chartRow_Bossa')), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const Key('chartSearchField')),
+        'zebra',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('chartSearchNone')), findsOneWidget);
+    });
+
+    testWidgets('starring survives reopening the sheet', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await seed(tester);
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      await openLibrary(tester);
+
+      await tester.tap(find.byKey(const Key('chartStar_Bossa')));
+      await tester.pumpAndSettle();
+
+      // Starred-only shows just that one.
+      await tester.tap(find.byKey(const Key('chartFavouritesOnly')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('chartRow_Bossa')), findsOneWidget);
+      expect(find.byKey(const Key('chartRow_The Waltz')), findsNothing);
+
+      // Close and reopen: the star is a persisted fact, not sheet state.
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+      await openLibrary(tester);
+      await tester.tap(find.byKey(const Key('chartFavouritesOnly')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('chartRow_Bossa')), findsOneWidget);
+    });
+
+    testWidgets('deleting a starred chart does not leave the star behind',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await seed(tester);
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      await openLibrary(tester);
+
+      await tester.tap(find.byKey(const Key('chartStar_Bossa')));
+      await tester.pumpAndSettle();
+      final prefs = await SharedPreferences.getInstance();
+      expect(ChartStore(prefs).favourites(), contains('Bossa'));
+
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const Key('chartRow_Bossa')),
+          matching: find.byIcon(Icons.delete_outline),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        ChartStore(prefs).favourites(),
+        isNot(contains('Bossa')),
+        reason: 'a deleted chart must not come back starred',
+      );
+    });
+  });
 }

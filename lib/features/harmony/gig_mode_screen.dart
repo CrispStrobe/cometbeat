@@ -16,7 +16,6 @@
 library;
 
 import 'package:comet_beat/core/harmony/chart.dart';
-import 'package:comet_beat/core/harmony/chart_codec.dart';
 import 'package:comet_beat/core/harmony/setlist.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
@@ -99,7 +98,7 @@ class _GigModeScreenState extends State<GigModeScreen> {
     if (entry == null) return null;
     for (final saved in widget.charts.list()) {
       if (saved.name != entry.chartName) continue;
-      final chart = chartFromJsonString(saved.json);
+      final chart = saved.chart;
       return chart == null ? null : resolveEntry(chart, entry);
     }
     return null;

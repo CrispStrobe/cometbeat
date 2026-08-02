@@ -17311,6 +17311,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Editing is off in gig mode'**
   String get gigLocked;
+
+  /// No description provided for @chartSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search saved charts'**
+  String get chartSearch;
+
+  /// No description provided for @chartSearchNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches that.'**
+  String get chartSearchNone;
+
+  /// No description provided for @chartFavourites.
+  ///
+  /// In en, this message translates to:
+  /// **'Starred only'**
+  String get chartFavourites;
+
+  /// No description provided for @chartFavourite.
+  ///
+  /// In en, this message translates to:
+  /// **'Star this chart'**
+  String get chartFavourite;
+
+  /// No description provided for @chartUnfavourite.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove star'**
+  String get chartUnfavourite;
 }
 
 class _AppLocalizationsDelegate
