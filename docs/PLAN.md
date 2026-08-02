@@ -1132,6 +1132,7 @@ is recorded in [HISTORY.md](HISTORY.md).
     |---|---|---|---|---|---|---|
     | barline (double/final) | ✅ | ✅ **new** | ✅ **new** | ✅ | ✅ **new** | ✅ **new** |
     | pickup | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+    | start/endRepeat | ✅ | ✅ | ✅ | ✅ | ✅ **new** | ✅ |
     | tempoChange | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
     | inlineClefs | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
     | measureRepeat | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -1152,11 +1153,16 @@ is recorded in [HISTORY.md](HISTORY.md).
       Mid-score tempo is expressible everywhere (`\tempo` mid-piece is already
       READ by the LilyPond reader as of `b65f7d0` — the writer just never emits
       one); mid-bar clef has its own note in `workshop-musicxml-writer-gaps`.
-    - 🆕 **UNCLAIMED — LilyPond repeats are READ-ONLY.** Its reader handles
-      `\repeat volta`; its writer emits no repeat structure at all, so
-      `startRepeat`/`endRepeat` are lost on export. The exact mirror of the
-      `\tempo` write-only asymmetry, found by the same audit. `\bar ".|:"` /
-      `":|."` is the cheap fix and slots into the barline code just added.
+    - ✅ **LilyPond repeats were READ-ONLY — FIXED** (`468b9e2`). Its reader has
+      always handled `\repeat volta`; its writer emitted no repeat structure at
+      all, so every export lost `startRepeat`/`endRepeat`. The exact mirror of
+      the `\tempo` write-only asymmetry, found by the same audit. They ride the
+      `\bar` slot the styles just gained and win it; an end here plus a start
+      next bar combine into one `:|.|:`.
+      - ⚠️ A repeat opening the FIRST bar has no preceding barline to ride on,
+        so it needs its own leading `\bar ".|:"` — and on the way back it must
+        apply to the bar being BUILT, not be staged for the next one the way a
+        mid-score `.|:` is. Staging it unconditionally put the repeat on bar 2.
 
   - 🆕 **UNCLAIMED — `scoreFromMidi` HANGS FOREVER on a meter finer than a
     sixteenth. Belongs with the existing scoreToMidi/scoreFromMidi item, and it
