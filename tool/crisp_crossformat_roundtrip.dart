@@ -283,7 +283,12 @@ List<String> _scoreExtras(Score s) {
     for (final l in s.laissezVibrer) 'lv@${at(l.noteId)}',
     for (final f in s.figuredBass) 'figbass@${at(f.noteId)}:${f.figures}',
     for (final c in s.cueNoteIds) 'cue@${at(c)}',
-    if (s.tempo != null) 'tempo:${s.tempo!.quarterBpm}',
+    // ⚠️ To the nearest bpm, deliberately. LilyPond CANNOT carry more — a
+    // fractional `\tempo` is a syntax error there, not a rounding choice — so
+    // comparing exactly reports a false failure on every score whose tempo came
+    // from MuseScore's quarters-per-second float (1.5333 * 60 = 91.9998).
+    // A signature must not demand more precision than a target format has.
+    if (s.tempo != null) 'tempo:${s.tempo!.quarterBpm.round()}',
   ]..sort();
   return out;
 }
