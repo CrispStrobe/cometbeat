@@ -3,6 +3,8 @@ import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/form_realizer.dart';
 import 'package:comet_beat/core/harmony/style_library.dart';
+import 'package:crisp_notation_core/crisp_notation_core.dart'
+    show TimeSignature;
 import 'package:flutter_test/flutter_test.dart';
 
 /// The band, assembled.
@@ -172,6 +174,8 @@ void main() {
     });
   });
 
+  meterTests();
+
   group('degenerate input', () {
     test('a one-bar chart plays', () {
       expect(render('| C |'), isNotNull);
@@ -197,5 +201,122 @@ void main() {
       expect(band, isNotNull);
       expect(band!.totalMs, greaterThan(0));
     });
+  });
+}
+
+/// BB-D5 — meters beyond 4/4, and the clock that makes them exact.
+void meterTests() {
+  group('meters beyond 4/4', () {
+    test('3/4, 6/8 and 5/4 each get the right bar length', () {
+      // Tempo is quarter-note BPM, so 6/8 is THREE quarters, not six eighths.
+      for (final (meter, expectedMs) in [
+        ('4/4', 2000),
+        ('3/4', 1500),
+        ('6/8', 1500),
+        ('5/4', 2500),
+        ('12/8', 3000),
+        ('7/8', 1750),
+      ]) {
+        final band = renderBand(
+          chart('meter: $meter\ntempo: 120\n[A]\n| C |'),
+          style: styleFor('straight'),
+          form: const FormOptions(countIn: false, ending: false),
+          sampleRate: _rate,
+        )!;
+        expect(band.bars.single.durationMs, expectedMs, reason: meter);
+      }
+    });
+
+    test('a mid-chart meter change lands where it should', () {
+      final source = chart('tempo: 120\n[A]\n| C |');
+      final mixed = Chart(
+        sections: [
+          ChartSection(
+            bars: [
+              source.sections.single.bars.first,
+              ChartBar(
+                chords: source.sections.single.bars.first.chords,
+                meterChange: const TimeSignature(3, 4),
+              ),
+              source.sections.single.bars.first,
+            ],
+          ),
+        ],
+      );
+      final band = renderBand(
+        mixed,
+        style: styleFor('straight'),
+        form: const FormOptions(countIn: false, ending: false),
+        sampleRate: _rate,
+      )!;
+      expect(band.bars.map((b) => b.durationMs), [2000, 1500, 2000]);
+      expect(band.bars.map((b) => b.startMs), [0, 2000, 3500]);
+      expect(band.totalMs, 5500);
+    });
+  });
+
+  group('the clock does not drift', () {
+    test('bars stay contiguous at a tempo with no whole-ms bar', () {
+      // 137bpm gives a 1751.8ms bar. Rounding each duration independently
+      // leaves gaps that `barAt` falls into; error diffusion cannot.
+      for (final bpm in [137, 111, 93, 157]) {
+        final band = renderBand(
+          chart('tempo: $bpm\n[A]\n${List.filled(32, '| C |').join('\n')}'),
+          style: styleFor('straight'),
+          form: const FormOptions(countIn: false, ending: false),
+          sampleRate: _rate,
+        )!;
+        for (var i = 1; i < band.bars.length; i++) {
+          expect(
+            band.bars[i].startMs,
+            band.bars[i - 1].endMs,
+            reason: 'gap at bar $i, $bpm bpm',
+          );
+        }
+        expect(band.bars.last.endMs, band.totalMs, reason: '$bpm bpm');
+      }
+    });
+
+    test('barAt finds a bar at EVERY millisecond of the performance', () {
+      // The failure a gap produces: the playhead blinks out mid-piece.
+      final band = renderBand(
+        chart('tempo: 137\n[A]\n${List.filled(12, '| C |').join('\n')}'),
+        style: styleFor('straight'),
+        form: const FormOptions(countIn: false, ending: false),
+        sampleRate: _rate,
+      )!;
+      for (var ms = 0; ms < band.totalMs; ms += 7) {
+        expect(band.barAt(ms), isNotNull, reason: 'no bar at ${ms}ms');
+      }
+    });
+
+    test('the last bar ends exactly at the total, over a long chart', () {
+      final band = renderBand(
+        chart('tempo: 93\n[A]\n${List.filled(64, '| C |').join('\n')}'),
+        style: styleFor('straight'),
+        form: const FormOptions(countIn: false, ending: false),
+        sampleRate: _rate,
+      )!;
+      // No accumulated drift: 64 bars of a fractional length still land on the
+      // total rather than a bar-length away from it.
+      expect(band.bars.last.endMs, band.totalMs);
+      expect(
+        (band.totalMs - 64 * 4 * 60000 / 93).abs(),
+        lessThan(1),
+      );
+    });
+  });
+
+  test('a 4/4 chart at an integral tempo is unchanged by the diffusion', () {
+    // The card's own requirement: this card must not move existing output.
+    final band = renderBand(
+      chart('tempo: 120\n[A]\n| C | F | G | C |'),
+      style: styleFor('straight'),
+      form: const FormOptions(countIn: false, ending: false),
+      sampleRate: _rate,
+    )!;
+    expect(band.bars.map((b) => b.startMs), [0, 2000, 4000, 6000]);
+    expect(band.bars.map((b) => b.durationMs), [2000, 2000, 2000, 2000]);
+    expect(band.totalMs, 8000);
   });
 }

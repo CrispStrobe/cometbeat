@@ -113,20 +113,29 @@ BandPerformance? renderBand(
   final beatMs = 60000 / bpm;
 
   // Pass 1 — place every bar on the clock.
-  final spans = <BandBarSpan>[];
-  var cursor = 0.0;
+  //
+  // ⚠️ ERROR DIFFUSION, not per-bar rounding. The exact edges are accumulated
+  // as doubles and each bar's LENGTH is then the difference between two rounded
+  // edges — so every boundary is exact by construction and the rounding error
+  // is absorbed by the bar rather than accumulating.
+  //
+  // Rounding a bar's duration independently looks equivalent and is not: at a
+  // tempo whose bar is not a whole number of milliseconds (which is most of
+  // them — 137bpm gives 1751.8ms), `startMs + durationMs` misses the next
+  // `startMs`, leaving a gap in which `barAt` reports NOTHING mid-performance.
+  final edges = <double>[0];
   for (final bar in bars) {
-    final ms = barBeats(bar.meter) * beatMs;
-    spans.add(
-      BandBarSpan(
-        startMs: cursor.round(),
-        durationMs: ms.round(),
-        bar: bar,
-      ),
-    );
-    cursor += ms;
+    edges.add(edges.last + barBeats(bar.meter) * beatMs);
   }
-  final totalMs = cursor.round();
+  final spans = <BandBarSpan>[
+    for (var i = 0; i < bars.length; i++)
+      BandBarSpan(
+        startMs: edges[i].round(),
+        durationMs: edges[i + 1].round() - edges[i].round(),
+        bar: bars[i],
+      ),
+  ];
+  final totalMs = edges.last.round();
   if (totalMs <= 0) return null;
 
   // Pass 2 — the comp is voiced across the WHOLE piece at once, so voice
