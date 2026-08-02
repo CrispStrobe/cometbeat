@@ -3497,5 +3497,22 @@
       }
     }
   },
-  "chartOpenFailed": "Dieses Stück konnte nicht geöffnet werden."
+  "chartOpenFailed": "Dieses Stück konnte nicht geöffnet werden.",
+  "gigMode": "Auftritts-Modus",
+  "gigModeHint": "Große Schrift, kein Bearbeiten, Bildschirm bleibt an",
+  "gigNext": "Nächstes Stück",
+  "gigPrev": "Vorheriges Stück",
+  "gigPosition": "{index} von {total}",
+  "gigEnd": "Ende des Sets",
+  "gigLocked": "Im Auftritts-Modus ist Bearbeiten aus",
+  "@gigPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
 }

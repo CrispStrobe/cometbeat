@@ -9585,4 +9585,28 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get chartOpenFailed => 'Dieses Stück konnte nicht geöffnet werden.';
+
+  @override
+  String get gigMode => 'Auftritts-Modus';
+
+  @override
+  String get gigModeHint =>
+      'Große Schrift, kein Bearbeiten, Bildschirm bleibt an';
+
+  @override
+  String get gigNext => 'Nächstes Stück';
+
+  @override
+  String get gigPrev => 'Vorheriges Stück';
+
+  @override
+  String gigPosition(int index, int total) {
+    return '$index von $total';
+  }
+
+  @override
+  String get gigEnd => 'Ende des Sets';
+
+  @override
+  String get gigLocked => 'Im Auftritts-Modus ist Bearbeiten aus';
 }

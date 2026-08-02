@@ -1,6 +1,7 @@
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/setlist.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
+import 'package:comet_beat/features/harmony/gig_mode_screen.dart';
 import 'package:comet_beat/features/harmony/setlist_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -290,6 +291,34 @@ void main() {
       // would still be looking at C.
       expect(find.text('D'), findsWidgets);
       expect(find.text('G'), findsWidgets);
+    });
+  });
+
+  group('gig mode', () {
+    testWidgets('is offered once the set has songs, and not before',
+        (tester) async {
+      await _seedCharts({'One': '| C |'});
+      await _seedSet(const Setlist(name: 'Friday'));
+
+      await tester.pumpWidget(_host(const SetlistDetailScreen(name: 'Friday')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('setlistGigMode')),
+        findsNothing,
+        reason: 'nothing to play yet',
+      );
+
+      await tester.tap(find.byKey(const ValueKey('setlistAdd')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('pickChart_One')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('pickChartsDone')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('setlistGigMode')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('setlistGigMode')));
+      await tester.pumpAndSettle();
+      expect(find.byType(GigModeScreen), findsOneWidget);
     });
   });
 }

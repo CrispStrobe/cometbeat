@@ -9531,4 +9531,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartOpenFailed => 'This chart could not be opened.';
+
+  @override
+  String get gigMode => 'Gig mode';
+
+  @override
+  String get gigModeHint => 'Big type, no editing, screen stays on';
+
+  @override
+  String get gigNext => 'Next song';
+
+  @override
+  String get gigPrev => 'Previous song';
+
+  @override
+  String gigPosition(int index, int total) {
+    return '$index of $total';
+  }
+
+  @override
+  String get gigEnd => 'End of the set';
+
+  @override
+  String get gigLocked => 'Editing is off in gig mode';
 }

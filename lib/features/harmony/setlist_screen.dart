@@ -18,6 +18,7 @@ import 'package:comet_beat/core/harmony/chart_codec.dart';
 import 'package:comet_beat/core/harmony/setlist.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_screen.dart';
+import 'package:comet_beat/features/harmony/gig_mode_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -266,6 +267,21 @@ class _SetlistDetailScreenState extends State<SetlistDetailScreen> {
             tooltip: l10n.setlistAdd,
             onPressed: _addSongs,
           ),
+          // Gig mode is only offered once there is a set to play.
+          if (setlist.entries.isNotEmpty && charts != null)
+            IconButton(
+              key: const ValueKey('setlistGigMode'),
+              icon: const Icon(Icons.play_circle_outline),
+              tooltip: l10n.gigMode,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => GigModeScreen(
+                    setlist: setlist,
+                    charts: charts,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       body: setlist.entries.isEmpty

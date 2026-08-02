@@ -17269,6 +17269,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This chart could not be opened.'**
   String get chartOpenFailed;
+
+  /// No description provided for @gigMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Gig mode'**
+  String get gigMode;
+
+  /// No description provided for @gigModeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Big type, no editing, screen stays on'**
+  String get gigModeHint;
+
+  /// No description provided for @gigNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next song'**
+  String get gigNext;
+
+  /// No description provided for @gigPrev.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous song'**
+  String get gigPrev;
+
+  /// No description provided for @gigPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'{index} of {total}'**
+  String gigPosition(int index, int total);
+
+  /// No description provided for @gigEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End of the set'**
+  String get gigEnd;
+
+  /// No description provided for @gigLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing is off in gig mode'**
+  String get gigLocked;
 }
 
 class _AppLocalizationsDelegate

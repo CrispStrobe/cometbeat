@@ -1934,9 +1934,29 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     `onReorderItem` already adjusts for the removed item, while the deprecated
     `onReorder` reports the index BEFORE removal and needs the off-by-one
     undone by hand. Verified the test fails against the wrong contract.
-  - ⬜ **Still to build.** **Gig mode**: auto-advance, big type, edits locked,
-    screen kept awake. And the chart list searchable by key/tempo/style/form/
-    tag, with favourites and recently played.
+  - ✅ **GIG MODE SHIPPED** (`gig_mode_screen.dart`, 10 tests): one song at a
+    time, big type, next/previous with 64px targets, the set position, and the
+    entry's cue as the FIRST thing on the page — "capo 3" is no use after the
+    count-in. Reached from the set (`setlistGigMode`), offered only once the
+    set has songs.
+    - **Edits are off STRUCTURALLY**: it passes `ChartGridView` no tap callback
+      at all, so there is nothing a future caller can forget to disable. The
+      test asserts `grid.onTapBar == null` rather than trying to tap — a
+      `readOnly: true` flag is exactly the kind of thing a refactor drops.
+    - **The ends of the set are dead ends, not wraps.** Rolling round to the
+      first tune after the last is wrong on a stand: the set ENDED.
+    - ⚠️ **The wake-lock is a SEAM (`KeepAwake`), not an implementation.** It
+      needs a platform plugin → a `pubspec.yaml` change plus per-platform
+      verification, which is not a unilateral mid-session call with other
+      agents in the tree. The default does nothing and says so. A recording
+      double proves it is asked on entry and, more importantly, RELEASED on the
+      way out — a phone that never sleeps again after one gig is a bug the user
+      rightly blames on the app. **To finish: pick the plugin, implement one
+      subclass, pass it in. This screen does not change.**
+  - ⬜ **Still to build.** **Auto-advance** — needs band PLAYBACK inside gig
+    mode, not just display, so it is a real slice rather than a flag. And the
+    chart list searchable by key/tempo/style/form/tag, with favourites and
+    recently played.
   - ⚠️ **Do not move the per-song override onto the chart.** Still the one thing
     the model exists to prevent, and it will still look like a simplification.
   - **Superseded card text below (kept for its reasoning).**

@@ -4067,5 +4067,22 @@
       }
     }
   },
-  "chartOpenFailed": "This chart could not be opened."
+  "chartOpenFailed": "This chart could not be opened.",
+  "gigMode": "Gig mode",
+  "gigModeHint": "Big type, no editing, screen stays on",
+  "gigNext": "Next song",
+  "gigPrev": "Previous song",
+  "gigPosition": "{index} of {total}",
+  "gigEnd": "End of the set",
+  "gigLocked": "Editing is off in gig mode",
+  "@gigPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
 }
