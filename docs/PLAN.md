@@ -28,6 +28,23 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> ✅ **CI and Pages are GREEN again (2026-08-02, opus/backing-band).** Both had
+> been red for hours on ONE cause: crisp_notation added
+> `chordName(ChordSymbol)` in a new `theory/chord_name.dart`, colliding with the
+> Tab Workshop's own `chordName(rootPc, label)`. An ambiguous import is an
+> **error**, not a lint, so it took out analyze, the Android build AND the web
+> build together. Fixed by `hide chordName` at the two imports that want the
+> app's version (`af4262f9`).
+>
+> ⚠️ **WHY LOCAL GATES MISSED IT, and this will happen again:** CI checks out
+> `crisp_notation@main` **fresh**; a local tree uses the SHARED clone at
+> `../crisp_notation`, which was **nine commits behind**. `flutter analyze` was
+> clean locally while CI ran the same command and failed. Before trusting a
+> local analyze as evidence about CI:
+> `cd ../crisp_notation && git fetch -q origin && git rev-list --left-right --count main...origin/main`
+> must print `0 0`. I have pulled it to `origin/main`; the other agent's
+> uncommitted pubspec WIP there was left untouched.
+
 > ⚠️ **`test/loop_mixer_test.dart` is TIME-flaky, and it is not an assertion
 > failure — for whoever owns Loop Studio (2026-08-01, opus/backing-band).**
 > Three runs, three DIFFERENT failing tests, every one of them reporting *"did
