@@ -58,6 +58,35 @@ bool _hasZeroCapacityMeter(Score s) {
   return false;
 }
 
+/// The channel the first divergence sits in — `lyric`, `ann`, `bar`, `note`…
+///
+/// Keyed off the first entry that differs, since that is the one the example
+/// line reports and the one a reader would investigate.
+String _channelOf(List<String> before, List<String> got) {
+  final n = before.length < got.length ? before.length : got.length;
+  for (var i = 0; i < n; i++) {
+    if (before[i] != got[i]) return _channelName(before[i]);
+  }
+  // Same prefix, different length: name the first entry that only one side has.
+  if (before.length > got.length) return _channelName(before[n]);
+  if (got.length > before.length) return _channelName(got[n]);
+  return 'unknown';
+}
+
+String _channelName(String entry) {
+  final at = entry.indexOf('@');
+  if (at > 0) {
+    final head = entry.substring(0, at);
+    // A note entry is `<midi>@<duration>`, so its head is digits.
+    if (int.tryParse(head.split('.').first) == null) return head;
+    return 'note';
+  }
+  if (entry.startsWith('bar{')) return 'bar';
+  final colon = entry.indexOf(':');
+  if (colon > 0) return entry.substring(0, colon);
+  return 'other';
+}
+
 Hop _hopFor(String f) => switch (f) {
       'musicxml' => (s) => scoreFromMusicXml(scoreToMusicXml(s)),
       'mei' => (s) => scoreFromMei(scoreToMei(s)),
@@ -345,6 +374,8 @@ void main(List<String> rawArgs) {
   final tried = <String, int>{};
   final passed = <String, int>{};
   final examples = <String, String>{};
+  final channelFails = <String, int>{};
+  final channelPairs = <String, Set<String>>{};
   var sources = 0;
 
   // A full-corpus run is hours long and writes nothing until the end, which
@@ -406,6 +437,14 @@ void main(List<String> rawArgs) {
           passed[pair] = (passed[pair] ?? 0) + 1;
           return round;
         }
+        // WHICH channel diverged, tallied across every failure. A `--rich` run
+        // mixes real defects with channels a format simply cannot carry, and a
+        // single percentage cannot tell them apart — 61% reads as alarming when
+        // most of it is kern having no way to write an annotation. The tally
+        // turns the run into a ranked list of what is actually missing.
+        final ch = _channelOf(before, got);
+        channelFails[ch] = (channelFails[ch] ?? 0) + 1;
+        channelPairs.putIfAbsent(ch, () => <String>{}).add(pair);
         examples.putIfAbsent(
           pair,
           // "entries", not "notes": under --rich the signature also holds bar
@@ -512,6 +551,18 @@ void main(List<String> rawArgs) {
   }
 
   stdout.writeln('source files with notes: $sources');
+  if (channelFails.isNotEmpty) {
+    final ranked = channelFails.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    stdout.writeln('\nfailures by channel (first divergence):');
+    for (final e in ranked) {
+      final pairs = (channelPairs[e.key] ?? const <String>{}).toList()..sort();
+      final shown =
+          pairs.length > 6 ? '${pairs.take(6).join(' ')} …' : pairs.join(' ');
+      stdout.writeln('  ${e.key.padRight(10)} ${e.value.toString().padLeft(6)}'
+          '   $shown');
+    }
+  }
   final pairs = tried.keys.toList()..sort();
   for (final p in pairs) {
     final t = tried[p]!;
