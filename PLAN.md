@@ -2797,7 +2797,34 @@ Nothing in `BB-H1`–`H3` or `BB-H6` depends on which way this goes; it gates
     `dart run bin/listen.dart --wav` / `bin/transcribe_chords.dart`, assert the
     detected chords and bass notes are the generated ones. Runs headless in CI.
 
-- ⬜ **BB-Q2 — style regression fingerprints.** `S`
+- ✅ **BB-Q2 — style regression fingerprints. DONE.** `S`
+  (`test/style_regression_test.dart`, 12 tests) — **all four BB-Q cards are now
+  closed.**
+  - Enforces **rule 3** (every style renders BYTE-IDENTICALLY for the same
+    `(chart, style, seed)`, and a different seed genuinely changes it) and
+    **rule 1** (a pinned fingerprint per style, so editing one cannot quietly
+    change another — they share `mixStems`, the humaniser and both generators,
+    so cross-contamination is live, not theoretical).
+  - ⚠️ **The fingerprints carry a TOLERANCE (1e-4) rather than being exact.**
+    The render is pure Dart but goes through `sin`/`tanh`, which are libm calls
+    that can differ by an ulp between macOS and the Linux CI runner. An exact
+    pin would redden main on a platform difference, and a test that cries wolf
+    gets deleted. Styles differ from each other by ~3e-3, so the tolerance is
+    30x smaller than the signal it must detect.
+  - ⚠️ **`humanize: false` does NOT make the seed irrelevant — I assumed it did
+    and was wrong.** `drum_generator._shapeIndex(seed, barIndex)` picks the fill
+    shape, which is a generative choice in its own right. **For a byte-identical
+    baseline under rule 1 a fixed seed is REQUIRED; turning humanising off is
+    not sufficient.**
+  - Two guards against the test decaying: **every shipped style must be pinned**
+    (a new style cannot escape the fingerprint) and **no two styles may render
+    identical audio** (a copy-paste in `style_library` would otherwise ship two
+    names for one groove with every other test still green).
+  - 📌 **When a pin legitimately moves**, the failure message prints the new
+    value to paste in — the test is meant to make a deliberate change one line
+    of work and an accidental one impossible to miss.
+
+- ⬜ **BB-Q2 (original) — style regression fingerprints.** `S`
   - A pinned audio fingerprint per style at a fixed seed, plus the byte-identical
     guard (rule 1). A style edit that changes another style's output fails.
 
