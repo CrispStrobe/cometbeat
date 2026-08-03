@@ -1237,7 +1237,37 @@ is recorded in [HISTORY.md](HISTORY.md).
        arpeggio, notehead or (ABC) figured-bass notation; ABC's mid-tune `Q:`
        rides the body text stream and needs the body parser, not a reader tweak.
 
-    ### 📊 Measured: 10,619 → 11,572 of 21,440 (2026-08-03)
+    ### 📊 Measured: 10,619 → 11,717 of 21,440 (2026-08-03)
+
+    Twenty-one sweeps of the same 9,440-file sample: **49.53% → 54.65%**, and
+    **`-> lilypond` 62.4% → 82.3%**.
+
+    ## ⚖️ The largest single gain came from REVERSING a call recorded here
+
+    An earlier entry measured the restated-meter question, decided to leave the
+    suppression in place, and wrote the numbers down for whoever revisited it.
+    Revisiting it was worth **+145 round trips in one change — the biggest of
+    the arc — with not one cell regressing.**
+
+    Five readers dropped a time signature equal to the running one. That broke
+    the round trip for ~16% of kern files and was the single largest remaining
+    cause in `krn -> lilypond` (79.8% against ~93% for the other three).
+
+    **Two things settled it the other way, and only one was new data:**
+    - 📌 **`layout_engine` ALREADY guards `timeChange != _time` before DRAWING
+      one.** The whole risk — "redundant exports would print a meter at every
+      bar" — does not exist a layer down. I had reasoned about rendering
+      without checking the renderer.
+    - Measured: only 2 of 681 MusicXML files and 0 of 25 kern files restate
+      their meter in more than half their bars.
+
+    **The lesson is not "be bolder".** Deferring was right at the time: the
+    change was unvalidated and the corpus was the only way to judge it. What
+    was wrong was reasoning about a downstream consequence without reading the
+    downstream code. Write the numbers down, then go and check the layer you
+    are worried about.
+
+    ### 📊 Earlier: 10,619 → 11,572 (2026-08-03)
 
     Eighteen sweeps of the same 9,440-file sample: **49.53% → 53.97%**, and
     **`-> lilypond` 62.4% → 81.5%**.
