@@ -1237,6 +1237,60 @@ is recorded in [HISTORY.md](HISTORY.md).
        arpeggio, notehead or (ABC) figured-bass notation; ABC's mid-tune `Q:`
        rides the body text stream and needs the body parser, not a reader tweak.
 
+    ## Continued 2026-08-03 — the open gaps, closed
+
+    Every gap the section above listed as tractable is now done, and each one
+    was found by asking the corpus report *what does this cell disagree about*
+    rather than by reading code.
+
+    | gap | what it actually was |
+    |---|---|
+    | MEI mid-bar clefs | its `<clef>` opens a LAYER, so a mid-bar one needs its own pass inside the element loop; the reader tells them apart by whether any element has been read |
+    | LilyPond clefs | the reason the first attempt cost 477 round trips: `scoreFromLilyPond` walks EVERY node, so a SATB score's four `\clef` commands all reached one measure builder — and the score clef came from the LAST staff. Scoped to the first staff leaf |
+    | LilyPond key changes | write-only, exactly like `\tempo` and `\header` before it: the writer emitted `\key` and the reader only updated its RUNNING key |
+    | LilyPond voltas | nothing was written at all |
+    | MuseScore common/cut | the corpus settled it: 644 `<TimeSig>` blocks read `4/4 subtype=1`, 39 read `2/2 subtype=2` |
+    | ABC + kern spacing | `\s+ → ' '` flattened runs of ordinary SPACES, reflowing every aligned hymn text |
+    | slurs (3 codecs) | `(`/`)` carry no identity — nesting and shared boundaries both collapsed |
+    | multi-note graces | fell back to `\grace { }`, turning every multi-note appoggiatura into an acciaccatura |
+
+    **Three lessons worth keeping, beyond the individual fixes:**
+
+    1. **A comment asserting a format limitation is a claim, not evidence —
+       check it.** Three were false and each was hiding a real defect:
+       *"LilyPond has no multi-note slashed grace"* (it does — both commands
+       take a music expression), *"LilyPond allows one slur at a time"* (it
+       does not — `\=1(`/`\=2(` exist precisely so it can), and
+       *"common time degrades to numeric 4/4 (documented loss)"*, which was a
+       test PINNING the loss.
+    2. **A running value is not an opening value.** `_clef` and `_key` were the
+       reader's current state, so the moment mid-score changes were recorded a
+       score reported its FINAL key as its opening one. `_initialTime` already
+       existed for exactly this reason and had two missing siblings. Any reader
+       that tracks state needs to capture what it started from.
+    3. **Flatten only what would BREAK the format.** A newline ends a kern
+       `!!!` record and an ABC field, so it must go — but `\s+` also eats runs
+       of spaces, and those are content. The fix is `[\r\n\t]+`, and the same
+       care applies from the other side: ABC's `w:` line maps a space to `~`,
+       one per SPACE rather than one per run.
+
+    **Method note.** `slurLevels()` is shared between the kern and LilyPond
+    writers rather than copied, because this arc has already found the same
+    table hand-copied into five codecs twice over (duration bases, the tuplet
+    voice routing). A rule that two formats need is a rule the third will too.
+
+    **Still open, and now genuinely short:**
+    - **`bar` (1,695)** — measure-STRUCTURE divergence: the two sides disagree
+      on how many bars exist. The largest remaining channel, untouched.
+    - **`scoreFromMidi` hangs** on a meter finer than a sixteenth. Scoped to
+      whoever owns `scoreToMidi`; the harness skips that hop meanwhile.
+    - **ABC mid-tune `Q:`** rides the body text stream and needs the body
+      parser to understand an inline field.
+    - **ABC chained slurs** — a true format limit, not a defect: `(` precedes
+      the first note and `)` follows the last, so a shared boundary note would
+      need a mark on either side of itself, and ABC has no numbered slur.
+    - `measureRepeat`/`multiRest` beyond MusicXML (bar abbreviations).
+
   - ✅ **DONE — CHORD SYMBOLS NOW SURVIVE ALL SIX FORMATS** (2026-08-01, opus;
     `parseChordName` + the six-format wiring, on `crisp_notation@main`).
     Supersedes the "needs a DECISION before any code" item that stood here.
