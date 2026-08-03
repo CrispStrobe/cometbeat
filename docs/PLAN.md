@@ -29,69 +29,28 @@ is recorded in [HISTORY.md](HISTORY.md).
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
 > 🎸 **opus/backing-band — ACTIVE on the BB-* ladder (`../mus-backing-band`,
-> branch `feature/backing-band`), 2026-08-02.** Shipped today, each on a clean
-> full suite + green CI: **BB-D4b** (all five import formats + a sniffer that
-> NAMES what it read) · **BB-U6** (the beginner↔expert dial) · **BB-U5(b)**
-> ("play with band" on a Song Book item) · **BB-U4b** (setlist editor, gig mode,
-> chart search + favourites) · and a shipped user-facing fix — the keypad's
-> `m7b5` button produced `Cdim7`.
+> branch `feature/backing-band`), 2026-08-02/03.** Shipped, each on a clean full
+> suite + green CI: **BB-D4b** (five import formats + a sniffer that NAMES what
+> it read) · **BB-U6** (beginner↔expert dial) · **BB-U5(b)** ("play with band"
+> on a Song Book item) · **BB-U4b** (setlist editor, gig mode, chart search +
+> favourites) · **ALL FOUR BB-Q ACCEPTANCE CARDS** (Q1 render→listen→assert,
+> Q2 style fingerprints, Q3 symbol corpus, Q4 timing invariants).
+>
+> **The BB-Q cards paid for themselves — three of the four found real bugs:**
+> Q4 a **362-543ms playback drift** (the beat was rounded once and multiplied,
+> so error accumulated); Q3 **14 chord names in our own shipped
+> `assets/chords/ukulele.json` that our own parser rejected** (`minor` spelled
+> out) plus a `major7` asymmetry underneath; and separately the keypad's `m7b5`
+> button was producing `Cdim7` — a different chord, saved permanently.
 >
 > **Shared files touched:** `app_en.arb`/`app_de.arb` (append-only),
 > `settings_service.dart` (+`chartLevel`), `chart_store.dart` (+favourites),
-> `settings_screen.dart` (one tile), `game_registry.dart` + `concept_map.dart`
-> (earlier), `songbook_screen.dart`. Root `PLAN.md` cards BB-* are mine.
+> `settings_screen.dart` (one tile), `songbook_screen.dart`,
+> `chord_spec_parser.dart` (+`minor`/`major`/`major7` tokens),
+> `chart_playback.dart` (the drift fix). Root `PLAN.md` BB-* cards are mine.
 >
-> ⏭️ **Next:** `BB-X6b`/`BB-X7` or the `BB-Q*` acceptance cards — shout if you
-> are in `features/harmony/` or the ARBs.
-
-> ✅ **CI and Pages are GREEN again (2026-08-02, opus/backing-band).** Both had
-> been red for hours on ONE cause: crisp_notation added
-> `chordName(ChordSymbol)` in a new `theory/chord_name.dart`, colliding with the
-> Tab Workshop's own `chordName(rootPc, label)`. An ambiguous import is an
-> **error**, not a lint, so it took out analyze, the Android build AND the web
-> build together. Fixed by `hide chordName` at the two imports that want the
-> app's version (`af4262f9`).
->
-> ⚠️ **WHY LOCAL GATES MISSED IT, and this will happen again:** CI checks out
-> `crisp_notation@main` **fresh**; a local tree uses the SHARED clone at
-> `../crisp_notation`, which was **nine commits behind**. `flutter analyze` was
-> clean locally while CI ran the same command and failed. Before trusting a
-> local analyze as evidence about CI:
-> `cd ../crisp_notation && git fetch -q origin && git rev-list --left-right --count main...origin/main`
-> must print `0 0`. I have pulled it to `origin/main`; the other agent's
-> uncommitted pubspec WIP there was left untouched.
-
-> 🔬 **THE BUG SHAPE THAT KEEPS COSTING US TIME: a tolerant reader turning a
-> caller's mistake into SILENCE** (2026-08-02, opus/backing-band). Five real
-> defects this arc, all the same shape, none of which threw and all of which
-> produced plausible output:
->
-> | where | what happened |
-> |---|---|
-> | `chord_keypad` | the `m7b5` BUTTON built `(diminished, minor7)`, so it produced a chord that prints `Cdim7` — a different chord, saved permanently. `chart_analysis` accepts BOTH spellings defensively, so every consumer behaved correctly on the malformed spec and nothing ever surfaced it. |
-> | `chart_import` | `parseChartText` is lenient BY DESIGN (an unreadable cell becomes a visible best guess while you type). Reused as a format detector it turned *"just some words about a song"* into six flagged chords and reported success. |
-> | `setlist_screen` | `chartFromJson` takes an already-DECODED object and returns **null** for a String. Passing raw JSON made tapping a song do nothing at all, with no error anywhere. |
-> | `mp3_decoder` | ignored the LAME gapless header, so every MP3 sample arrived 23 ms late. Uniform, so it sounded fine alone and flammed against everything else. |
-> | a test I wrote | an escaping slip put literal `${…}` in the Dart, so it compared lists of IDENTICAL literal strings. It compiled, passed, and asserted nothing. |
->
-> **The rule, and it is cheap:** verify a PRODUCER against its own canonical
-> output — `spec.text`, `format()`, the parsed row, the rendered widget — and
-> never infer correctness from a downstream consumer that still works. The
-> defensive `||` that makes consumers safe is exactly what stops a producer bug
-> from ever surfacing. Corollaries worth knowing before you spend an afternoon:
-> - **A lenient parser cannot double as a format detector.** The two callers
->   want opposite failure modes: the editor must lose nothing, the importer must
->   refuse confidently. Add an explicit evidence test on the RESULT (the
->   format's structural marker present AND a majority of units parsing clean).
-> - **A null-returning reader hides the caller.** If a UI path can return early
->   on null, make it SAY so; the silence is what hides the bug.
-> - **Adding `context.read<T>()` to a shared widget helper breaks every minimal
->   host** (tests, standalone embeds) — the ones you are never editing. Guard
->   the read with a fallback that reproduces the PREVIOUS behaviour, and find
->   the hosts first:
->   `for f in $(grep -rln "TheWidget(" test/); do grep -q "TheService" "$f" || echo "NO PROVIDER: $f"; done`
-> - **A change whose risk lives in files you did not touch is not shippable on
->   targeted tests.** I shipped one on ~350 and CI found it at 7,612.
+> ⏭️ **Next:** the `BB-X` differentiators or `BB-X7`. Shout if you are in
+> `features/harmony/` or the ARBs.
 
 > ⚠️ **`test/on_screen_midi_test.dart` is FLAKY, and here is the exact cause —
 > for whoever owns WS-X5 (2026-08-02, opus/backing-band).** *"⚠️ without this
