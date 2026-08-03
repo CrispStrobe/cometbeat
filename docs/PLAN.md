@@ -1237,7 +1237,38 @@ is recorded in [HISTORY.md](HISTORY.md).
        arpeggio, notehead or (ABC) figured-bass notation; ABC's mid-tune `Q:`
        rides the body text stream and needs the body parser, not a reader tweak.
 
-    ### 📊 Measured: 10,619 → 11,408 of 21,440 (2026-08-03)
+    ### 📊 Measured: 10,619 → 11,489 of 21,440 (2026-08-03)
+
+    Nine sweeps of the same 9,440-file sample: **49.53% → 53.59%**, **65.98% →
+    71.39%** on the six real notation formats, and **`-> lilypond` 62.4% →
+    80.8%**.
+
+    **The last two fixes both came from one question — *why does this file fail
+    IDENTICALLY in four unrelated targets?*** That pattern means the SOURCE read
+    is wrong, not the writers, and it pointed straight at two LilyPond reader
+    defects that had been invisible for the whole arc:
+
+    - **33 of 181 elements had no id.** Exactly one kind: the spacer rests that
+      align an inner `\\` voice to where its split began. Every other reader
+      ids everything. The symptom appeared *three subsystems away* — a span
+      cannot attach to an id-less element, every index-based comparison shifts
+      from that point on (which is why one file's 20 slurs were all present and
+      all mispositioned), and **`scoreToMidi` silently DROPS notes with a null
+      id**, so inner voices read from `.ly` never reached MIDI export at all.
+    - **Lyrics on an inner voice were dropped** — 109 of 160 in one vocal score.
+      `\addlyrics` attaches to the staff's FIRST voice, and two sung parts
+      sharing a staff is the ordinary way choral music is engraved. Fixed with
+      LilyPond's own `\new Voice = "…"` + `\lyricsto`, applied ONLY when an
+      inner voice has lyrics so every other score's output is byte-identical.
+      Its second half only surfaced once the first worked: the reader numbered
+      verses with ONE counter across all blocks, so voice 2's first verse
+      continued voice 1's — six verses where the score has two.
+
+    📌 **Verses belong to a voice, ids belong to every element.** Both defects
+    are the same shape as the rest of this arc: something the model carries that
+    exactly one codec quietly declined to carry.
+
+    ### 📊 Earlier: 10,619 → 11,408 (2026-08-03)
 
     Six sweeps of the same 9,440-file sample, one after each batch:
     **49.53% → 53.21%**, **65.98% → 70.88%** on the six real notation formats,
