@@ -29,15 +29,36 @@ void main() {
   Future<void> settle([int ms = 80]) =>
       Future<void>.delayed(Duration(milliseconds: ms));
 
+  /// Waits until [done], or gives up after [maxMs].
+  ///
+  /// ⚠️ Use this, NOT `settle()`, whenever the test is waiting for a MESSAGE
+  /// to arrive. Sleeping a fixed interval and hoping is a race: the auto-release
+  /// timer is 50ms and `settle()` slept 80ms, a 30ms margin that a stalled
+  /// event loop eats. Measured in the act — 137ms of wall clock elapsed and the
+  /// note-off still had not been delivered — it failed about one run in three,
+  /// which is the worst kind of red because it says nothing about the code.
+  ///
+  /// Polling is fast when things work (it returns on the first check) and
+  /// robust when they do not.
+  Future<void> until(bool Function() done, {int maxMs = 2000}) async {
+    final clock = Stopwatch()..start();
+    while (!done() && clock.elapsedMilliseconds < maxMs) {
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+    }
+  }
+
+  /// Waits for [count] messages to have arrived.
+  Future<void> untilSeen(int count) => until(() => seen.length >= count);
+
   group('a tap becomes a note that ENDS', () {
     test('note-on immediately, note-off after the length', () async {
       keys.tap(60);
-      await settle(10);
+      await untilSeen(1);
       expect(seen, hasLength(1));
       expect(seen.single.isNoteOn, isTrue);
       expect(seen.single.note, 60);
 
-      await settle();
+      await untilSeen(2);
       expect(seen, hasLength(2), reason: 'the note-off must arrive on its own');
       expect(seen.last.isNoteOff, isTrue);
       expect(seen.last.note, 60);
@@ -48,7 +69,7 @@ void main() {
       // naive `onKeyTap` -> note-on bridge passes every other test in this file
       // and fails this one.
       keys.tap(64);
-      await settle();
+      await untilSeen(2);
       final held = HeldNotes();
       for (final message in seen) {
         held.apply(message);
@@ -60,7 +81,7 @@ void main() {
       for (final note in [60, 64, 67]) {
         keys.tap(note);
       }
-      await settle();
+      await untilSeen(6); // three on, three off
       final held = HeldNotes();
       for (final message in seen) {
         held.apply(message);
@@ -73,29 +94,55 @@ void main() {
 
   group('re-tapping while still ringing', () {
     test('it restarts the note rather than stacking timers', () async {
-      // The bug this prevents: two timers, the first one's note-off cutting
-      // the second tap short, which sounds like a dropped note.
-      keys.tap(60);
-      await settle(20);
-      keys.tap(60);
-      await settle(20);
-      // The first timer would have fired by now if it were still pending.
-      expect(keys.isRinging(60), isTrue, reason: 'the SECOND tap still holds');
+      // ⚠️ NO SLEEPS AND NO SHARED `keys`. The property is "a second tap
+      // arriving WHILE the first is still ringing", and with the 50ms note the
+      // rest of the file uses, that precondition is itself a race — any pause
+      // between the taps and the first note has already released, making the
+      // second an unrelated fresh note. Two earlier attempts failed exactly
+      // there, one of them mine.
+      //
+      // A note long enough to outlive the test removes time from the question
+      // altogether: both taps land inside it by construction, and the counts
+      // then say everything. If the timers STACKED there would be two
+      // note-offs; if the second tap were swallowed there would be one
+      // note-on.
+      final long = OnScreenMidi(noteLength: const Duration(seconds: 30));
+      final heard = <MidiMessage>[];
+      long.input.messages.listen(heard.add);
+      addTearDown(long.dispose);
 
-      await settle();
-      expect(keys.isRinging(60), isFalse);
+      long.tap(60);
+      long.tap(60);
+      expect(long.isRinging(60), isTrue, reason: 'still inside the 30s note');
+
+      long.releaseAll();
+      await until(() => heard.length >= 3);
+
+      expect(
+        heard.where((m) => m.isNoteOn).length,
+        2,
+        reason: 'both taps must sound',
+      );
+      expect(
+        heard.where((m) => m.isNoteOff).length,
+        1,
+        reason: "the first tap's timer must have been CANCELLED, not stacked",
+      );
       final held = HeldNotes();
-      for (final message in seen) {
+      for (final message in heard) {
         held.apply(message);
       }
-      expect(held.isEmpty, isTrue);
+      expect(held.isEmpty, isTrue, reason: 'nothing left sounding');
     });
   });
 
   group('a real press and release', () {
     test('it holds until released, however long that is', () async {
       keys.press(60);
-      await settle(120); // well past the tap length
+      // A REAL sleep, deliberately: this proves a note-off does NOT arrive,
+      // and you cannot poll for a non-event. A stall only makes it more
+      // conclusive, so it is safe where a wait-for-arrival is not.
+      await settle(120);
       expect(
         seen.where((m) => m.isNoteOff),
         isEmpty,
@@ -103,16 +150,16 @@ void main() {
       );
 
       keys.release(60);
-      await settle(10);
+      await until(() => seen.any((m) => m.isNoteOff));
       expect(seen.last.isNoteOff, isTrue);
     });
 
     test('pressing a note that was tapped cancels the auto-release', () async {
       // Otherwise a stale timer releases a key the user is still holding.
       keys.tap(60);
-      await settle(10);
+      await untilSeen(1);
       keys.press(60);
-      await settle(120);
+      await settle(120); // a real wait: proving the auto-release does NOT fire
       final held = HeldNotes();
       for (final message in seen) {
         held.apply(message);
@@ -177,7 +224,7 @@ void main() {
   group('velocity', () {
     test('a per-tap velocity overrides the default', () async {
       keys.tap(60, velocity: 30);
-      await settle(10);
+      await untilSeen(1);
       expect(seen.single.velocity, 30);
     });
 
@@ -186,7 +233,7 @@ void main() {
       // screen must not be able to break the input by being off by one — and
       // 0 in particular would mean note-OFF, silently swallowing the note.
       keys.tap(60, velocity: 0);
-      await settle(10);
+      await untilSeen(1);
       expect(seen.single.velocity, greaterThan(0));
       expect(
         seen.single.isNoteOn,
@@ -196,7 +243,7 @@ void main() {
 
       seen.clear();
       keys.tap(62, velocity: 999);
-      await settle(10);
+      await untilSeen(1);
       expect(seen.single.velocity, 127);
     });
   });
