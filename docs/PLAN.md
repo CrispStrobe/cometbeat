@@ -1237,7 +1237,53 @@ is recorded in [HISTORY.md](HISTORY.md).
        arpeggio, notehead or (ABC) figured-bass notation; ABC's mid-tune `Q:`
        rides the body text stream and needs the body parser, not a reader tweak.
 
-    ### 📊 Measured: 10,619 → 11,561 of 21,440 (2026-08-03)
+    ### 📊 Measured: 10,619 → 11,563 of 21,440 (2026-08-03)
+
+    Fifteen sweeps of the same 9,440-file sample: **49.53% → 53.93%**, **65.98%
+    → 71.85%** on the six real notation formats, **`-> lilypond` 62.4% →
+    81.2%**, **`-> kern` 45.7% → 50.2%**.
+
+    ## 🔁 kern has TWO writer paths, and only one of them was complete
+
+    Three defects in a row, all the same shape: a feature added to the obvious
+    single-voice path and never to `_multiVoiceRows`. **A piano score is ALWAYS
+    multi-voice, so "some scores lose this" really meant "all piano music
+    does".** Whenever a codec branches, diff the branches.
+
+    - **Mid-bar clefs** — none at all. In Humdrum an interpretation must span
+      every spine, so a clef is its own ROW with one `*clef…` per sub-spine,
+      never a token inside a data row.
+    - **Grace notes** — none at all. A grace carries no rhythmic time, so it
+      cannot ride the onset merge that builds the rows; it needs its own row
+      ahead of its principal, `.` in the other columns.
+    - 🛑 **Dynamics, lyrics, chord symbols and figured bass are STILL dropped**
+      for any multi-voice score. This one is stated in the code —
+      *"Only the single-voice path is paired; a multi-voice score keeps both
+      out of scope"* — and it is a real design piece, not a contained fix:
+      `_kernWithExtraSpines` builds the whole `**dynam`/`**text` layout for the
+      single-voice case, and combining that with the sub-spine row merge is a
+      rewrite of both. **Left deliberately, not overlooked.**
+
+    📌 **How the last two were found: the first-divergence INDEX moved.**
+    `001-1-BRZ.krn` went 493 → 1268 → 1658 across the three fixes while its
+    cell count never budged, because the file still failed. **Progress inside a
+    file is invisible to a pass/fail count** — read the index, not just the
+    percentage, or a working fix looks like a no-op. (One sweep came back
+    byte-identical in total and I nearly concluded the fix had not shipped.)
+
+    ## ⚖️ Measured but NOT changed: a restated meter
+
+    Three readers suppress a `<time>`/meter change equal to the running one
+    (`signature != _time`), so a score that RESTATES its meter mid-piece loses
+    that restatement; kern keeps it. Measured before deciding: of 681 corpus
+    MusicXML/`.mxl` files, **534 carry more than one `<time>` but only 2 restate
+    it in ≥50% of bars** — so the pathology the guard protects against is ~0.3%.
+    **Left as is anyway:** removing the guard trades a cosmetic fidelity gain
+    for a rendering regression (a meter drawn at every bar) that cannot be
+    validated from here. The numbers are recorded so the next person decides
+    with data instead of re-deriving them.
+
+    ### 📊 Earlier: 10,619 → 11,561 (2026-08-03)
 
     Twelve sweeps of the same 9,440-file sample: **49.53% → 53.92%**, **65.98%
     → 71.83%** on the six real notation formats, **`-> lilypond` 62.4% →
