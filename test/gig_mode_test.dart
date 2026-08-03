@@ -1,5 +1,6 @@
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/setlist.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
 import 'package:comet_beat/features/harmony/gig_mode_screen.dart';
@@ -286,6 +287,157 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('1 of 1'), findsOneWidget);
+    });
+  });
+
+  group('the real wake lock', () {
+    testWidgets('a missing platform channel does not stop the set opening',
+        (tester) async {
+      // ⚠️ The guard's whole point. A wake lock is a nice-to-have; a set that
+      // will not open because the screen could not be kept on is far worse
+      // than a screen that dims. In a widget test no plugin is registered, so
+      // this exercises exactly the throwing path.
+      final charts = await _seed({'Tune': '| C | F |'});
+      await tester.pumpWidget(
+        _host(
+          GigModeScreen(
+            charts: charts,
+            setlist: const Setlist(
+              name: 'Friday',
+              entries: [SetlistEntry(chartName: 'Tune')],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tune'), findsOneWidget);
+      expect(find.text('C'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('playback and auto-advance', () {
+    testWidgets('with no player there is no transport at all', (tester) async {
+      // Gig mode degrades to the reading surface rather than showing dead
+      // buttons — the same rule as the Song Book's "play with band".
+      final charts = await _seed({'Tune': '| C |'});
+      await tester.pumpWidget(
+        _host(
+          GigModeScreen(
+            charts: charts,
+            keepAwake: KeepAwake.none,
+            setlist: const Setlist(
+              name: 'Friday',
+              entries: [SetlistEntry(chartName: 'Tune')],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('gigPlay')), findsNothing);
+      expect(find.byKey(const ValueKey('gigAutoAdvance')), findsNothing);
+      // …and the set is still readable, which is the point.
+      expect(find.text('C'), findsWidgets);
+    });
+
+    testWidgets('with a player the transport appears, off by default',
+        (tester) async {
+      final charts = await _seed({'Tune': '| C | F |'});
+      await tester.pumpWidget(
+        _host(
+          GigModeScreen(
+            charts: charts,
+            keepAwake: KeepAwake.none,
+            audio: AudioService(),
+            setlist: const Setlist(
+              name: 'Friday',
+              entries: [SetlistEntry(chartName: 'Tune')],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('gigPlay')), findsOneWidget);
+      // ⚠️ Auto-advance is OFF by default. A set that starts moving on its own
+      // is alarming the first time; a player who wants it will find the switch.
+      final toggle = tester.widget<SwitchListTile>(
+        find.byKey(const ValueKey('gigAutoAdvance')),
+      );
+      expect(toggle.value, isFalse);
+    });
+
+    testWidgets('moving by hand stops the band', (tester) async {
+      // Leaving the previous song playing under the new chart is the one
+      // behaviour nobody wants on a stand.
+      final charts = await _seed({'One': '| C |', 'Two': '| F |'});
+      await tester.pumpWidget(
+        _host(
+          GigModeScreen(
+            charts: charts,
+            keepAwake: KeepAwake.none,
+            audio: AudioService(),
+            setlist: const Setlist(
+              name: 'Friday',
+              entries: [
+                SetlistEntry(chartName: 'One'),
+                SetlistEntry(chartName: 'Two'),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('gigNext')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 of 2'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('what happens when a song ends', () {
+    // The decision itself, tested exhaustively without a clock. A widget test
+    // CANNOT drive a song to its end here: `testWidgets` runs in a fake-async
+    // zone while the playhead is a real `Stopwatch`, so awaiting a delay that
+    // only advances when pumped deadlocks. I hung a test for ten minutes
+    // proving it before pulling the decision out.
+    test('auto-advance moves on, mid-set', () {
+      expect(
+        gigEnding(autoAdvance: true, index: 0, lastIndex: 3),
+        GigEnding.advance,
+      );
+      expect(
+        gigEnding(autoAdvance: true, index: 2, lastIndex: 3),
+        GigEnding.advance,
+      );
+    });
+
+    test('the END of the set stops rather than wrapping', () {
+      // Same rule as `next` being a dead end there: the set finished.
+      expect(
+        gigEnding(autoAdvance: true, index: 3, lastIndex: 3),
+        GigEnding.stop,
+      );
+    });
+
+    test('with auto-advance off it always stops', () {
+      for (var i = 0; i <= 3; i++) {
+        expect(
+          gigEnding(autoAdvance: false, index: i, lastIndex: 3),
+          GigEnding.stop,
+          reason: 'song $i',
+        );
+      }
+    });
+
+    test('a one-song set stops', () {
+      expect(
+        gigEnding(autoAdvance: true, index: 0, lastIndex: 0),
+        GigEnding.stop,
+      );
     });
   });
 }

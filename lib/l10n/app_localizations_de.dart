@@ -9624,4 +9624,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get chartUnfavourite => 'Markierung entfernen';
+
+  @override
+  String get gigPlay => 'Abspielen';
+
+  @override
+  String get gigPause => 'Stopp';
+
+  @override
+  String get gigAutoAdvance => 'Automatisch weiter';
 }

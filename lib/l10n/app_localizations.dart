@@ -17341,6 +17341,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove star'**
   String get chartUnfavourite;
+
+  /// No description provided for @gigPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get gigPlay;
+
+  /// No description provided for @gigPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get gigPause;
+
+  /// No description provided for @gigAutoAdvance.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-advance'**
+  String get gigAutoAdvance;
 }
 
 class _AppLocalizationsDelegate

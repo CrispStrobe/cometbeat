@@ -126,6 +126,7 @@ dependencies:
   glint_vorbis:
     path: native/glint
   sqlite3: ^3.5.0
+  wakelock_plus: ^1.3.3
 dependency_overrides:
   crisp_notation_core:
     path: ../crisp_notation/packages/crisp_notation_core

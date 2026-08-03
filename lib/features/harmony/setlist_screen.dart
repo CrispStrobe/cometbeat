@@ -15,11 +15,13 @@
 library;
 
 import 'package:comet_beat/core/harmony/setlist.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_screen.dart';
 import 'package:comet_beat/features/harmony/gig_mode_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The list of saved setlists.
@@ -278,6 +280,17 @@ class _SetlistDetailScreenState extends State<SetlistDetailScreen> {
                   builder: (_) => GigModeScreen(
                     setlist: setlist,
                     charts: charts,
+                    // Read here and passed down, so gig mode never touches
+                    // the tree itself.
+                    //
+                    // ⚠️ GUARDED. I wrote "where a provider is guaranteed"
+                    // and it was not: this screen is pumped standalone in its
+                    // own tests, and an unguarded read threw exactly as it did
+                    // earlier in this arc. Without a service gig mode is the
+                    // reading surface, which is the behaviour that existed
+                    // before playback — the only fallback that cannot regress
+                    // anyone.
+                    audio: _audioOrNull(context),
                   ),
                 ),
               ),
@@ -556,4 +569,16 @@ Future<List<String>?> _pickCharts(BuildContext context, ChartStore charts) {
       ),
     ),
   );
+}
+
+/// The [AudioService] above [context], or null when there is none.
+///
+/// See `provider-read-in-shared-helper`: a screen that a test can pump on its
+/// own must tolerate a tree that does not provide what the app's tree does.
+AudioService? _audioOrNull(BuildContext context) {
+  try {
+    return context.read<AudioService>();
+  } on ProviderNotFoundException {
+    return null;
+  }
 }

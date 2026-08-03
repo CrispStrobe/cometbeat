@@ -9569,4 +9569,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartUnfavourite => 'Remove star';
+
+  @override
+  String get gigPlay => 'Play';
+
+  @override
+  String get gigPause => 'Stop';
+
+  @override
+  String get gigAutoAdvance => 'Auto-advance';
 }

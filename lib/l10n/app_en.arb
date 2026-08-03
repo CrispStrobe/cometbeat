@@ -4089,5 +4089,8 @@
   "chartSearchNone": "Nothing matches that.",
   "chartFavourites": "Starred only",
   "chartFavourite": "Star this chart",
-  "chartUnfavourite": "Remove star"
+  "chartUnfavourite": "Remove star",
+  "gigPlay": "Play",
+  "gigPause": "Stop",
+  "gigAutoAdvance": "Auto-advance"
 }

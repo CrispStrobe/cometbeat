@@ -1945,14 +1945,29 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
       `readOnly: true` flag is exactly the kind of thing a refactor drops.
     - **The ends of the set are dead ends, not wraps.** Rolling round to the
       first tune after the last is wrong on a stand: the set ENDED.
-    - ⚠️ **The wake-lock is a SEAM (`KeepAwake`), not an implementation.** It
-      needs a platform plugin → a `pubspec.yaml` change plus per-platform
-      verification, which is not a unilateral mid-session call with other
-      agents in the tree. The default does nothing and says so. A recording
-      double proves it is asked on entry and, more importantly, RELEASED on the
-      way out — a phone that never sleeps again after one gig is a bug the user
-      rightly blames on the app. **To finish: pick the plugin, implement one
-      subclass, pass it in. This screen does not change.**
+    - ✅ **The wake-lock is REAL** (`wakelock_plus`, 2026-08-03). `KeepAwake`
+      stays a seam so a widget test can assert WHEN the screen is asked to stay
+      awake without a platform channel, and a recording double still proves it
+      is RELEASED on the way out — a phone that never sleeps again after one
+      gig is a bug the user rightly blames on the app. **Every call is
+      guarded**: a wake lock is a nice-to-have, and a set that will not open
+      because the screen could not be kept on is far worse than a screen that
+      dims. A test exercises exactly that path, since no plugin is registered
+      in a widget test. Web build verified — Pages builds web, so a plugin
+      without web support would have reddened it.
+    - ✅ **AUTO-ADVANCE SHIPPED** (2026-08-03). Gig mode renders and plays the
+      current song's band; when it ends the set moves on. **Off by default** —
+      a set that starts moving on its own is alarming the first time. Moving by
+      hand stops the band, because leaving the previous song playing under the
+      new chart is the one behaviour nobody wants on a stand.
+      - ⚠️ **`AudioService` is PASSED IN, not read from the tree**, and without
+        one gig mode degrades to the reading surface rather than crashing.
+      - ⚠️ **A widget test CANNOT drive a song to its end here.** `testWidgets`
+        runs in a FAKE-async zone while the playhead is a real `Stopwatch`, so
+        awaiting a delay that only advances when pumped DEADLOCKS — I hung a
+        test for ten minutes proving it. The decision is therefore extracted as
+        a pure `gigEnding()` and tested exhaustively, including the rule that is
+        easy to get wrong: at the END of the set it STOPS rather than wrapping.
   - ✅ **SEARCH + FAVOURITES SHIPPED** (`core/harmony/chart_search.dart` +
     the library sheet; 20 pure-Dart tests + 3 through the UI).
     - **One free-text box, not five filter controls** — that is how a player
@@ -1973,11 +1988,10 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
       be visible, so a player can see WHY a result came back.
     - Matching is pure Dart so its edge cases are testable without pumping a
       sheet.
-  - ⬜ **Still to build, and both need MODEL work rather than UI.**
-    **Auto-advance** — needs band PLAYBACK inside gig mode, not just display,
-    so it is a real slice rather than a flag. **Tags** — `Chart` has no tag
-    field. **"Recently played"** — needs tracking distinct from `savedAtMs`,
-    which records when a chart was SAVED, not when it was played.
+  - ⬜ **Still to build, and both need MODEL work rather than UI.** **Tags** —
+    `Chart` has no tag field. **"Recently played"** — needs tracking distinct
+    from `savedAtMs`, which records when a chart was SAVED, not when it was
+    played.
   - ⚠️ **Do not move the per-song override onto the chart.** Still the one thing
     the model exists to prevent, and it will still look like a simplification.
   - **Superseded card text below (kept for its reasoning).**

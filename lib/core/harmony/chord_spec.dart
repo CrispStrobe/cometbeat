@@ -88,13 +88,12 @@ class ChordSymbolStyle {
   /// `♭`/`♯` instead of `b`/`#`.
   final bool unicodeAccidentals;
 
-  /// `∆` for a major seventh and `°` for a diminished.
+  /// `∆` for a major seventh, `ø` for a half-diminished, `°` for a diminished.
   ///
-  /// ⚠️ NOT `ø` for a half-diminished, deliberately — that prints `m7♭5`, and
-  /// `chord_spec_test.dart` pins it. The parser DOES read `ø` (it is one of
-  /// the five accepted spellings), so this is an asymmetry on purpose: we
-  /// accept the engraved glyph and print the name more players can read.
-  /// Revisit only as a decision, not as a bug — see BB-U6.
+  /// `ø` absorbs the core mark, the seventh AND the flat five — `Cø7`, not
+  /// `Cmø7♭5`. It is gated to this style on purpose: reading it is a skill, so
+  /// below expert (see `ChartLevel.symbolStyle`) the same chord prints
+  /// `Cm7♭5`, which is the name more players know. Both spellings parse.
   final bool jazzGlyphs;
 
   /// The German convention: the natural B prints as `H`, and B♭ prints as `B`.
@@ -332,14 +331,28 @@ class ChordSpec {
     return fuses ? '($suffix)' : suffix;
   }
 
+  /// A half-diminished seventh: a MINOR core carrying a flattened fifth.
+  ///
+  /// Not `triad == diminished` — see the class doc. This is the shape the `ø`
+  /// glyph stands for, and it absorbs BOTH the `m` and the `♭5`.
+  bool get _isHalfDiminished =>
+      triad == ChordTriad.minor &&
+      seventh == ChordSeventh.minor &&
+      alterations.contains(ChordAlteration.flatFive);
+
   String _qualitySuffix(ChordSymbolStyle style) {
     final b = StringBuffer();
     final acc = _Accidentals(style);
 
+    // `ø` replaces the core mark, the seventh AND the flat five in one glyph —
+    // `Cø7`, not `Cmø7♭5`. Engraved spelling only: below the jazz style these
+    // still print `Cm7♭5`, which is the name more players read.
+    final halfDimGlyph = style.jazzGlyphs && _isHalfDiminished;
+
     // 1. the core mark
     switch (triad) {
       case ChordTriad.minor:
-        b.write('m');
+        b.write(halfDimGlyph ? 'ø' : 'm');
       case ChordTriad.diminished:
         // A half-diminished is a minor core with a flat five, so anything
         // reaching here with a minor seventh is a true diminished spelling.
@@ -399,6 +412,8 @@ class ChordSpec {
     ];
     for (final a in order) {
       if (!alterations.contains(a)) continue;
+      // Absorbed by `ø`; printing it too would say the fifth twice.
+      if (halfDimGlyph && a == ChordAlteration.flatFive) continue;
       b.write(
         switch (a) {
           ChordAlteration.flatFive => '${acc.flat}5',

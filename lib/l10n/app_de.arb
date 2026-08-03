@@ -3519,5 +3519,8 @@
   "chartSearchNone": "Dazu passt nichts.",
   "chartFavourites": "Nur markierte",
   "chartFavourite": "Stück markieren",
-  "chartUnfavourite": "Markierung entfernen"
+  "chartUnfavourite": "Markierung entfernen",
+  "gigPlay": "Abspielen",
+  "gigPause": "Stopp",
+  "gigAutoAdvance": "Automatisch weiter"
 }

@@ -105,12 +105,12 @@ void main() {
         altered.format(style: ChartLevel.beginner.symbolStyle),
         'F#m7b5',
       );
-      // Expert differs only in the ACCIDENTAL glyphs. Note it is NOT `ø`:
-      // the formatter prints `m♭5` on purpose and a test pins that, so the
-      // dial's "print convention" axis is currently unicode-vs-ASCII only.
+      // Expert prints the engraved spelling — `ø` absorbing the `m`, the `7`
+      // and the `♭5`. This IS the dial's "print convention" axis: the same
+      // chord, named the way each reader expects.
       expect(
         altered.format(style: ChartLevel.expert.symbolStyle),
-        'F♯m7♭5',
+        'F♯ø7',
       );
     });
   });

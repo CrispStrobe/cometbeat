@@ -477,7 +477,13 @@ void main() {
       const jazz = ChordSymbolStyle.jazz;
       expect(parseChordSpec('Cmaj7')!.format(style: jazz), 'C∆7');
       expect(parseChordSpec('Cdim7')!.format(style: jazz), 'C°7');
-      expect(parseChordSpec('F#m7b5')!.format(style: jazz), 'F♯m7♭5');
+      // `ø` absorbs the `m`, the `7` and the `♭5` in one glyph.
+      expect(parseChordSpec('F#m7b5')!.format(style: jazz), 'F♯ø7');
+      expect(parseChordSpec('Cm9b5')!.format(style: jazz), 'Cø9');
+      // …but only for a genuine half-diminished. A true diminished seventh
+      // keeps `°`, and a plain minor seventh keeps `m`.
+      expect(parseChordSpec('Cdim7')!.format(style: jazz), 'C°7');
+      expect(parseChordSpec('Cm7')!.format(style: jazz), 'Cm7');
       expect(parseChordSpec('Bb7#11')!.format(style: jazz), 'B♭7♯11');
     });
 
