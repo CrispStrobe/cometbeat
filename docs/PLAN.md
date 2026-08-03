@@ -1237,7 +1237,48 @@ is recorded in [HISTORY.md](HISTORY.md).
        arpeggio, notehead or (ABC) figured-bass notation; ABC's mid-tune `Q:`
        rides the body text stream and needs the body parser, not a reader tweak.
 
-    ### 📊 Measured: 10,619 → 11,563 of 21,440 (2026-08-03)
+    ### 📊 Measured: 10,619 → 11,572 of 21,440 (2026-08-03)
+
+    Eighteen sweeps of the same 9,440-file sample: **49.53% → 53.97%**, and
+    **`-> lilypond` 62.4% → 81.5%**.
+
+    ## 🛑 The biggest "format limitation" in this file was not one
+
+    This section previously recorded 81 sweep failures as ONE hard LilyPond
+    limitation — it derives barlines from durations plus the meter and *"has no
+    representation for a bar exceeding its meter"*, so it re-bars and everything
+    after shifts. A 135-bar motet came back with 152, and this was essentially
+    the whole `krn -> lilypond` gap against the other three formats
+    (79.8% vs ~93%).
+
+    **It does have a representation: `\set Timing.measureLength`** — which the
+    same note named as the principled fix. The writer emits it when a bar
+    exceeds the running length; the reader honours it in place of the meter's
+    capacity. ⚠️ `\time` RESETS it in LilyPond, so the override must not
+    outlive a meter change — without that the piece re-bars one step later
+    instead, which looks like the fix half-working.
+
+    **Two over-reaches the corpus caught, at a net −7 before they were fixed:**
+    - the bar's content is the **longest voice**, not voice 1 — which need not
+      fill the bar when another voice does;
+    - and only an **over-full** bar needs the override. An under-full one
+      already round-trips, because the writer emits an explicit `|` after every
+      measure and the reader closes on it. Announcing a shorter length for
+      those cost 14 MusicXML round trips on its own.
+
+    📌 **The model already has the right concept** — `Measure.actualDuration`
+    with `capacityGiven()`, documented as *"use this, not the raw meter"* — but
+    **no reader populates it**, so inference from the elements is currently the
+    only signal available. Populating it in the readers is the cleaner
+    long-term fix and would remove the guesswork above.
+
+    ⚖️ **Lesson for this whole arc: a recorded "format limitation" is a
+    hypothesis with a date on it.** Four were checked in the last two sessions
+    and three were wrong — multi-note slashed graces, one-slur-at-a-time, cue
+    notes, and now irregular bars. Only the time-signature GLYPH survived
+    scrutiny. Re-test them; don't inherit them.
+
+    ### 📊 Earlier: 10,619 → 11,563 (2026-08-03)
 
     Fifteen sweeps of the same 9,440-file sample: **49.53% → 53.93%**, **65.98%
     → 71.85%** on the six real notation formats, **`-> lilypond` 62.4% →
