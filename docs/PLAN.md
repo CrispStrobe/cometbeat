@@ -1237,7 +1237,42 @@ is recorded in [HISTORY.md](HISTORY.md).
        arpeggio, notehead or (ABC) figured-bass notation; ABC's mid-tune `Q:`
        rides the body text stream and needs the body parser, not a reader tweak.
 
-    ### 📊 Measured: 10,619 → 11,317 of 21,440 (2026-08-03)
+    ### 📊 Measured: 10,619 → 11,408 of 21,440 (2026-08-03)
+
+    Six sweeps of the same 9,440-file sample, one after each batch:
+    **49.53% → 53.21%**, **65.98% → 70.88%** on the six real notation formats,
+    and **`-> lilypond` 62.4% → 78.7%** — LilyPond was the worst capable target
+    and got most of the attention, since it is the one we ship natively.
+
+    ⚠️ **Three "format limits" in the last batch turned out to be assumptions,
+    and one turned out to be real.** The pattern is worth more than the fixes:
+
+    - **Cue notes** — written off because `\cueDuring` quotes another voice,
+      which a flat measure list cannot produce. True and irrelevant: the model
+      defines a cue note as one drawn at reduced SCALE, which is exactly
+      `\tweak font-size`. **Read the model before declaring a limit.** Channel
+      160 → 87.
+    - **A hairpin on ONE note** — dropped because close-before-open is the rule
+      for two DIFFERENT spans meeting, and exactly backwards for one span on
+      one note. `\!\>` closes nothing and leaves a hairpin open forever; it
+      has to be `\>\!`, and the ORDERING is what tells the two cases apart.
+    - **A hyphenated `\tweak` property** — `font-size` never matched because
+      `-` is the script marker, so the lexer splits it into `font`, `-`,
+      `size`. `NoteHead.style` worked only because it has no hyphen.
+    - **The time-signature glyph IS a real limit.** LilyPond does not store
+      which glyph was chosen: `\defaultTimeSignature` derives it from the
+      fraction, so cut-C over 4/4 cannot be written without a custom stencil —
+      and early-American psalm collections write exactly that. Recorded in the
+      test rather than papered over with an invented encoding.
+
+    🛑 **And the test that could not see it.** The time-symbol test used only
+    the CONVENTIONAL pairings (4/4 as C, 2/2 as cut-C) — precisely where
+    LilyPond's inference and the written truth agree. **A test built from the
+    conventional case is blind to the case that matters.** Same shape as the
+    round-trip matrix being blind to reader-only syntax, and as the lyric
+    comparison that keyed on ids rather than positions.
+
+    ### 📊 Earlier in the day: 10,619 → 11,317 (2026-08-03)
 
     Four sweeps of the same 9,440-file sample, one after each batch of fixes:
     **49.53% → 52.78%**, and **65.98% → 70.32%** on the six real notation
