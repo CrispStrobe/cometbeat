@@ -1237,7 +1237,43 @@ is recorded in [HISTORY.md](HISTORY.md).
        arpeggio, notehead or (ABC) figured-bass notation; ABC's mid-tune `Q:`
        rides the body text stream and needs the body parser, not a reader tweak.
 
-    ### 📊 Measured: 10,619 → 11,489 of 21,440 (2026-08-03)
+    ### 📊 Measured: 10,619 → 11,561 of 21,440 (2026-08-03)
+
+    Twelve sweeps of the same 9,440-file sample: **49.53% → 53.92%**, **65.98%
+    → 71.83%** on the six real notation formats, **`-> lilypond` 62.4% →
+    81.2%**.
+
+    **One diagnostic question did most of the late work: *why does this file
+    fail IDENTICALLY across several unrelated targets?*** Four separate defects
+    answered to it, and none was in the format it appeared in:
+
+    - **33 elements with no id** (the spacer rests aligning an inner `\\`
+      voice). Spans cannot attach to them, indices shift from there on, and
+      `scoreToMidi` DROPS null-id notes — so inner voices read from `.ly` never
+      reached MIDI at all.
+    - **Inner-voice lyrics dropped** — `\addlyrics` addresses the staff's first
+      voice, and two sung parts per staff is how choral music is engraved.
+    - **A note opening TWO hairpins kept one, with the other's direction** —
+      the corpus has `292-292:crescendo` on the same note as
+      `292-293:diminuendo`. Single-slot maps in the LilyPond and MuseScore
+      writers; the same list-not-slot shape as the slur maps.
+    - **A clef at the BAR'S END onset was dropped by every writer.** It sits
+      past the last element, so a loop emitting clefs *before* each element
+      never reaches it — and that is exactly where kern puts a `*clef`
+      announced at the end of a measure. 22 of 37 in one piano score.
+
+    📌 **When several independent targets agree, they are not all wrong the
+    same way — the SOURCE read or a shared assumption is.** That is now the
+    first thing to check in the report, ahead of any per-codec triage.
+
+    **Still open, and each is a decision rather than a puzzle:**
+    - **kern's MULTI-VOICE path emits no inline clefs** (only its single-voice
+      path does). Needs the clef records placed across the parallel spine rows.
+    - `gp` / `midi` targets — still ~52% of remaining failures, owned elsewhere.
+    - The 285 shipped `db.json` rows awaiting a re-index behind the publish
+      gate, plus the one-row-or-seventeen question for multi-tune ABC files.
+
+    ### 📊 Earlier: 10,619 → 11,489 (2026-08-03)
 
     Nine sweeps of the same 9,440-file sample: **49.53% → 53.59%**, **65.98% →
     71.39%** on the six real notation formats, and **`-> lilypond` 62.4% →
