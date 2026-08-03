@@ -169,17 +169,36 @@ jobs:
       - name: Build & sign .pkg (xcodebuild, manual signing)
         run: |
           set -euo pipefail
-          # Same "archive unsigned, sign at export" pattern as iOS: CI holds only
-          # the Distribution private key, and a bare archive would demand a
-          # Development identity it cannot have.
+          # ⚠️ macOS SIGNS AT ARCHIVE TIME — the opposite of ios-release.yml, and
+          # the difference is not cosmetic. iOS archives UNSIGNED because a bare
+          # `xcodebuild archive` demands an iOS *Development* profile that CI
+          # cannot have. Doing the same on macOS produces a .pkg that Apple
+          # rejects with:
+          #     ERROR 90296: App sandbox not enabled. The following executables
+          #     must include the "com.apple.security.app-sandbox" entitlement.
+          # because `-exportArchive` re-signs WITHOUT the project's
+          # Release.entitlements, so the sandbox key never reaches the binaries.
+          # macOS has no development-profile requirement for a generic macOS
+          # destination, so manual Distribution signing works here and carries
+          # the entitlements through.
           PATH="/usr/bin:$PATH" flutter build macos --release --config-only
           PATH="/usr/bin:$PATH" env -u GEM_HOME -u GEM_PATH -u RUBYOPT \
             pod install --project-directory=macos
           PATH="/usr/bin:$PATH" xcodebuild -workspace macos/Runner.xcworkspace -scheme Runner \
             -configuration Release -destination 'generic/platform=macOS' \
             -archivePath build/macos/archive/Runner.xcarchive \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ env.PROFILE_NAME }}" \
+            DEVELOPMENT_TEAM="${{ secrets.ASC_TEAM_ID }}" \
             clean archive
+          # Prove the sandbox entitlement actually landed, BEFORE spending two
+          # minutes on an altool round trip that would only tell us the same.
+          APP=build/macos/archive/Runner.xcarchive/Products/Applications/CometBeat.app
+          codesign -d --entitlements - --xml "$APP" 2>/dev/null \
+            | plutil -convert xml1 -o - - | grep -q 'app-sandbox' \
+            || { echo "::error::the archived .app has no app-sandbox entitlement; Apple will reject it (90296)"; exit 1; }
+          echo "app-sandbox entitlement present in the archive"
           PATH="/usr/bin:$PATH" xcodebuild -exportArchive \
             -archivePath build/macos/archive/Runner.xcarchive \
             -exportPath build/macos/pkg \
