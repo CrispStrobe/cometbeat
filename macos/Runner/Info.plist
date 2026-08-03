@@ -22,6 +22,13 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
+	<!-- Export compliance. Without this Apple parks every upload at
+	     MISSING_EXPORT_COMPLIANCE and the build cannot be assigned to ANY
+	     TestFlight group until a human (or an API PATCH) answers it. ios/Runner
+	     has always declared it; macOS did not, which is why macOS build 4 landed
+	     blocked. The app ships no non-exempt cryptography. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSMinimumSystemVersion</key>
