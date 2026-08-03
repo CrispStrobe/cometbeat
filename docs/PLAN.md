@@ -1237,6 +1237,64 @@ is recorded in [HISTORY.md](HISTORY.md).
        arpeggio, notehead or (ABC) figured-bass notation; ABC's mid-tune `Q:`
        rides the body text stream and needs the body parser, not a reader tweak.
 
+    ### 📊 Measured: 10,619 → 11,317 of 21,440 (2026-08-03)
+
+    Four sweeps of the same 9,440-file sample, one after each batch of fixes:
+    **49.53% → 52.78%**, and **65.98% → 70.32%** on the six real notation
+    formats. `-> lilypond` alone went **71.0% → 75.3%**.
+
+    | channel | before | after | |
+    |---|---|---|---|
+    | bar | 1,695 | 1,248 | −447 |
+    | slur | 354 | 249 | −105 |
+    | ann | 1,133 | 1,032 | −101 |
+    | note | 4,711 | 4,622 | −89 |
+    | lyric | 1,031 | 972 | −59 |
+    | dyn | 560 | 503 | −57 |
+    | hairpin | 633 | 728 | **+95** |
+    | cue | 132 | 160 | **+28** |
+
+    ⚠️ **The risers are not regressions** — first-divergence attribution means a
+    file that used to stop at `bar` now reaches `hairpin`. Only the TOTAL is a
+    regression signal, and it moved +698. `bar` was the largest remaining
+    channel at the start of the day and is no longer.
+
+    **📌 Where the rest actually is: 52% of all remaining failures are the `gp`
+    and `midi` target columns**, at 0.1% and 0.2% — both known-bad and scoped to
+    whoever owns `scoreToMidi`. `-> abc` (21.8%) and `-> kern` (49.9%) are next,
+    and most of THAT is format truth: neither carries a hairpin, arpeggio,
+    notehead, cue note, ottava, pedal, trill extension or glissando, so the rich
+    signature marks them failed on any score using one. The four capable targets
+    sit at 93.1% (mei), 92.1% (musescore), 88.3% (musicxml) and 75.3%
+    (lilypond) — so LilyPond is where the real remaining work is, and it is the
+    one we ship natively.
+
+    **Found by reading the report, not the code.** Each of these was a cell
+    disagreeing about something specific:
+    - `lyric@1:1:1.  vs lyric@1:1:1.` — two strings that look identical and
+      differ by a trailing space. The space was the tell, not the bug: **the
+      LilyPond reader was singing `\lyricsto "Melodie"`'s VOICE NAME and
+      `\set stanza = #"1. "`'s marker as syllables**, so every verse in every
+      vocal score using named contexts started one note late, sometimes two.
+    - `slur@68-67` — an end BEFORE its start. MuseScore states the distance to
+      each slur's end, but an onset is not unique: every staff and voice
+      restarts at the same measure onset, so in a four-voice score the alto's
+      slur matched the soprano's end. Pairing needs document order too.
+    - `dyn@3238:fp vs dyn@3238:f` — five dynamic levels collapsed onto three,
+      **with a test pinning the loss** as though the model had no level for
+      `sfz` or `fp`. It has both.
+    - `bar{nav:segno}` — LilyPond wrote no navigation marks at all.
+    - `bar{key:0 time:C|} vs bar{key:0 time:C}` — the common/cut glyph.
+
+    **The rule that keeps paying: check the comment.** Four claims of format
+    limitation were false, and each hid a defect — *"LilyPond has no multi-note
+    slashed grace"*, *"LilyPond allows one slur at a time"*, *"nested `&(`/`&)`
+    are read as plain"*, and a test named *"common time degrades to numeric 4/4
+    (documented loss)"*. The genuine limits look different when you check them:
+    ABC really cannot chain two slurs on a shared note, kern and ABC really have
+    no cue notes, and LilyPond's `\cueDuring` really does need a quoted voice a
+    flat measure list cannot produce. Those stay, documented, in the tests.
+
     ## Continued 2026-08-03 — the open gaps, closed
 
     Every gap the section above listed as tractable is now done, and each one
