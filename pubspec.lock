@@ -188,7 +188,7 @@ packages:
       path: "../CrispEmbed/flutter/crispembed"
       relative: true
     source: path
-    version: "0.16.1"
+    version: "0.17.10"
   cross_file:
     dependency: transitive
     description:
@@ -661,7 +661,7 @@ packages:
       path: "../onnx_runtime_dart"
       relative: true
     source: path
-    version: "0.10.3"
+    version: "0.10.8"
   onnxruntime:
     dependency: "direct main"
     description:

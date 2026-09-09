@@ -91,3 +91,6 @@ ios/Frameworks/crispasr.xcframework
 
 # Android HD TTS libs — fetched in CI from a CrispASR release, never committed
 android/app/src/main/jniLibs/
+
+.appstoreconnect/
+*.p8
