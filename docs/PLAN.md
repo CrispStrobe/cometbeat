@@ -28,6 +28,14 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> **Hermes/composition-opt — ACTIVE (2026-09-17).** Worktree
+> `../mus-composition-opt`, branch `feature/composition-opt`. Characterizing
+> playback/rebuild costs before scoped optimization. Reserved files:
+> `advanced_tracker_screen.dart`, `loop_mixer_screen.dart`, `daw_screen.dart`,
+> `composition_workshop_screen.dart`, `tracker_replayer.dart`, related new
+> helper/unit/widget/integration tests. Preserve existing ValueNotifier paths,
+> DSP output and capability fallbacks. Unit and live verification pending.
+
 > 🎼 **opus/interchange — IDLE, arc SHIPPED (2026-08-03).** Six-codec
 > round-trip fidelity in **`crisp_notation`** (worktree
 > `../crisp_notation-utf16xml`, branch `feature/utf16-musicxml`, all merged to
