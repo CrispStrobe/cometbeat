@@ -1207,6 +1207,40 @@ void main() {
     expect(find.byIcon(Icons.stop), findsNothing);
   });
 
+  testWidgets('playback highlights do not rebuild the toolbar', (tester) async {
+    await pump(tester);
+    await tester.tap(_pianoKeyAt(16));
+    await tester.pump();
+    await tester.tap(_pianoKeyAt(18));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.play_arrow));
+    await tester.pump();
+    final editor = _editor(tester);
+    final toolbar = tester.widget<AppBar>(find.byType(AppBar));
+    final score =
+        tester.widget<MultiSystemView>(find.byType(MultiSystemView)).score;
+    final ids = editor.debugElementIds;
+    Map<String, Color> elementColorsOf() => tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .elementColors;
+    editor.debugTickPlayback(0.01);
+    await tester.pump();
+    expect(elementColorsOf()[ids.first], Colors.green);
+    expect(tester.widget<AppBar>(find.byType(AppBar)), same(toolbar));
+    expect(
+      tester.widget<MultiSystemView>(find.byType(MultiSystemView)).score,
+      same(score),
+    );
+    editor.debugTickPlayback(0.7);
+    await tester.pump();
+    expect(elementColorsOf()[ids.last], Colors.green);
+    expect(tester.widget<AppBar>(find.byType(AppBar)), same(toolbar));
+    await tester.tap(find.byIcon(Icons.stop));
+    await tester.pump();
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    expect(elementColorsOf().values, isNot(contains(Colors.green)));
+  });
+
   testWidgets('playback drives both voices without crashing', (tester) async {
     await pump(tester);
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));

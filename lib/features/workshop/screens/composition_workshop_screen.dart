@@ -519,6 +519,9 @@ abstract interface class CompositionWorkshopTester {
   bool get hasLiveProjectLink;
   bool writeBackToProject();
 
+  /// Drive the real playback callback at a deterministic music time in tests.
+  void debugTickPlayback(double seconds);
+
   int get noteCount;
   int get barCount;
   bool get hasSelection;
@@ -761,6 +764,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   double _playEndSeconds = 0;
   Set<String> _soundingIds = const {};
 
+  /// Sounding-note highlights as a notifier: playback ticks update THIS instead
+  /// of setState, so a moving cursor repaints only the notation subtree (which
+  /// listens) and never rebuilds the toolbar / input bar / piano per tick.
+  final ValueNotifier<Set<String>> _soundingListenable =
+      ValueNotifier<Set<String>>(const {});
+
   // Parts silenced during multi-part playback (indices into [_mpd]). Cleared on
   // any structural part change (add/remove would shift these indices). A muted
   // part is dropped from both the audio mix and the moving cursor.
@@ -833,6 +842,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   @override
   void dispose() {
     _playTimer?.cancel();
+    _soundingListenable.dispose();
     _pianoScroll.dispose();
     _mpd.dispose();
     super.dispose();
@@ -2527,7 +2537,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       const Duration(milliseconds: 40),
       (_) => _tickPlayback(),
     );
-    setState(() {}); // reflect the transport (play → stop icon)
+    // The canvases consume sounding highlights through _soundingListenable; the
+    // single setState here reflects only the transport state (play → stop icon).
+    setState(() => _soundingListenable.value = const {});
   }
 
   /// The selection's [start, end] on the active part's stretched clock, or
@@ -2593,9 +2605,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     }
   }
 
-  void _tickPlayback() {
+  @override
+  void debugTickPlayback(double seconds) => _tickPlayback(seconds);
+
+  void _tickPlayback([double? musicSeconds]) {
     // Music time: the count-in runs before zero, so nothing highlights yet.
-    final t = _playClock.elapsedMilliseconds / 1000.0 - _countInSec;
+    final t =
+        musicSeconds ?? (_playClock.elapsedMilliseconds / 1000.0 - _countInSec);
     if (t >= _playEndSeconds) {
       if (_loopActive) {
         _restartLoop();
@@ -2611,7 +2627,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     };
     final changed =
         now.length != _soundingIds.length || !now.every(_soundingIds.contains);
-    if (changed) setState(() => _soundingIds = now);
+    if (changed) {
+      _soundingIds = now;
+      _soundingListenable.value = now;
+    }
   }
 
   /// Next loop cycle: straight back to the music (the count-in is a lead-in for
@@ -2631,11 +2650,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     _playClock.stop();
     _loopActive = false;
     _audio.stop();
-    if (!mounted) {
-      _soundingIds = const {};
-      return;
-    }
-    setState(() => _soundingIds = const {});
+    _soundingIds = const {};
+    _soundingListenable.value = const {};
+    if (!mounted) return;
+    setState(() {}); // reflect the transport (stop → play icon)
   }
 
   Future<void> _exportText(String title, String text) async {
@@ -4637,9 +4655,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final elementColors = <String, Color>{
       ...analysisColors,
       for (final id in selectedIds) id: Colors.amber,
-      // The playback cursor paints the sounding notes green, overriding any
-      // selection tint underneath so the moving highlight always reads.
-      for (final id in _soundingIds) id: Colors.green,
+      // NOTE: sounding-note green is NOT merged here. The canvases consume it
+      // through _soundingView (below) so a playback tick repaints only the
+      // notation subtree and never rebuilds the toolbar / dock / piano.
     };
     // The multi-part canvas keys colours by GLOBAL id (`p<part>:<rawId>`); remap
     // the analysis layer onto the active part so the Analysis toggle actually
@@ -5121,44 +5139,60 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                 child: _mpd.partCount > 1
                                     ? Stack(
                                         children: [
-                                          MultiPartCanvas(
-                                            document: _mpd,
-                                            staffSpace: _zoom,
-                                            onElementTap: _onGlobalElementTap,
-                                            onStaffTap: _onMpStaffTap,
-                                            onHover: _onMpHover,
-                                            onElementHover: _inspect
-                                                ? _onMpElementHover
-                                                : null,
-                                            ghostPart: _hoverPart,
-                                            ghostTarget: _hover,
-                                            ghostDuration: _ghostDuration,
-                                            // While playing, the moving cursor (sounding
-                                            // global ids) takes over the highlight from the
-                                            // selection.
-                                            highlightedIds: _isPlaying
-                                                ? _soundingIds
-                                                : _mpd.selectedGlobalIds,
-                                            elementColors: mpElementColors,
-                                            suppressElementIds: _mpSuppressed,
-                                            onElementDragStart: _onMpDragStart,
-                                            onElementDragUpdate:
-                                                _onMpDragUpdate,
-                                            onElementDragEnd: _onMpDragEnd,
-                                            controller: _regions,
-                                            onMarquee: _marquee
-                                                ? _applyMpMarquee
-                                                : null,
-                                            caret: _mpCaret,
-                                            showEndCaret:
-                                                _doc.caretBeforeId == null &&
-                                                    !_doc.isEmpty,
-                                            showMeasureNumbers: _barNumbers,
-                                            showNoteNames: _noteNames,
-                                            // Note names carry their octave (F2) in
-                                            // the editor, where exact pitch matters.
-                                            showNoteOctaves: _noteNames,
-                                            noteNameStyle: _noteNameStyle,
+                                          // The sounding cursor flows in through
+                                          // _soundingListenable: a playback tick
+                                          // rebuilds ONLY this subtree.
+                                          ValueListenableBuilder<Set<String>>(
+                                            valueListenable:
+                                                _soundingListenable,
+                                            builder: (context, sounding, _) =>
+                                                MultiPartCanvas(
+                                              document: _mpd,
+                                              staffSpace: _zoom,
+                                              onElementTap: _onGlobalElementTap,
+                                              onStaffTap: _onMpStaffTap,
+                                              onHover: _onMpHover,
+                                              onElementHover: _inspect
+                                                  ? _onMpElementHover
+                                                  : null,
+                                              ghostPart: _hoverPart,
+                                              ghostTarget: _hover,
+                                              ghostDuration: _ghostDuration,
+                                              // While playing, the moving cursor (sounding
+                                              // global ids) takes over the highlight from the
+                                              // selection.
+                                              highlightedIds: _isPlaying
+                                                  ? sounding
+                                                  : _mpd.selectedGlobalIds,
+                                              elementColors: <String, Color>{
+                                                ...mpElementColors,
+                                                // The playback cursor paints the sounding
+                                                // notes green, overriding any tint
+                                                // underneath so the highlight reads.
+                                                for (final id in sounding)
+                                                  id: Colors.green,
+                                              },
+                                              suppressElementIds: _mpSuppressed,
+                                              onElementDragStart:
+                                                  _onMpDragStart,
+                                              onElementDragUpdate:
+                                                  _onMpDragUpdate,
+                                              onElementDragEnd: _onMpDragEnd,
+                                              controller: _regions,
+                                              onMarquee: _marquee
+                                                  ? _applyMpMarquee
+                                                  : null,
+                                              caret: _mpCaret,
+                                              showEndCaret:
+                                                  _doc.caretBeforeId == null &&
+                                                      !_doc.isEmpty,
+                                              showMeasureNumbers: _barNumbers,
+                                              showNoteNames: _noteNames,
+                                              // Note names carry their octave (F2) in
+                                              // the editor, where exact pitch matters.
+                                              showNoteOctaves: _noteNames,
+                                              noteNameStyle: _noteNameStyle,
+                                            ),
                                           ),
                                           if (_inspect && _hoverInfo != null)
                                             _hoverInspectCard(),
@@ -5192,73 +5226,119 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                                         e.localPosition,
                                                 child: Stack(
                                                   children: [
-                                                    _grand
-                                                        ? InteractiveGrandStaffView(
-                                                            grandStaff: _doc
-                                                                .buildGrandStaff(),
-                                                            theme: theme,
-                                                            staffSpace: _zoom,
-                                                            showMeasureNumbers:
-                                                                _barNumbers,
-                                                            noteNameStyle:
-                                                                _noteNameStyle,
-                                                            controller:
-                                                                _regions,
-                                                            elementColors:
-                                                                elementColors,
-                                                            dragPreviewOpacity:
-                                                                _kDragPreviewOpacity,
-                                                            onElementTap:
-                                                                _onElementTap,
-                                                            onStaffTap:
-                                                                _onStaffTap,
-                                                            onHover: _onHover,
-                                                            ghostTarget: _hover,
-                                                            ghostDuration:
-                                                                _ghostDuration,
-                                                            caret: caret,
-                                                            onElementDragStart:
-                                                                _onElementDragStart,
-                                                            onElementDragUpdate:
-                                                                _onElementDragUpdate,
-                                                            onElementDragEnd:
-                                                                _onElementDragEnd,
-                                                          )
-                                                        : MultiSystemView(
-                                                            score: _doc
-                                                                .buildScore(),
-                                                            theme: theme,
-                                                            staffSpace: _zoom,
-                                                            // Single-part bar numbers
-                                                            // come from the app overlay
-                                                            // (every measure), so the
-                                                            // engine's stay off (the
-                                                            // default) to avoid drawing
-                                                            // them twice.
-                                                            noteNameStyle:
-                                                                _noteNameStyle,
-                                                            controller:
-                                                                _regions,
-                                                            elementColors:
-                                                                elementColors,
-                                                            dragPreviewOpacity:
-                                                                _kDragPreviewOpacity,
-                                                            onElementTap:
-                                                                _onElementTap,
-                                                            onStaffTap:
-                                                                _onStaffTap,
-                                                            onHover: _onHover,
-                                                            ghostTarget: _hover,
-                                                            ghostDuration:
-                                                                _ghostDuration,
-                                                            caret: caret,
-                                                            onElementDragStart:
-                                                                _onElementDragStart,
-                                                            onElementDragUpdate:
-                                                                _onElementDragUpdate,
-                                                            onElementDragEnd:
-                                                                _onElementDragEnd,
-                                                          ),
+                                                    // The sounding cursor flows in
+                                                    // through _soundingListenable: a
+                                                    // playback tick rebuilds ONLY this
+                                                    // subtree, never the toolbar/dock.
+                                                    ValueListenableBuilder<
+                                                        Set<String>>(
+                                                      valueListenable:
+                                                          _soundingListenable,
+                                                      builder: (
+                                                        context,
+                                                        sounding,
+                                                        _,
+                                                      ) =>
+                                                          _grand
+                                                              ? InteractiveGrandStaffView(
+                                                                  grandStaff: _doc
+                                                                      .buildGrandStaff(),
+                                                                  theme: theme,
+                                                                  staffSpace:
+                                                                      _zoom,
+                                                                  showMeasureNumbers:
+                                                                      _barNumbers,
+                                                                  noteNameStyle:
+                                                                      _noteNameStyle,
+                                                                  controller:
+                                                                      _regions,
+                                                                  elementColors: <String,
+                                                                      Color>{
+                                                                    ...elementColors,
+                                                                    // The playback cursor
+                                                                    // paints the sounding
+                                                                    // notes green,
+                                                                    // overriding any
+                                                                    // selection tint
+                                                                    // underneath so the
+                                                                    // highlight reads.
+                                                                    for (final id
+                                                                        in sounding)
+                                                                      id: Colors
+                                                                          .green,
+                                                                  },
+                                                                  dragPreviewOpacity:
+                                                                      _kDragPreviewOpacity,
+                                                                  onElementTap:
+                                                                      _onElementTap,
+                                                                  onStaffTap:
+                                                                      _onStaffTap,
+                                                                  onHover:
+                                                                      _onHover,
+                                                                  ghostTarget:
+                                                                      _hover,
+                                                                  ghostDuration:
+                                                                      _ghostDuration,
+                                                                  caret: caret,
+                                                                  onElementDragStart:
+                                                                      _onElementDragStart,
+                                                                  onElementDragUpdate:
+                                                                      _onElementDragUpdate,
+                                                                  onElementDragEnd:
+                                                                      _onElementDragEnd,
+                                                                )
+                                                              : MultiSystemView(
+                                                                  score: _doc
+                                                                      .buildScore(),
+                                                                  theme: theme,
+                                                                  staffSpace:
+                                                                      _zoom,
+                                                                  // Single-part bar numbers
+                                                                  // come from the app overlay
+                                                                  // (every measure), so the
+                                                                  // engine's stay off (the
+                                                                  // default) to avoid drawing
+                                                                  // them twice.
+                                                                  noteNameStyle:
+                                                                      _noteNameStyle,
+                                                                  controller:
+                                                                      _regions,
+                                                                  elementColors: <String,
+                                                                      Color>{
+                                                                    ...elementColors,
+                                                                    // The playback cursor
+                                                                    // paints the sounding
+                                                                    // notes green,
+                                                                    // overriding any
+                                                                    // selection tint
+                                                                    // underneath so the
+                                                                    // highlight reads.
+                                                                    for (final id
+                                                                        in sounding)
+                                                                      id: Colors
+                                                                          .green,
+                                                                  },
+                                                                  dragPreviewOpacity:
+                                                                      _kDragPreviewOpacity,
+                                                                  onElementTap:
+                                                                      _onElementTap,
+                                                                  onStaffTap:
+                                                                      _onStaffTap,
+                                                                  onHover:
+                                                                      _onHover,
+                                                                  ghostTarget:
+                                                                      _hover,
+                                                                  ghostDuration:
+                                                                      _ghostDuration,
+                                                                  caret: caret,
+                                                                  onElementDragStart:
+                                                                      _onElementDragStart,
+                                                                  onElementDragUpdate:
+                                                                      _onElementDragUpdate,
+                                                                  onElementDragEnd:
+                                                                      _onElementDragEnd,
+                                                                ),
+                                                    ),
                                                     if (_barNumbers ||
                                                         _noteNames ||
                                                         (_doc.caretBeforeId ==
