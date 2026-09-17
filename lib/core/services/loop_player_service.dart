@@ -10,6 +10,7 @@
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:comet_beat/core/services/audio_cache_directory.dart';
 import 'package:flutter/foundation.dart';
 
 class LoopPlayerService {
@@ -27,6 +28,7 @@ class LoopPlayerService {
       final player = _player ??= AudioPlayer();
       await player.setReleaseMode(ReleaseMode.loop);
       await player.stop();
+      if (!kIsWeb) await prepareAudioCacheDirectory();
       final source = kIsWeb
           // BytesSource is not supported by the web implementation; a data
           // URI plays fine in the browser's audio element.

@@ -96,13 +96,21 @@ Finder _pianoKeyAt(int i) => find
 
 Finder _pianoKey() => _pianoKeyAt(16);
 
+// CheckedPopupMenuItem wraps its label in IgnorePointer; tap the actual item.
+Finder _menuItem(Finder label) => find
+    .ancestor(
+      of: label,
+      matching: find.byWidgetPredicate((widget) => widget is PopupMenuItem),
+    )
+    .first;
+
 // The Studio-tier controls (voice toggle, input-mode toggle, inspector) live on
 // the Studio shelf; flip it on via the ⋮ menu.
 Future<void> _enterStudio(WidgetTester tester) async {
   final l10n = await AppLocalizations.delegate.load(const Locale('en'));
   await tester.tap(find.byIcon(Icons.more_vert));
   await tester.pumpAndSettle();
-  await tester.tap(find.text(l10n.workshopStudioMode));
+  await tester.tap(_menuItem(find.text(l10n.workshopStudioMode)));
   await tester.pumpAndSettle();
 }
 
@@ -131,7 +139,7 @@ Future<CompositionWorkshopTester> _fourNotesWithInspector(
   final l10n = await AppLocalizations.delegate.load(const Locale('en'));
   await tester.tap(find.byIcon(Icons.more_vert));
   await tester.pumpAndSettle();
-  await tester.tap(find.text(l10n.workshopInspector).last);
+  await tester.tap(_menuItem(find.text(l10n.workshopInspector).last));
   await tester.pumpAndSettle();
   return _editor(tester);
 }
@@ -333,7 +341,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopAnalysis));
+    await tester.tap(_menuItem(find.text(l10n.workshopAnalysis)));
     await tester.pumpAndSettle();
 
     // The banner appears with the detected key (empty score → C major default).
@@ -345,7 +353,7 @@ void main() {
     // Toggling it off removes the banner again.
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopAnalysis));
+    await tester.tap(_menuItem(find.text(l10n.workshopAnalysis)));
     await tester.pumpAndSettle();
     expect(find.text('C Major'), findsNothing);
   });
@@ -360,7 +368,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopAnalysis));
+    await tester.tap(_menuItem(find.text(l10n.workshopAnalysis)));
     await tester.pumpAndSettle();
 
     final view = tester.widget<MultiSystemView>(find.byType(MultiSystemView));
@@ -434,7 +442,7 @@ void main() {
     // Turn Analysis on.
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopAnalysis));
+    await tester.tap(_menuItem(find.text(l10n.workshopAnalysis)));
     await tester.pumpAndSettle();
 
     final view = tester.widget<InteractiveMultiPartView>(
@@ -473,7 +481,7 @@ void main() {
     expect(editor.inspectMode, isFalse);
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.inspectMode));
+    await tester.tap(_menuItem(find.text(l10n.inspectMode)));
     await tester.pumpAndSettle();
     expect(editor.inspectMode, isTrue);
 
@@ -504,7 +512,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.inspectMode));
+    await tester.tap(_menuItem(find.text(l10n.inspectMode)));
     await tester.pumpAndSettle();
 
     // Now hovering the note raises the floating card…
@@ -869,13 +877,14 @@ void main() {
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
     expect(find.text(l10n.workshopInspector), findsNothing);
-    await tester.tap(find.text(l10n.workshopStudioMode)); // enter Studio
+    await tester
+        .tap(_menuItem(find.text(l10n.workshopStudioMode))); // enter Studio
     await tester.pumpAndSettle();
 
     // In Studio, toggle the inspector on from the ⋮ menu.
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopInspector));
+    await tester.tap(_menuItem(find.text(l10n.workshopInspector)));
     await tester.pumpAndSettle();
 
     // The panel now shows, with the selected note's editable properties.
@@ -907,7 +916,7 @@ void main() {
     await _enterStudio(tester);
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopInspector));
+    await tester.tap(_menuItem(find.text(l10n.workshopInspector)));
     await tester.pumpAndSettle();
     expect(find.text(l10n.workshopStaccato), findsOneWidget);
   });
@@ -928,7 +937,7 @@ void main() {
     await _enterStudio(tester);
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopInspector));
+    await tester.tap(_menuItem(find.text(l10n.workshopInspector)));
     await tester.pumpAndSettle();
 
     // The rest now has a bar-anchored Structure section: it defaults to "No
@@ -951,7 +960,7 @@ void main() {
     await _enterStudio(tester);
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopInspector));
+    await tester.tap(_menuItem(find.text(l10n.workshopInspector)));
     await tester.pumpAndSettle();
 
     // The Structure section now carries inline Key + Time-signature controls,
@@ -981,7 +990,7 @@ void main() {
     await _enterStudio(tester);
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopInspector));
+    await tester.tap(_menuItem(find.text(l10n.workshopInspector)));
     await tester.pumpAndSettle();
 
     // The rest now has a length control (it used to be a dead end) with a chip
@@ -1010,7 +1019,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(palette);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopRepeatEnd));
+    await tester.tap(_menuItem(find.text(l10n.workshopRepeatEnd)));
     await tester.pumpAndSettle();
 
     // The Studio inspector's Structure section reflects that anchored change:
@@ -1019,7 +1028,7 @@ void main() {
     await _enterStudio(tester);
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.workshopInspector));
+    await tester.tap(_menuItem(find.text(l10n.workshopInspector)));
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.workshopStructure), findsOneWidget);
@@ -1158,7 +1167,7 @@ void main() {
     await tester.tap(palette);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Trill'));
+    await tester.tap(_menuItem(find.text('Trill')));
     await tester.pumpAndSettle();
 
     // Reopen; the Trill item is now checked.
@@ -1187,7 +1196,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.tap(find.text(l10n.workshopRepeatEnd));
+    await tester.tap(_menuItem(find.text(l10n.workshopRepeatEnd)));
     await tester.pumpAndSettle();
 
     // The single bar now ends with a repeat barline.
@@ -1333,7 +1342,7 @@ void main() {
     }
 
     // Arming count-in sticks.
-    await tester.tap(find.text(l10n.workshopCountIn));
+    await tester.tap(_menuItem(find.text(l10n.workshopCountIn)));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
@@ -1359,7 +1368,7 @@ void main() {
     for (final label in [l10n.workshopCountIn, l10n.workshopLoopSelection]) {
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(label));
+      await tester.tap(_menuItem(find.text(label)));
       await tester.pumpAndSettle();
     }
 
@@ -1382,7 +1391,7 @@ void main() {
     expect(find.text('1×'), findsOneWidget);
     await tester.tap(find.text('1×'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('0.5×').last); // the menu item
+    await tester.tap(_menuItem(find.text('0.5×').last)); // the menu item
     await tester.pumpAndSettle();
 
     // The chip now reads 0.5× and 1× is no longer shown.
@@ -1425,7 +1434,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.tune).first);
     await tester.pumpAndSettle();
     expect(find.text(l10n.workshopMutePart), findsOneWidget);
-    await tester.tap(find.text(l10n.workshopMutePart));
+    await tester.tap(_menuItem(find.text(l10n.workshopMutePart)));
     await tester.pumpAndSettle();
 
     // Reopen: the mute item is now checked.
@@ -1451,7 +1460,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.tap(find.text(l10n.workshopGraceNotes).last);
+    await tester.tap(_menuItem(find.text(l10n.workshopGraceNotes).last));
     await tester.pumpAndSettle();
 
     // The editor shows the empty hint, the note buttons and the style toggle.
@@ -1995,7 +2004,7 @@ void main() {
     }
 
     expect((await openAndFindSplit()).checked, isFalse);
-    await tester.tap(find.text(l10n.workshopSplitNotes));
+    await tester.tap(_menuItem(find.text(l10n.workshopSplitNotes)));
     await tester.pumpAndSettle();
     expect(
       (await openAndFindSplit()).checked,
@@ -2028,7 +2037,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.tap(find.text(l10n.workshopBarNumbers));
+    await tester.tap(_menuItem(find.text(l10n.workshopBarNumbers)));
     await tester.pumpAndSettle();
 
     // The app overlay draws single-part bar numbers (every measure); the engine
@@ -2051,7 +2060,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.tap(find.text(l10n.workshopBarNumbers));
+    await tester.tap(_menuItem(find.text(l10n.workshopBarNumbers)));
     await tester.pumpAndSettle();
 
     expect(view().showMeasureNumbers, isTrue);
@@ -2067,7 +2076,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.tap(find.text(l10n.workshopNoteNames));
+    await tester.tap(_menuItem(find.text(l10n.workshopNoteNames)));
     await tester.pumpAndSettle();
 
     // Names are painted by the app overlay so octave numbers (for example F2)
@@ -2092,7 +2101,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.tune).first);
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.tap(find.text(l10n.workshopBreakBarlineBelow));
+    await tester.tap(_menuItem(find.text(l10n.workshopBreakBarlineBelow)));
     await tester.pump();
 
     expect(view().document.barlineGroups, isNotEmpty);
@@ -2110,7 +2119,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.tap(find.text(l10n.workshopNoteNames));
+    await tester.tap(_menuItem(find.text(l10n.workshopNoteNames)));
     await tester.pumpAndSettle();
 
     expect(view().showNoteNames, isTrue);
@@ -2133,7 +2142,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    await tester.tap(find.text(l10n.workshopBarNumbers));
+    await tester.tap(_menuItem(find.text(l10n.workshopBarNumbers)));
     await tester.pumpAndSettle();
 
     expect(view().showMeasureNumbers, isTrue);

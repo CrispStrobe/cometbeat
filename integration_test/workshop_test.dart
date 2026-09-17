@@ -10,9 +10,13 @@
 // A macOS runner may report "Failed to foreground app; open returned 1" even
 // when this test succeeds. Judge the run by its assertions and exit status.
 // Scroll controls into view and use the actions sheet on narrow windows.
-// Audio may be unavailable; this test verifies editing, not audible output.
+// This native run requires working audio: errors fail, and playback position
+// must advance. It does not measure physical speaker output.
 // The same editing flows are covered by test/composition_workshop_test.dart.
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:comet_beat/core/audio/synth.dart';
+import 'package:comet_beat/core/services/audio_cache_directory.dart';
 import 'package:comet_beat/features/home/screens/home_screen.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -33,8 +37,39 @@ CompositionWorkshopTester _editor(WidgetTester tester) =>
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('native byte-source playback advances its position',
+      (tester) async {
+    final player = AudioPlayer();
+    addTearDown(player.dispose);
+    await prepareAudioCacheDirectory();
+    await player.play(
+      BytesSource(
+        renderWav([
+          (freqs: [440.0], ms: 3000),
+        ]),
+        mimeType: 'audio/wav',
+      ),
+    );
+    expect(player.state, PlayerState.playing);
+    final initial = await player.getCurrentPosition() ?? Duration.zero;
+    await tester.pump(const Duration(milliseconds: 400));
+    final advanced = await player.getCurrentPosition();
+    expect(advanced, isNotNull);
+    expect(advanced! > initial, isTrue);
+    await player.stop();
+  });
+
   testWidgets('compose on the piano, copy/paste, and switch to grand staff',
       (tester) async {
+    final audioErrors = <String>[];
+    final originalDebugPrint = debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {
+      if (message != null && message.contains('[AUDIO] playback unavailable')) {
+        audioErrors.add(message);
+      }
+      originalDebugPrint(message, wrapWidth: wrapWidth);
+    };
+    addTearDown(() => debugPrint = originalDebugPrint);
     SharedPreferences.setMockInitialValues({});
     await app.main();
     await tester.pumpAndSettle(const Duration(seconds: 2));
@@ -95,5 +130,10 @@ void main() {
     await tester.tap(find.text('𝄞𝄢').last);
     await tester.pumpAndSettle();
     expect(find.byType(InteractiveGrandStaffView), findsOneWidget);
+    expect(
+      audioErrors,
+      isEmpty,
+      reason: 'Native note playback must prepare successfully',
+    );
   });
 }

@@ -29,6 +29,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:comet_beat/core/services/audio_cache_directory.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
@@ -198,6 +199,7 @@ class GaplessLoopPlayer {
       final outgoing = _players[_active];
 
       await incoming.setReleaseMode(ReleaseMode.loop);
+      if (!kIsWeb) await prepareAudioCacheDirectory();
       final source = kIsWeb
           // BytesSource isn't supported on web; a data URI plays fine there.
           ? UrlSource('data:audio/wav;base64,${base64Encode(wav)}')

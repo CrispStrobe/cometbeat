@@ -11,6 +11,7 @@ import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/voice_render.dart';
+import 'package:comet_beat/core/services/audio_cache_directory.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show pcmFloatToWav;
 import 'package:flutter/foundation.dart';
@@ -72,6 +73,7 @@ class AudioService {
         await player
             .play(UrlSource('data:audio/wav;base64,${base64Encode(wav)}'));
       } else {
+        await prepareAudioCacheDirectory();
         await player.play(BytesSource(wav, mimeType: 'audio/wav'));
       }
     } catch (e) {

@@ -36,6 +36,8 @@ dependencies:
 
   # Storage & Data
   shared_preferences: ^2.2.2
+  # Prepare the native temporary directory used by audioplayers BytesSource.
+  path_provider: ^2.1.6
 
   # Audio
   audioplayers: ^6.1.0
@@ -141,6 +143,8 @@ dev_dependencies:
   # Test-only: fake the file picker to drive the import file-pick paths.
   file_selector_platform_interface: ^2.7.0
   plugin_platform_interface: ^2.1.8
+  # Isolate native audio cache paths in integration regressions.
+  path_provider_platform_interface: ^2.1.2
 flutter_launcher_icons:
   android: true
   ios: true

@@ -13,6 +13,7 @@
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:comet_beat/core/services/audio_cache_directory.dart';
 import 'package:flutter/foundation.dart';
 
 class VoicePool {
@@ -49,6 +50,7 @@ class VoicePool {
           UrlSource('data:audio/wav;base64,${base64Encode(wav)}'),
         );
       } else {
+        await prepareAudioCacheDirectory();
         await player.play(BytesSource(wav, mimeType: 'audio/wav'));
       }
     } catch (e) {
