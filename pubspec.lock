@@ -188,7 +188,7 @@ packages:
       path: "../CrispEmbed/flutter/crispembed"
       relative: true
     source: path
-    version: "0.17.10"
+    version: "0.17.11"
   cross_file:
     dependency: transitive
     description:
