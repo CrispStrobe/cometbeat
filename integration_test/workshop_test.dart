@@ -7,12 +7,15 @@
 // Run on a device with a real, foregroundable display:
 //   flutter test integration_test/workshop_test.dart -d macos
 //   flutter test integration_test/workshop_test.dart -d chrome   # needs chromedriver
-// NB: a *headless* macOS run cannot foreground the app window ("Failed to
-// foreground app; open returned 1"), so pointer taps do not land — run it on a
-// real desktop session or a CI runner with a display. The same flows are also
-// covered headlessly (and in CI) by test/composition_workshop_test.dart.
+// A macOS runner may report "Failed to foreground app; open returned 1" even
+// when this test succeeds. Judge the run by its assertions and exit status.
+// Scroll controls into view and use the actions sheet on narrow windows.
+// Audio may be unavailable; this test verifies editing, not audible output.
+// The same editing flows are covered by test/composition_workshop_test.dart.
 
+import 'package:comet_beat/features/home/screens/home_screen.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/main.dart' as app;
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart'
@@ -36,30 +39,54 @@ void main() {
     await app.main();
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
-    // Open the Workshop from the home app bar.
-    await tester.tap(find.byTooltip('Workshop'));
+    // The home authoring button opens a mode menu, not the editor directly.
+    final l10n = AppLocalizations.of(tester.element(find.byType(HomeScreen)))!;
+    await tester.tap(find.byTooltip(l10n.workshopTitle));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.workshopModeScore));
     await tester.pumpAndSettle();
     expect(find.byType(CompositionWorkshopScreen), findsOneWidget);
 
     // Compose three notes on the on-screen piano.
     final editor = _editor(tester);
     for (var i = 0; i < 3; i++) {
-      await tester.tap(find.byType(PianoKeyboard));
+      final key = find
+          .descendant(
+            of: find.byType(PianoKeyboard),
+            matching: find.byType(GestureDetector),
+          )
+          .at(16 + i);
+      await tester.ensureVisible(key);
+      await tester.tap(key);
       await tester.pump(const Duration(milliseconds: 150));
     }
     expect(editor.noteCount, 3);
     expect(editor.hasSelection, isTrue);
 
-    // Copy the selected note and paste it.
-    await tester.tap(find.byIcon(Icons.copy));
+    // Copy the selected note and paste it (scroll the strip buttons into view
+    // — at 578×545 they sit beyond the right edge of the scrollable input bar).
+    final copy = find.byIcon(Icons.copy);
+    final paste = find.byIcon(Icons.content_paste);
+    final undo = find.byIcon(Icons.undo);
+    await tester.ensureVisible(copy);
     await tester.pump();
-    await tester.tap(find.byIcon(Icons.content_paste));
+    await tester.tap(copy);
+    await tester.pump();
+    await tester.ensureVisible(paste);
+    await tester.pump();
+    await tester.tap(paste);
     await tester.pump();
     expect(editor.noteCount, 4);
 
-    // Undo the paste.
-    await tester.tap(find.byIcon(Icons.undo));
+    // Narrow windows put transport/history actions in the actions sheet.
+    if (undo.evaluate().isEmpty) {
+      await tester.tap(find.byTooltip(l10n.workshopMoreActions));
+      await tester.pumpAndSettle();
+    }
+    await tester.ensureVisible(undo);
     await tester.pump();
+    await tester.tap(undo);
+    await tester.pumpAndSettle();
     expect(editor.noteCount, 3);
 
     // Switch to the grand staff (both clefs).

@@ -2691,53 +2691,55 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.file_open_outlined),
-              title: Text(l10n.workshopOpen),
-              onTap: () => Navigator.of(ctx).pop('open'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.save_outlined),
-              title: Text(l10n.myMelodySave),
-              enabled: !_doc.isEmpty,
-              onTap: () => Navigator.of(ctx).pop('save'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.ios_share_outlined),
-              title: Text(l10n.workshopExportChoose),
-              enabled: !_doc.isEmpty,
-              onTap: () => Navigator.of(ctx).pop('export'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.undo),
-              title: Text(l10n.myMelodyUndo),
-              enabled: _doc.canUndo,
-              onTap: () => Navigator.of(ctx).pop('undo'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.redo),
-              title: Text(l10n.workshopRedo),
-              enabled: _doc.canRedo,
-              onTap: () => Navigator.of(ctx).pop('redo'),
-            ),
-            ListTile(
-              leading: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
-              title: Text(
-                _isPlaying ? l10n.workshopStop : l10n.myMelodyPlay,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.file_open_outlined),
+                title: Text(l10n.workshopOpen),
+                onTap: () => Navigator.of(ctx).pop('open'),
               ),
-              enabled: _hasPlayableContent || _isPlaying,
-              onTap: () => Navigator.of(ctx).pop('play'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.piano),
-              title: Text(l10n.gameNoteHighway),
-              enabled: _hasPlayableContent,
-              onTap: () => Navigator.of(ctx).pop('highway'),
-            ),
-          ],
+              ListTile(
+                leading: const Icon(Icons.save_outlined),
+                title: Text(l10n.myMelodySave),
+                enabled: !_doc.isEmpty,
+                onTap: () => Navigator.of(ctx).pop('save'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.ios_share_outlined),
+                title: Text(l10n.workshopExportChoose),
+                enabled: !_doc.isEmpty,
+                onTap: () => Navigator.of(ctx).pop('export'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.undo),
+                title: Text(l10n.myMelodyUndo),
+                enabled: _doc.canUndo,
+                onTap: () => Navigator.of(ctx).pop('undo'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.redo),
+                title: Text(l10n.workshopRedo),
+                enabled: _doc.canRedo,
+                onTap: () => Navigator.of(ctx).pop('redo'),
+              ),
+              ListTile(
+                leading: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+                title: Text(
+                  _isPlaying ? l10n.workshopStop : l10n.myMelodyPlay,
+                ),
+                enabled: _hasPlayableContent || _isPlaying,
+                onTap: () => Navigator.of(ctx).pop('play'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.piano),
+                title: Text(l10n.gameNoteHighway),
+                enabled: _hasPlayableContent,
+                onTap: () => Navigator.of(ctx).pop('highway'),
+              ),
+            ],
+          ),
         ),
       ),
     );

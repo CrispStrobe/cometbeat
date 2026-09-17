@@ -202,6 +202,59 @@ void main() {
     await tester.pumpWidget(_app());
   }
 
+  testWidgets('narrow actions sheet fits a short window and exposes Undo',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(578, 545);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_app());
+    await tester.ensureVisible(_pianoKeyAt(16));
+    await tester.tap(_pianoKeyAt(16));
+    await tester.pump();
+    final context = tester.element(find.byType(CompositionWorkshopScreen));
+    expect(MediaQuery.sizeOf(context), const Size(578, 545));
+    final l10n = AppLocalizations.of(context)!;
+    await tester.tap(find.byTooltip(l10n.workshopMoreActions));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    final undo = find.byIcon(Icons.undo);
+    await tester.ensureVisible(undo);
+    await tester.pump();
+    expect(undo.hitTestable(), findsOneWidget);
+    await tester.tap(undo);
+    await tester.pumpAndSettle();
+    expect(_editor(tester).noteCount, 0);
+  });
+
+  testWidgets('narrow clipboard controls work after scrolling into view',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(578, 545);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_app());
+    for (var i = 0; i < 3; i++) {
+      await tester.ensureVisible(_pianoKeyAt(16 + i));
+      await tester.tap(_pianoKeyAt(16 + i));
+      await tester.pump();
+    }
+    expect(_editor(tester).noteCount, 3);
+    final copy = find.byIcon(Icons.copy);
+    final paste = find.byIcon(Icons.content_paste);
+    await tester.ensureVisible(copy);
+    await tester.pump();
+    expect(copy.hitTestable(), findsOneWidget);
+    await tester.tap(copy);
+    await tester.pump();
+    await tester.ensureVisible(paste);
+    await tester.pump();
+    expect(paste.hitTestable(), findsOneWidget);
+    await tester.tap(paste);
+    await tester.pump();
+    expect(_editor(tester).noteCount, 4);
+  });
+
   testWidgets('renders the multi-line canvas and the piano input dock',
       (tester) async {
     await pump(tester);
