@@ -104,6 +104,9 @@ Future<void> main(List<String> args) async {
       fmax: fmax,
     );
     sw.stop();
+    // Machine-readable on stderr in every mode, for the pool A/B harness
+    // (tool/pool_workers_ab.dart).
+    stderr.writeln('elapsed_ms ${sw.elapsedMilliseconds}');
     if (args.contains('--json')) {
       stdout.writeln(
         jsonEncode([
@@ -140,6 +143,7 @@ Future<void> main(List<String> args) async {
     ),
   );
   sw.stop();
+  stderr.writeln('elapsed_ms ${sw.elapsedMilliseconds}');
 
   if (args.contains('--json')) {
     stdout.writeln(

@@ -2,9 +2,6 @@
 // it as a NeuralTranscriber the router can inject. dart:io only — reached solely
 // through neural_provider.dart's conditional import, so web never compiles it.
 
-import 'dart:typed_data';
-
-import 'package:comet_beat/core/audio/transcription/basic_pitch.dart';
 import 'package:comet_beat/core/audio/transcription/basic_pitch_model_store.dart';
 import 'package:comet_beat/core/audio/transcription/route.dart'
     show NeuralTranscriber;
@@ -20,10 +17,10 @@ Future<NeuralTranscriber?> loadNeuralTranscriber({
   try {
     final store = BasicPitchModelStore();
     if (!download && !neuralModelPresent()) return null;
-    final model =
-        await store.load(); // downloads if missing (throws if it can't)
-    return (Float64List mono, int sampleRate) async =>
-        basicPitchTranscribe(mono, model: model, sampleRate: sampleRate);
+    // Downloads if missing (throws if it can't), then sets up the isolate GEMM
+    // pool — same pooled path RMVPE/FCPE/CREPE already take. Bitwise-identical
+    // notes; `COMET_BASICPITCH_WORKERS=0` falls back to the synchronous run.
+    return await store.transcriber();
   } on Object {
     return null;
   }

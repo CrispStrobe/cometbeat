@@ -1,0 +1,172 @@
+name: Isolate-pool A/B
+
+# Measures the `onnx_runtime_dart` isolate GEMM pool on CometBeat's OWN models
+# — Basic Pitch and CREPE — and publishes the numbers as an artifact + a job
+# summary. Manual (and on demand from a PR that touches the pooled paths),
+# never on every push: each matrix leg runs ~40 model inferences.
+#
+# WHY CI AND NOT A DEV BOX: the protocol demands one arm per process, a
+# discarded cold run and a median of >= 3, and all of that is worthless on a
+# machine that is doing anything else. A GitHub runner is dedicated for the
+# duration, which is the closest to a quiet machine this project has. The
+# runner's core count is also the interesting variable for `autoPoolWorkers()`.
+#
+# Read the harness header (tool/pool_workers_ab.dart) before trusting a number
+# from here; it states the rules it enforces.
+
+on:
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: 'Length of the synthesised benchmark audio (s), Basic Pitch'
+        default: '20'
+      crepe_seconds:
+        description: 'Length for CREPE (per-frame, ~10x more inferences/second of audio)'
+        default: '6'
+      arms:
+        description: 'Worker counts to compare (0 = unpooled)'
+        default: '0,1,2,4,6'
+      runs:
+        description: 'Runs per arm (>= 4; the first is discarded)'
+        default: '4'
+  pull_request:
+    paths:
+      - 'lib/core/audio/transcription/basic_pitch.dart'
+      - 'lib/core/audio/transcription/basic_pitch_model_store.dart'
+      - 'lib/core/audio/transcription/crepe_model_store.dart'
+      - 'tool/pool_workers_ab.dart'
+      - '.github/workflows/pool-ab.yml'
+
+concurrency:
+  group: pool-ab-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  ab:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout cometbeat
+        uses: actions/checkout@v5
+        with:
+          path: cometbeat
+
+      # Same sibling path deps as ci.yml — `flutter pub get` resolves them all,
+      # even though this job only builds two pure-Dart CLIs.
+      - name: Checkout crisp_notation (sibling path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/crisp_notation
+          ref: main
+          path: crisp_notation
+
+      - name: Checkout CrispEmbed (sibling FFI path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/CrispEmbed
+          ref: main
+          path: CrispEmbed
+
+      - name: Checkout onnx_runtime_dart (sibling path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/onnx_runtime_dart
+          ref: main
+          path: onnx_runtime_dart
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: cometbeat
+        run: flutter pub get
+
+      # AOT, not `dart run`. The JIT's warm-up inflates compute relative to the
+      # pool's per-conv message copy and would flatter the pool; the app ships
+      # AOT, so AOT is what the numbers should describe. `dart compile exe`
+      # refuses here (objective_c/sqlite3 have build hooks), hence `dart build`.
+      # `dart build cli` writes to one fixed bundle directory and CLEARS it
+      # first, so the second build deletes the first binary. Each bundle is
+      # copied aside before the next build (verified the hard way).
+      - name: Build the transcriber CLIs (AOT)
+        id: bins
+        working-directory: cometbeat
+        shell: bash
+        run: |
+          set -eu
+          dart build cli --target bin/transcribe_basicpitch.dart
+          cp -R "$(dirname "$(find build/cli -name 'transcribe_basicpitch*' -type f | head -1)")/.." bp-bundle
+          dart build cli --target bin/transcribe_crepe.dart
+          cp -R "$(dirname "$(find build/cli -name 'transcribe_crepe*' -type f | head -1)")/.." cr-bundle
+          bp=$(find bp-bundle -name 'transcribe_basicpitch*' -type f | head -1)
+          cr=$(find cr-bundle -name 'transcribe_crepe*' -type f | head -1)
+          echo "bp=$bp" >> "$GITHUB_OUTPUT"
+          echo "cr=$cr" >> "$GITHUB_OUTPUT"
+          echo "basicpitch: $bp"
+          echo "crepe:      $cr"
+
+      # Warms the model caches so the "cold" discarded run is cold in the sense
+      # that matters (page cache, first touch of the weights) and not "spent 30
+      # seconds downloading a model".
+      - name: Prefetch the models
+        working-directory: cometbeat
+        shell: bash
+        run: |
+          dart run tool/pool_workers_ab.dart --model basicpitch \
+            --bin "${{ steps.bins.outputs.bp }}" --wav warm.wav \
+            --seconds 2 --arms 0 --runs 4 > /dev/null || true
+          dart run tool/pool_workers_ab.dart --model crepe \
+            --bin "${{ steps.bins.outputs.cr }}" --wav warm.wav \
+            --seconds 2 --arms 0 --runs 4 > /dev/null || true
+
+      - name: A/B — Basic Pitch
+        working-directory: cometbeat
+        shell: bash
+        run: |
+          dart run tool/pool_workers_ab.dart --model basicpitch \
+            --bin "${{ steps.bins.outputs.bp }}" \
+            --wav bench.wav \
+            --seconds "${{ inputs.seconds || '20' }}" \
+            --arms "${{ inputs.arms || '0,1,2,4,6' }}" \
+            --runs "${{ inputs.runs || '4' }}" \
+            | tee "basicpitch-${{ matrix.os }}.md"
+
+      - name: A/B — CREPE
+        working-directory: cometbeat
+        shell: bash
+        run: |
+          dart run tool/pool_workers_ab.dart --model crepe \
+            --bin "${{ steps.bins.outputs.cr }}" \
+            --wav bench-crepe.wav \
+            --seconds "${{ inputs.crepe_seconds || '6' }}" \
+            --arms "${{ inputs.arms || '0,1,2,4,6' }}" \
+            --runs "${{ inputs.runs || '4' }}" \
+            | tee "crepe-${{ matrix.os }}.md"
+
+      - name: Job summary
+        if: always()
+        working-directory: cometbeat
+        shell: bash
+        run: |
+          for f in basicpitch-*.md crepe-*.md; do
+            [ -f "$f" ] || continue
+            echo "## $f" >> "$GITHUB_STEP_SUMMARY"
+            cat "$f" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pool-ab-${{ matrix.os }}
+          path: |
+            cometbeat/basicpitch-*.md
+            cometbeat/crepe-*.md
+          if-no-files-found: warn

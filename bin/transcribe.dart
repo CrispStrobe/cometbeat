@@ -50,7 +50,6 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mp3/mp3_decoder.dart' show mp3Decode;
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
-import 'package:comet_beat/core/audio/transcription/basic_pitch.dart';
 import 'package:comet_beat/core/audio/transcription/basic_pitch_model_store.dart';
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
 import 'package:comet_beat/core/audio/transcription/crepe_model_store.dart';
@@ -168,9 +167,10 @@ Future<void> main(List<String> args) async {
 
   switch (task) {
     case 'poly':
-      final model = await BasicPitchModelStore().load();
-      final notes =
-          basicPitchTranscribe(model: model, mono, sampleRate: sampleRate);
+      // Pooled by default (same path the app's neural provider takes);
+      // COMET_BASICPITCH_WORKERS=0 falls back to the synchronous run.
+      final transcribe = await BasicPitchModelStore().transcriber();
+      final notes = await transcribe(mono, sampleRate);
       sw.stop();
       _printNotes(notes, sw, json);
     case 'chords':
