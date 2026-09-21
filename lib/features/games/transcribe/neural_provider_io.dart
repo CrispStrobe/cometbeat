@@ -15,16 +15,24 @@ Future<NeuralTranscriber?> loadNeuralTranscriber({
   bool download = false,
 }) async {
   try {
-    final store = BasicPitchModelStore();
     if (!download && !neuralModelPresent()) return null;
+    // Memoised, and that is load-bearing now rather than merely tidy: the
+    // pooled transcriber owns N worker isolates that nothing disposes, and
+    // `_neural()` is called once per transcription. A fresh store per call
+    // would re-read the model and spawn another pool every time.
+    //
     // Downloads if missing (throws if it can't), then sets up the isolate GEMM
-    // pool — same pooled path RMVPE/FCPE/CREPE already take. Bitwise-identical
-    // notes; `COMET_BASICPITCH_WORKERS=0` falls back to the synchronous run.
-    return await store.transcriber();
+    // pool. Bitwise-identical notes to the synchronous path;
+    // `COMET_BASICPITCH_WORKERS=0` falls back to it.
+    return _transcriber ??=
+        await (_store ??= BasicPitchModelStore()).transcriber();
   } on Object {
     return null;
   }
 }
+
+BasicPitchModelStore? _store;
+NeuralTranscriber? _transcriber;
 
 /// Whether the model is already on disk (a large-enough file), without touching
 /// the network — the "is the HD engine ready?" gate for the UI.
