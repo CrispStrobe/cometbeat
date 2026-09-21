@@ -28,6 +28,31 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> 🎹 **opus/note-models — branch `feat/crispasr-note-models` (worktree
+> `../cometbeat-notemodels`), 2026-09-21.** The ggml polyphonic path loaded ONE
+> model, hard-coded. `crispasr_session_piano` is the SAME C entry point for
+> basic-pitch, piano-transcription and MT3, so this is a choice of model, not a
+> code path: `CrispasrNoteModel` on `TranscriptionEngineConfig`, resolved
+> through CrispASR's own registry + cache, with a Settings chip row under
+> "Chords & piano". Default unchanged (`auto` = piano-transcription).
+>
+> **Why MT3 matters:** MusicNet test split, mir_eval rules — F1 **76.5%** vs
+> 47.7% (Kong) and 44.2% (Basic Pitch), at 0.26x real time. Numbers, caveats and
+> the degradation table: `docs/TRANSCRIPTION_NOTE_MODELS.md`. The default does
+> NOT flip on someone else's corpus; a CometBeat-side A/B on short takes is the
+> gate.
+>
+> **Reserved files:** `engine_config.dart`, `crispasr_ffi_piano_io.dart`,
+> `crispasr_ffi_piano_stub.dart`, `transcribe_engines.dart`,
+> `transcription_config_service.dart`, the transcription block of
+> `settings_screen.dart`, the six new `transcriptionNoteModel*` ARB keys
+> (append-only), `test/transcribe_engines_test.dart`,
+> `test/transcription/engine_config_test.dart`,
+> `test/crispasr_ffi_backends_test.dart`.
+>
+> ⚠️ **Overlaps `perf/basic-pitch-pool` (PR #1) only in spirit, not in files** —
+> that PR owns the ONNX Basic Pitch path; this one owns the ggml note-event path.
+
 > **Hermes/composition-opt — ACTIVE (2026-09-17).** Worktree
 > `../mus-composition-opt`, branch `feature/composition-opt`. Characterizing
 > playback/rebuild costs before scoped optimization. Reserved files:

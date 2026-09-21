@@ -15722,6 +15722,42 @@ abstract class AppLocalizations {
   /// **'Steadier notes, no octave jumps — a little slower (neural pitch only)'**
   String get transcriptionF0ViterbiSubtitle;
 
+  /// No description provided for @transcriptionNoteModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note model (GGUF native)'**
+  String get transcriptionNoteModelLabel;
+
+  /// No description provided for @transcriptionNoteModelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Used when “Chords & piano” runs on GGUF (native). Downloaded the first time you pick that engine.'**
+  String get transcriptionNoteModelSubtitle;
+
+  /// No description provided for @transcriptionNoteModelAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto (piano, 77 MB)'**
+  String get transcriptionNoteModelAuto;
+
+  /// No description provided for @transcriptionNoteModelBasicPitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic Pitch (110 KB)'**
+  String get transcriptionNoteModelBasicPitch;
+
+  /// No description provided for @transcriptionNoteModelPiano.
+  ///
+  /// In en, this message translates to:
+  /// **'Piano specialist (77 MB)'**
+  String get transcriptionNoteModelPiano;
+
+  /// No description provided for @transcriptionNoteModelMt3.
+  ///
+  /// In en, this message translates to:
+  /// **'MT3 — many instruments (96 MB)'**
+  String get transcriptionNoteModelMt3;
+
   /// No description provided for @trackerNativeCommand.
   ///
   /// In en, this message translates to:

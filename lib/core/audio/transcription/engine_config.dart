@@ -36,7 +36,9 @@ enum TranscriptionStep {
 ///
 /// Three neural runtimes (the "3 paths"), fastest-first for native:
 ///   • [crispasr] — CrispASR ggml/GGUF via FFI. Native, GPU-fast. Has CREPE,
-///     piano, and separation (htdemucs/RoFormer) today; not RMVPE/Basic-Pitch/BTC.
+///     separation (htdemucs/RoFormer), and THREE note-event models behind one
+///     entry point — piano-transcription, Basic Pitch and MT3, picked with
+///     [CrispasrNoteModel]; not RMVPE/BTC.
 ///   • [onnxFfi]  — the native ONNX Runtime via FFI. Native, fast; runs any of
 ///     our .onnx models. Needs a native-ORT binding + bundled libs (no web).
 ///   • [onnx]     — onnx_runtime_dart, PURE Dart (no native lib). Runs on WEB.
@@ -52,6 +54,63 @@ bool backendNeedsFfi(Backend b) =>
 /// the raw knobs). fast = smallest/quickest; accurate = biggest/best; balanced
 /// is the shipping default.
 enum ModelQuality { fast, balanced, accurate }
+
+/// Which NOTE-EVENT model the `crispasr` runtime loads for the polyphonic step.
+///
+/// All three reach the same C entry point — `crispasr_session_piano`, surfaced
+/// in Dart as `CrispasrSession.pianoNotes` — so this is a choice of MODEL, not a
+/// second code path. (The C parameter is still spelled `pcm_16k` for historical
+/// reasons; the rate is per-model and must be QUERIED, see [sampleRate].)
+///
+/// They differ in what they can hear, what they cost to fetch, and how they run:
+///   • [basicPitch] — Spotify Basic Pitch (Apache-2.0), ~110 KB, 22050 Hz. The
+///     same model as the pure-Dart ONNX default, on the ggml runtime.
+///   • [pianoTranscription] — ByteDance/Kong high-resolution piano (MIT),
+///     ~77 MB, 16000 Hz. A piano SPECIALIST: on non-piano material it correctly
+///     declines rather than guessing, so it is not a general upgrade.
+///   • [mt3] — Magenta MT3 (Apache-2.0), ~96 MB, 16000 Hz. Multi-instrument,
+///     and by a wide margin the most accurate of the three on real recordings
+///     (MusicNet test split, mir_eval.transcription: F1 76.5% vs 47.7% for
+///     piano-transcription and 44.2% for Basic Pitch). It is an autoregressive
+///     encoder-decoder that greedy-decodes up to 1024 tokens per 2.048 s
+///     segment, so its cost is decode-bound and it is a FILE-IMPORT engine, not
+///     a live one.
+///
+/// [auto] keeps today's behaviour — [pianoTranscription] — because the other two
+/// have not been A/B'd on this app's own material, and because MT3's 96 MB
+/// download should follow from a deliberate choice, not from a step preference.
+enum CrispasrNoteModel { auto, basicPitch, pianoTranscription, mt3 }
+
+extension CrispasrNoteModelInfo on CrispasrNoteModel {
+  /// The CrispASR registry key — what `registryLookup` / `CrispasrSession.open`
+  /// take. [auto] resolves here, so callers never special-case it.
+  String get registryBackend => switch (this) {
+        CrispasrNoteModel.auto => 'piano-transcription',
+        CrispasrNoteModel.basicPitch => 'basic-pitch',
+        CrispasrNoteModel.pianoTranscription => 'piano-transcription',
+        CrispasrNoteModel.mt3 => 'mt3',
+      };
+
+  /// Approximate download, in bytes — for a UI that warns before a big fetch.
+  /// Advisory only; the registry is the authority on the actual file.
+  int get approxDownloadBytes => switch (this) {
+        CrispasrNoteModel.basicPitch => 110 * 1024,
+        CrispasrNoteModel.auto ||
+        CrispasrNoteModel.pianoTranscription =>
+          77 * 1024 * 1024,
+        CrispasrNoteModel.mt3 => 96 * 1024 * 1024,
+      };
+
+  /// Whether fetching this model is big enough to deserve an explicit user
+  /// action rather than an incidental first-use download (> 16 MB).
+  bool get needsExplicitDownloadConsent =>
+      approxDownloadBytes > 16 * 1024 * 1024;
+
+  /// The model's native input rate, in Hz. Informational only — the live path
+  /// asks the session (`pianoSampleRate`), which is the authority and also acts
+  /// as the capability probe (it returns 0 when there is no piano arm).
+  int get sampleRate => this == CrispasrNoteModel.basicPitch ? 22050 : 16000;
+}
 
 enum ModelSize { tiny, full }
 
@@ -73,6 +132,7 @@ class TranscriptionEngineConfig {
     this.backends = const {},
     this.quality = ModelQuality.balanced,
     this.f0Viterbi = false,
+    this.crispasrNoteModel = CrispasrNoteModel.auto,
   });
 
   /// Per-step backend preference; a missing step means [Backend.auto].
@@ -86,17 +146,24 @@ class TranscriptionEngineConfig {
   /// [F0DecodeOptions] by the config service.
   final bool f0Viterbi;
 
+  /// Which model the `crispasr` runtime loads for [TranscriptionStep.polyphonic].
+  /// Only consulted when that step actually resolves to [Backend.crispasr];
+  /// every other backend ignores it.
+  final CrispasrNoteModel crispasrNoteModel;
+
   Backend backendFor(TranscriptionStep step) => backends[step] ?? Backend.auto;
 
   TranscriptionEngineConfig copyWith({
     Map<TranscriptionStep, Backend>? backends,
     ModelQuality? quality,
     bool? f0Viterbi,
+    CrispasrNoteModel? crispasrNoteModel,
   }) =>
       TranscriptionEngineConfig(
         backends: backends ?? this.backends,
         quality: quality ?? this.quality,
         f0Viterbi: f0Viterbi ?? this.f0Viterbi,
+        crispasrNoteModel: crispasrNoteModel ?? this.crispasrNoteModel,
       );
 
   /// Resolve the engine for [step]. [isWeb] forces pure-Dart/ONNX (no FFI);
@@ -153,6 +220,7 @@ class TranscriptionEngineConfig {
   Map<String, Object> toJson() => {
         'quality': quality.name,
         'f0Viterbi': f0Viterbi,
+        'crispasrNoteModel': crispasrNoteModel.name,
         'backends': {
           for (final e in backends.entries) e.key.name: e.value.name,
         },
@@ -167,6 +235,11 @@ class TranscriptionEngineConfig {
     return TranscriptionEngineConfig(
       quality: q,
       f0Viterbi: json['f0Viterbi'] == true,
+      // Absent (a config written before the model choice existed) ⇒ auto, which
+      // is today's model — an older config keeps behaving exactly as it did.
+      crispasrNoteModel:
+          CrispasrNoteModel.values.asNameMap()[json['crispasrNoteModel']] ??
+              CrispasrNoteModel.auto,
       backends: {
         for (final e in raw.entries)
           if (steps[e.key] case final s?)

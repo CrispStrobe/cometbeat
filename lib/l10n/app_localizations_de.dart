@@ -8687,6 +8687,25 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ruhigere Töne, keine Oktavsprünge – etwas langsamer (nur neuronale Tonhöhe)';
 
   @override
+  String get transcriptionNoteModelLabel => 'Notenmodell (GGUF nativ)';
+
+  @override
+  String get transcriptionNoteModelSubtitle =>
+      'Wird verwendet, wenn „Akkorde & Klavier“ auf GGUF (nativ) läuft. Wird beim ersten Auswählen dieser Engine heruntergeladen.';
+
+  @override
+  String get transcriptionNoteModelAuto => 'Auto (Klavier, 77 MB)';
+
+  @override
+  String get transcriptionNoteModelBasicPitch => 'Basic Pitch (110 KB)';
+
+  @override
+  String get transcriptionNoteModelPiano => 'Klavier-Spezialist (77 MB)';
+
+  @override
+  String get transcriptionNoteModelMt3 => 'MT3 – viele Instrumente (96 MB)';
+
+  @override
   String get trackerNativeCommand => 'Roher nativer Befehl';
 
   @override

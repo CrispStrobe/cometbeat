@@ -47,6 +47,12 @@ class TranscriptionConfigService with ChangeNotifier {
   Future<void> setF0Viterbi(bool on) =>
       _update(_config.copyWith(f0Viterbi: on));
 
+  /// Which note model the `crispasr` runtime loads for the polyphonic step.
+  /// Takes effect the next time engines are resolved; changing it does not
+  /// download anything on its own.
+  Future<void> setCrispasrNoteModel(CrispasrNoteModel m) =>
+      _update(_config.copyWith(crispasrNoteModel: m));
+
   /// Push the config's F0-Viterbi choice to the process-wide override the neural
   /// F0 model stores read. Enabling forces it on; leaving it off defers to the
   /// per-model `COMET_*_VITERBI` env gates (so a dev env var still works).

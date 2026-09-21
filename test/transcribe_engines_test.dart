@@ -102,7 +102,10 @@ void main() {
       loadF0OnnxFfi: ({bool download = false}) async => null,
       loadNeuralOnnxFfi: ({bool download = false}) async => null,
       loadChordsOnnxFfi: ({bool download = false}) async => null,
-      loadPianoGgml: ({bool download = false}) async => null,
+      loadPianoGgml: (
+              {bool download = false,
+              CrispasrNoteModel model = CrispasrNoteModel.auto}) async =>
+          null,
     );
     expect(e.f0, isNotNull); // forced pure-Dart → WORLD DIO, not CREPE
     await e.f0!(Float64List(0), 44100); // DIO runs (no model, no download)
@@ -186,7 +189,10 @@ void main() {
       cfg,
       isWeb: false,
       loadNeural: ({bool download = false}) async => _fakeNeural, // onnx BP
-      loadPianoGgml: ({bool download = false}) async => piano, // ggml
+      loadPianoGgml: (
+              {bool download = false,
+              CrispasrNoteModel model = CrispasrNoteModel.auto}) async =>
+          piano, // ggml
     );
     expect(e.neural, isNotNull);
     await e.neural!(Float64List(0), 44100);
@@ -201,5 +207,80 @@ void main() {
     expect(await loadOnnxFfiF0(), isNull);
     expect(await loadOnnxFfiNeural(), isNull);
     expect(await loadOnnxFfiChords(), isNull);
+  });
+
+  group('crispasr note-model choice', () {
+    // One C entry point, three models: the choice has to reach the ggml loader,
+    // and it must not leak into any other runtime's probe.
+    Future<TranscriptionEngines> run(
+      TranscriptionEngineConfig c,
+      void Function(bool download, CrispasrNoteModel model) record,
+    ) =>
+        resolveEngines(
+          c,
+          isWeb: false,
+          loadNeural: ({bool download = false}) async => _fakeNeural,
+          loadRmvpe: ({bool download = false}) async => null,
+          loadCrepeOnnx: ({bool download = false}) async => null,
+          loadCrepeGgml: ({bool download = false}) async => null,
+          loadHarmony: ({bool download = false}) async => null,
+          loadF0OnnxFfi: ({bool download = false}) async => null,
+          loadNeuralOnnxFfi: ({bool download = false}) async => null,
+          loadChordsOnnxFfi: ({bool download = false}) async => null,
+          loadPianoGgml: ({
+            bool download = false,
+            CrispasrNoteModel model = CrispasrNoteModel.auto,
+          }) async {
+            record(download, model);
+            return null;
+          },
+        );
+
+    test('the configured model reaches the ggml loader', () async {
+      late CrispasrNoteModel seen;
+      await run(
+        cfg.copyWith(crispasrNoteModel: CrispasrNoteModel.mt3),
+        (_, m) => seen = m,
+      );
+      expect(seen, CrispasrNoteModel.mt3);
+    });
+
+    test('default is auto — an untouched config asks for today\'s model',
+        () async {
+      late CrispasrNoteModel seen;
+      await run(cfg, (_, m) => seen = m);
+      expect(seen, CrispasrNoteModel.auto);
+      expect(CrispasrNoteModel.auto.registryBackend, 'piano-transcription');
+    });
+
+    test('an auto polyphonic step never downloads a 96 MB model', () async {
+      late bool seen;
+      await run(
+        cfg.copyWith(crispasrNoteModel: CrispasrNoteModel.mt3),
+        (d, _) => seen = d,
+      );
+      expect(seen, isFalse, reason: 'auto probes, it does not fetch');
+    });
+
+    test('an EXPLICIT crispasr polyphonic choice does download', () async {
+      late bool seen;
+      await run(
+        cfg.copyWith(
+          backends: {TranscriptionStep.polyphonic: Backend.crispasr},
+          crispasrNoteModel: CrispasrNoteModel.mt3,
+        ),
+        (d, _) => seen = d,
+      );
+      expect(seen, isTrue);
+    });
+
+    test('falls back to onnx Basic Pitch when the ggml model is absent',
+        () async {
+      final e = await run(
+        cfg.copyWith(crispasrNoteModel: CrispasrNoteModel.mt3),
+        (_, __) {},
+      );
+      expect(e.neural, same(_fakeNeural));
+    });
   });
 }

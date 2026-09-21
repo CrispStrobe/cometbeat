@@ -1,14 +1,25 @@
-// Native CrispASR ggml PIANO transcription (CrispasrSession.pianoNotes, crispasr
-// 0.8.17+): resample the mono audio to the model's rate, run pianoNotes, map its
-// PianoNote records onto our NoteEvent contract. dart:io only. Null when the
-// ggml runtime/model isn't available here → the resolver falls back to the
-// pure-Dart onnx Basic Pitch.
+// Native CrispASR ggml NOTE-EVENT transcription (CrispasrSession.pianoNotes,
+// crispasr 0.8.17+): resample the mono audio to the model's OWN rate, run the
+// model, map its PianoNote records onto our NoteEvent contract. dart:io only.
+// Null when the ggml runtime/model isn't available here → the resolver falls
+// back to the pure-Dart onnx Basic Pitch.
+//
+// THREE models share this one seam. `crispasr_session_piano` is the same C
+// entry point for piano-transcription, Basic Pitch and MT3 alike (its `pcm_16k`
+// parameter name is historical), so [CrispasrNoteModel] is a choice of MODEL,
+// not a third code path. What differs between them is the registry key and the
+// native sample rate — and the rate is ASKED FOR, never assumed:
+// `pianoSampleRate` returns 22050 for basic-pitch, 16000 for the other two, and
+// 0 when the opened backend has no piano arm at all, which is exactly the
+// capability probe we want.
 
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
 import 'package:comet_beat/core/audio/transcription/crispasr_ffi_session_io.dart';
+import 'package:comet_beat/core/audio/transcription/engine_config.dart'
+    show CrispasrNoteModel, CrispasrNoteModelInfo;
 import 'package:comet_beat/core/audio/transcription/route.dart'
     show NeuralTranscriber;
 // For the CrispasrSession type; hide the PitchFrame that collides with ours.
@@ -19,13 +30,34 @@ import 'package:crispasr/crispasr.dart' hide PitchFrame;
 int _i(Object? v) => (v as num).toInt();
 double _d(Object? v) => (v as num).toDouble();
 
-/// A CrispASR-FFI piano [NeuralTranscriber], or null when the piano backend/
-/// model/lib isn't available. [download] fetches the GGUF if not cached.
-Future<NeuralTranscriber?> loadCrispasrPianoFfi({bool download = false}) async {
+/// A CrispASR-FFI note-event [NeuralTranscriber] for [model], or null when that
+/// model / the ggml lib isn't available. [download] fetches the GGUF if not
+/// cached — the caller gates that, because MT3 and piano-transcription are tens
+/// of megabytes (see [CrispasrNoteModelInfo.needsExplicitDownloadConsent]).
+Future<NeuralTranscriber?> loadCrispasrPianoFfi({
+  bool download = false,
+  CrispasrNoteModel model = CrispasrNoteModel.auto,
+}) async {
+  // registryLookup + cacheDir + cacheEnsureFile, via the shared opener — no
+  // hand-rolled URLs. Null for: no libcrispasr, a build without this backend
+  // registered, or "not cached and we were told not to download".
   final CrispasrSession? session =
-      openCrispasrSession('piano-transcription', download: download);
+      openCrispasrSession(model.registryBackend, download: download);
   if (session == null) return null;
-  final target = session.pianoSampleRate; // 16 kHz for the Kong model
+  // Ask the model its rate; 0 means this session has no piano arm (or the
+  // dylib predates the API), in which case there is nothing to fall through to
+  // but null — and dividing by it would hand resampleLinear an infinite ratio.
+  final int target;
+  try {
+    target = session.pianoSampleRate;
+  } on Object {
+    session.close();
+    return null;
+  }
+  if (target <= 0) {
+    session.close();
+    return null;
+  }
   return (Float64List mono, int sampleRate) async {
     if (mono.isEmpty) return const <NoteEvent>[];
     final at =
@@ -39,7 +71,10 @@ Future<NeuralTranscriber?> loadCrispasrPianoFfi({bool download = false}) async {
       final events = <NoteEvent>[];
       for (final n in session.pianoNotes(pcm)) {
         // velocity is a loudness estimate, not a confidence — use it as a 0–1
-        // strength proxy (documented; better than a flat constant).
+        // strength proxy (documented; better than a flat constant). MT3 emits a
+        // General-MIDI program per note that this flat ABI drops, so a note's
+        // instrument is not recoverable here; that is a known limitation of the
+        // shared seam, not of the model.
         final NoteEvent e = (
           midi: _i(n.midi),
           onMs: _d(n.onMs),
