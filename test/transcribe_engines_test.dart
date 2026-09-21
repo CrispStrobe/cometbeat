@@ -102,9 +102,10 @@ void main() {
       loadF0OnnxFfi: ({bool download = false}) async => null,
       loadNeuralOnnxFfi: ({bool download = false}) async => null,
       loadChordsOnnxFfi: ({bool download = false}) async => null,
-      loadPianoGgml: (
-              {bool download = false,
-              CrispasrNoteModel model = CrispasrNoteModel.auto}) async =>
+      loadPianoGgml: ({
+        bool download = false,
+        CrispasrNoteModel model = CrispasrNoteModel.auto,
+      }) async =>
           null,
     );
     expect(e.f0, isNotNull); // forced pure-Dart → WORLD DIO, not CREPE
@@ -189,9 +190,10 @@ void main() {
       cfg,
       isWeb: false,
       loadNeural: ({bool download = false}) async => _fakeNeural, // onnx BP
-      loadPianoGgml: (
-              {bool download = false,
-              CrispasrNoteModel model = CrispasrNoteModel.auto}) async =>
+      loadPianoGgml: ({
+        bool download = false,
+        CrispasrNoteModel model = CrispasrNoteModel.auto,
+      }) async =>
           piano, // ggml
     );
     expect(e.neural, isNotNull);
