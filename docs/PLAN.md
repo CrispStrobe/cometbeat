@@ -28,6 +28,100 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> 🎹 **opus/note-models — branch `feat/crispasr-note-models` (worktree
+> `../cometbeat-notemodels`), 2026-09-21.** The ggml polyphonic path loaded ONE
+> model, hard-coded. `crispasr_session_piano` is the SAME C entry point for
+> basic-pitch, piano-transcription and MT3, so this is a choice of model, not a
+> code path: `CrispasrNoteModel` on `TranscriptionEngineConfig`, resolved
+> through CrispASR's own registry + cache, with a Settings chip row under
+> "Chords & piano". Default unchanged (`auto` = piano-transcription).
+>
+> **Why MT3 matters:** MusicNet test split, mir_eval rules — F1 **76.5%** vs
+> 47.7% (Kong) and 44.2% (Basic Pitch), at 0.26x real time. Numbers, caveats and
+> the degradation table: `docs/TRANSCRIPTION_NOTE_MODELS.md`. The default does
+> NOT flip on someone else's corpus; a CometBeat-side A/B on short takes is the
+> gate.
+>
+> ✅ **Follow-up DONE on this same branch (2026-09-22) — `NoteEvent` widened
+> with `program`, the General MIDI instrument, and carried to the score.**
+> This is the work the paragraph below proposed, and the heads-up
+> `contracts.dart` asks for was this board entry.
+>
+> **The seam was widened rather than wrapped, and the reason is a language
+> fact: Dart records have NO width subtyping.** A five-field
+> `({..., int program})` is simply not assignable to the four-field
+> `NoteEvent`, so a "superset record" could not have flowed through the
+> existing consumers — the wrapper option was never the cheap one it looks
+> like. The remaining alternative, a parallel `List<int>` of programs beside
+> the notes, is one `sort` or one `where` away from silently relabelling every
+> note, and this pipeline sorts and filters notes in four places. Widening is
+> the only shape the compiler checks. It cost **22 construction sites, 5 of
+> them in `lib/`** — every one a compile error until it said what instrument
+> it had identified, which is exactly the audit we wanted.
+>
+> **`-1` is the sentinel, never `0`** (`gmProgramUnknown`; `128` =
+> `gmProgramPercussion`). `0` is *Acoustic Grand Piano* and would be
+> indistinguishable from a real answer. pYIN's note-HMM, Basic Pitch, Kong's
+> piano-transcription and the Score→notes helper all report `-1` —
+> `test/transcription/note_program_test.dart` pins that by running the REAL
+> producers, not stubs.
+>
+> **What consumes it:** `transcribeToParts` (`transcribe.dart`) groups notes by
+> program and engraves ONE STAFF PER INSTRUMENT, each choosing its own clef and
+> stamped with `ScoreMetadata(instrument:, midiProgram:, isPercussion:)` —
+> which `crisp_notation_core` already turns into a MusicXML `<part-name>` +
+> `<midi-program>` and a MIDI program change, so no notation-library work was
+> needed. It surfaces as `TranscriptionResult.parts` (+ the `multiPart()`
+> helper), and the Transcribe screen's "open in score editor" now hands the
+> Workshop the several named staves instead of `MultiPartScore([one])`. A
+> single-instrument take yields exactly one part, so every existing path is
+> byte-identical.
+>
+> **Verified end to end, not just at the boundary.** MusicNet piece 1819 (wind
+> trio), first 8 s, MT3 via `bin/transcribe_notes_ggml.dart` (new):
+> programs **60/70/71 → French Horn, Bassoon, Clarinet**, matching the
+> annotation's 61/71/72 (MusicNet numbers from 1), nothing spurious; and
+> `--musicxml` writes **three `<part>`s with three `<midi-program>`s** from the
+> same run. Web stays safe: the FFI file is still behind the conditional
+> import and the stub is unchanged.
+>
+> **Reserved files** (the note-model claim, plus this follow-up):
+> `engine_config.dart`, `crispasr_ffi_piano_io.dart`,
+> `crispasr_ffi_piano_stub.dart`, `transcribe_engines.dart`,
+> `transcription_config_service.dart`, the transcription block of
+> `settings_screen.dart`, the six new `transcriptionNoteModel*` ARB keys
+> (append-only), `test/transcribe_engines_test.dart`,
+> `test/transcription/engine_config_test.dart`,
+> `test/crispasr_ffi_backends_test.dart` — and for the seam:
+> `contracts.dart`, the new `gm_programs.dart`, `transcribe.dart`,
+> `transcription_service.dart`, `note_hmm.dart`, `basic_pitch.dart`,
+> `piano.dart`, `notation.dart`, `sung_melody.dart`,
+> `transcribe_screen.dart` (the score-editor button only), the new
+> `bin/transcribe_notes_ggml.dart` and
+> `test/transcription/note_program_test.dart`, plus the one-line
+> `program:` additions in eleven existing transcription tests.
+>
+> ⚠️ **`basic_pitch.dart` overlaps PR #1 (`perf/basic-pitch-pool`) by one
+> line** — the `program: gmProgramUnknown` inside `notesFromPosteriorgrams`.
+> Whoever merges second takes that line; there is no behavioural conflict.
+>
+> The original proposal, for the record:
+>
+> > MT3's per-note General MIDI program used to be dropped by the C ABI;
+> > `crispasr 0.8.35` fixes that (`crispasr_session_piano_note_programs`,
+> > Dart `pianoNotesWithPrograms`, mirrored in C#), so the instrument now
+> > reaches `crispasr_ffi_piano_io.dart`. What drops it is our own `NoteEvent`
+> > — which `contracts.dart` declares THE SEAM and frozen, shared by pYIN, the
+> > note-HMM, rhythm and notation. Adding a field changes the record type for
+> > every one of them, so it is not done here.
+>
+> ⚠️ **Overlaps `perf/basic-pitch-pool` (PR #1) only in spirit, not in files** —
+> that PR owns the ONNX Basic Pitch path; this one owns the ggml note-event path.
+> The one shared LINE — `program: gmProgramUnknown` inside
+> `notesFromPosteriorgrams` — merged cleanly when **PR #4 landed on main
+> (`c508f19`, 2026-09-22)** and this branch merged main back in; git resolved
+> `basic_pitch.dart` on its own, and only this board needed a hand.
+
 > ⚡ **opus/basic-pitch-pool — ACTIVE (2026-09-21), branch `perf/basic-pitch-pool`,
 > PR #1.** Basic Pitch was the one ONNX model not on the `onnx_runtime_dart`
 > isolate GEMM pool (RMVPE/FCPE/CREPE already are). Added the async path

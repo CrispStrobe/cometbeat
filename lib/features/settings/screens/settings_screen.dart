@@ -759,6 +759,11 @@ class _TranscriptionEngineSection extends StatelessWidget {
                         Backend.crispasr,
                       ],
                     ),
+                    // Which MODEL the ggml runtime loads for the polyphonic
+                    // step — one C entry point, three models. Only meaningful
+                    // natively, and only when that step runs on `crispasr`, so
+                    // it is hidden on web and sits directly under its step.
+                    if (!kIsWeb) _noteModelPicker(context, svc),
                     _stepPicker(
                       context,
                       svc,
@@ -806,6 +811,44 @@ class _TranscriptionEngineSection extends StatelessWidget {
     );
   }
 
+  /// The CrispASR note-model chips. Each label carries its download size,
+  /// because picking one and then choosing the ggml polyphonic engine is what
+  /// triggers the fetch — MT3 is 96 MB and the user should see that first.
+  Widget _noteModelPicker(
+    BuildContext context,
+    TranscriptionConfigService svc,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final cur = svc.config.crispasrNoteModel;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.transcriptionNoteModelLabel,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          Text(
+            l10n.transcriptionNoteModelSubtitle,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final m in CrispasrNoteModel.values)
+                ChoiceChip(
+                  label: Text(_noteModelName(l10n, m)),
+                  selected: cur == m,
+                  onSelected: (_) => svc.setCrispasrNoteModel(m),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _stepPicker(
     BuildContext context,
     TranscriptionConfigService svc,
@@ -845,6 +888,14 @@ String _qualityName(AppLocalizations l10n, ModelQuality q) => switch (q) {
       ModelQuality.fast => l10n.transcriptionQualityFast,
       ModelQuality.balanced => l10n.transcriptionQualityBalanced,
       ModelQuality.accurate => l10n.transcriptionQualityAccurate,
+    };
+
+String _noteModelName(AppLocalizations l10n, CrispasrNoteModel m) =>
+    switch (m) {
+      CrispasrNoteModel.auto => l10n.transcriptionNoteModelAuto,
+      CrispasrNoteModel.basicPitch => l10n.transcriptionNoteModelBasicPitch,
+      CrispasrNoteModel.pianoTranscription => l10n.transcriptionNoteModelPiano,
+      CrispasrNoteModel.mt3 => l10n.transcriptionNoteModelMt3,
     };
 
 String _backendName(AppLocalizations l10n, Backend b) => switch (b) {

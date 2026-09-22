@@ -62,8 +62,8 @@ void main() {
     Future<List<NoteEvent>> fakeNeural(Float64List mono, int sr) async {
       called = true;
       return [
-        (midi: 60, onMs: 0, offMs: 500, confidence: 0.9),
-        (midi: 64, onMs: 500, offMs: 1000, confidence: 0.9),
+        (midi: 60, onMs: 0, offMs: 500, confidence: 0.9, program: -1),
+        (midi: 64, onMs: 500, offMs: 1000, confidence: 0.9, program: -1),
       ];
     }
 
@@ -88,9 +88,9 @@ void main() {
       () async {
     // A polyphonic transcriber returns a C-major triad struck together.
     Future<List<NoteEvent>> chordNeural(Float64List mono, int sr) async => [
-          (midi: 60, onMs: 0, offMs: 500, confidence: 0.9),
-          (midi: 64, onMs: 0, offMs: 500, confidence: 0.9),
-          (midi: 67, onMs: 0, offMs: 500, confidence: 0.9),
+          (midi: 60, onMs: 0, offMs: 500, confidence: 0.9, program: -1),
+          (midi: 64, onMs: 0, offMs: 500, confidence: 0.9, program: -1),
+          (midi: 67, onMs: 0, offMs: 500, confidence: 0.9, program: -1),
         ];
 
     final chord = Int16List(_sr);

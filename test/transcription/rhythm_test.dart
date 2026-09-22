@@ -97,8 +97,9 @@ void main() {
       onsetMs: <double>[],
     );
     const quarterOnBeat2 =
-        (midi: 60, onMs: 1000.0, offMs: 1500.0, confidence: 1.0);
-    const eighthOnBeat0 = (midi: 62, onMs: 0.0, offMs: 250.0, confidence: 1.0);
+        (midi: 60, onMs: 1000.0, offMs: 1500.0, confidence: 1.0, program: -1);
+    const eighthOnBeat0 =
+        (midi: 62, onMs: 0.0, offMs: 250.0, confidence: 1.0, program: -1);
     final out = quantizeToGrid([quarterOnBeat2, eighthOnBeat0], grid);
 
     expect(out[0].startBeat, closeTo(2.0, 1e-9));

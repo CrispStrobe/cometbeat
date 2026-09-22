@@ -7,7 +7,11 @@
 // pass can move it to a compute() isolate. Test seams (`debugPickAudio`,
 // `debugNeural`) let a widget test drive the flow with no file-picker/mic/ONNX.
 
+import 'package:comet_beat/core/audio/transcription/contracts.dart'
+    show hasInstrument;
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
+import 'package:comet_beat/core/audio/transcription/gm_programs.dart'
+    show gmProgramName;
 import 'package:comet_beat/core/audio/transcription/harmony.dart'
     show ChordEstimator;
 import 'package:comet_beat/core/audio/transcription/route.dart';
@@ -453,8 +457,23 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
                 runSpacing: 8,
                 children: [
                   FilledButton.tonalIcon(
-                    onPressed: () =>
-                        _openInScoreEditor(MultiPartScore([r.score])),
+                    // One part per instrument. A single-instrument take (every
+                    // producer but MT3, which all report gmProgramUnknown)
+                    // yields exactly one part, so this is the old
+                    // `MultiPartScore([r.score])` unchanged; a multi-instrument
+                    // one opens in the editor as the several staves it is,
+                    // each named and carrying its own GM program, instead of
+                    // one staff of every instrument's notes piled together.
+                    onPressed: () => _openInScoreEditor(
+                      multiPart(r),
+                      [
+                        for (final part in r.parts)
+                          if (hasInstrument(part.program))
+                            gmProgramName(part.program)
+                          else
+                            l10n.transcribeTitle,
+                      ],
+                    ),
                     icon: const Icon(Icons.edit_note),
                     label: Text(l10n.transcribeOpenScore),
                   ),

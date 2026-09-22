@@ -22,15 +22,25 @@ import 'package:comet_beat/core/audio/transcription/rhythm.dart';
 import 'package:comet_beat/core/audio/transcription/route.dart';
 import 'package:comet_beat/core/audio/transcription/transcribe.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
-import 'package:crisp_notation_core/crisp_notation_core.dart' show Score;
+import 'package:crisp_notation_core/crisp_notation_core.dart'
+    show MultiPartScore, Score;
 
 /// The outcome of transcribing a recording: the engraved [score], the [notes] it
 /// was built from (each carries a `confidence` a UI can surface), which [engine]
 /// the router chose, the [probe] that decided, the detected [bpm], the estimated
 /// [meter] (beats-per-bar → the time signature), the [key], and any recognised
 /// [chords] (empty unless a neural chord estimator was supplied).
+///
+/// [parts] is [score] split by instrument — one entry per distinct
+/// [NoteEvent.program], each already re-spelled for the key. It is never
+/// empty. With a single-instrument transcriber (every producer but MT3, all of
+/// which report [gmProgramUnknown]) it holds exactly one part and [score] is
+/// that part's score, so a caller that ignores [parts] sees no change. With MT3
+/// it is how a multi-instrument take reaches the UI as more than one staff;
+/// [multiPart] wraps it for the multi-part MusicXML writer.
 typedef TranscriptionResult = ({
   Score score,
+  List<TranscribedPart> parts,
   List<NoteEvent> notes,
   TranscriptionEngine engine,
   InputProbe probe,
@@ -109,8 +119,26 @@ Future<TranscriptionResult> transcribeRecording(
   // Detect the key and re-spell (B-flat, not A-sharp) + stamp the key signature.
   final key = estimateKey(routed.notes);
   final score = respell(raw, fifths: key.fifths);
+  // Split by instrument. For every producer but MT3 this is one part holding
+  // the whole take (all notes carry gmProgramUnknown), and its score is `score`
+  // itself — the single-instrument path is untouched.
+  final parts = [
+    for (final part in transcribeToParts(
+      routed.notes,
+      grid,
+      beatsPerBar: meter.beatsPerBar,
+    ))
+      (
+        program: part.program,
+        notes: part.notes,
+        // Re-spell per part, so a transposing/low part is spelled in the key
+        // rather than inheriting the whole take's accidentals by accident.
+        score: respell(part.score, fifths: key.fifths),
+      ),
+  ];
   return (
     score: score,
+    parts: parts,
     notes: routed.notes,
     engine: routed.engine,
     probe: routed.probe,
@@ -120,3 +148,10 @@ Future<TranscriptionResult> transcribeRecording(
     chords: chords,
   );
 }
+
+/// [TranscriptionResult.parts] as a [MultiPartScore] — what
+/// `multiPartToMusicXml` takes, so a multi-instrument transcription exports as
+/// one document with a `<part>` (and its own `<midi-program>`) per instrument
+/// rather than one staff of piled-up chords.
+MultiPartScore multiPart(TranscriptionResult result) =>
+    MultiPartScore([for (final p in result.parts) p.score]);

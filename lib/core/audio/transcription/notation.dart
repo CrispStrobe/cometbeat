@@ -172,7 +172,13 @@ List<NoteEvent> _scoreNotes(Score score) => [
         for (final e in [...m.elements, ...m.voice2, ...m.voice3, ...m.voice4])
           if (e is NoteElement)
             for (final p in e.pitches)
-              (midi: p.midiNumber, onMs: 0, offMs: 1, confidence: 1),
+              (
+                midi: p.midiNumber,
+                onMs: 0,
+                offMs: 1,
+                confidence: 1,
+                program: gmProgramUnknown,
+              ),
     ];
 
 double _pearson(List<double> a, List<double> b) {

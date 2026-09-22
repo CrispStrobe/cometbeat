@@ -96,5 +96,5 @@ Prf notePrf(
 /// list at full confidence.
 List<NoteEvent> notes(List<(int, double, double)> spec) => [
       for (final (m, on, off) in spec)
-        (midi: m, onMs: on, offMs: off, confidence: 1),
+        (midi: m, onMs: on, offMs: off, confidence: 1, program: -1),
     ];

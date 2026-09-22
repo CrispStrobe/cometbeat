@@ -12,7 +12,7 @@ import 'package:comet_beat/core/games/highway/highway_review.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 NoteEvent _heard(int midi, double onMs) =>
-    (midi: midi, onMs: onMs, offMs: onMs + 200, confidence: 1);
+    (midi: midi, onMs: onMs, offMs: onMs + 200, confidence: 1, program: -1);
 
 const _events = [
   HighwayEvent(startBeat: 0, beats: 1, midi: 60),

@@ -13,7 +13,8 @@ List<NoteEvent> _notes(List<int> midis) => [
           midi: midis[i],
           onMs: i * 500.0,
           offMs: i * 500.0 + 450,
-          confidence: 1
+          confidence: 1,
+          program: gmProgramUnknown,
         ),
     ];
 

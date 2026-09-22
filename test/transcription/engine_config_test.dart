@@ -160,4 +160,63 @@ void main() {
     expect(back.backendFor(TranscriptionStep.separation), Backend.onnx);
     expect(back.backendFor(TranscriptionStep.chords), Backend.auto); // default
   });
+
+  group('crispasr note model', () {
+    test('every value maps to a distinct registry key, except auto', () {
+      final keys = {
+        for (final m in CrispasrNoteModel.values) m: m.registryBackend,
+      };
+      // auto IS piano-transcription today — that is the point of it.
+      expect(keys[CrispasrNoteModel.auto], 'piano-transcription');
+      expect(
+        {
+          keys[CrispasrNoteModel.basicPitch],
+          keys[CrispasrNoteModel.pianoTranscription],
+          keys[CrispasrNoteModel.mt3],
+        },
+        {'basic-pitch', 'piano-transcription', 'mt3'},
+      );
+      expect(keys.values.every((k) => k.isNotEmpty), isTrue);
+    });
+
+    test('sample rates are per-model — basic-pitch is NOT 16 kHz', () {
+      expect(CrispasrNoteModel.basicPitch.sampleRate, 22050);
+      expect(CrispasrNoteModel.pianoTranscription.sampleRate, 16000);
+      expect(CrispasrNoteModel.mt3.sampleRate, 16000);
+    });
+
+    test('only the tiny model is small enough to fetch without asking', () {
+      expect(
+        CrispasrNoteModel.basicPitch.needsExplicitDownloadConsent,
+        isFalse,
+      );
+      expect(CrispasrNoteModel.mt3.needsExplicitDownloadConsent, isTrue);
+      expect(
+        CrispasrNoteModel.pianoTranscription.needsExplicitDownloadConsent,
+        isTrue,
+      );
+    });
+
+    test('JSON round-trips the choice; an older config reads back as auto', () {
+      final c = const TranscriptionEngineConfig()
+          .copyWith(crispasrNoteModel: CrispasrNoteModel.mt3);
+      expect(
+        TranscriptionEngineConfig.fromJson(c.toJson()).crispasrNoteModel,
+        CrispasrNoteModel.mt3,
+      );
+      // A config persisted before this field existed.
+      final old = Map<String, Object?>.from(c.toJson())
+        ..remove('crispasrNoteModel');
+      expect(
+        TranscriptionEngineConfig.fromJson(old).crispasrNoteModel,
+        CrispasrNoteModel.auto,
+      );
+      // And garbage does not throw.
+      expect(
+        TranscriptionEngineConfig.fromJson({'crispasrNoteModel': 'nope'})
+            .crispasrNoteModel,
+        CrispasrNoteModel.auto,
+      );
+    });
+  });
 }

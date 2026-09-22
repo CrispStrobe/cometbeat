@@ -53,13 +53,20 @@ typedef TranscriptionEngines = ({
 Future<F0Estimator?> loadCrispasrCrepeF0({bool download = false}) async =>
     await crispasrFfiCrepeF0(download: download) ?? crispasrCliCrepeF0();
 
-/// `crispasr` runtime — polyphonic transcription via CrispASR ggml PIANO (Kong).
+/// `crispasr` runtime — polyphonic transcription via CrispASR ggml note events.
 /// WIRED via the clean FFI note-event API (`crispasr_ffi_piano.dart` →
 /// `CrispasrSession.pianoNotes`, crispasr 0.8.17+): its `{midi, onMs, offMs,
 /// velocity}` maps straight onto [NoteEvent]. Null (no lib/model) → the resolver
 /// falls back to the pure-Dart onnx Basic Pitch.
-Future<NeuralTranscriber?> loadCrispasrPiano({bool download = false}) =>
-    loadCrispasrPianoFfi(download: download);
+///
+/// [model] picks WHICH note model the runtime loads — piano-transcription
+/// (today's default), Basic Pitch, or MT3. One entry point, three models; see
+/// [CrispasrNoteModel] for what each costs and what each is good at.
+Future<NeuralTranscriber?> loadCrispasrPiano({
+  bool download = false,
+  CrispasrNoteModel model = CrispasrNoteModel.auto,
+}) =>
+    loadCrispasrPianoFfi(download: download, model: model);
 
 /// `onnxFfi` runtime — the same CREPE `.onnx` model on the NATIVE ONNX Runtime
 /// via FFI (the `onnxruntime` plugin), reusing crepeF0WithRunner. WIRED for F0
@@ -112,8 +119,10 @@ Future<TranscriptionEngines> resolveEngines(
   // crispasr (ggml) loaders — stubs until the pub package ships.
   Future<F0Estimator?> Function({bool download}) loadCrepeGgml =
       loadCrispasrCrepeF0,
-  Future<NeuralTranscriber?> Function({bool download}) loadPianoGgml =
-      loadCrispasrPiano,
+  Future<NeuralTranscriber?> Function({
+    bool download,
+    CrispasrNoteModel model,
+  }) loadPianoGgml = loadCrispasrPiano,
 }) async {
   final f0Explicit = config.backendFor(TranscriptionStep.f0) != Backend.auto;
   final polyExplicit =
@@ -130,7 +139,14 @@ Future<TranscriptionEngines> resolveEngines(
 
   final onnxNeural = await loadNeural(download: polyExplicit);
   final ffiNeural = await loadNeuralOnnxFfi(download: polyExplicit);
-  final ggmlNeural = await loadPianoGgml(download: polyExplicit);
+  // The note-model choice only ever reaches the ggml probe; it is inert for
+  // every other runtime. `download` stays tied to an EXPLICIT backend choice,
+  // so neither the 77 MB piano model nor MT3's 96 MB is ever fetched by an
+  // `auto` probe — a user has to have asked for the ggml polyphonic engine.
+  final ggmlNeural = await loadPianoGgml(
+    download: polyExplicit,
+    model: config.crispasrNoteModel,
+  );
 
   final onnxChords = await loadHarmony(download: chordsExplicit);
   final ffiChords = await loadChordsOnnxFfi(download: chordsExplicit);

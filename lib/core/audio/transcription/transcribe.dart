@@ -16,6 +16,9 @@
 import 'dart:math' as math;
 
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
+import 'package:comet_beat/core/audio/transcription/gm_programs.dart';
+import 'package:comet_beat/core/audio/transcription/notation.dart'
+    show chooseClef;
 import 'package:comet_beat/core/audio/transcription/rhythm.dart'
     show quantizeToGrid;
 // The pure core (NOT the Flutter barrel, which reaches Flutter via midi_pitch)
@@ -145,6 +148,114 @@ Score transcribeToScore(
     tempo: grid.bpm > 0 ? Tempo(grid.bpm) : null,
     measures: measures,
   );
+}
+
+/// One engraved instrument part: the [program] it was transcribed as (see
+/// [NoteEvent.program]), the [notes] carrying that program, and the [score]
+/// they engrave to — a single staff, already stamped with the part's
+/// [ScoreMetadata] (instrument name, GM program, percussion flag).
+typedef TranscribedPart = ({int program, List<NoteEvent> notes, Score score});
+
+/// Split [notes] by instrument and engrave ONE PART PER [NoteEvent.program] —
+/// the consumer that makes the program worth carrying.
+///
+/// A multi-instrument transcriber (today: MT3, the only producer that fills the
+/// program in) hands back a wind trio as one flat note list. [transcribeToScore]
+/// engraves that as a single staff of dense chords, which is a truthful record
+/// of the pitches and an unreadable piece of music. This groups the notes by
+/// program first, so a trio comes out as three staves that can be read, played,
+/// and exported as three MusicXML `<part>`s / three MIDI tracks with their own
+/// `<midi-program>`.
+///
+/// Part order is **highest median pitch first** — the ordinary "top line on
+/// top" rule, and deterministic (programs tie-break ascending). A part whose
+/// notes carry [gmProgramUnknown] sorts last and gets no instrument metadata,
+/// because naming it would be inventing the answer the sentinel exists to
+/// withhold.
+///
+/// **Single-instrument input is unchanged**: every note carrying the same
+/// program (the [gmProgramUnknown] every non-MT3 producer reports included)
+/// yields exactly one part whose score is what [transcribeToScore] would have
+/// returned, so pYIN, Basic Pitch and Kong keep their existing output.
+///
+/// [clef] pins every part's clef; by default each part picks its own with
+/// [chooseClef], which is what puts a bassoon on a bass staff and a clarinet on
+/// a treble one.
+List<TranscribedPart> transcribeToParts(
+  List<NoteEvent> notes,
+  RhythmGrid grid, {
+  Clef? clef,
+  int beatsPerBar = 4,
+}) {
+  final byProgram = <int, List<NoteEvent>>{};
+  for (final n in notes) {
+    (byProgram[n.program] ??= <NoteEvent>[]).add(n);
+  }
+  if (byProgram.isEmpty) {
+    return [
+      (
+        program: gmProgramUnknown,
+        notes: const <NoteEvent>[],
+        score: transcribeToScore(
+          const <NoteEvent>[],
+          grid,
+          clef: clef ?? Clef.treble,
+          beatsPerBar: beatsPerBar,
+        ),
+      ),
+    ];
+  }
+
+  final programs = byProgram.keys.toList()
+    ..sort((a, b) {
+      // Unknown last, whatever it sounds like — it is not an instrument.
+      final aKnown = hasInstrument(a), bKnown = hasInstrument(b);
+      if (aKnown != bKnown) return aKnown ? -1 : 1;
+      final byPitch = _medianMidi(byProgram[b]!).compareTo(
+        _medianMidi(byProgram[a]!),
+      );
+      return byPitch != 0 ? byPitch : a.compareTo(b);
+    });
+
+  return [
+    for (final program in programs)
+      () {
+        final part = byProgram[program]!;
+        final score = transcribeToScore(
+          part,
+          grid,
+          clef: clef ?? chooseClef(part),
+          beatsPerBar: beatsPerBar,
+        );
+        return (
+          program: program,
+          notes: part,
+          score: hasInstrument(program)
+              ? score.copyWith(
+                  metadata: score.metadata.copyWith(
+                    instrument: gmProgramName(program),
+                    // 128 is GM channel 10, which carries no program — the
+                    // isPercussion flag says it instead. Leaving midiProgram
+                    // unset is right here (and ScoreMetadata.copyWith reads a
+                    // null as "keep", which on this freshly engraved score
+                    // means keep it absent); writing 128 would emit a
+                    // <midi-program> no reader accepts.
+                    midiProgram:
+                        program == gmProgramPercussion ? null : program,
+                    isPercussion: program == gmProgramPercussion,
+                  ),
+                )
+              : score,
+        );
+      }(),
+  ];
+}
+
+/// The median MIDI number of [notes] (0 when empty) — the part's register.
+int _medianMidi(List<NoteEvent> notes) {
+  if (notes.isEmpty) return 0;
+  final midis = [for (final n in notes) n.midi]..sort();
+  return midis[midis.length ~/ 2];
 }
 
 /// Whether two sorted midi lists hold the same pitch set.

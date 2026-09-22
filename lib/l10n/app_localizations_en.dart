@@ -8640,6 +8640,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Steadier notes, no octave jumps — a little slower (neural pitch only)';
 
   @override
+  String get transcriptionNoteModelLabel => 'Note model (GGUF native)';
+
+  @override
+  String get transcriptionNoteModelSubtitle =>
+      'Used when “Chords & piano” runs on GGUF (native). Downloaded the first time you pick that engine.';
+
+  @override
+  String get transcriptionNoteModelAuto => 'Auto (piano, 77 MB)';
+
+  @override
+  String get transcriptionNoteModelBasicPitch => 'Basic Pitch (110 KB)';
+
+  @override
+  String get transcriptionNoteModelPiano => 'Piano specialist (77 MB)';
+
+  @override
+  String get transcriptionNoteModelMt3 => 'MT3 — many instruments (96 MB)';
+
+  @override
   String get trackerNativeCommand => 'Raw native command';
 
   @override
