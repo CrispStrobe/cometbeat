@@ -8,6 +8,56 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## Note-model choice, and MT3's instruments reach the score (2026-09-22)
+
+The ggml polyphonic path loaded **one** model, hard-coded.
+`crispasr_session_piano` is the same C entry point for `basic-pitch`,
+`piano-transcription` and MT3, so this was a choice of model rather than a
+code path: `CrispasrNoteModel` on `TranscriptionEngineConfig`, resolved
+through CrispASR's own registry and cache, with a Settings chip row under
+"Chords & piano". Default unchanged (`auto` = piano-transcription) — flipping
+it belongs to a CometBeat-side A/B on its own material, not to a corpus
+measured elsewhere.
+
+**Why MT3 matters:** MusicNet test split, `mir_eval` rules, validated against
+the official reference implementations — F1 **76.5%** against 47.7% (Kong)
+and 44.2% (Basic Pitch), at 0.26x real time. Numbers, caveats and the
+degradation table in `docs/TRANSCRIPTION_NOTE_MODELS.md`.
+
+**And the instrument now survives the pipeline.** MT3 emits a General MIDI
+program per note; the flat C record dropped it until `crispasr 0.8.35` added
+a parallel accessor, after which our own `NoteEvent` was what discarded it.
+That record is widened rather than wrapped — Dart records have no width
+subtyping, so a superset type could never flow where the four-field one was
+expected, and a parallel array would be one `sort` or `where` from silently
+relabelling notes in a pipeline that sorts or filters in four places.
+Widening cost 22 construction sites; every one was a compile error until it
+stated the instrument it had identified, so the errors were the audit.
+`gmProgramUnknown = -1` (never `0`, which is Acoustic Grand Piano and would
+read as an answer), `gmProgramPercussion = 128`.
+
+`transcribeToParts` groups by program and engraves one staff per instrument.
+`crisp_notation_core` already wrote MusicXML `<part-name>` + `<midi-program>`,
+so no notation work was needed. Verified end to end: MusicNet 1819 (wind
+trio), eight seconds through MT3 → programs 60/70/71 = French Horn, Bassoon,
+Clarinet, and `--musicxml` wrote three `<part>`s with `<midi-program>`
+72/61/71 — MusicXML numbers from 1, so literally the annotation's 61/71/72 —
+with the bassoon staff choosing an F clef by itself.
+
+Also shipped alongside: Basic Pitch moved onto the `onnx_runtime_dart` isolate
+GEMM pool (the one ONNX model that was not), and a **frame-clock fix** worth
+more than either — the stitched grid kept 142 frames per window while a window
+advanced 36,164 samples, so reported note times gained 8.53 ms per window,
+about 840 ms three minutes in. Note-level F1 **11.1% → 47.8%**.
+
+Open follow-ups: part ordering is by descending median pitch rather than
+orchestral family order (defensible ad hoc, wrong for a conventionally
+engraved score), and `autoPoolWorkers`' `min(cores-2, 6)` is still unmeasured
+on CometBeat's own models — `tool/pool_workers_ab.dart` and the `pool-ab`
+workflow are in place to answer it.
+
+---
+
 ## Chord-chart backing band — the whole ladder, and it plays (2026-08-01)
 
 **One-line status:** the backing-band arc went from a headless engine nobody
