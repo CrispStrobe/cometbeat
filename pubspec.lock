@@ -178,17 +178,17 @@ packages:
     dependency: "direct main"
     description:
       name: crispasr
-      sha256: a2e8c27c228fa6ad8e77208290ee68cfb4f01d993db45117302feb8b7c9e77dc
+      sha256: "60416f04a505783aa8af95d0355903ecb587ddb207a06dfe659cc141740809cb"
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.21"
+    version: "0.8.35"
   crispembed:
     dependency: "direct main"
     description:
       path: "../CrispEmbed/flutter/crispembed"
       relative: true
     source: path
-    version: "0.16.1"
+    version: "0.17.10"
   cross_file:
     dependency: transitive
     description:
@@ -205,14 +205,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.7"
-  csslib:
-    dependency: transitive
-    description:
-      name: csslib
-      sha256: "09bad715f418841f976c77db72d5398dc1253c21fb9c0c7f0b0b985860b2d58e"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.2"
   cupertino_icons:
     dependency: "direct main"
     description:
@@ -426,14 +418,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.2"
-  html:
-    dependency: transitive
-    description:
-      name: html
-      sha256: "6d1264f2dffa1b1101c25a91dff0dc2daee4c18e87cd8538729773c073dbf602"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.15.6"
   http:
     dependency: "direct main"
     description:
@@ -661,7 +645,7 @@ packages:
       path: "../onnx_runtime_dart"
       relative: true
     source: path
-    version: "0.10.3"
+    version: "0.10.8"
   onnxruntime:
     dependency: "direct main"
     description:

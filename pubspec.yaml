@@ -98,7 +98,7 @@ dependencies:
   #     back to the pure-Dart onnx / CLI paths.
   # Models are registry-resolved + downloaded on first use, never bundled.
   # Native lib bundling: macOS first.
-  crispasr: ^0.8.17
+  crispasr: ^0.8.35
   # AEC Tier 3b native full-duplex echo canceller (in-repo Flutter FFI plugin).
   # Used only on native platforms + only when speaker-backing AEC is wanted;
   # reached exclusively through core/audio/aec_capability.dart, whose web build

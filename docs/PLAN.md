@@ -42,6 +42,21 @@ is recorded in [HISTORY.md](HISTORY.md).
 > NOT flip on someone else's corpus; a CometBeat-side A/B on short takes is the
 > gate.
 >
+> **Follow-up proposed, NOT done here — widening `NoteEvent` for MT3's
+> instrument.** MT3's per-note General MIDI program used to be dropped by the
+> C ABI; `crispasr 0.8.35` fixes that (`crispasr_session_piano_note_programs`,
+> Dart `pianoNotesWithPrograms`, mirrored in C#), so the instrument now
+> reaches `crispasr_ffi_piano_io.dart`. What drops it is our own
+> `NoteEvent` — which `contracts.dart` declares THE SEAM and frozen, shared
+> by pYIN, the note-HMM, rhythm and notation. Adding a field changes the
+> record type for every one of them, so it is not done here.
+>
+> Verified working at the boundary: MusicNet piece 1819 (wind trio), eight
+> seconds → programs 60/70/71 = French Horn, Bassoon, Clarinet, against an
+> annotation of 61/71/72 (MusicNet numbers MIDI programs from 1). All three
+> correct. Multi-instrument transcription is what earns MT3 its 76.5%, and
+> it currently arrives flattened to a single part.
+>
 > **Reserved files:** `engine_config.dart`, `crispasr_ffi_piano_io.dart`,
 > `crispasr_ffi_piano_stub.dart`, `transcribe_engines.dart`,
 > `transcription_config_service.dart`, the transcription block of

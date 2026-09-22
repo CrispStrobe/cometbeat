@@ -71,10 +71,18 @@ Future<NeuralTranscriber?> loadCrispasrPianoFfi({
       final events = <NoteEvent>[];
       for (final n in session.pianoNotes(pcm)) {
         // velocity is a loudness estimate, not a confidence — use it as a 0–1
-        // strength proxy (documented; better than a flat constant). MT3 emits a
-        // General-MIDI program per note that this flat ABI drops, so a note's
-        // instrument is not recoverable here; that is a known limitation of the
-        // shared seam, not of the model.
+        // strength proxy (documented; better than a flat constant).
+        //
+        // MT3 emits a General-MIDI program per note. That used to be dropped
+        // by the C ABI; crispasr 0.8.35 added
+        // `crispasr_session_piano_note_programs` and the Dart
+        // `pianoNotesWithPrograms`, so the instrument IS available here now.
+        // What drops it is `NoteEvent` — `contracts.dart` calls that record
+        // THE SEAM and frozen, and widening it changes the type for pYIN,
+        // the note-HMM, rhythm and notation alike. So the program is
+        // deliberately not smuggled in: see the PLAN.md board entry
+        // proposing the seam change, which is a decision for the workers who
+        // share that contract rather than for this file.
         final NoteEvent e = (
           midi: _i(n.midi),
           onMs: _d(n.onMs),
