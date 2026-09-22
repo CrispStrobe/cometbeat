@@ -82,7 +82,7 @@ void main() {
     var called = false;
     Future<List<NoteEvent>> fakeNeural(Float64List mono, int sr) async {
       called = true;
-      return [(midi: 60, onMs: 0, offMs: 500, confidence: 1)];
+      return [(midi: 60, onMs: 0, offMs: 500, confidence: 1, program: -1)];
     }
 
     final r = await transcribeAuto(

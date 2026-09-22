@@ -7,8 +7,13 @@ import 'package:comet_beat/core/audio/transcription/transcribe.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-NoteEvent _n(int midi, double on, double off) =>
-    (midi: midi, onMs: on, offMs: off, confidence: 1.0);
+NoteEvent _n(
+  int midi,
+  double on,
+  double off, {
+  int program = gmProgramUnknown,
+}) =>
+    (midi: midi, onMs: on, offMs: off, confidence: 1.0, program: program);
 
 // One 4/4 bar at 120 BPM: beats at 0, 500, 1000, 1500, 2000 ms.
 const _grid = (

@@ -1,6 +1,7 @@
 // Native CrispASR ggml NOTE-EVENT transcription (CrispasrSession.pianoNotes,
 // crispasr 0.8.17+): resample the mono audio to the model's OWN rate, run the
-// model, map its PianoNote records onto our NoteEvent contract. dart:io only.
+// model, map its PianoNoteWithProgram records onto our NoteEvent contract —
+// MT3's per-note General MIDI instrument included. dart:io only.
 // Null when the ggml runtime/model isn't available here → the resolver falls
 // back to the pure-Dart onnx Basic Pitch.
 //
@@ -29,6 +30,14 @@ import 'package:crispasr/crispasr.dart' hide PitchFrame;
 // record-inference quirk), so pin them to the NoteEvent field types here.
 int _i(Object? v) => (v as num).toInt();
 double _d(Object? v) => (v as num).toDouble();
+
+/// A program from the C ABI, clamped to what [NoteEvent.program] promises:
+/// -1, 0..127, or 128. Anything else (a future ABI, a corrupt read) becomes
+/// [gmProgramUnknown] rather than being passed on as a GM program it is not.
+int _program(Object? v) {
+  final p = (v as num).toInt();
+  return (p >= 0 && p <= gmProgramPercussion) ? p : gmProgramUnknown;
+}
 
 /// A CrispASR-FFI note-event [NeuralTranscriber] for [model], or null when that
 /// model / the ggml lib isn't available. [download] fetches the GGUF if not
@@ -67,27 +76,26 @@ Future<NeuralTranscriber?> loadCrispasrPianoFfi({
       pcm[i] = at[i].toDouble();
     }
     try {
-      // PianoNote {midi, onMs, offMs, velocity} → our NoteEvent.
+      // PianoNoteWithProgram {midi, onMs, offMs, velocity, program} → our
+      // NoteEvent, program included.
       final events = <NoteEvent>[];
-      for (final n in session.pianoNotes(pcm)) {
+      for (final n in session.pianoNotesWithPrograms(pcm)) {
         // velocity is a loudness estimate, not a confidence — use it as a 0–1
         // strength proxy (documented; better than a flat constant).
         //
-        // MT3 emits a General-MIDI program per note. That used to be dropped
-        // by the C ABI; crispasr 0.8.35 added
-        // `crispasr_session_piano_note_programs` and the Dart
-        // `pianoNotesWithPrograms`, so the instrument IS available here now.
-        // What drops it is `NoteEvent` — `contracts.dart` calls that record
-        // THE SEAM and frozen, and widening it changes the type for pYIN,
-        // the note-HMM, rhythm and notation alike. So the program is
-        // deliberately not smuggled in: see the PLAN.md board entry
-        // proposing the seam change, which is a decision for the workers who
-        // share that contract rather than for this file.
+        // `pianoNotesWithPrograms` is the unconditional call: against a dylib
+        // predating `crispasr_session_piano_note_programs`, or against
+        // piano-transcription / basic-pitch, it returns -1 for every program
+        // rather than throwing or probing. So the -1 arriving here means
+        // exactly what NoteEvent.program's sentinel means, whichever of the
+        // three models is loaded, and there is no capability branch to get
+        // wrong. Only MT3 fills it in.
         final NoteEvent e = (
           midi: _i(n.midi),
           onMs: _d(n.onMs),
           offMs: _d(n.offMs),
           confidence: (_d(n.velocity) / 127).clamp(0.0, 1.0).toDouble(),
+          program: _program(n.program),
         );
         events.add(e);
       }

@@ -8,7 +8,7 @@ import 'package:crisp_notation_core/crisp_notation_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 NoteEvent _n(int midi, double on, double off) =>
-    (midi: midi, onMs: on, offMs: off, confidence: 1);
+    (midi: midi, onMs: on, offMs: off, confidence: 1, program: -1);
 
 const _grid = (
   bpm: 120.0,

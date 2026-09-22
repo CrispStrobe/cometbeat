@@ -232,7 +232,18 @@ void _detectNotes(
     final onMs = (bgn + col(onsetShift, bgn)) / _framesPerSecond * 1000.0;
     final offMs = (fin + col(offsetShift, fin)) / _framesPerSecond * 1000.0;
     final vel = col(velocity, bgn);
-    out.add((midi: k + _beginNote, onMs: onMs, offMs: offMs, confidence: vel));
+    // Kong's model is piano-only and identifies no instrument — so it
+    // reports gmProgramUnknown, NOT program 0 (Acoustic Grand Piano). It would
+    // very often be right about the piano; it would never have computed it.
+    out.add(
+      (
+        midi: k + _beginNote,
+        onMs: onMs,
+        offMs: offMs,
+        confidence: vel,
+        program: gmProgramUnknown,
+      ),
+    );
   }
 
   int? bgn;

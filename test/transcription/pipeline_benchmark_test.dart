@@ -45,6 +45,7 @@ List<NoteEvent> _truth(List<int> midis) => [
           onMs: i * 500.0,
           offMs: i * 500.0 + 425,
           confidence: 1,
+          program: gmProgramUnknown,
         ),
     ];
 

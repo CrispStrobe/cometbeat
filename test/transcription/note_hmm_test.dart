@@ -58,7 +58,9 @@ List<NoteEvent> _gt(List<int> midis, {double noteMs = 400, double gapMs = 80}) {
   final out = <NoteEvent>[];
   var t = 0.0;
   for (final m in midis) {
-    out.add((midi: m, onMs: t, offMs: t + noteMs, confidence: 1));
+    out.add(
+      (midi: m, onMs: t, offMs: t + noteMs, confidence: 1, program: -1),
+    );
     t += noteMs + gapMs;
   }
   return out;
@@ -100,7 +102,7 @@ void main() {
 
   group('removeOctaveArtifacts (real-audio subharmonic cleanup)', () {
     NoteEvent n(int midi, double on, double off) =>
-        (midi: midi, onMs: on, offMs: off, confidence: 1.0);
+        (midi: midi, onMs: on, offMs: off, confidence: 1.0, program: -1);
 
     test('drops a short sub-octave blip between two notes', () {
       final cleaned = removeOctaveArtifacts([

@@ -92,7 +92,21 @@ class SungMelodyCollector {
   }) {
     if (!hasEnough) return const [];
     return melodyQueryFromNotes(
-      notes(voicedThreshold: voicedThreshold),
+      // Drop to the four fields melodic_search names structurally. It does NOT
+      // import the transcription contracts on purpose (see
+      // melodyQueryFromNotes), and Dart records have no width subtyping, so the
+      // five-field NoteEvent cannot be passed as the four-field shape — the
+      // projection is what keeps that independence real rather than nominal.
+      // A melodic query is pitch contour; the instrument is not part of it.
+      [
+        for (final n in notes(voicedThreshold: voicedThreshold))
+          (
+            midi: n.midi,
+            onMs: n.onMs,
+            offMs: n.offMs,
+            confidence: n.confidence,
+          ),
+      ],
       minDurationMs: minDurationMs,
       minConfidence: minConfidence,
       maxNotes: maxNotes,

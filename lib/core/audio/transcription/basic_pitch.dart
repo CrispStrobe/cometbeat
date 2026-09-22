@@ -188,6 +188,9 @@ List<NoteEvent> notesFromPosteriorgrams(
         onMs: _frameToMs(n.startFrame),
         offMs: _frameToMs(n.endFrame),
         confidence: n.amp.clamp(0.0, 1.0),
+        // Basic Pitch is instrument-agnostic by design — one pitch grid, no
+        // timbre head. gmProgramUnknown, never 0.
+        program: gmProgramUnknown,
       ),
   ]..sort((a, b) => a.onMs.compareTo(b.onMs));
 }
