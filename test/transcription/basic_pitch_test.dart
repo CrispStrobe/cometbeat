@@ -170,6 +170,58 @@ void main() {
       },
       timeout: const Timeout(Duration(minutes: 3)),
     );
+
+    // The isolate GEMM pool splits each Conv/MatMul by output band and
+    // concatenates the bands — a pure SCHEDULING change. So the pooled path is
+    // not "close enough", it is exactly equal, and anything else is a bug in
+    // the partitioning rather than a precision tradeoff worth accepting. This
+    // test is the standing guard on that claim; it is what licenses
+    // `BasicPitchModelStore.transcriber()` to be the default native path.
+    test(
+      'pooled transcribe == synchronous transcribe, element for element',
+      () async {
+        final store = BasicPitchModelStore();
+        if (await store.ensureFile() == null) {
+          markTestSkipped(
+            'Basic Pitch model unavailable (offline) — skipping.',
+          );
+          return;
+        }
+        final audio = _normalize(
+          renderSegmentsRaw(
+            const [
+              (freqs: [261.63, 329.63, 392.00], ms: 900),
+              (freqs: [293.66, 349.23, 440.00], ms: 900),
+            ],
+            timbre: timbreFor(Instrument.flute),
+          ),
+        );
+
+        // Two separate OnnxModel instances, so the pooled arm cannot be
+        // accidentally reading state the sync arm left behind.
+        final plain = await BasicPitchModelStore().load();
+        final sync = basicPitchTranscribe(audio, model: plain);
+
+        final pooledModel = await BasicPitchModelStore().load();
+        await pooledModel.parallelize(workers: 2, poolConv: true);
+        final pooled =
+            await basicPitchTranscribeAsync(audio, model: pooledModel);
+        pooledModel.dispose();
+
+        expect(pooled.length, sync.length);
+        for (var i = 0; i < sync.length; i++) {
+          expect(pooled[i].midi, sync[i].midi, reason: 'note $i midi');
+          expect(pooled[i].onMs, sync[i].onMs, reason: 'note $i onMs');
+          expect(pooled[i].offMs, sync[i].offMs, reason: 'note $i offMs');
+          expect(
+            pooled[i].confidence,
+            sync[i].confidence,
+            reason: 'note $i confidence',
+          );
+        }
+      },
+      timeout: const Timeout(Duration(minutes: 5)),
+    );
   });
 }
 

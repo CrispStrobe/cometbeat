@@ -117,6 +117,31 @@ is recorded in [HISTORY.md](HISTORY.md).
 >
 > ⚠️ **Overlaps `perf/basic-pitch-pool` (PR #1) only in spirit, not in files** —
 > that PR owns the ONNX Basic Pitch path; this one owns the ggml note-event path.
+> The one shared LINE — `program: gmProgramUnknown` inside
+> `notesFromPosteriorgrams` — merged cleanly when **PR #4 landed on main
+> (`c508f19`, 2026-09-22)** and this branch merged main back in; git resolved
+> `basic_pitch.dart` on its own, and only this board needed a hand.
+
+> ⚡ **opus/basic-pitch-pool — ACTIVE (2026-09-21), branch `perf/basic-pitch-pool`,
+> PR #1.** Basic Pitch was the one ONNX model not on the `onnx_runtime_dart`
+> isolate GEMM pool (RMVPE/FCPE/CREPE already are). Added the async path
+> ALONGSIDE the synchronous one — `basicPitchTranscribe` stays pure/sync/web-safe
+> because the web build depends on it and `parallelize` throws on web — plus
+> `BasicPitchModelStore.transcriber()`, the pooled native entry point, mirroring
+> `RmvpeModelStore.estimator()`.
+>
+> **Reserved files:** `basic_pitch.dart`, `basic_pitch_model_store.dart`,
+> `neural_provider_io.dart`, `bin/transcribe_basicpitch.dart`,
+> `bin/transcribe_crepe.dart` (an `elapsed_ms` line only), `bin/transcribe.dart`
+> (the `poly` case only), `test/transcription/basic_pitch_test.dart`, and the new
+> `tool/pool_workers_ab.dart` + `.github/workflows/pool-ab.yml`.
+>
+> **The measurement is the deliverable, not the change.** `tool/pool_workers_ab.dart`
+> enforces one arm per process, a discarded cold run, a median of >= 3 and an
+> output-equality check that exits non-zero on a mismatch. It runs on CI because
+> a shared box cannot produce an honest timing — the dev box for this sat at load
+> 17 on 4 cores and its within-arm spread exceeded the effect being measured.
+> Record + verdicts: `docs/ISOLATE_POOL_AB.md`.
 
 > **Hermes/composition-opt — ACTIVE (2026-09-17).** Worktree
 > `../mus-composition-opt`, branch `feature/composition-opt`. Characterizing

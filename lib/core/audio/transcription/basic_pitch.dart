@@ -45,8 +45,30 @@ const String _inputName = 'serving_default_input_2:0';
 const String _noteOut = 'StatefulPartitionedCall:1'; // Yn (frame activations)
 const String _onsetOut = 'StatefulPartitionedCall:2'; // Yo (onset activations)
 
-/// Milliseconds of one model frame (`FFT_HOP / SR`), ≈ 11.61 ms.
-double _frameToMs(num frame) => frame * _fftHop / _sampleRate * 1000.0;
+/// Milliseconds of a frame in the STITCHED grid.
+///
+/// Replaces a uniform `frame * FFT_HOP / SR` clock, which is correct within
+/// one window and drifts across them.
+///
+/// The stitched grid keeps `_annotFrames - _overlapFrames` = 142 frames per
+/// window, but a window advances `_hopSize` = 36164 samples — and
+/// 142 × 256 = 36352. So treating the stitched index as a uniform clock
+/// gains **188 samples (8.53 ms) for every window a frame is past**: about
+/// 840 ms three minutes into a piece.
+///
+/// Window 0 is unaffected, because the 15-frame trim at the head exactly
+/// cancels the `_startPad`, so the error is zero at the start and grows
+/// linearly — which is what makes it easy to miss on short clips and fatal
+/// on long ones. Measured against MusicNet's test split with
+/// `mir_eval.transcription` rules (50 ms onset tolerance): note-level F1
+/// **11.1% before, 47.8% after**.
+double _stitchedFrameToMs(int frame) {
+  const framesPerWindow = _annotFrames - _overlapFrames; // 142
+  final window = frame ~/ framesPerWindow;
+  final withinWindow = frame % framesPerWindow;
+  final samples = window * _hopSize + withinWindow * _fftHop;
+  return samples / _sampleRate * 1000.0;
+}
 
 /// Default minimum note length in *frames* (~127.7 ms, the package default).
 const int _defaultMinNoteLen = 11;
@@ -61,6 +83,10 @@ typedef _FrameNote = ({int startFrame, int endFrame, int midi, double amp});
 /// it natively via `BasicPitchModelStore` (`basic_pitch_model_store.dart`) or,
 /// on web, from bytes you fetched yourself + `OnnxModel.fromBytes`. Pure /
 /// synchronous / web-safe.
+///
+/// Native callers should prefer [basicPitchTranscribeAsync] on a
+/// `parallelize`d model — same notes, measurably faster. This entry point is
+/// deliberately kept synchronous because the web build depends on it.
 List<NoteEvent> basicPitchTranscribe(
   Float64List mono, {
   required OnnxModel model,
@@ -114,42 +140,174 @@ List<NoteEvent> basicPitchTranscribeWithRunner(
   bool inferOnsets = true,
   bool melodiaTrick = false,
 }) {
-  // 1 · Resample to 22050 Hz mono (ratio = inRate/outRate; 44100 → 2.0).
+  // 1+2 · Resample and pad (shared with the async path).
+  final prep = _prepare(mono, sampleRate);
+
+  // 3 · Run each window; trim the overlap and stitch full posteriorgrams.
+  final grids = _Grids();
+  for (final window in _windows(prep.padded)) {
+    final out = run(window);
+    grids.append(out.notes, out.onsets);
+  }
+
+  // 4 · Trim the tail padding and decode.
+  return _decodeGrids(
+    grids,
+    audioLength: prep.audioLength,
+    onsetThreshold: onsetThreshold,
+    frameThreshold: frameThreshold,
+    minNoteLenFrames: minNoteLenFrames,
+    inferOnsets: inferOnsets,
+    melodiaTrick: melodiaTrick,
+  );
+}
+
+/// The ASYNC counterpart of [BasicPitchWindowRunner] — a per-window inference
+/// that may await (the isolate GEMM pool of `onnx_runtime_dart`, an FFI session
+/// on another thread, a remote service). See [basicPitchTranscribeWithAsyncRunner].
+typedef BasicPitchAsyncWindowRunner
+    = Future<({Float32List notes, Float32List onsets})> Function(
+  Float32List window,
+);
+
+/// [basicPitchTranscribeWithRunner] with an awaitable [run]. Byte-for-byte the
+/// same windowing, stitching and decoding — ONLY the per-window inference is
+/// allowed to suspend. Exists so native callers can use the isolate pool
+/// (`OnnxModel.parallelize` + `runAsync`) without making the synchronous,
+/// web-safe [basicPitchTranscribe] async; the web build keeps the sync entry.
+Future<List<NoteEvent>> basicPitchTranscribeWithAsyncRunner(
+  Float64List mono, {
+  required BasicPitchAsyncWindowRunner run,
+  int sampleRate = 44100,
+  double onsetThreshold = 0.5,
+  double frameThreshold = 0.3,
+  int minNoteLenFrames = _defaultMinNoteLen,
+  bool inferOnsets = true,
+  bool melodiaTrick = false,
+}) async {
+  final prep = _prepare(mono, sampleRate);
+  final grids = _Grids();
+  for (final window in _windows(prep.padded)) {
+    final out = await run(window);
+    grids.append(out.notes, out.onsets);
+  }
+  return _decodeGrids(
+    grids,
+    audioLength: prep.audioLength,
+    onsetThreshold: onsetThreshold,
+    frameThreshold: frameThreshold,
+    minNoteLenFrames: minNoteLenFrames,
+    inferOnsets: inferOnsets,
+    melodiaTrick: melodiaTrick,
+  );
+}
+
+/// [basicPitchTranscribe] on the isolate GEMM pool. Identical output to the
+/// synchronous entry point (a pure scheduling change — the pool partitions each
+/// MatMul/Conv by output band and concatenates, so results are bitwise equal);
+/// the caller must have run `model.parallelize(...)` first, otherwise
+/// `runAsync` degrades to `run` and this is merely the sync path with awaits.
+/// Native only — `parallelize` throws on the web, which is why
+/// [basicPitchTranscribe] stays as it is.
+Future<List<NoteEvent>> basicPitchTranscribeAsync(
+  Float64List mono, {
+  required OnnxModel model,
+  int sampleRate = 44100,
+  double onsetThreshold = 0.5,
+  double frameThreshold = 0.3,
+  int minNoteLenFrames = _defaultMinNoteLen,
+  bool inferOnsets = true,
+  bool melodiaTrick = false,
+}) =>
+    basicPitchTranscribeWithAsyncRunner(
+      mono,
+      sampleRate: sampleRate,
+      onsetThreshold: onsetThreshold,
+      frameThreshold: frameThreshold,
+      minNoteLenFrames: minNoteLenFrames,
+      inferOnsets: inferOnsets,
+      melodiaTrick: melodiaTrick,
+      run: (window) async {
+        final out = await model.runAsync(
+          {
+            _inputName: Tensor.float(window, [1, _audioNSamples, 1]),
+          },
+          const [_noteOut, _onsetOut],
+        );
+        return (
+          notes: out[_noteOut]!.f ?? out[_noteOut]!.asFloatList(),
+          onsets: out[_onsetOut]!.f ?? out[_onsetOut]!.asFloatList(),
+        );
+      },
+    );
+
+// ── Shared halves of the two transcribe paths ────────────────────────────────
+// Everything except the run loop itself lives here, so the sync and async
+// entry points cannot drift: same resample, same padding, same window slicing,
+// same overlap trim, same tail trim, same decode.
+
+const int _overlapLen = _overlapFrames * _fftHop; // 7680
+const int _hopSize = _audioNSamples - _overlapLen; // 36164
+const int _startPad = _overlapLen ~/ 2; // 3840
+const int _nOlap = _overlapFrames ~/ 2; // 15 frames trimmed each side
+
+/// 1 · Resample to 22050 Hz mono (ratio = inRate/outRate; 44100 → 2.0), then
+/// 2 · pad the start by overlap/2. [audioLength] is the RESAMPLED length, which
+/// is what the tail trim is computed from.
+({Float64List padded, int audioLength}) _prepare(
+  Float64List mono,
+  int sampleRate,
+) {
   final audio = sampleRate == _sampleRate
       ? mono
       : resampleLinear(mono, sampleRate / _sampleRate);
+  final padded = Float64List(_startPad + audio.length)
+    ..setRange(_startPad, _startPad + audio.length, audio);
+  return (padded: padded, audioLength: audio.length);
+}
 
-  // 2 · Pad the start by overlap/2 and window at `hopSize`, tail-padded.
-  const overlapLen = _overlapFrames * _fftHop; // 7680
-  const hopSize = _audioNSamples - overlapLen; // 36164
-  const startPad = overlapLen ~/ 2; // 3840
-  final padded = Float64List(startPad + audio.length)
-    ..setRange(startPad, startPad + audio.length, audio);
-
-  // 3 · Run each window; trim the overlap and stitch full posteriorgrams.
-  const nOlap = _overlapFrames ~/ 2; // 15 frames trimmed each side
-  final notesGrid = <Float64List>[]; // Yn rows (n_frames × 88)
-  final onsetGrid = <Float64List>[];
-  final window = Float32List(_audioNSamples);
-  for (var i = 0; i < padded.length; i += hopSize) {
-    for (var j = 0; j < _audioNSamples; j++) {
-      final k = i + j;
-      window[j] = k < padded.length ? padded[k].toDouble() : 0.0;
+/// The `[1, 43844, 1]` windows of [padded] at `hopSize`, tail-padded with zeros.
+/// Each is a fresh `Float32List` (the runner may hand it to an isolate).
+Iterable<Float32List> _windows(Float64List padded) sync* {
+  for (var i = 0; i < padded.length; i += _hopSize) {
+    final window = Float32List(_audioNSamples);
+    final n = padded.length - i;
+    final take = n < _audioNSamples ? n : _audioNSamples;
+    for (var j = 0; j < take; j++) {
+      window[j] = padded[i + j];
     }
-    final out = run(Float32List.fromList(window));
-    _appendTrimmed(notesGrid, out.notes, nOlap);
-    _appendTrimmed(onsetGrid, out.onsets, nOlap);
+    yield window;
   }
+}
 
-  // Trim trailing padded frames: keep n_expected_windows · frames_per_window.
+/// The stitched posteriorgrams being accumulated window by window.
+class _Grids {
+  final List<Float64List> notes = []; // Yn rows (n_frames × 88)
+  final List<Float64List> onsets = [];
+
+  void append(Float32List n, Float32List o) {
+    _appendTrimmed(notes, n, _nOlap);
+    _appendTrimmed(onsets, o, _nOlap);
+  }
+}
+
+/// Trim the trailing padded frames and decode — step 4 of both entry points.
+List<NoteEvent> _decodeGrids(
+  _Grids grids, {
+  required int audioLength,
+  required double onsetThreshold,
+  required double frameThreshold,
+  required int minNoteLenFrames,
+  required bool inferOnsets,
+  required bool melodiaTrick,
+}) {
+  // Keep n_expected_windows · frames_per_window.
   const framesPerWindow = _annotFrames - _overlapFrames; // 142
-  final nKeep = ((audio.length / hopSize) * framesPerWindow).floor();
-  final keep = nKeep < notesGrid.length ? nKeep : notesGrid.length;
-
-  // 4 · Decode notes (shared with the deterministic-test entry point).
+  final nKeep = ((audioLength / _hopSize) * framesPerWindow).floor();
+  final keep = nKeep < grids.notes.length ? nKeep : grids.notes.length;
   return notesFromPosteriorgrams(
-    notesGrid.sublist(0, keep),
-    onsetGrid.sublist(0, keep),
+    grids.notes.sublist(0, keep),
+    grids.onsets.sublist(0, keep),
     onsetThreshold: onsetThreshold,
     frameThreshold: frameThreshold,
     minNoteLenFrames: minNoteLenFrames,
@@ -185,8 +343,8 @@ List<NoteEvent> notesFromPosteriorgrams(
     for (final n in raw)
       (
         midi: n.midi,
-        onMs: _frameToMs(n.startFrame),
-        offMs: _frameToMs(n.endFrame),
+        onMs: _stitchedFrameToMs(n.startFrame),
+        offMs: _stitchedFrameToMs(n.endFrame),
         confidence: n.amp.clamp(0.0, 1.0),
         // Basic Pitch is instrument-agnostic by design — one pitch grid, no
         // timbre head. gmProgramUnknown, never 0.
