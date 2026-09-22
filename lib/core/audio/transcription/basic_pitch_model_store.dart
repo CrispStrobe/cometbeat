@@ -11,6 +11,11 @@ library;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/transcription/basic_pitch.dart';
+import 'package:comet_beat/core/audio/transcription/crepe_model_store.dart'
+    show autoPoolWorkers;
+import 'package:comet_beat/core/audio/transcription/route.dart'
+    show NeuralTranscriber;
 import 'package:onnx_runtime_dart/onnx_runtime_dart.dart';
 
 /// Resolves + loads the Apache-2.0 Basic Pitch ONNX model. Override the cache
@@ -75,6 +80,37 @@ class BasicPitchModelStore {
     // nmp.onnx is self-contained (no external data), so bytes → OnnxModel keeps
     // this off the `_io` model loader.
     return _cached = OnnxModel.fromBytes(file.readAsBytesSync());
+  }
+
+  /// Builds a [NeuralTranscriber] backed by Basic Pitch, on the isolate GEMM
+  /// pool by default — exactly as `RmvpeModelStore.estimator()` and the CREPE /
+  /// FCPE stores do for their models. Basic Pitch's graph is Conv-dominated, so
+  /// `poolConv: true` is what buys the time; output is bitwise identical to the
+  /// synchronous path (the pool only splits each Conv/MatMul by output band).
+  ///
+  /// `COMET_BASICPITCH_WORKERS` overrides the worker count; `0` disables the
+  /// pool and falls back to the synchronous [basicPitchTranscribe], which is
+  /// also what happens on a machine [autoPoolWorkers] rates as too small to
+  /// gain from one. Native-only; web callers use `basicPitchTranscribe`
+  /// directly with a model they loaded themselves.
+  Future<NeuralTranscriber> transcriber({int? workers}) async {
+    final model = await load();
+    final n = workers ??
+        int.tryParse(Platform.environment['COMET_BASICPITCH_WORKERS'] ?? '') ??
+        autoPoolWorkers();
+    if (n > 0) {
+      await model.parallelize(workers: n, poolConv: true);
+      return (Float64List mono, int sampleRate) => basicPitchTranscribeAsync(
+            mono,
+            model: model,
+            sampleRate: sampleRate,
+          );
+    }
+    return (Float64List mono, int sampleRate) async => basicPitchTranscribe(
+          mono,
+          model: model,
+          sampleRate: sampleRate,
+        );
   }
 
   static Future<Uint8List?> _get(String url) async {

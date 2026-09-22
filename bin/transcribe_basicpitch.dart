@@ -6,6 +6,14 @@
 //
 //   dart run bin/transcribe_basicpitch.dart path/to/audio.wav
 //       [--onset 0.5] [--frame 0.3] [--min-len 11] [--melodia] [--json]
+//       [--workers N]
+//
+// `--workers N` selects the inference path, and is the A/B knob the pooling
+// benchmark drives (one arm per process — see docs/BASIC_PITCH_POOL_AB.md):
+//   N < 0  (default) — autoPoolWorkers(), i.e. what the app itself does
+//   N = 0            — the synchronous, web-safe basicPitchTranscribe
+//   N > 0            — parallelize(workers: N, poolConv: true) + runAsync
+// The notes are identical on every setting; only the wall clock differs.
 //
 // Convert anything to the expected format first, e.g.
 //   ffmpeg -i in.ogg -ac 1 -ar 44100 -c:a pcm_s16le out.wav
@@ -20,6 +28,8 @@ import 'dart:io';
 import 'package:comet_beat/core/audio/transcription/basic_pitch.dart';
 import 'package:comet_beat/core/audio/transcription/basic_pitch_model_store.dart';
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
+import 'package:comet_beat/core/audio/transcription/crepe_model_store.dart'
+    show autoPoolWorkers;
 import 'package:comet_beat/core/audio/wav_io.dart';
 
 const _names = [
@@ -52,7 +62,8 @@ Future<void> main(List<String> args) async {
   final positional = args.where((a) => !a.startsWith('--')).toList();
   if (positional.isEmpty) {
     stderr.writeln('usage: dart run bin/transcribe_basicpitch.dart audio.wav '
-        '[--onset 0.5] [--frame 0.3] [--min-len 11] [--melodia] [--json]');
+        '[--onset 0.5] [--frame 0.3] [--min-len 11] [--melodia] [--json] '
+        '[--workers N]');
     exit(64);
   }
   final path = positional.first;
@@ -67,17 +78,42 @@ Future<void> main(List<String> args) async {
       '${(mono.length / wav.sampleRate).toStringAsFixed(2)} s');
 
   final model = await BasicPitchModelStore().load();
-  final sw = Stopwatch()..start();
-  final List<NoteEvent> events = basicPitchTranscribe(
-    mono,
-    model: model,
-    sampleRate: wav.sampleRate,
-    onsetThreshold: _optD(args, '--onset', 0.5),
-    frameThreshold: _optD(args, '--frame', 0.3),
-    minNoteLenFrames: _optI(args, '--min-len', 11),
-    melodiaTrick: args.contains('--melodia'),
+  final requested = _optI(args, '--workers', -1);
+  final workers = requested < 0 ? autoPoolWorkers() : requested;
+  if (workers > 0) {
+    await model.parallelize(workers: workers, poolConv: true);
+  }
+  stderr.writeln(
+    workers > 0
+        ? 'inference: isolate pool, $workers workers (poolConv)'
+        : 'inference: single isolate (synchronous)',
   );
+
+  final sw = Stopwatch()..start();
+  final List<NoteEvent> events = workers > 0
+      ? await basicPitchTranscribeAsync(
+          mono,
+          model: model,
+          sampleRate: wav.sampleRate,
+          onsetThreshold: _optD(args, '--onset', 0.5),
+          frameThreshold: _optD(args, '--frame', 0.3),
+          minNoteLenFrames: _optI(args, '--min-len', 11),
+          melodiaTrick: args.contains('--melodia'),
+        )
+      : basicPitchTranscribe(
+          mono,
+          model: model,
+          sampleRate: wav.sampleRate,
+          onsetThreshold: _optD(args, '--onset', 0.5),
+          frameThreshold: _optD(args, '--frame', 0.3),
+          minNoteLenFrames: _optI(args, '--min-len', 11),
+          melodiaTrick: args.contains('--melodia'),
+        );
   sw.stop();
+  model.dispose();
+  // Machine-readable on stderr in every mode, so the A/B harness can read the
+  // timing from the same run it reads the notes from.
+  stderr.writeln('elapsed_ms ${sw.elapsedMilliseconds}');
 
   if (args.contains('--json')) {
     stdout.writeln(
