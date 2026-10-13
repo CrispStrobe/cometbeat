@@ -8,6 +8,29 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## crisp_notation 0.7.1 — engraving fixes in every score view (2026-10-13)
+
+**One-line status:** the notation library (path dep, so already live; the
+lockfile now records 0.7.1) gained engraving checks that run every layout
+against barline and collision rules over ~4,900 real scores, and fixed what
+they found. What a learner sees change:
+
+- A piece that ends on a repeat ends with one repeat barline, not two
+  (crisp_notation #19).
+- The staff stops at the final barline (it ran a staff space past it in ~90%
+  of imported MusicXML scores).
+- No stray barline in front of a start repeat; empty bars keep their width.
+- A chord with a second, stem down, no longer touches the time signature or
+  barline before it; a dotted second shows both dots.
+- Accidentals and unison chords are drawn once (they were drawn twice, so
+  they looked heavier); keys with 8+ sharps or flats no longer crash.
+- Tab staves (Tab Workshop, notation + tab) show repeats and the closing
+  barline.
+- Wrapped scores keep a straight right margin and keep note names on every
+  line.
+
+The crisp-dependent CometBeat tests pass against it (local and CI).
+
 ## Chord-chart backing band — the whole ladder, and it plays (2026-08-01)
 
 **One-line status:** the backing-band arc went from a headless engine nobody
