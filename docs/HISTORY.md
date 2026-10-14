@@ -38,7 +38,8 @@ change.
   `user_songs_service_test`. Progress, review data and songs now chain their
   writes, and a failed write cannot stall the chain.
 - **Review** re-asks exact items for Key Signatures, Key Quiz, Time
-  Signatures, Meter Detective, Find the Key and Rhythm Tap (`reviewItemIds` on each; a reviewed key outside the beginner set
+  Signatures, Meter Detective, Find the Key, Rhythm Tap and the guitar and cello
+  open-string quizzes (`reviewItemIds` on each; a reviewed key outside the beginner set
   still gets asked; Find the Key skips due notes its keyboard cannot show).
 - **Localisation**: the seven shared sheets and ~30 interpolated DAW /
   instrument-editor strings.

@@ -82,6 +82,24 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('review mode re-asks only the given string', (tester) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    await tester.pumpWidget(
+      _wrap(
+        const GuitarStringQuizScreen(reviewItemIds: ['guitar.string.s3']),
+        sri,
+      ),
+    );
+    await tester.pump();
+    // String 3 is the open G: tapping G is right every round, so only that
+    // one item is ever recorded.
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(find.widgetWithText(FilledButton, 'G'));
+      await tester.pumpAndSettle();
+    }
+    expect(sri.totalTrackedItems, 1);
+  });
+
   testWidgets('read-the-tab game records under guitar.fret', (tester) async {
     final sri = SriService(getNow: () => DateTime(2026, 7, 11));
     await tester.pumpWidget(_wrap(const GuitarTabReadScreen(), sri));

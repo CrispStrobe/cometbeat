@@ -22,7 +22,10 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:provider/provider.dart';
 
 class GuitarStringQuizScreen extends StatefulWidget {
-  const GuitarStringQuizScreen({super.key});
+  const GuitarStringQuizScreen({super.key, this.reviewItemIds});
+
+  /// SRI ids (`guitar.string.s<n>`) to re-ask instead of a random string.
+  final List<String>? reviewItemIds;
 
   @override
   State<GuitarStringQuizScreen> createState() => _GuitarStringQuizScreenState();
@@ -56,9 +59,21 @@ class _GuitarStringQuizScreenState extends State<GuitarStringQuizScreen>
     prepareRound();
   }
 
+  /// The strings behind [GuitarStringQuizScreen.reviewItemIds]; null when not
+  /// reviewing.
+  late final List<GuitarNote>? _reviewStrings = () {
+    final ids = {...?widget.reviewItemIds};
+    final strings = [
+      for (final s in kGuitarOpenStrings)
+        if (ids.contains('guitar.string.s${s.stringNumber}')) s,
+    ];
+    return strings.isEmpty ? null : strings;
+  }();
+
   @override
   void prepareRound() {
-    _target = kGuitarOpenStrings[_random.nextInt(kGuitarOpenStrings.length)];
+    final pool = _reviewStrings ?? kGuitarOpenStrings;
+    _target = pool[_random.nextInt(pool.length)];
     _tapped = null;
     _lastAnswer = null;
   }

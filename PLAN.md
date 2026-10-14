@@ -21,9 +21,10 @@ is the short version; the sections below remain the detail.
 **Now — the learner's path** (landed 2026-10-13/14, see HISTORY):
 - ⬜ Watch the Continue card and Studio-tools default with real children; the
   default for *existing* installs (tools stay on) is a guess worth revisiting.
-- ⬜ More dedicated review runners. Fourteen namespaces re-ask exact items
+- ⬜ More dedicated review runners. Sixteen namespaces re-ask exact items
   now (incl. `key_sig.`, `keyboard.name.`, `keyboard.find.`,
-  `measures.timesig.`, `measures.meter.`, `note_values.rhythm.`); the rest open
+  `measures.timesig.`, `measures.meter.`, `note_values.rhythm.`,
+  `guitar.string.`, `cello.string.`); the rest open
   a normal round. Each new one needs its game to accept `reviewItemIds`.
 - ⬜ Per-learner projects. Songs are per learner now; `projects_v1`, charts,
   instruments and the tray stay per device (studio data, deliberately).

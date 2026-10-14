@@ -82,6 +82,21 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('review mode re-asks only the given string', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        const CelloStringQuizScreen(reviewItemIds: ['cello.string.g2']),
+        sri,
+      ),
+    );
+    await tester.pump();
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(find.text('G'));
+      await tester.pumpAndSettle();
+    }
+    expect(sri.totalTrackedItems, 1);
+  });
+
   testWidgets('finger quiz offers fingers 0-4 and records', (tester) async {
     await tester.pumpWidget(_wrap(const CelloFingerQuizScreen(), sri));
     await tester.pump();

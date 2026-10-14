@@ -19,8 +19,10 @@
 //     a different skill instead of offering the same game again.
 
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/cello/cello_string_quiz_screen.dart';
 import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
 import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/features/games/guitar/guitar_string_quiz_screen.dart';
 import 'package:comet_beat/features/games/harmony/function_ear_screen.dart';
 import 'package:comet_beat/features/games/harmony/harmony_quiz_screen.dart';
 import 'package:comet_beat/features/games/keyboard/key_find_screen.dart';
@@ -58,6 +60,8 @@ final Map<String, Widget Function(List<String> ids)> kReviewRunners = {
   'measures.meter.': (ids) => MeterDetectiveScreen(reviewItemIds: ids),
   'keyboard.find.': (ids) => KeyFindScreen(reviewItemIds: ids),
   'note_values.rhythm.': (ids) => RhythmTapScreen(reviewItemIds: ids),
+  'guitar.string.': (ids) => GuitarStringQuizScreen(reviewItemIds: ids),
+  'cello.string.': (ids) => CelloStringQuizScreen(reviewItemIds: ids),
 };
 
 /// The game that drills each remaining skill, by SRI prefix → game id. A new
@@ -68,7 +72,6 @@ const Map<String, String> kReviewGameBySkill = {
   'cello.finger.': 'cello_finger_quiz',
   'cello.play.': 'cello_play_it',
   'cello.play_along': 'cello_play_along',
-  'cello.string.': 'cello_string_quiz',
   'chords.build.': 'chord_builder',
   'chords.hear.': 'seventh_ear',
   'chords.interval.': 'interval_ear',
@@ -84,7 +87,6 @@ const Map<String, String> kReviewGameBySkill = {
   'guitar.fret.': 'fretboard_find',
   'guitar.play_along': 'guitar_play_along',
   'guitar.power.': 'power_chord',
-  'guitar.string.': 'guitar_string_quiz',
   'harmony.cadence.': 'cadence_workshop',
   'harmony.degree.': 'connect_degrees',
   'harmony.parallels.': 'spot_parallels',

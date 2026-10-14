@@ -21,7 +21,11 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:provider/provider.dart';
 
 class CelloStringQuizScreen extends StatefulWidget {
-  const CelloStringQuizScreen({super.key});
+  const CelloStringQuizScreen({super.key, this.reviewItemIds});
+
+  /// SRI ids (`cello.string.<step><octave>`) to re-ask instead of a random
+  /// string.
+  final List<String>? reviewItemIds;
 
   @override
   State<CelloStringQuizScreen> createState() => _CelloStringQuizScreenState();
@@ -51,13 +55,27 @@ class _CelloStringQuizScreenState extends State<CelloStringQuizScreen>
     prepareRound();
   }
 
+  /// The strings behind [CelloStringQuizScreen.reviewItemIds]; null when not
+  /// reviewing.
+  late final List<CelloString>? _reviewStrings = () {
+    final ids = {...?widget.reviewItemIds};
+    final strings = [
+      for (final s in CelloString.values)
+        if (ids.contains(
+          'cello.string.${s.openPitch.step.name}${s.openPitch.octave}',
+        ))
+          s,
+    ];
+    return strings.isEmpty ? null : strings;
+  }();
+
   @override
   void prepareRound() {
     // Only the OPEN strings: each open-string pitch belongs to exactly one
     // string, so "which string?" has one unambiguous answer. (Stopped notes
     // can be played on several strings — that made the old quiz confusing.)
-    final string =
-        CelloString.values[_random.nextInt(CelloString.values.length)];
+    final pool = _reviewStrings ?? CelloString.values;
+    final string = pool[_random.nextInt(pool.length)];
     _target = CelloNote(string.openPitch, string, 0);
     _tapped = null;
     _lastAnswer = null;
