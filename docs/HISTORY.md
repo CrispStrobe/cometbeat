@@ -16,6 +16,9 @@ the repo root (detailed roadmap planning and the agent board are in
   note.
 - `DawMarkedRange` — the Audio Editor's Mark In / Mark Out, minimum length,
   readout and target-track rule.
+- `TrackerCursor` — the tracker's edit cursor and block-selection anchor
+  (seven loose fields and the rect/extend/select logic), with clamping to a
+  shrunken pattern in one place.
 - `CustomHarmonies` — Loop Studio's custom harmony list (the "add" had two
   copies). It writes nothing until the stored list has been read, so an early
   add cannot overwrite saved harmonies.

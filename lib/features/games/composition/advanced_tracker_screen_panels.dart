@@ -46,7 +46,9 @@ extension _AdvancedTrackerPanels on _AdvancedTrackerScreenState {
 
   Widget _blockMenu(AppLocalizations l10n) => PopupMenuButton<String>(
         icon: Icon(
-          _marking || _hasSelection ? Icons.select_all : Icons.highlight_alt,
+          _marking || _cursor.hasSelection
+              ? Icons.select_all
+              : Icons.highlight_alt,
         ),
         tooltip: l10n.trackerBlock,
         onSelected: (v) {
@@ -55,8 +57,8 @@ extension _AdvancedTrackerPanels on _AdvancedTrackerScreenState {
               _rebuild(() {
                 _marking = !_marking;
                 if (_marking) {
-                  _anchorChannel = _cursorChannel;
-                  _anchorRow = _cursorRow;
+                  _cursor.anchorChannel = _cursor.channel;
+                  _cursor.anchorRow = _cursor.row;
                 } else {
                   _unmark();
                 }
@@ -143,7 +145,7 @@ extension _AdvancedTrackerPanels on _AdvancedTrackerScreenState {
           PopupMenuItem(value: 'delRow', child: Text(l10n.trackerDeleteRow)),
           const PopupMenuDivider(),
           PopupMenuItem(value: 'clear', child: Text(l10n.trackerBlockClear)),
-          if (_hasSelection)
+          if (_cursor.hasSelection)
             PopupMenuItem(
               value: 'unmark',
               child: Text(l10n.trackerBlockUnmark),

@@ -44,10 +44,11 @@ is the short version; the sections below remain the detail.
 - ⬜ Giant state classes, step two — started 2026-10-14. Logic that was loose
   fields on the State now lives in small tested classes:
   `TrackerFieldEntry` (tracker keyboard entry), `DawMarkedRange` (Mark In/Out),
-  `CustomHarmonies` (Loop Studio). The Score Workshop's model was already out
+  `CustomHarmonies` (Loop Studio), `TrackerCursor` (tracker cursor + block
+  selection). The Score Workshop's model was already out
   (`MultiPartDocument`). What remains on the States is mostly playback timing,
-  view state and service wiring; the next candidates are the tracker cursor /
-  block selection and the workshop's playback (timer, count-in, loop flags).
+  view state and service wiring; the next candidate is the workshop's playback
+  (timer, count-in, loop flags).
 
 **Later — the scoped ladders below**, in the order their sections give:
 workstation parity, the chord-chart backing band, the Note Highway, tune

@@ -99,6 +99,7 @@ import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
+import 'package:comet_beat/features/games/composition/tracker_cursor.dart';
 import 'package:comet_beat/features/games/composition/tracker_field_entry.dart';
 import 'package:comet_beat/features/games/composition/tracker_meter.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
@@ -838,13 +839,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   int get _elapsedMs => _clock.elapsedMilliseconds + _baseMs;
 
-  /// The edit cursor — keyboard and on-screen piano enter notes here.
-  int _cursorChannel = 0;
-  int _cursorRow = 0;
-
-  /// Block selection anchor (the other corner is the cursor). Null = no block.
-  int? _anchorChannel;
-  int? _anchorRow;
+  /// The edit cursor and block selection (tracker_cursor.dart).
+  final _cursor = TrackerCursor();
 
   /// Touch "mark" mode: while on, tapping a cell EXTENDS the selection rather
   /// than moving the cursor freely.
@@ -861,8 +857,6 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   /// The copied block (row-major), for paste / paste-mix.
   List<List<TrackerCell>>? _clipboard;
-
-  bool get _hasSelection => _anchorChannel != null && _anchorRow != null;
 
   /// Keyboard/piano entry state.
   int _octave = 4;
@@ -1234,9 +1228,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   bool get isPlaying => _clock.isRunning;
   @override
-  int get cursorChannel => _cursorChannel;
+  int get cursorChannel => _cursor.channel;
   @override
-  int get cursorRow => _cursorRow;
+  int get cursorRow => _cursor.row;
   @override
   int get octave => _octave;
   @override
@@ -1268,7 +1262,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _clearUndo();
     setState(() {
       _song.setRows(rows);
-      if (_cursorRow >= rows) _cursorRow = rows - 1;
+      _cursor.clampTo(channels: _song.channelCount, rows: rows);
     });
     _syncPlayback();
   }
@@ -1281,7 +1275,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _clearUndo();
     setState(() {
       _song.setPatternRows(_song.currentIndex, rows.clamp(1, 1024));
-      if (_cursorRow >= _song.rows) _cursorRow = _song.rows - 1;
+      _cursor.clampTo(channels: _song.channelCount, rows: _song.rows);
     });
     _syncPlayback();
   }
@@ -1298,9 +1292,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _clearUndo();
     setState(() {
       _song.removeChannel(channel);
-      if (_cursorChannel >= _song.channelCount) {
-        _cursorChannel = _song.channelCount - 1;
-      }
+      _cursor.clampTo(channels: _song.channelCount, rows: _song.rows);
     });
     _syncPlayback();
   }
@@ -1309,10 +1301,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void togglePlay() => _togglePlay();
   @override
   void moveCursor(int channel, int row) {
-    setState(() {
-      _cursorChannel = channel.clamp(0, _song.channelCount - 1);
-      _cursorRow = row.clamp(0, _song.rows - 1);
-    });
+    setState(
+      () => _cursor.moveTo(
+        channel,
+        row,
+        channels: _song.channelCount,
+        rows: _song.rows,
+      ),
+    );
     _ensureCursorVisible();
   }
 
@@ -1350,7 +1346,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     setState(() {
       final i = _song.addPattern(cloneCurrent: clone);
       _song.selectPattern(i);
-      _cursorRow = 0;
+      _cursor.row = 0;
     });
     _syncPlayback();
   }
@@ -1360,7 +1356,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _clearUndo();
     setState(() {
       _song.selectPattern(index);
-      if (_cursorRow >= _song.rows) _cursorRow = _song.rows - 1;
+      _cursor.clampTo(channels: _song.channelCount, rows: _song.rows);
     });
     _syncPlayback();
   }
@@ -1444,7 +1440,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// a roll you could edit that silently disagreed with the grid would be worse
   /// than no roll, and making them agree is its own piece of work.
   Future<void> _showPianoRoll() async {
-    final channel = _cursorChannel;
+    final channel = _cursor.channel;
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -1787,7 +1783,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_vScroll.hasClients) return;
       final pos = _vScroll.position;
-      final rowTop = _cursorRow * _rowHeight;
+      final rowTop = _cursor.row * _rowHeight;
       final rowBottom = rowTop + _rowHeight;
       final viewTop = _vScroll.offset;
       final viewBottom = viewTop + pos.viewportDimension;
@@ -1832,11 +1828,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     }
     _pushUndo();
     _song.engine.setCell(
-      _cursorChannel,
-      _cursorRow,
+      _cursor.channel,
+      _cursor.row,
       TrackerCell(midi: midi, instrument: _activeInstrument),
     );
-    setState(() => _cursorRow = (_cursorRow + _editStep) % _song.rows);
+    setState(() => _cursor.row = (_cursor.row + _editStep) % _song.rows);
     _ensureCursorVisible();
     _syncPlayback();
   }
@@ -1877,7 +1873,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     for (final note in allocateChord(
       notes: notes,
       row: row,
-      startChannel: _cursorChannel,
+      startChannel: _cursor.channel,
       channelCount: _song.channelCount,
     )) {
       // copyWith, not a fresh cell: an existing volume or effect on that row is
@@ -2033,8 +2029,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   void _clearAtCursorAndAdvance() {
     _pushUndo();
-    _song.engine.clearCell(_cursorChannel, _cursorRow);
-    setState(() => _cursorRow = (_cursorRow + _editStep) % _song.rows);
+    _song.engine.clearCell(_cursor.channel, _cursor.row);
+    setState(() => _cursor.row = (_cursor.row + _editStep) % _song.rows);
     _ensureCursorVisible();
     _syncPlayback();
   }
@@ -2096,12 +2092,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// Move the cursor and drop any selection (a plain move / click).
   void _moveCursorClearing(int channel, int row) {
     _entry.resetColumns();
-    setState(() {
-      _cursorChannel = channel.clamp(0, _song.channelCount - 1);
-      _cursorRow = row.clamp(0, _song.rows - 1);
-      _anchorChannel = null;
-      _anchorRow = null;
-    });
+    setState(
+      () => _cursor.moveClearing(
+        channel,
+        row,
+        channels: _song.channelCount,
+        rows: _song.rows,
+      ),
+    );
     _ensureCursorVisible();
   }
 
@@ -2109,65 +2107,41 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// if none, then move the cursor to the new corner.
   void _extendTo(int channel, int row) {
     _entry.resetColumns();
-    setState(() {
-      _anchorChannel ??= _cursorChannel;
-      _anchorRow ??= _cursorRow;
-      _cursorChannel = channel.clamp(0, _song.channelCount - 1);
-      _cursorRow = row.clamp(0, _song.rows - 1);
-    });
+    setState(
+      () => _cursor.extendTo(
+        channel,
+        row,
+        channels: _song.channelCount,
+        rows: _song.rows,
+      ),
+    );
     _ensureCursorVisible();
   }
 
   void _unmark() => setState(() {
-        _anchorChannel = null;
-        _anchorRow = null;
+        _cursor.clearSelection();
         _marking = false;
       });
 
-  /// The selection rectangle, or the single cursor cell when nothing is marked.
-  ({int cLo, int cHi, int rLo, int rHi}) get _selRect {
-    final ac = _anchorChannel ?? _cursorChannel;
-    final ar = _anchorRow ?? _cursorRow;
-    return (
-      cLo: ac < _cursorChannel ? ac : _cursorChannel,
-      cHi: ac > _cursorChannel ? ac : _cursorChannel,
-      rLo: ar < _cursorRow ? ar : _cursorRow,
-      rHi: ar > _cursorRow ? ar : _cursorRow,
-    );
-  }
-
-  bool _inSelection(int channel, int row) {
-    if (!_hasSelection) return false;
-    final s = _selRect;
-    return channel >= s.cLo && channel <= s.cHi && row >= s.rLo && row <= s.rHi;
-  }
-
   void _selectTrack() {
-    setState(() {
-      _anchorChannel = _cursorChannel;
-      _anchorRow = 0;
-      _cursorRow = _song.rows - 1;
-    });
+    setState(() => _cursor.selectChannel(rows: _song.rows));
     _ensureCursorVisible();
   }
 
   void _selectPattern() {
-    setState(() {
-      _anchorChannel = 0;
-      _anchorRow = 0;
-      _cursorChannel = _song.channelCount - 1;
-      _cursorRow = _song.rows - 1;
-    });
+    setState(
+      () => _cursor.selectAll(channels: _song.channelCount, rows: _song.rows),
+    );
     _ensureCursorVisible();
   }
 
   void _copyBlock() {
-    final s = _selRect;
+    final s = _cursor.rect;
     _clipboard = _song.copyBlock(s.cLo, s.rLo, s.cHi, s.rHi);
   }
 
   void _cutBlock() {
-    final s = _selRect;
+    final s = _cursor.rect;
     _copyBlock();
     _pushUndo();
     setState(() => _song.clearBlock(s.cLo, s.rLo, s.cHi, s.rHi));
@@ -2178,20 +2152,21 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     if (_clipboard == null) return;
     _pushUndo();
     setState(
-      () => _song.pasteBlock(_clipboard!, _cursorChannel, _cursorRow, mix: mix),
+      () =>
+          _song.pasteBlock(_clipboard!, _cursor.channel, _cursor.row, mix: mix),
     );
     _syncPlayback();
   }
 
   void _clearBlock() {
-    final s = _selRect;
+    final s = _cursor.rect;
     _pushUndo();
     setState(() => _song.clearBlock(s.cLo, s.rLo, s.cHi, s.rHi));
     _syncPlayback();
   }
 
   void _transposeBlock(int semitones) {
-    final s = _selRect;
+    final s = _cursor.rect;
     _pushUndo();
     setState(() => _song.transposeBlock(s.cLo, s.rLo, s.cHi, s.rHi, semitones));
     _syncPlayback();
@@ -2205,10 +2180,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _pushUndo();
     setState(() {
       for (var c = 0; c < _song.channelCount; c++) {
-        for (var r = _song.rows - 1; r > _cursorRow; r--) {
+        for (var r = _song.rows - 1; r > _cursor.row; r--) {
           _song.engine.setCell(c, r, _song.engine.cellAt(c, r - 1));
         }
-        _song.engine.clearCell(c, _cursorRow);
+        _song.engine.clearCell(c, _cursor.row);
       }
     });
     _syncPlayback();
@@ -2220,7 +2195,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _pushUndo();
     setState(() {
       for (var c = 0; c < _song.channelCount; c++) {
-        for (var r = _cursorRow; r < _song.rows - 1; r++) {
+        for (var r = _cursor.row; r < _song.rows - 1; r++) {
           _song.engine.setCell(c, r, _song.engine.cellAt(c, r + 1));
         }
         _song.engine.clearCell(c, _song.rows - 1);
@@ -2230,8 +2205,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   }
 
   void _interpolateBlock() {
-    if (!_hasSelection) return;
-    final s = _selRect;
+    if (!_cursor.hasSelection) return;
+    final s = _cursor.rect;
     if (s.rHi <= s.rLo) return;
     _pushUndo();
     setState(() {
@@ -2254,7 +2229,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// set a voice once at the top, then stamp it across the whole column. Like
   /// interpolate, it works per-channel; empty cells are left untouched.
   void _fillInstrumentBlock() {
-    final s = _selRect;
+    final s = _cursor.rect;
     _pushUndo();
     setState(() {
       for (var c = s.cLo; c <= s.cHi; c++) {
@@ -2272,8 +2247,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// note to its bottom selected note (a glissando). No-op without a marked
   /// block spanning ≥2 rows.
   void _interpolateNotesBlock() {
-    if (!_hasSelection) return;
-    final s = _selRect;
+    if (!_cursor.hasSelection) return;
+    final s = _cursor.rect;
     if (s.rHi <= s.rLo) return;
     _pushUndo();
     setState(
@@ -2298,8 +2273,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       if (arp) {
         final step = _editStep < 1 ? 1 : _editStep;
         _song.stampArpeggio(
-          _cursorChannel,
-          _cursorRow,
+          _cursor.channel,
+          _cursor.row,
           rootMidi,
           intervals,
           step: step,
@@ -2307,8 +2282,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         );
       } else {
         _song.stampChordAcross(
-          _cursorChannel,
-          _cursorRow,
+          _cursor.channel,
+          _cursor.row,
           rootMidi,
           intervals,
           instrument: _activeInstrument,
@@ -2326,7 +2301,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void _showChordSheet() {
     final l10n = AppLocalizations.of(context)!;
     // Seed the root from the cursor note when present.
-    final cur = _song.engine.cellAt(_cursorChannel, _cursorRow).midi;
+    final cur = _song.engine.cellAt(_cursor.channel, _cursor.row).midi;
     var pc = cur != null ? cur % 12 : 0;
     var octave = cur != null ? ((cur ~/ 12) - 1).clamp(2, 6) : 4;
     var quality = 0; // index into kChordTemplates
@@ -2433,11 +2408,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// pool index; value clamps to the pool size, 0 = channel default). No-op on
   /// a cell without a note — the instrument column belongs to a note.
   void _enterInstrumentDigit(int d) {
-    if (_song.engine.cellAt(_cursorChannel, _cursorRow).midi == null) return;
+    if (_song.engine.cellAt(_cursor.channel, _cursor.row).midi == null) return;
     _pushUndo();
     final index = _entry.typeInstrument(d, poolSize: _song.instruments.length);
     setState(
-      () => _song.engine.setCellInstrument(_cursorChannel, _cursorRow, index),
+      () => _song.engine.setCellInstrument(_cursor.channel, _cursor.row, index),
     );
     _syncPlayback();
   }
@@ -2447,18 +2422,18 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// a move). Applies progressively so it builds visibly.
   void _enterEffectHex(int hex) {
     final fx = _entry.typeEffect(hex);
-    _setCellCommand(_cursorChannel, _cursorRow, fx.command, fx.param);
+    _setCellCommand(_cursor.channel, _cursor.row, fx.command, fx.param);
   }
 
   /// Feeds one hex digit into the FT2 volume column (high nibble then low →
   /// value 00–40 = 0–64). No-op on a cell without a note.
   void _enterVolumeHex(int hex) {
-    if (_song.engine.cellAt(_cursorChannel, _cursorRow).midi == null) return;
+    if (_song.engine.cellAt(_cursor.channel, _cursor.row).midi == null) return;
     _pushUndo();
     final v = _entry.typeVolume(hex) / 64.0;
     setState(
       () => _song.engine
-          .setCellVolume(_cursorChannel, _cursorRow, v >= 0.999 ? null : v),
+          .setCellVolume(_cursor.channel, _cursor.row, v >= 0.999 ? null : v),
     );
     _syncPlayback();
   }
@@ -2498,7 +2473,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       if (key == LogicalKeyboardKey.backspace ||
           key == LogicalKeyboardKey.delete) {
         _entry.resetEffect();
-        _setCellCommand(_cursorChannel, _cursorRow, 0, 0);
+        _setCellCommand(_cursor.channel, _cursor.row, 0, 0);
         return KeyEventResult.handled;
       }
       // Swallow other printable keys so they don't become notes here.
@@ -2517,7 +2492,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           key == LogicalKeyboardKey.delete) {
         _entry.resetInstrument();
         setState(
-          () => _song.engine.setCellInstrument(_cursorChannel, _cursorRow, 0),
+          () => _song.engine.setCellInstrument(_cursor.channel, _cursor.row, 0),
         );
         _syncPlayback();
         return KeyEventResult.handled;
@@ -2581,7 +2556,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         _playPattern();
         return KeyEventResult.handled;
       case AppIntent.transportPlayFromCursor:
-        _playPattern(fromRow: _cursorRow);
+        _playPattern(fromRow: _cursor.row);
         return KeyEventResult.handled;
       case AppIntent.transportStop:
         _stop();
@@ -2607,11 +2582,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           return KeyEventResult.handled;
         case AppIntent.selectAll:
           // First Ctrl+A = the track column; a second widens to the pattern.
-          if (_hasSelection &&
-              _selRect.rLo == 0 &&
-              _selRect.rHi == _song.rows - 1 &&
-              _selRect.cLo == _cursorChannel &&
-              _selRect.cHi == _cursorChannel) {
+          if (_cursor.hasSelection &&
+              _cursor.rect.rLo == 0 &&
+              _cursor.rect.rHi == _song.rows - 1 &&
+              _cursor.rect.cLo == _cursor.channel &&
+              _cursor.rect.cHi == _cursor.channel) {
             _selectPattern();
           } else {
             _selectTrack();
@@ -2664,21 +2639,21 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     switch (intent) {
       case AppIntent.cursorDown:
       case AppIntent.selectDown:
-        go(_cursorChannel, (_cursorRow + 1) % _song.rows);
+        go(_cursor.channel, (_cursor.row + 1) % _song.rows);
         return KeyEventResult.handled;
       case AppIntent.cursorUp:
       case AppIntent.selectUp:
-        go(_cursorChannel, (_cursorRow - 1 + _song.rows) % _song.rows);
+        go(_cursor.channel, (_cursor.row - 1 + _song.rows) % _song.rows);
         return KeyEventResult.handled;
       case AppIntent.cursorRight:
       case AppIntent.selectRight:
-        go((_cursorChannel + 1) % _song.channelCount, _cursorRow);
+        go((_cursor.channel + 1) % _song.channelCount, _cursor.row);
         return KeyEventResult.handled;
       case AppIntent.cursorLeft:
       case AppIntent.selectLeft:
         go(
-          (_cursorChannel - 1 + _song.channelCount) % _song.channelCount,
-          _cursorRow,
+          (_cursor.channel - 1 + _song.channelCount) % _song.channelCount,
+          _cursor.row,
         );
         return KeyEventResult.handled;
       // Insert / Shift+Delete: insert / delete a whole row at the cursor.
@@ -2689,7 +2664,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         _deleteRow();
         return KeyEventResult.handled;
       case AppIntent.editDelete:
-        if (_hasSelection) {
+        if (_cursor.hasSelection) {
           _clearBlock();
         } else {
           _clearAtCursorAndAdvance();
@@ -3645,7 +3620,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   }) =>
       _applyChordAtCursor(pc, octave, intervals, arp: arp);
   @override
-  void playFromCursor() => _playPattern(fromRow: _cursorRow);
+  void playFromCursor() => _playPattern(fromRow: _cursor.row);
   @override
   void insertRow() => _insertRow();
   @override
@@ -4665,8 +4640,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _clearUndo();
     setState(() {
       _song = song;
-      _cursorChannel = 0;
-      _cursorRow = 0;
+      _cursor.channel = 0;
+      _cursor.row = 0;
       _scopeDirty = true;
     });
   }
@@ -6383,7 +6358,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   // Block-editing tester hooks (delegate to the private implementations).
   @override
-  bool get hasSelection => _hasSelection;
+  bool get hasSelection => _cursor.hasSelection;
   @override
   void selectTrack() => _selectTrack();
   @override
@@ -6400,8 +6375,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void transposeBlock(int semitones) => _transposeBlock(semitones);
   @override
   void debugMarkBlock(int channel, int row) => setState(() {
-        _anchorChannel = channel;
-        _anchorRow = row;
+        _cursor.anchorChannel = channel;
+        _cursor.anchorRow = row;
       });
   @override
   double? debugCellVolume(int channel, int row) =>
@@ -6470,8 +6445,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   Widget _cell(int channel, int row, ColorScheme scheme) {
     final cell = _song.engine.cellAt(channel, row);
     final hasNote = cell.midi != null;
-    final isCursor = channel == _cursorChannel && row == _cursorRow;
-    final selected = _inSelection(channel, row);
+    final isCursor = channel == _cursor.channel && row == _cursor.row;
+    final selected = _cursor.selects(channel, row);
     // note + volume + effect sub-columns (classic tracker cell).
     final note = hasNote ? trackerNoteName(cell.midi!) : '···';
     final vol = hasNote && cell.volume != null && cell.volume != 1.0
