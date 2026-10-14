@@ -16,6 +16,9 @@ the repo root (detailed roadmap planning and the agent board are in
   note.
 - `DawMarkedRange` — the Audio Editor's Mark In / Mark Out, minimum length,
   readout and target-track rule.
+- `WorkshopPlayhead` — the Score Workshop's moving cursor: the schedule,
+  the count-in offset (first pass only), loop-or-stop at the end, and the
+  count-in length for a meter and practice speed.
 - `TrackerCursor` — the tracker's edit cursor and block-selection anchor
   (seven loose fields and the rect/extend/select logic), with clamping to a
   shrunken pattern in one place.

@@ -63,6 +63,7 @@ import 'package:comet_beat/features/workshop/export/score_pdf.dart';
 import 'package:comet_beat/features/workshop/model/multi_part_document.dart';
 import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:comet_beat/features/workshop/widgets/multi_part_canvas.dart';
+import 'package:comet_beat/features/workshop/workshop_playhead.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
@@ -763,9 +764,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   // in the timeline, so playback reflects them.
   Timer? _playTimer;
   final Stopwatch _playClock = Stopwatch();
-  List<({String id, double start, double end})> _playSchedule = const [];
-  double _playEndSeconds = 0;
-  Set<String> _soundingIds = const {};
+  // The schedule, count-in offset, loop flag and sounding ids of the current
+  // run (workshop_playhead.dart).
+  final _playhead = WorkshopPlayhead();
+  Set<String> get _soundingIds => _playhead.sounding;
 
   // Parts silenced during multi-part playback (indices into [_mpd]). Cleared on
   // any structural part change (add/remove would shift these indices). A muted
@@ -780,10 +782,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   // Count-in: a bar of metronome clicks before the music, so you can come in on
   // time. Rendered INTO the same WAV (clicks then silence per beat), with the
-  // cursor clock offset by [_countInSec] — the first cycle only; a loop restart
-  // drops straight back to the music.
+  // playhead offset by its length — the first cycle only; a loop restart drops
+  // straight back to the music.
   bool _countIn = false;
-  double _countInSec = 0;
 
   // True while an OMR "Scan sheet music" recognition is running (guards against
   // re-entry; the image pick + native inference are async).
@@ -795,7 +796,6 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   // from the ACTIVE part's selection but clips every part, so the accompaniment
   // loops with it. [_loopStems] caches the count-in-free audio for restarts.
   bool _loopSelection = false;
-  bool _loopActive = false;
   bool _loopMulti = false;
   List<List<(List<int>, int)>> _loopStems = const [];
 
@@ -2519,11 +2519,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
     _loopMulti = multi;
     _loopStems = stems; // count-in-free: what a loop restart replays
-    _loopActive = _loopSelection && from != null;
-    _playSchedule =
-        schedule; // music-relative (count-in offset applied on read)
-    _playEndSeconds = end;
-    _countInSec = _countIn ? _countInSeconds() : 0;
+    _playhead.start(
+      schedule, // music-relative (the playhead applies the count-in offset)
+      endSeconds: end,
+      countInSeconds: _countIn ? _countInSeconds() : 0,
+      loop: _loopSelection && from != null,
+    );
 
     _playAudio(withCountIn: _countIn);
     _playClock
@@ -2555,13 +2556,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// One bar of clicks at the current tempo — the count-in's wall-clock length.
   /// Beats are the meter's own unit (6/8 counts six eighths, not six quarters),
   /// and the practice-speed stretch applies so the lead-in matches the music.
-  double _countInSeconds() {
-    final bpm = _doc.tempo?.quarterBpm ?? 100;
-    final quarterBpm = bpm <= 0 ? 100.0 : bpm;
-    final ts = _doc.timeSignature;
-    final beatSec = 60 / quarterBpm * (4 / ts.beatUnit) / _playSpeed;
-    return beatSec * _countInBeats;
-  }
+  double _countInSeconds() => WorkshopPlayhead.countInLength(
+        quarterBpm: _doc.tempo?.quarterBpm.toDouble(),
+        beats: _doc.timeSignature.beats,
+        beatUnit: _doc.timeSignature.beatUnit,
+        speed: _playSpeed,
+      );
 
   int get _countInBeats => _doc.timeSignature.beats.clamp(2, 8);
 
@@ -2600,30 +2600,20 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   }
 
   void _tickPlayback() {
-    // Music time: the count-in runs before zero, so nothing highlights yet.
-    final t = _playClock.elapsedMilliseconds / 1000.0 - _countInSec;
-    if (t >= _playEndSeconds) {
-      if (_loopActive) {
+    final r = _playhead.step(_playClock.elapsedMilliseconds / 1000.0);
+    switch (r.action) {
+      case PlayheadAction.restartLoop:
         _restartLoop();
-        return;
-      }
-      _stopPlayback();
-      return;
+      case PlayheadAction.stop:
+        _stopPlayback();
+      case PlayheadAction.play:
+        if (r.changed) setState(() {});
     }
-    final now = <String>{
-      if (t >= 0)
-        for (final s in _playSchedule)
-          if (t >= s.start && t < s.end) s.id,
-    };
-    final changed =
-        now.length != _soundingIds.length || !now.every(_soundingIds.contains);
-    if (changed) setState(() => _soundingIds = now);
   }
 
   /// Next loop cycle: straight back to the music (the count-in is a lead-in for
   /// the first pass only), replaying the cached count-in-free stems.
   void _restartLoop() {
-    _countInSec = 0;
     _playAudio(withCountIn: false);
     _playClock
       ..reset()
@@ -2635,13 +2625,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     _playTimer?.cancel();
     _playTimer = null;
     _playClock.stop();
-    _loopActive = false;
     _audio.stop();
     if (!mounted) {
-      _soundingIds = const {};
+      _playhead.stop();
       return;
     }
-    setState(() => _soundingIds = const {});
+    setState(_playhead.stop);
   }
 
   Future<void> _exportText(String title, String text) async {

@@ -45,10 +45,11 @@ is the short version; the sections below remain the detail.
   fields on the State now lives in small tested classes:
   `TrackerFieldEntry` (tracker keyboard entry), `DawMarkedRange` (Mark In/Out),
   `CustomHarmonies` (Loop Studio), `TrackerCursor` (tracker cursor + block
-  selection). The Score Workshop's model was already out
+  selection), `WorkshopPlayhead` (Score Workshop schedule, count-in, loop).
+  The Score Workshop's model was already out
   (`MultiPartDocument`). What remains on the States is mostly playback timing,
-  view state and service wiring; the next candidate is the workshop's playback
-  (timer, count-in, loop flags).
+  view state, service wiring and the timers/audio that drive these classes.
+  No further candidate stands out; split more only when a change needs it.
 
 **Later — the scoped ladders below**, in the order their sections give:
 workstation parity, the chord-chart backing band, the Note Highway, tune
