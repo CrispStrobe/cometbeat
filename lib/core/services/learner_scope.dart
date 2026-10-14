@@ -3,9 +3,9 @@
 // Which learner the per-learner stores read and write.
 //
 // Several people share one tablet. What belongs to a LEARNER — the spaced-
-// repetition database, stars and streak, which tutorials they have seen — is
-// stored under a per-profile key; what belongs to the DEVICE (language, sound,
-// projects, instruments) is not.
+// repetition database, stars and streak, which tutorials they have seen, their
+// songs and saved projects — is stored under a per-profile key; what belongs to
+// the DEVICE (language, sound, instruments, the tray) is not.
 //
 // The first profile keeps the original, un-prefixed keys. That is the whole
 // migration: an install from before profiles existed simply IS the default

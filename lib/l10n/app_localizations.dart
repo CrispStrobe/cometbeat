@@ -11909,7 +11909,7 @@ abstract class AppLocalizations {
   /// No description provided for @learnerDeleteConfirm.
   ///
   /// In en, this message translates to:
-  /// **'Delete {name} and all their progress? This cannot be undone.'**
+  /// **'Delete {name} with all their progress, songs and saved projects? This cannot be undone.'**
   String learnerDeleteConfirm(String name);
 
   /// No description provided for @learnerBackup.
@@ -11921,7 +11921,7 @@ abstract class AppLocalizations {
   /// No description provided for @learnerBackupSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Save {name}’s stars and review data to a file'**
+  /// **'Save {name}’s stars, review data, songs and projects to a file'**
   String learnerBackupSubtitle(String name);
 
   /// No description provided for @learnerRestore.

@@ -6482,7 +6482,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String learnerDeleteConfirm(String name) {
-    return 'Delete $name and all their progress? This cannot be undone.';
+    return 'Delete $name with all their progress, songs and saved projects? This cannot be undone.';
   }
 
   @override
@@ -6490,7 +6490,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String learnerBackupSubtitle(String name) {
-    return 'Save $name’s stars and review data to a file';
+    return 'Save $name’s stars, review data, songs and projects to a file';
   }
 
   @override

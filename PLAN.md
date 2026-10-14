@@ -27,8 +27,8 @@ is the short version; the sections below remain the detail.
   `note_values.rhythm.`, `guitar.string.`, `guitar.fret.`, `cello.string.`);
   the rest open
   a normal round. Each new one needs its game to accept `reviewItemIds`.
-- ⬜ Per-learner projects. Songs are per learner now; `projects_v1`, charts,
-  instruments and the tray stay per device (studio data, deliberately).
+- ✅ Per-learner saved projects (in the backup too). Charts, instruments and
+  the tray stay per device (studio data, deliberately).
 - ✅ Per-learner user songs (in the backup too).
 
 **Next — quality debts with a known shape:**

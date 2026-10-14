@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:comet_beat/core/services/learner_scope.dart';
 import 'package:comet_beat/core/services/profile_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/project_store.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -167,6 +168,32 @@ void main() {
       json.decode(prefs.getString(learnerKeyFor(restored.id, 'user_songs'))!),
       containsPair('x', 1),
     );
+  });
+
+  test('saved projects belong to the learner, and travel in the backup',
+      () async {
+    final profiles = ProfileService();
+    await profiles.load();
+    final prefs = await SharedPreferences.getInstance();
+    final store = ProjectStore(prefs);
+    // Saved before profiles existed: the default learner's, untouched.
+    await prefs.setString(
+      'projects_v1',
+      json.encode([
+        {'name': 'Old song', 'at': 1, 'p': '{}'},
+      ]),
+    );
+    expect(store.list().single.name, 'Old song');
+    final document = await profiles.exportActive();
+
+    await profiles.add('Mia');
+    expect(store.list(), isEmpty, reason: 'a new learner starts empty');
+
+    final restored = await profiles.importAsNew(document);
+    expect(profiles.active.id, restored.id);
+    expect(store.list().single.name, 'Old song');
+    await profiles.switchTo(kDefaultLearnerId);
+    expect(store.list().single.name, 'Old song');
   });
 
   test('a file that is not a backup is refused and writes nothing', () async {

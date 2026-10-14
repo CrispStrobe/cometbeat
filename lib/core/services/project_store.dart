@@ -27,6 +27,7 @@ import 'dart:convert';
 
 import 'package:comet_beat/core/project/project.dart';
 import 'package:comet_beat/core/project/project_codec.dart';
+import 'package:comet_beat/core/services/learner_scope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// One saved project: a name, when it was last written, and its JSON.
@@ -78,7 +79,10 @@ class ProjectStore {
 
   final SharedPreferences _prefs;
 
-  static const _key = 'projects_v1';
+  /// Per learner (learner_scope.dart): the default learner keeps the original
+  /// key, so projects saved before profiles existed stay theirs. Read on every
+  /// call, so a learner switch needs no reload.
+  static String get _key => learnerKey('projects_v1');
 
   /// How many are kept. A cap rather than unbounded growth because these live
   /// in SharedPreferences, which is not a database — and because a list nobody

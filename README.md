@@ -81,10 +81,10 @@ Live web builds — two deploy regimes on purpose:
   `<module>.<skill>.` namespace needs a line there; `review_router_test` fails
   until it has one.
 - **Learner profiles**: `ProfileService` + `learner_scope.dart`. Per-learner
-  stores (review data, stars, streak, tutorials, user songs) build their keys
-  with `learnerKey(...)`; the first profile keeps the
+  stores (review data, stars, streak, tutorials, user songs, saved projects)
+  build their keys with `learnerKey(...)`; the first profile keeps the
   original un-prefixed keys, so there is no migration. Device-wide settings
-  (language, sound, projects) are not scoped.
+  (language, sound, instruments, the tray) are not scoped.
 - **Error log**: `lib/core/services/error_log.dart` catches errors that escape
   a build or an unawaited future and keeps the last 50 on the device (Settings
   ▸ Debug ▸ Error log, after seven taps on the home title). Nothing is sent

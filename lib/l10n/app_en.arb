@@ -2996,14 +2996,14 @@
   "learnerNameHint": "Name",
   "learnerRename": "Rename",
   "learnerDelete": "Delete",
-  "learnerDeleteConfirm": "Delete {name} and all their progress? This cannot be undone.",
+  "learnerDeleteConfirm": "Delete {name} with all their progress, songs and saved projects? This cannot be undone.",
   "@learnerDeleteConfirm": {
     "placeholders": {
       "name": {"type": "String"}
     }
   },
   "learnerBackup": "Back up progress",
-  "learnerBackupSubtitle": "Save {name}’s stars and review data to a file",
+  "learnerBackupSubtitle": "Save {name}’s stars, review data, songs and projects to a file",
   "@learnerBackupSubtitle": {
     "placeholders": {
       "name": {"type": "String"}

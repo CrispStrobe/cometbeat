@@ -33,6 +33,9 @@ change.
 
 - **User songs per learner** (`user_songs` via `learnerKey`, reloaded on a
   switch, carried in the backup as optional `data.songs`).
+- **Saved projects per learner** (`projects_v1` via `learnerKey`; existing
+  projects stay with the default learner, others start empty; carried in the
+  backup as optional `data.projects`; the delete warning says so).
 - **Saves serialised.** Snapshotting key and data before the first `await`
   (2026-10-13) let an older save finish last; caught by
   `user_songs_service_test`. Progress, review data and songs now chain their

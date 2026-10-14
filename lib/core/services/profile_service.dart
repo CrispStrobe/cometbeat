@@ -50,6 +50,7 @@ class ProfileService with ChangeNotifier {
   static const _daysKey = 'practice_days';
   static const _tutorialPrefix = 'tutorial_seen_';
   static const _songsKey = 'user_songs';
+  static const _projectsKey = 'projects_v1';
 
   List<LearnerProfile> _profiles = const [
     LearnerProfile(id: kDefaultLearnerId, name: ''),
@@ -187,6 +188,8 @@ class ProfileService with ChangeNotifier {
         // Optional on import: version-1 backups written before songs were
         // per learner simply have none.
         'songs': decoded(_songsKey),
+        // Saved studio projects; optional on import like songs.
+        'projects': decoded(_projectsKey),
         'tutorialsSeen': [
           for (final key in prefs.getKeys())
             if (key.startsWith(seenPrefix) && (prefs.getBool(key) ?? false))
@@ -244,6 +247,10 @@ class ProfileService with ChangeNotifier {
     final songs = data['songs'];
     if (songs is Map<String, dynamic>) {
       await prefs.setString(key(_songsKey), json.encode(songs));
+    }
+    final projects = data['projects'];
+    if (projects is List) {
+      await prefs.setString(key(_projectsKey), json.encode(projects));
     }
     for (final gameId in seen.whereType<String>()) {
       await prefs.setBool(key('$_tutorialPrefix$gameId'), true);

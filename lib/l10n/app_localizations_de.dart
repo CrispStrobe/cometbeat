@@ -6511,7 +6511,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String learnerDeleteConfirm(String name) {
-    return '$name und den gesamten Fortschritt löschen? Das lässt sich nicht rückgängig machen.';
+    return '$name mit dem gesamten Fortschritt, den Liedern und gespeicherten Projekten löschen? Das lässt sich nicht rückgängig machen.';
   }
 
   @override
@@ -6519,7 +6519,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String learnerBackupSubtitle(String name) {
-    return 'Sterne und Wiederholungsdaten von $name in einer Datei speichern';
+    return 'Sterne, Wiederholungsdaten, Lieder und Projekte von $name in einer Datei speichern';
   }
 
   @override
