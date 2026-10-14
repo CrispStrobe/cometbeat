@@ -31,7 +31,10 @@ const _patterns = <List<int>>[
 ];
 
 class WhichBeatScreen extends StatefulWidget {
-  const WhichBeatScreen({super.key});
+  const WhichBeatScreen({super.key, this.reviewItemIds});
+
+  /// SRI ids (`measures.beat.<1-4>`) to re-ask instead of a random note.
+  final List<String>? reviewItemIds;
 
   @override
   State<WhichBeatScreen> createState() => _WhichBeatScreenState();
@@ -72,13 +75,34 @@ class _WhichBeatScreenState extends State<WhichBeatScreen>
     prepareRound();
   }
 
+  /// Every (pattern, note) whose note starts on a due beat; null when not
+  /// reviewing.
+  late final List<(List<int>, int)>? _reviewChoices = () {
+    final ids = {...?widget.reviewItemIds};
+    final choices = [
+      for (final p in _patterns)
+        for (var i = 0; i < p.length; i++)
+          if (ids.contains('measures.beat.${_startBeat(p, i)}')) (p, i),
+    ];
+    return choices.isEmpty ? null : choices;
+  }();
+
+  static int _startBeat(List<int> durations, int index) =>
+      1 + durations.take(index).fold<int>(0, (a, b) => a + b);
+
   @override
   void prepareRound() {
-    _durations = _patterns[_random.nextInt(_patterns.length)];
-    _targetIndex = _random.nextInt(_durations.length);
+    final review = _reviewChoices;
+    if (review != null) {
+      final (durations, index) = review[_random.nextInt(review.length)];
+      _durations = durations;
+      _targetIndex = index;
+    } else {
+      _durations = _patterns[_random.nextInt(_patterns.length)];
+      _targetIndex = _random.nextInt(_durations.length);
+    }
     // The target's start beat = 1 + sum of durations before it.
-    _answerBeat =
-        1 + _durations.take(_targetIndex).fold<int>(0, (a, b) => a + b);
+    _answerBeat = _startBeat(_durations, _targetIndex);
     _tapped = null;
     _lastAnswer = null;
   }

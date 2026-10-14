@@ -19,7 +19,11 @@ import 'package:flutter/material.dart' hide Step, Interval;
 import 'package:provider/provider.dart';
 
 class IntervalEarScreen extends StatefulWidget {
-  const IntervalEarScreen({super.key});
+  const IntervalEarScreen({super.key, this.reviewItemIds});
+
+  /// SRI ids (`chords.interval.<second|third|fifth|octave>`) to re-ask instead
+  /// of a random interval.
+  final List<String>? reviewItemIds;
 
   @override
   State<IntervalEarScreen> createState() => _IntervalEarScreenState();
@@ -56,10 +60,29 @@ class _IntervalEarScreenState extends State<IntervalEarScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) => _playInterval());
   }
 
+  /// The intervals behind [IntervalEarScreen.reviewItemIds]; null when not
+  /// reviewing.
+  late final List<Interval>? _reviewIntervals = () {
+    final ids = {...?widget.reviewItemIds};
+    final intervals = [
+      for (final i in _intervals)
+        if (ids.contains('chords.interval.${_skillName(i)}')) i,
+    ];
+    return intervals.isEmpty ? null : intervals;
+  }();
+
+  static String _skillName(Interval interval) => switch (interval.number) {
+        2 => 'second',
+        3 => 'third',
+        5 => 'fifth',
+        _ => 'octave',
+      };
+
   @override
   void prepareRound() {
+    final pool = _reviewIntervals ?? _intervals;
     _root = Pitch(_roots[_random.nextInt(_roots.length)]);
-    _interval = _intervals[_random.nextInt(_intervals.length)];
+    _interval = pool[_random.nextInt(pool.length)];
     _tapped = null;
     _lastAnswer = null;
     if (round > 0) _playInterval();
@@ -86,15 +109,9 @@ class _IntervalEarScreenState extends State<IntervalEarScreen>
     final correct = choice == _interval;
 
     if (_tapped == null || !answeredWrong) {
-      final name = switch (_interval.number) {
-        2 => 'second',
-        3 => 'third',
-        5 => 'fifth',
-        _ => 'octave',
-      };
       context
           .read<SriService>()
-          .recordResponse('chords.interval.$name', correct);
+          .recordResponse('chords.interval.${_skillName(_interval)}', correct);
     }
 
     setState(() {

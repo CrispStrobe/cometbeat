@@ -14,7 +14,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _app() => MultiProvider(
+Widget _app({WhichBeatScreen screen = const WhichBeatScreen()}) =>
+    MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsService()),
         ChangeNotifierProvider(
@@ -23,15 +24,15 @@ Widget _app() => MultiProvider(
         Provider<AudioService>(create: (_) => AudioService()),
         ChangeNotifierProvider(create: (_) => ProgressService()),
       ],
-      child: const MaterialApp(
-        localizationsDelegates: [
+      child: MaterialApp(
+        localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: [Locale('en'), Locale('de')],
-        home: WhichBeatScreen(),
+        supportedLocales: const [Locale('en'), Locale('de')],
+        home: screen,
       ),
     );
 
@@ -71,5 +72,16 @@ void main() {
     }
 
     expect(find.byIcon(Icons.star).evaluate().length, greaterThanOrEqualTo(1));
+  });
+
+  testWidgets('review mode asks only notes on the due beat', (tester) async {
+    await tester.pumpWidget(
+      _app(screen: const WhichBeatScreen(reviewItemIds: ['measures.beat.3'])),
+    );
+    await tester.pump();
+    for (var i = 0; i < 5; i++) {
+      expect(_game(tester).answerBeat, 3);
+      await _solveRound(tester);
+    }
   });
 }

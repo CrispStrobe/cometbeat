@@ -21,6 +21,7 @@
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/features/games/cello/cello_string_quiz_screen.dart';
 import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
+import 'package:comet_beat/features/games/chords/interval_ear_screen.dart';
 import 'package:comet_beat/features/games/game_registry.dart';
 import 'package:comet_beat/features/games/guitar/fretboard_find_screen.dart';
 import 'package:comet_beat/features/games/guitar/guitar_string_quiz_screen.dart';
@@ -31,6 +32,7 @@ import 'package:comet_beat/features/games/keyboard/key_find_screen.dart';
 import 'package:comet_beat/features/games/keyboard/key_name_screen.dart';
 import 'package:comet_beat/features/games/measures/meter_detective_screen.dart';
 import 'package:comet_beat/features/games/measures/time_signature_screen.dart';
+import 'package:comet_beat/features/games/measures/which_beat_screen.dart';
 import 'package:comet_beat/features/games/note_reading/note_reading_quiz_screen.dart';
 import 'package:comet_beat/features/games/note_values/note_value_quiz_screen.dart';
 import 'package:comet_beat/features/games/note_values/rhythm_tap_screen.dart';
@@ -66,6 +68,8 @@ final Map<String, Widget Function(List<String> ids)> kReviewRunners = {
   'cello.string.': (ids) => CelloStringQuizScreen(reviewItemIds: ids),
   'keyboard.grand.': (ids) => GrandStaffReadScreen(reviewItemIds: ids),
   'guitar.fret.': (ids) => FretboardFindScreen(reviewItemIds: ids),
+  'chords.interval.': (ids) => IntervalEarScreen(reviewItemIds: ids),
+  'measures.beat.': (ids) => WhichBeatScreen(reviewItemIds: ids),
 };
 
 /// The game that drills each remaining skill, by SRI prefix → game id. A new
@@ -78,7 +82,6 @@ const Map<String, String> kReviewGameBySkill = {
   'cello.play_along': 'cello_play_along',
   'chords.build.': 'chord_builder',
   'chords.hear.': 'seventh_ear',
-  'chords.interval.': 'interval_ear',
   'chords.name.': 'name_that_chord',
   'chords.play_along': 'chord_play_along',
   'chords.quality.': 'major_minor_sort',
@@ -99,7 +102,6 @@ const Map<String, String> kReviewGameBySkill = {
   'keyboard.melody.': 'key_melody',
   'keyboard.play_along': 'keyboard_play_along',
   'measures.accent.': 'strong_beat',
-  'measures.beat.': 'which_beat',
   'measures.fill.': 'measure_fill',
   'measures.syncopation.': 'sync_read',
   'measures.upbeat.': 'spot_upbeat',

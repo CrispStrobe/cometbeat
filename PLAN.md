@@ -21,10 +21,11 @@ is the short version; the sections below remain the detail.
 **Now — the learner's path** (landed 2026-10-13/14, see HISTORY):
 - ⬜ Watch the Continue card and Studio-tools default with real children; the
   default for *existing* installs (tools stay on) is a guess worth revisiting.
-- ⬜ More dedicated review runners. Eighteen namespaces re-ask exact items
+- ⬜ More dedicated review runners. Twenty namespaces re-ask exact items
   now (incl. `key_sig.`, `keyboard.name.`, `keyboard.find.`,
-  `keyboard.grand.`, `measures.timesig.`, `measures.meter.`,
-  `note_values.rhythm.`, `guitar.string.`, `guitar.fret.`, `cello.string.`);
+  `keyboard.grand.`, `measures.timesig.`, `measures.meter.`, `measures.beat.`,
+  `note_values.rhythm.`, `chords.interval.`, `guitar.string.`, `guitar.fret.`,
+  `cello.string.`);
   the rest open
   a normal round. Each new one needs its game to accept `reviewItemIds`.
 - ✅ Per-learner saved projects (in the backup too). Charts, instruments and

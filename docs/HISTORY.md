@@ -42,7 +42,7 @@ change.
   writes, and a failed write cannot stall the chain.
 - **Review** re-asks exact items for Key Signatures, Key Quiz, Time
   Signatures, Meter Detective, Find the Key, Rhythm Tap, Grand Staff, Find the Note
-  (fretboard) and the guitar and cello open-string quizzes (`reviewItemIds` on each; a reviewed key outside the beginner set
+  (fretboard), Interval Detective, Which Beat and the guitar and cello open-string quizzes (`reviewItemIds` on each; a reviewed key outside the beginner set
   still gets asked; Find the Key skips due notes its keyboard cannot show).
 - **Localisation**: the seven shared sheets and ~30 interpolated DAW /
   instrument-editor strings.

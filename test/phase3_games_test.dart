@@ -57,6 +57,22 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('interval detective review re-asks only the due interval',
+      (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        const IntervalEarScreen(reviewItemIds: ['chords.interval.fifth']),
+        sri,
+      ),
+    );
+    await tester.pump();
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.text('Fifth'));
+      await tester.pumpAndSettle();
+    }
+    expect(sri.totalTrackedItems, 1);
+  });
+
   testWidgets('triad builder renders the root on an interactive staff',
       (tester) async {
     await tester.pumpWidget(_wrap(const TriadBuilderScreen(), sri));
