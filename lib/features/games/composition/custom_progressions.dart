@@ -80,3 +80,58 @@ class CustomProgressionStore {
     }
   }
 }
+
+/// The player's custom harmonies for one Loop Studio session: the list, the
+/// ids new ones get, and keeping the store in step. The screen used to do this
+/// inline, with the "add" written out twice.
+class CustomHarmonies {
+  CustomHarmonies({CustomProgressionStore? store})
+      : _store = store ?? CustomProgressionStore();
+
+  final CustomProgressionStore _store;
+  List<Progression> _items = const [];
+
+  /// Session-unique ids for harmonies made now. Loaded ones are `custom-N`;
+  /// these are `custom-new-N`, so the two can never collide.
+  int _nextId = 0;
+
+  List<Progression> get items => _items;
+
+  bool _loaded = false;
+
+  /// Reads the saved harmonies. Ones added before this completes are kept,
+  /// after the saved ones — and nothing is written until it has run, or an
+  /// early add would overwrite the stored list before it was read.
+  Future<void> load() async {
+    final early = _items;
+    _items = [...await _store.load(), ...early];
+    _loaded = true;
+    if (early.isNotEmpty) _save();
+  }
+
+  void _save() {
+    if (_loaded) _saved = _store.save(_items);
+  }
+
+  /// The last save, so a caller (or a test) can wait for it.
+  Future<void> get saved => _saved;
+  Future<void> _saved = Future<void>.value();
+
+  /// Adds a harmony made of [degrees] and returns it. Applies at once; the
+  /// save runs behind it (best-effort, like the store itself).
+  Progression add(List<ChordDegree> degrees) {
+    final p = Progression('custom-new-${_nextId++}', degrees);
+    _items = [..._items, p];
+    _save();
+    return p;
+  }
+
+  /// Removes the harmony with [id] (no-op if absent). Saves behind it.
+  void remove(String id) {
+    _items = [
+      for (final p in _items)
+        if (p.id != id) p,
+    ];
+    _save();
+  }
+}

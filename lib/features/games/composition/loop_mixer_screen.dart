@@ -607,9 +607,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   late final Ticker _ticker;
   // LM-UX7: the kid's own saved harmonies, shown alongside the built-in ones.
-  final _progStore = CustomProgressionStore();
-  List<Progression> _customProgressions = const [];
-  int _customProgId = 0; // session-unique ids for new harmonies
+  final _harmonies = CustomHarmonies();
+  List<Progression> get _customProgressions => _harmonies.items;
 
   final _step = ValueNotifier<int>(-1);
 
@@ -674,8 +673,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _historyBase = _engine.spec;
     _tempoController.text = _engine.tempoBpm.toString();
     // LM-UX7: load the kid's saved harmonies (best-effort).
-    _progStore.load().then((ps) {
-      if (mounted) setState(() => _customProgressions = ps);
+    _harmonies.load().then((_) {
+      if (mounted) setState(() {});
     });
     _ticker = createTicker((_) {
       if (!_clock.isRunning && !_paused) {
@@ -1049,9 +1048,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   @override
   void debugAddCustomHarmony(List<ChordDegree> degrees) {
-    final p = Progression('custom-new-${_customProgId++}', degrees);
-    setState(() => _customProgressions = [..._customProgressions, p]);
-    _progStore.save(_customProgressions);
+    final p = _harmonies.add(degrees);
+    setState(() {});
     _setProgression(p);
   }
 
@@ -3981,22 +3979,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   // ── Custom harmonies (LM-UX7) ─────────────────────────────────────────────
   void _deleteCustomProgression(Progression p) {
-    setState(() {
-      _customProgressions = [
-        for (final c in _customProgressions)
-          if (c.id != p.id) c,
-      ];
-    });
+    setState(() => _harmonies.remove(p.id));
     if (_engine.progression?.id == p.id) _setProgression(null);
-    _progStore.save(_customProgressions);
   }
 
   Future<void> _makeCustomProgression(AppLocalizations l10n) async {
     final degrees = await _showHarmonyEditor(l10n);
     if (degrees == null || degrees.length < 2) return;
-    final p = Progression('custom-new-${_customProgId++}', degrees);
-    setState(() => _customProgressions = [..._customProgressions, p]);
-    await _progStore.save(_customProgressions);
+    if (!mounted) return;
+    final p = _harmonies.add(degrees);
+    setState(() {});
     _setProgression(p);
   }
 
