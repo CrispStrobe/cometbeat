@@ -8,6 +8,21 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## Logic out of the big screens, first pieces (2026-10-14)
+
+- `TrackerFieldEntry` — the Advanced Tracker's hex volume / effect / decimal
+  instrument digit entry and note-name entry (nine fields on the State). Mode
+  switching now also drops a pending sharp, which used to leak into the next
+  note.
+- `DawMarkedRange` — the Audio Editor's Mark In / Mark Out, minimum length,
+  readout and target-track rule.
+- `CustomHarmonies` — Loop Studio's custom harmony list (the "add" had two
+  copies). It writes nothing until the stored list has been read, so an early
+  add cannot overwrite saved harmonies.
+
+Each has its own unit tests; the screens keep thin getters so callers did not
+change.
+
 ## Follow-ups: songs per learner, more review, more splits (2026-10-14)
 
 - **User songs per learner** (`user_songs` via `learnerKey`, reloaded on a

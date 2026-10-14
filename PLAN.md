@@ -41,10 +41,13 @@ is the short version; the sections below remain the detail.
   by ear, so it is left as is. Step grid and drum kit are done. Reduced motion:
   the remaining tickers drive gameplay timing, not decoration — nothing safe to
   switch off without changing the games.
-- ⬜ Giant state classes, step two. Each now has one `part` split off
-  (`*_panels.dart`, `*_inspector.dart`, `daw_screen_mixing.dart`); the main
-  files are still 4.8k–7.5k lines. The next step is real controllers (model +
-  ChangeNotifier) rather than more file splits.
+- ⬜ Giant state classes, step two — started 2026-10-14. Logic that was loose
+  fields on the State now lives in small tested classes:
+  `TrackerFieldEntry` (tracker keyboard entry), `DawMarkedRange` (Mark In/Out),
+  `CustomHarmonies` (Loop Studio). The Score Workshop's model was already out
+  (`MultiPartDocument`). What remains on the States is mostly playback timing,
+  view state and service wiring; the next candidates are the tracker cursor /
+  block selection and the workshop's playback (timer, count-in, loop flags).
 
 **Later — the scoped ladders below**, in the order their sections give:
 workstation parity, the chord-chart backing band, the Note Highway, tune
