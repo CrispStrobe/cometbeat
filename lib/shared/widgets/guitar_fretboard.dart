@@ -5,6 +5,7 @@
 // decides what a tap means and what it sounds like — the same contract as
 // PianoKeyboard.
 
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Tuning;
 import 'package:flutter/material.dart';
 
@@ -42,50 +43,64 @@ class GuitarFretboard extends StatelessWidget {
             children: [
               for (var fret = 0; fret <= maxFret; fret++)
                 Expanded(
-                  child: GestureDetector(
-                    onTap: onTap == null
-                        ? null
-                        : () => onTap!(tuning.strings[s].midiNumber + fret),
-                    child: Container(
-                      height: 30,
-                      margin: const EdgeInsets.all(1),
-                      decoration: BoxDecoration(
-                        color:
-                            highlights[tuning.strings[s].midiNumber + fret] ??
-                                (fret == 0 ? woodOpen : woodLight),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.black26),
+                  // Announced by POSITION, never by note name: in the fretboard
+                  // quizzes the name is the answer.
+                  child: Semantics(
+                    button: true,
+                    enabled: onTap != null,
+                    selected: highlights.containsKey(
+                      tuning.strings[s].midiNumber + fret,
+                    ),
+                    label: AppLocalizations.of(context)
+                            ?.a11yFretCell(s + 1, fret) ??
+                        '',
+                    child: GestureDetector(
+                      onTap: onTap == null
+                          ? null
+                          : () => onTap!(tuning.strings[s].midiNumber + fret),
+                      child: Container(
+                        height: 30,
+                        margin: const EdgeInsets.all(1),
+                        decoration: BoxDecoration(
+                          color:
+                              highlights[tuning.strings[s].midiNumber + fret] ??
+                                  (fret == 0 ? woodOpen : woodLight),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.black26),
+                        ),
+                        alignment: Alignment.center,
+                        child: fret != 0 &&
+                                _dotFrets.contains(fret) &&
+                                s == tuning.stringCount ~/ 2
+                            ? const Icon(
+                                Icons.circle,
+                                size: 8,
+                                color: Colors.white70,
+                              )
+                            : null,
                       ),
-                      alignment: Alignment.center,
-                      child: fret != 0 &&
-                              _dotFrets.contains(fret) &&
-                              s == tuning.stringCount ~/ 2
-                          ? const Icon(
-                              Icons.circle,
-                              size: 8,
-                              color: Colors.white70,
-                            )
-                          : null,
                     ),
                   ),
                 ),
             ],
           ),
         const SizedBox(height: 2),
-        // Fret-number strip.
-        Row(
-          children: [
-            for (var fret = 0; fret <= maxFret; fret++)
-              Expanded(
-                child: Text(
-                  '$fret',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+        // Fret-number strip (each cell already announces its fret).
+        ExcludeSemantics(
+          child: Row(
+            children: [
+              for (var fret = 0; fret <= maxFret; fret++)
+                Expanded(
+                  child: Text(
+                    '$fret',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ],
     );

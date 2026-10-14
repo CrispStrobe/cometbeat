@@ -1,4 +1,4 @@
-// lib/features/games/cello/tuner_spike_screen.dart
+// lib/features/games/cello/tuner_screen.dart
 //
 // Live cello/chromatic tuner: open the mic, detect the pitch you play/sing, and
 // show how many cents sharp or flat you are — the whole chain (mic → PCM →
@@ -30,14 +30,14 @@ const _instrumentStrings = <TunerInstrument, List<int>>{
 /// Selectable reference pitches (A4 in Hz): baroque, standard, orchestral.
 const _referencePitches = <double>[415, 440, 442];
 
-class TunerSpikeScreen extends StatefulWidget {
-  const TunerSpikeScreen({super.key});
+class TunerScreen extends StatefulWidget {
+  const TunerScreen({super.key});
 
   @override
-  State<TunerSpikeScreen> createState() => _TunerSpikeScreenState();
+  State<TunerScreen> createState() => _TunerScreenState();
 }
 
-class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
+class _TunerScreenState extends State<TunerScreen> {
   final MicrophonePitchService _service = MicrophonePitchService();
   StreamSubscription<PitchReading>? _sub;
 

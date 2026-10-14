@@ -9,6 +9,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/features/library/soundfont_download.dart'
     show kGmSoundFonts;
 import 'package:comet_beat/features/library/soundfont_sheet.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,6 +25,8 @@ void main() {
   }) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Builder(
             builder: (context) => ElevatedButton(
@@ -121,6 +124,8 @@ void main() {
     SoundFontSource? requested;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Builder(
             builder: (context) => ElevatedButton(

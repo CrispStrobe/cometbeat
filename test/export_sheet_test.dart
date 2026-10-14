@@ -24,6 +24,7 @@ import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/export_sheet.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -68,7 +69,11 @@ MultiPartScore _score() => MultiPartScore([
 
 Future<void> _pumpSheet(WidgetTester tester, List<ExportOption> options) =>
     tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: ExportSheetBody(options: options))),
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: ExportSheetBody(options: options)),
+      ),
     );
 
 void main() {

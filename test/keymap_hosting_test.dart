@@ -18,6 +18,7 @@ import 'dart:convert';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/keymap/intents.dart';
 import 'package:comet_beat/shared/keymap/keymap.dart';
 import 'package:comet_beat/shared/keymap/keymap_service.dart';
@@ -202,6 +203,8 @@ void main() {
     }) =>
         tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: KeymapSheetBody(
                 keymap: keymap ?? Keymap(),

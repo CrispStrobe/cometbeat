@@ -19,6 +19,7 @@ import 'package:comet_beat/core/audio/sf2/soundfont_loader.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/library/soundfont_download.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -183,7 +184,7 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
     return showDialog<SoundFontSource>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Download General MIDI'),
+        title: Text(AppLocalizations.of(context)!.soundfontDownloadGm),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -210,7 +211,7 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.dawCancel),
           ),
         ],
       ),
@@ -289,7 +290,10 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Load SoundFont', style: theme.textTheme.titleMedium),
+                  Text(
+                    AppLocalizations.of(context)!.soundfontLoad,
+                    style: theme.textTheme.titleMedium,
+                  ),
                   if (_fontName != null)
                     Text(
                       _fontName!,
@@ -318,7 +322,7 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Open a .sf2 or .sf3 SoundFont to browse its instruments.',
+                AppLocalizations.of(context)!.soundfontOpenHint,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium,
               ),
@@ -326,7 +330,7 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
               FilledButton.icon(
                 onPressed: _busy ? null : _choose,
                 icon: const Icon(Icons.folder_open),
-                label: const Text('Choose SoundFont file…'),
+                label: Text(AppLocalizations.of(context)!.soundfontChooseFile),
               ),
               // Fetch a free General-MIDI font on demand (native only — the web
               // build has no disk cache for a 140 MB download).
@@ -335,7 +339,9 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
                 TextButton.icon(
                   onPressed: _busy ? null : _downloadGm,
                   icon: const Icon(Icons.cloud_download_outlined),
-                  label: const Text('Download General MIDI…'),
+                  label: Text(
+                    AppLocalizations.of(context)!.soundfontDownloadGmEllipsis,
+                  ),
                 ),
               ],
               if (_busy) ...[
@@ -363,11 +369,11 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: TextField(
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Search instruments',
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: AppLocalizations.of(context)!.soundfontSearch,
               isDense: true,
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             onChanged: (v) => setState(() => _filter = v),
           ),
@@ -405,12 +411,12 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
               TextButton.icon(
                 onPressed: _busy ? null : _choose,
                 icon: const Icon(Icons.folder_open, size: 18),
-                label: const Text('Change file'),
+                label: Text(AppLocalizations.of(context)!.soundfontChangeFile),
               ),
             const Spacer(),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.dawCancel),
             ),
             const SizedBox(width: 8),
             FilledButton(
@@ -423,7 +429,7 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
                       }
                       Navigator.of(context).pop(_selectedInst);
                     },
-              child: const Text('Use this sound'),
+              child: Text(AppLocalizations.of(context)!.soundfontUse),
             ),
           ],
         ),

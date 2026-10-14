@@ -126,14 +126,20 @@ void main() {
     autoShowTutorials = false; // don't let a first-run tutorial cover a screen
     await hold(tester, ms: 1500); // let the first frame render
 
+    // MultiProvider sits above MaterialApp in main.dart, so MaterialApp's
+    // context can read SettingsService.
+    final settings = Provider.of<SettingsService>(
+      tester.element(find.byType(MaterialApp)),
+      listen: false,
+    );
+    // The workshop shot needs the authoring menu, which is opt-in on a fresh
+    // simulator (Settings ▸ Studio tools).
+    await settings.setStudioMode(true);
     if (shotLocale.isNotEmpty) {
-      // MultiProvider sits above MaterialApp in main.dart, so MaterialApp's
-      // context can read SettingsService and force this capture's language.
-      final ctx = tester.element(find.byType(MaterialApp));
-      await Provider.of<SettingsService>(ctx, listen: false)
-          .setLocale(Locale(shotLocale));
-      await hold(tester, ms: 900);
+      // Force this capture's language.
+      await settings.setLocale(Locale(shotLocale));
     }
+    await hold(tester, ms: 900);
 
     await binding
         .convertFlutterSurfaceToImage(); // required on iOS before shots

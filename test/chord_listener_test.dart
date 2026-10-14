@@ -1,4 +1,4 @@
-// ChordListenSpikeScreen (live chord listener) — previously untested. The mic
+// ChordListenerScreen (live chord listener) — previously untested. The mic
 // only starts on the toggle button, so the idle screen builds without any
 // capture; a smoke test covers that build + idle UI. The `debugChords` seam
 // feeds synthetic readings so the detection→display path is covered headlessly,
@@ -6,7 +6,7 @@
 import 'dart:async';
 
 import 'package:comet_beat/core/audio/chroma_analysis.dart';
-import 'package:comet_beat/features/games/chords/chord_listen_spike_screen.dart';
+import 'package:comet_beat/features/games/chords/chord_listener_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,10 +17,10 @@ void main() {
 
   testWidgets('renders the idle chord listener without throwing',
       (tester) async {
-    await pumpGame(tester, const ChordListenSpikeScreen());
+    await pumpGame(tester, const ChordListenerScreen());
     await tester.pump(const Duration(milliseconds: 100));
     expect(tester.takeException(), isNull);
-    expect(find.byType(ChordListenSpikeScreen), findsOneWidget);
+    expect(find.byType(ChordListenerScreen), findsOneWidget);
   });
 
   testWidgets('names the detected chord and its runner-up from the stream',
@@ -30,7 +30,7 @@ void main() {
 
     await pumpGame(
       tester,
-      ChordListenSpikeScreen(debugChords: controller.stream),
+      ChordListenerScreen(debugChords: controller.stream),
     );
     await tester.pump();
 

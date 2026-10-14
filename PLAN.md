@@ -13,6 +13,43 @@
 > looking for how something already-built came out, or for the reasoning behind
 > a shipped decision, it is in HISTORY. 46 ⬜ cards remain.
 
+## Now / next / later (one page — added 2026-10-13)
+
+This file and `docs/PLAN.md` run to fifteen thousand lines between them. This
+is the short version; the sections below remain the detail.
+
+**Now — the learner's path** (landed 2026-10-13/14, see HISTORY):
+- ⬜ Watch the Continue card and Studio-tools default with real children; the
+  default for *existing* installs (tools stay on) is a guess worth revisiting.
+- ⬜ More dedicated review runners. Fourteen namespaces re-ask exact items
+  now (incl. `key_sig.`, `keyboard.name.`, `keyboard.find.`,
+  `measures.timesig.`, `measures.meter.`, `note_values.rhythm.`); the rest open
+  a normal round. Each new one needs its game to accept `reviewItemIds`.
+- ⬜ Per-learner projects. Songs are per learner now; `projects_v1`, charts,
+  instruments and the tray stay per device (studio data, deliberately).
+- ✅ Per-learner user songs (in the backup too).
+
+**Next — quality debts with a known shape:**
+- ✅ Shared sheets localised (`soundfont_sheet`, `fx_rack`, `keymap_sheet`,
+  `tracker_piano_roll`, `export_sheet`, `undo_history_sheet`, `tray_panel`).
+- ✅ Interpolated DAW / instrument-editor strings localised. A few remain on
+  purpose: units and readouts (`BPM`, `LUFS`, `dBFS`, `ms`, "Range 1.0-2.0 s")
+  and file-dialog type labels in `const` groups.
+- ⬜ Accessibility: the staff views (`crisp_notation`, external) are still
+  unlabelled — that work belongs in the library. The note highway is a
+  real-time falling-note game; labelling its lanes would not make it playable
+  by ear, so it is left as is. Step grid and drum kit are done. Reduced motion:
+  the remaining tickers drive gameplay timing, not decoration — nothing safe to
+  switch off without changing the games.
+- ⬜ Giant state classes, step two. Each now has one `part` split off
+  (`*_panels.dart`, `*_inspector.dart`, `daw_screen_mixing.dart`); the main
+  files are still 4.8k–7.5k lines. The next step is real controllers (model +
+  ChangeNotifier) rather than more file splits.
+
+**Later — the scoped ladders below**, in the order their sections give:
+workstation parity, the chord-chart backing band, the Note Highway, tune
+identification, and the tracker gap analysis.
+
 🚧 **Idle / Last-shipped (Agent checkpoint)**
 - Shipped: Synth & FX Editor (embeds Sound Lab directly into Tracker via `instrument_editor.dart`).
 - Shipped: Multi-Sample Groundwork (`MultiSampleInstrument` added to `tracker_engine.dart` with correct monophonic choking semantics).

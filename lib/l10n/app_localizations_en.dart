@@ -155,6 +155,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Advanced! Earn 2 stars in the other Cello Corner games first.';
 
   @override
+  String unlockHintProgress(String module, int have, int need) {
+    return 'Keep playing $module to unlock this — $have of $need done!';
+  }
+
+  @override
   String unlockHint(String module) {
     return 'Play $module first to unlock this!';
   }
@@ -5683,6 +5688,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get curContinueHere => 'Continue here';
 
   @override
+  String get homeContinueTitle => 'Keep going';
+
+  @override
+  String homeContinueSubtitle(String level, String topic) {
+    return '$level · next up: $topic';
+  }
+
+  @override
   String get curPractiseWeakest => 'Practise your weakest topic';
 
   @override
@@ -6448,6 +6461,736 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resultNewBest => 'New best time! 🎉';
+
+  @override
+  String get learnersTitle => 'Learners';
+
+  @override
+  String get learnerDefaultName => 'Player 1';
+
+  @override
+  String get learnerAdd => 'Add a learner';
+
+  @override
+  String get learnerNameHint => 'Name';
+
+  @override
+  String get learnerRename => 'Rename';
+
+  @override
+  String get learnerDelete => 'Delete';
+
+  @override
+  String learnerDeleteConfirm(String name) {
+    return 'Delete $name and all their progress? This cannot be undone.';
+  }
+
+  @override
+  String get learnerBackup => 'Back up progress';
+
+  @override
+  String learnerBackupSubtitle(String name) {
+    return 'Save $name’s stars and review data to a file';
+  }
+
+  @override
+  String get learnerRestore => 'Restore from a backup';
+
+  @override
+  String get learnerRestoreSubtitle =>
+      'Adds the backup as a new learner — nothing is overwritten';
+
+  @override
+  String learnerRestored(String name) {
+    return 'Restored $name';
+  }
+
+  @override
+  String get learnerRestoreFailed =>
+      'That file is not a CometBeat progress backup';
+
+  @override
+  String get learnerBackupSaved => 'Backup saved';
+
+  @override
+  String get learnerSwitchTitle => 'Who is playing?';
+
+  @override
+  String a11yPianoKey(int n) {
+    return 'Piano key $n';
+  }
+
+  @override
+  String a11yFretCell(int string, int fret) {
+    return 'String $string, fret $fret';
+  }
+
+  @override
+  String get dawTrackFx => 'Track FX';
+
+  @override
+  String get dawCopyChainToSelectedTracks => 'Copy chain to selected tracks';
+
+  @override
+  String get dawCopyChainToAllTracks => 'Copy chain to all tracks';
+
+  @override
+  String get dawApplyPresetToSelectedTracks =>
+      'Apply preset to selected tracks';
+
+  @override
+  String get dawAddEffectToSelectedTracks => 'Add effect to selected tracks';
+
+  @override
+  String get dawApplyPreset => 'Apply preset';
+
+  @override
+  String get dawAddEffect => 'Add effect';
+
+  @override
+  String get dawNoTrackEffects => 'No track effects';
+
+  @override
+  String get dawSavedChains => 'Saved chains';
+
+  @override
+  String get dawCopyChain => 'Copy chain';
+
+  @override
+  String get dawPasteChain => 'Paste chain';
+
+  @override
+  String get dawStretchQuality => 'Stretch quality';
+
+  @override
+  String get dawClipTempoQuestion => 'What tempo is this clip in?';
+
+  @override
+  String get dawMasterFx => 'Master FX';
+
+  @override
+  String get dawOutputBus => 'Output bus';
+
+  @override
+  String get dawNoMasterEffects => 'No master effects';
+
+  @override
+  String get dawBuses => 'Buses';
+
+  @override
+  String get dawAddBus => 'Add bus';
+
+  @override
+  String get dawRouteSelectedToMaster => 'Route selected to Master';
+
+  @override
+  String get dawNoBuses => 'No buses';
+
+  @override
+  String get dawMaster => 'Master';
+
+  @override
+  String get dawRenameBus => 'Rename bus';
+
+  @override
+  String get dawBusName => 'Bus name';
+
+  @override
+  String get dawRouteSelectedToBus => 'Route selected tracks to this bus';
+
+  @override
+  String get dawRemoveBus => 'Remove bus';
+
+  @override
+  String get dawNoBusEffects => 'No bus effects';
+
+  @override
+  String get dawRangeGain => 'Range Gain';
+
+  @override
+  String get dawTrackAutomation => 'Track Automation';
+
+  @override
+  String get dawMoveUp => 'Move up';
+
+  @override
+  String get dawMoveDown => 'Move down';
+
+  @override
+  String get dawRemoveEffect => 'Remove effect';
+
+  @override
+  String get dawTakes => 'Takes';
+
+  @override
+  String get dawStackAsTake => 'Stack in as another take';
+
+  @override
+  String get dawStackAsTakeHint => 'Moves it in — undoable';
+
+  @override
+  String get dawClipGainLabel => 'clip gain';
+
+  @override
+  String get dawRemovePoint => 'Remove point';
+
+  @override
+  String get dawCurve => 'Curve';
+
+  @override
+  String get dawAuto => 'Auto';
+
+  @override
+  String get dawEdit => 'Edit';
+
+  @override
+  String get dawExportMix => 'Mix';
+
+  @override
+  String get dawExportStems => 'Stems';
+
+  @override
+  String get dawExportNotes => 'Notes (MusicXML, MIDI, PDF…)';
+
+  @override
+  String get dawExportProjectFile => 'Project file';
+
+  @override
+  String get dawExportMixTitle => 'Export mix';
+
+  @override
+  String get dawWholeLength => 'Whole length';
+
+  @override
+  String get dawMarkedRange => 'Marked range';
+
+  @override
+  String get dawNormalizePeak => 'Normalize peak';
+
+  @override
+  String get dawChooseFormat => 'Choose format';
+
+  @override
+  String get dawClipFx => 'Clip FX';
+
+  @override
+  String get dawCopyFxToSelectedClips => 'Copy FX to selected clips';
+
+  @override
+  String get dawApplyPresetToSelectedClips => 'Apply preset to selected clips';
+
+  @override
+  String get dawAddEffectToSelectedClips => 'Add effect to selected clips';
+
+  @override
+  String get dawClipEnvelope => 'Clip envelope';
+
+  @override
+  String get dawCrossfadeNext => 'Crossfade next';
+
+  @override
+  String get dawTranscribeToNotation => 'Transcribe → notation';
+
+  @override
+  String get dawTranscribing => 'Transcribing the audio…';
+
+  @override
+  String get dawTranscribedClipAdded =>
+      'Added a notation clip transcribed from the audio.';
+
+  @override
+  String get dawLoudness => 'Loudness';
+
+  @override
+  String get dawMarkIn => 'Mark In';
+
+  @override
+  String get dawMarkOut => 'Mark Out';
+
+  @override
+  String get dawPreset => 'Preset';
+
+  @override
+  String get dawTrackAuto => 'Track Auto';
+
+  @override
+  String get dawRangeFade => 'Range Fade';
+
+  @override
+  String get dawUnmute => 'Unmute';
+
+  @override
+  String get dawRangeMute => 'Range Mute';
+
+  @override
+  String get dawRippleDelete => 'Ripple delete';
+
+  @override
+  String get dawRippleInsert => 'Ripple insert';
+
+  @override
+  String get dawConversionLossy => 'This conversion loses something';
+
+  @override
+  String get instrEdTitle => 'Edit Instrument';
+
+  @override
+  String get instrEdAdditiveVoice => 'Additive voice';
+
+  @override
+  String get instrEdMidiKey => 'MIDI key';
+
+  @override
+  String get instrEdNoZones => 'No mapped zones';
+
+  @override
+  String get instrEdMappedNote => 'Mapped Note';
+
+  @override
+  String get instrEdAddMapping => 'Add key mapping';
+
+  @override
+  String get instrEdRemap => 'Remap selected key';
+
+  @override
+  String get instrEdRemoveMapping => 'Remove key mapping';
+
+  @override
+  String get instrEdLoopEditor => 'Loop Editor';
+
+  @override
+  String get instrEdPingPongLoop => 'Ping-Pong Loop';
+
+  @override
+  String get instrEdPingPongLoopHint => 'Bounces forward and backward';
+
+  @override
+  String get instrEdSustainLoopEditor => 'Sustain Loop Editor';
+
+  @override
+  String get instrEdPingPongSustain => 'Ping-Pong Sustain';
+
+  @override
+  String get instrEdPingPongSustainHint => 'Bounces while the note is held';
+
+  @override
+  String get instrEdBaseNote => 'Base Note (Tuning)';
+
+  @override
+  String get instrEdSampleVolume => 'Sample Volume';
+
+  @override
+  String get instrEdVolumeEnvelope => 'Native Volume Envelope';
+
+  @override
+  String get instrEdEditVolumeEnvelope => 'Edit native volume envelope';
+
+  @override
+  String get instrEdPanEnvelope => 'Native Pan Envelope';
+
+  @override
+  String get instrEdEditPanEnvelope => 'Edit native pan envelope';
+
+  @override
+  String get instrEdPitchEnvelope => 'Native Pitch Envelope';
+
+  @override
+  String get instrEdEditPitchEnvelope => 'Edit native pitch envelope';
+
+  @override
+  String get instrEdNewNoteAction => 'New Note Action';
+
+  @override
+  String get instrEdActionCut => 'Cut';
+
+  @override
+  String get instrEdActionContinue => 'Continue';
+
+  @override
+  String get instrEdActionNoteOff => 'Note Off';
+
+  @override
+  String get instrEdActionFade => 'Fade';
+
+  @override
+  String get instrEdDuplicateCheck => 'Duplicate Check';
+
+  @override
+  String get instrEdNone => 'None';
+
+  @override
+  String get instrEdDupNote => 'Note';
+
+  @override
+  String get instrEdDupSample => 'Sample';
+
+  @override
+  String get instrEdDuplicateAction => 'Duplicate Action';
+
+  @override
+  String get instrEdFadeout => 'Fadeout';
+
+  @override
+  String get instrEdSustainPoint => 'Sustain point';
+
+  @override
+  String get instrEdLoopStart => 'Loop start';
+
+  @override
+  String get instrEdLoopEnd => 'Loop end';
+
+  @override
+  String get instrEdMacros => 'Instrument Macros';
+
+  @override
+  String get instrEdAddMacro => 'Add macro';
+
+  @override
+  String get instrEdNoMacros =>
+      'No macros — add one to modulate the note per tick.';
+
+  @override
+  String get instrEdEditMacro => 'Edit macro';
+
+  @override
+  String get instrEdRemoveMacro => 'Remove macro';
+
+  @override
+  String get instrEdSteps => 'Steps';
+
+  @override
+  String get instrEdTo => 'to';
+
+  @override
+  String get instrEdReleaseAt => 'Release at';
+
+  @override
+  String get dawExportMixDetail => 'Everything, as one file';
+
+  @override
+  String get dawExportStemsDetail => 'One file per lane';
+
+  @override
+  String get dawExportProjectDetail => 'Reopen and keep editing';
+
+  @override
+  String get tabArticulateTechniques => 'Articulate techniques';
+
+  @override
+  String get tabLoopBar => 'Loop bar';
+
+  @override
+  String get tabSpeedTrainer => 'Speed trainer';
+
+  @override
+  String get tabNoStaff => 'No staff';
+
+  @override
+  String get tabGrandStaff => 'Grand staff';
+
+  @override
+  String get tabInstrumentDefault => 'Default';
+
+  @override
+  String get tabMeter => 'Meter';
+
+  @override
+  String get tabTriplet => 'Triplet';
+
+  @override
+  String get tabBuildChord => 'Build a chord';
+
+  @override
+  String get trackerBeatsAndBars => 'Beats and bars';
+
+  @override
+  String get trackerFollowPattern => 'Follow the pattern';
+
+  @override
+  String get trackerPianoRollHint =>
+      'Higher notes to the right; time runs downward.';
+
+  @override
+  String get trackerOverviewHint =>
+      'Tap to jump there. Press and drag a block to move it.';
+
+  @override
+  String get exportSoundFile => 'Sound file';
+
+  @override
+  String get exportSongRenderedDetail => 'The whole song, rendered';
+
+  @override
+  String get exportTrackerModule => 'Tracker module';
+
+  @override
+  String get exportTrackerModuleDetail =>
+      '.mod · .xm · .it · .s3m — what other trackers read';
+
+  @override
+  String get exportForNotationPrograms => 'For notation programs';
+
+  @override
+  String get trackerSongOverview => 'Song overview';
+
+  @override
+  String get trackerPianoRoll => 'Piano roll';
+
+  @override
+  String get audioExportFormat => 'Format';
+
+  @override
+  String get audioExportSampleRate => 'Sample rate';
+
+  @override
+  String get audioExportConversion => 'Conversion';
+
+  @override
+  String get audioExportBitDepth => 'Bit depth';
+
+  @override
+  String get audioExportDither => 'Dither';
+
+  @override
+  String get audioExportDitherHint =>
+      'Smoother fades (adds a faint noise floor)';
+
+  @override
+  String get audioExportBitrate => 'Bitrate';
+
+  @override
+  String get audioExportMp3Encoder => 'MP3 encoder';
+
+  @override
+  String get exportLoopRenderedDetail => 'The loop, rendered';
+
+  @override
+  String get exportShareCodeDetail => 'A short code someone else can paste in';
+
+  @override
+  String get errorLogTitle => 'Error log';
+
+  @override
+  String errorLogCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count errors recorded',
+      one: '1 error recorded',
+      zero: 'Nothing recorded',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get errorLogEmpty => 'No errors recorded on this device.';
+
+  @override
+  String get errorLogCopy => 'Copy all';
+
+  @override
+  String get errorLogCopied => 'Error log copied';
+
+  @override
+  String get errorLogClear => 'Clear the log';
+
+  @override
+  String get soundfontDownloadGm => 'Download General MIDI';
+
+  @override
+  String get soundfontLoad => 'Load SoundFont';
+
+  @override
+  String get soundfontOpenHint =>
+      'Open a .sf2 or .sf3 SoundFont to browse its instruments.';
+
+  @override
+  String get soundfontChooseFile => 'Choose SoundFont file…';
+
+  @override
+  String get soundfontDownloadGmEllipsis => 'Download General MIDI…';
+
+  @override
+  String get soundfontSearch => 'Search instruments';
+
+  @override
+  String get soundfontChangeFile => 'Change file';
+
+  @override
+  String get soundfontUse => 'Use this sound';
+
+  @override
+  String get fxRackEmpty => 'No effects — the sound passes through unchanged.';
+
+  @override
+  String get fxRackMoveEarlier => 'Move earlier';
+
+  @override
+  String get fxRackMoveLater => 'Move later';
+
+  @override
+  String get keymapEmpty => 'No keyboard shortcuts on this screen yet.';
+
+  @override
+  String get trackerNoNotesOnChannel => 'No notes on this channel yet.';
+
+  @override
+  String get exportNothingYet => 'Nothing to export yet.';
+
+  @override
+  String dawPartN(int n) {
+    return 'Part $n';
+  }
+
+  @override
+  String dawSummaryWhole(String summary) {
+    return 'Whole length: $summary';
+  }
+
+  @override
+  String dawSummaryTrack(String summary) {
+    return 'This track: $summary';
+  }
+
+  @override
+  String dawSummaryRange(String summary) {
+    return 'Marked range: $summary';
+  }
+
+  @override
+  String dawDurationValue(String value) {
+    return 'Duration $value';
+  }
+
+  @override
+  String dawPeakValue(String value) {
+    return 'Peak $value';
+  }
+
+  @override
+  String dawExportPeakValue(String value) {
+    return 'Export peak $value';
+  }
+
+  @override
+  String dawWidthPercent(int percent) {
+    return '$percent% wide';
+  }
+
+  @override
+  String dawNSelected(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String dawTranscribeFailed(String error) {
+    return 'Could not transcribe: $error';
+  }
+
+  @override
+  String dawFadeInCurve(String curve) {
+    return 'Fade In $curve';
+  }
+
+  @override
+  String dawFadeOutCurve(String curve) {
+    return 'Fade Out $curve';
+  }
+
+  @override
+  String dawRoutedToBusN(int n) {
+    return 'Routed to Bus $n';
+  }
+
+  @override
+  String dawRoutedTo(String bus) {
+    return 'Routed to $bus';
+  }
+
+  @override
+  String dawBusSends(int count) {
+    return '$count bus sends';
+  }
+
+  @override
+  String dawBusN(int n) {
+    return 'Bus $n';
+  }
+
+  @override
+  String dawTrackCount(int count) {
+    return '$count tracks';
+  }
+
+  @override
+  String dawStartPercent(int percent) {
+    return 'Start $percent%';
+  }
+
+  @override
+  String dawEndPercent(int percent) {
+    return 'End $percent%';
+  }
+
+  @override
+  String dawTakeN(int n) {
+    return 'Take $n';
+  }
+
+  @override
+  String dawEditAutomation(String label) {
+    return 'Edit $label automation';
+  }
+
+  @override
+  String dawPointCount(int count) {
+    return '$count points';
+  }
+
+  @override
+  String dawPointN(int n) {
+    return 'Point $n';
+  }
+
+  @override
+  String dawAutomate(String label) {
+    return 'Automate $label';
+  }
+
+  @override
+  String get instrEdDisabled => 'Disabled';
+
+  @override
+  String instrEdRemovePointN(int n) {
+    return 'Remove point $n';
+  }
+
+  @override
+  String instrEdStepCount(int count) {
+    return '$count steps';
+  }
+
+  @override
+  String instrEdMacroTitle(String target) {
+    return '$target macro';
+  }
+
+  @override
+  String instrEdMacroRangeHint(int lo, int hi) {
+    return 'Range $lo…$hi · drag a bar to set its value';
+  }
+
+  @override
+  String a11yStepCell(String row, int step) {
+    return '$row, step $step';
+  }
+
+  @override
+  String get studioModeLabel => 'Studio tools';
+
+  @override
+  String get studioModeSubtitle =>
+      'Show the score workshop, tracker, tab editor, Loop Studio, audio editor and projects on the home screen. For older kids and grown-ups.';
 
   @override
   String get showTimerLabel => 'Show your time';

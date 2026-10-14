@@ -33,7 +33,11 @@ class _MajorKey {
 }
 
 class KeySignatureScreen extends StatefulWidget {
-  const KeySignatureScreen({super.key});
+  const KeySignatureScreen({super.key, this.reviewItemIds});
+
+  /// Due `key_sig.<tonic>` items to re-ask (the home review); null = a normal
+  /// game.
+  final List<String>? reviewItemIds;
 
   static const _totalRounds = 10;
 
@@ -84,6 +88,20 @@ class _KeySignatureScreenState extends State<KeySignatureScreen>
   @override
   bool get playFeedbackSounds => false;
 
+  /// The keys behind [KeySignatureScreen.reviewItemIds]; null when not
+  /// reviewing (or when none of the ids parse).
+  late final List<_MajorKey>? _reviewKeys = () {
+    final tonics = {
+      for (final id in widget.reviewItemIds ?? const <String>[])
+        id.split('.').last,
+    };
+    final keys = [
+      for (final k in KeySignatureScreen._all)
+        if (tonics.contains(k.tonic.name)) k,
+    ];
+    return keys.isEmpty ? null : keys;
+  }();
+
   @override
   void initState() {
     super.initState();
@@ -94,11 +112,16 @@ class _KeySignatureScreenState extends State<KeySignatureScreen>
   void prepareRound() {
     // Beginners: C, F, G, D (0–2 accidentals). Two stars adds A, E, B.
     final wide = context.read<ProgressService>().starsFor('key_sig') >= 2;
-    final pool = wide
+    final review = _reviewKeys;
+    // A reviewed key may sit outside the beginner set: draw its distractors
+    // from the full one.
+    final pool = wide || review != null
         ? [...KeySignatureScreen._all]
         : KeySignatureScreen._all.where((k) => k.fifths.abs() <= 2).toList();
 
-    _target = pool[_random.nextInt(pool.length)];
+    _target = review != null
+        ? review[_random.nextInt(review.length)]
+        : pool[_random.nextInt(pool.length)];
     final distractors = pool.where((k) => k.tonic != _target.tonic).toList()
       ..shuffle(_random);
     _options = [_target, ...distractors.take(3)]..shuffle(_random);

@@ -17,6 +17,7 @@
 // surface can really produce. A surface passes the categories it has; nothing
 // here knows how to build any of them.
 
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// What kind of thing an export produces — the question a person is actually
@@ -131,9 +132,9 @@ class ExportSheetBody extends StatelessWidget {
       children: [
         Text(title, style: theme.textTheme.titleMedium),
         if (options.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Text('Nothing to export yet.'),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(AppLocalizations.of(context)!.exportNothingYet),
           ),
         for (final kind in ExportKind.values)
           if (byKind[kind] case final group? when group.isNotEmpty) ...[

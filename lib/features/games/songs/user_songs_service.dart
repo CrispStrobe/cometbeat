@@ -7,6 +7,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:comet_beat/core/services/learner_scope.dart';
 import 'package:comet_beat/features/games/songs/import/omr_source_store.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show MultiPartScore, Score, multiPartScoreFromMusicXml, scoreFromMusicXml;
@@ -205,6 +206,7 @@ class UserSongsService with ChangeNotifier {
   List<ImportedSong> _songs = [];
   List<ImportedChordSheet> _sheets = [];
   List<SongCollection> _collections = [];
+  Future<void> _lastSave = Future<void>.value();
 
   List<ImportedSong> get songs => List.unmodifiable(_songs);
   List<ImportedChordSheet> get sheets => List.unmodifiable(_sheets);
@@ -213,7 +215,12 @@ class UserSongsService with ChangeNotifier {
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_storageKey);
+      // Per learner (learner_scope.dart): a child's imported songs are theirs.
+      // Reset first — this also runs on a learner switch.
+      final jsonString = prefs.getString(learnerKey(_storageKey));
+      _songs = [];
+      _sheets = [];
+      _collections = [];
       if (jsonString != null) {
         final map = json.decode(jsonString) as Map<String, dynamic>;
         _songs = [
@@ -243,15 +250,24 @@ class UserSongsService with ChangeNotifier {
 
   Future<void> _save() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        _storageKey,
-        json.encode({
-          'songs': [for (final s in _songs) s.toJson()],
-          'sheets': [for (final s in _sheets) s.toJson()],
-          'collections': [for (final c in _collections) c.toJson()],
-        }),
-      );
+      // Key and data before the first await (see ProgressService._save).
+      final key = learnerKey(_storageKey);
+      final encoded = json.encode({
+        'songs': [for (final s in _songs) s.toJson()],
+        'sheets': [for (final s in _sheets) s.toJson()],
+        'collections': [for (final c in _collections) c.toJson()],
+      });
+      // Chained, so writes land in call order: snapshotting before the await
+      // means an earlier, staler save could otherwise finish last.
+      _lastSave = _lastSave.then((_) async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(key, encoded);
+      }).catchError((Object e) {
+        // Caught on the chain itself, so one failed write cannot stall every
+        // later one.
+        if (kDebugMode) debugPrint('[USER_SONGS] save failed: $e');
+      });
+      await _lastSave;
     } catch (e) {
       if (kDebugMode) debugPrint('[USER_SONGS] save failed: $e');
     }

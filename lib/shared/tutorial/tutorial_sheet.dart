@@ -9,6 +9,7 @@
 import 'dart:async';
 
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/learner_scope.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/tts_service.dart';
 import 'package:comet_beat/features/games/widgets/playing_staff.dart';
@@ -40,8 +41,8 @@ Future<void> maybeShowTutorial(
   Tutorial Function(AppLocalizations) build,
 ) async {
   final prefs = await SharedPreferences.getInstance();
-  if (prefs.getBool('$_seenPrefix$gameId') ?? false) return;
-  await prefs.setBool('$_seenPrefix$gameId', true);
+  if (prefs.getBool(learnerKey('$_seenPrefix$gameId')) ?? false) return;
+  await prefs.setBool(learnerKey('$_seenPrefix$gameId'), true);
   if (!context.mounted) return;
   final l10n = AppLocalizations.of(context);
   if (l10n == null) return;
@@ -51,7 +52,7 @@ Future<void> maybeShowTutorial(
 /// Testing/reset hook: forget that [gameId]'s tutorial was seen.
 Future<void> resetTutorialSeen(String gameId) async {
   final prefs = await SharedPreferences.getInstance();
-  await prefs.remove('$_seenPrefix$gameId');
+  await prefs.remove(learnerKey('$_seenPrefix$gameId'));
 }
 
 class _TutorialSheet extends StatefulWidget {

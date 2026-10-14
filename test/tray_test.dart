@@ -23,6 +23,7 @@ import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/tray/tray.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,7 +136,11 @@ void main() {
         (tester) async {
       final tray = TrayService();
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: TrayPanel(tray: tray))),
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: TrayPanel(tray: tray)),
+        ),
       );
       expect(find.textContaining('Nothing here yet'), findsOneWidget);
 
@@ -149,7 +154,11 @@ void main() {
       final tray = TrayService();
       final item = _put(tray, 'Drums');
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: TrayPanel(tray: tray))),
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: TrayPanel(tray: tray)),
+        ),
       );
       await tester.tap(find.byKey(Key('tray-remove-${item.id}')));
       await tester.pump();
@@ -164,6 +173,8 @@ void main() {
       _put(tray, 'Drums');
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TrayPanel(
               tray: tray,
@@ -205,6 +216,8 @@ void main() {
       final placed = <String>[];
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TrayPanel(
               tray: tray,

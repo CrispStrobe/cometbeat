@@ -3,7 +3,7 @@
 // we can drive them and assert the screen reshapes without throwing.
 
 import 'package:comet_beat/core/services/settings_service.dart';
-import 'package:comet_beat/features/games/cello/tuner_spike_screen.dart';
+import 'package:comet_beat/features/games/cello/tuner_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -21,7 +21,7 @@ Widget _app() => ChangeNotifierProvider(
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: [Locale('en'), Locale('de')],
-        home: TunerSpikeScreen(),
+        home: TunerScreen(),
       ),
     );
 

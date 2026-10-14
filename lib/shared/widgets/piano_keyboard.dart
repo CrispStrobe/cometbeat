@@ -4,10 +4,14 @@
 // with the black keys overlaid. Reusable across the keyboard games — the
 // games decide what a tap means and what sound it makes.
 
+import 'package:comet_beat/core/note_naming.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Step;
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
+import 'package:provider/provider.dart';
 
 class PianoKeyboard extends StatelessWidget {
   /// MIDI number of the leftmost key; must be a C (e.g. 60 = C4).
@@ -32,6 +36,11 @@ class PianoKeyboard extends StatelessWidget {
   /// so keys across several octaves are unambiguous.
   final bool showOctaveNumbers;
 
+  /// Whether a screen reader announces each key by its note name ("C4").
+  /// Turn it OFF where the name is the answer (a "name this key" quiz): the
+  /// keys are then announced by position ("Piano key 3") instead.
+  final bool semanticNames;
+
   const PianoKeyboard({
     super.key,
     this.startMidi = 60,
@@ -41,6 +50,7 @@ class PianoKeyboard extends StatelessWidget {
     this.keyHints = const {},
     this.showLabels = false,
     this.showOctaveNumbers = false,
+    this.semanticNames = true,
   }) : assert(startMidi % 12 == 0, 'startMidi must be a C');
 
   /// A small hint caption (the computer-key letter) drawn on a key.
@@ -97,6 +107,34 @@ class PianoKeyboard extends StatelessWidget {
     );
   }
 
+  /// One key, as assistive technology sees it: a button with a name, marked
+  /// selected while a game highlights it. Without this the keyboard is a row
+  /// of anonymous boxes — a screen reader finds nothing to press.
+  Widget _key(BuildContext context, int midi, Widget child) {
+    final l10n = AppLocalizations.of(context);
+    final String label;
+    if (l10n == null) {
+      label = '';
+    } else if (semanticNames) {
+      label = spelledMidiNameWith(
+        l10n,
+        context.watch<SettingsService?>()?.noteNaming ?? NoteNaming.auto,
+        midi,
+      );
+    } else {
+      label = l10n.a11yPianoKey(midi - startMidi + 1);
+    }
+    return Semantics(
+      button: true,
+      enabled: onKeyTap != null,
+      selected: keyColors.containsKey(midi),
+      label: label,
+      excludeSemantics: true,
+      onTap: onKeyTap == null ? null : () => onKeyTap!(midi),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -111,40 +149,44 @@ class PianoKeyboard extends StatelessWidget {
               children: [
                 for (var i = 0; i < whiteKeyCount; i++)
                   Expanded(
-                    child: GestureDetector(
-                      onTap: onKeyTap == null
-                          ? null
-                          : () => onKeyTap!(whiteMidi(i)),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: keyColors[whiteMidi(i)] ?? Colors.white,
-                          border: Border.all(color: Colors.black87),
-                          borderRadius: const BorderRadius.vertical(
-                            bottom: Radius.circular(6),
+                    child: _key(
+                      context,
+                      whiteMidi(i),
+                      GestureDetector(
+                        onTap: onKeyTap == null
+                            ? null
+                            : () => onKeyTap!(whiteMidi(i)),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: keyColors[whiteMidi(i)] ?? Colors.white,
+                            border: Border.all(color: Colors.black87),
+                            borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(6),
+                            ),
                           ),
-                        ),
-                        child: Stack(
-                          children: [
-                            if (keyHints[whiteMidi(i)] != null)
-                              Align(
-                                alignment: Alignment.topCenter,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: _hintChip(
-                                    keyHints[whiteMidi(i)]!,
-                                    Colors.black54,
+                          child: Stack(
+                            children: [
+                              if (keyHints[whiteMidi(i)] != null)
+                                Align(
+                                  alignment: Alignment.topCenter,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: _hintChip(
+                                      keyHints[whiteMidi(i)]!,
+                                      Colors.black54,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            if (showLabels)
-                              Align(
-                                alignment: Alignment.bottomCenter,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: _label(context, i),
+                              if (showLabels)
+                                Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: _label(context, i),
+                                  ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -158,25 +200,29 @@ class PianoKeyboard extends StatelessWidget {
                   top: 0,
                   width: blackWidth,
                   height: height * 0.58,
-                  child: GestureDetector(
-                    onTap: onKeyTap == null
-                        ? null
-                        : () => onKeyTap!(whiteMidi(i) + 1),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: keyColors[whiteMidi(i) + 1] ?? Colors.black87,
-                        borderRadius: const BorderRadius.vertical(
-                          bottom: Radius.circular(4),
+                  child: _key(
+                    context,
+                    whiteMidi(i) + 1,
+                    GestureDetector(
+                      onTap: onKeyTap == null
+                          ? null
+                          : () => onKeyTap!(whiteMidi(i) + 1),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: keyColors[whiteMidi(i) + 1] ?? Colors.black87,
+                          borderRadius: const BorderRadius.vertical(
+                            bottom: Radius.circular(4),
+                          ),
                         ),
+                        alignment: Alignment.topCenter,
+                        padding: const EdgeInsets.only(top: 3),
+                        child: keyHints[whiteMidi(i) + 1] != null
+                            ? _hintChip(
+                                keyHints[whiteMidi(i) + 1]!,
+                                Colors.white70,
+                              )
+                            : null,
                       ),
-                      alignment: Alignment.topCenter,
-                      padding: const EdgeInsets.only(top: 3),
-                      child: keyHints[whiteMidi(i) + 1] != null
-                          ? _hintChip(
-                              keyHints[whiteMidi(i) + 1]!,
-                              Colors.white70,
-                            )
-                          : null,
                     ),
                   ),
                 ),

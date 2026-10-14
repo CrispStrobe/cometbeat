@@ -332,6 +332,12 @@ abstract class AppLocalizations {
   /// **'Advanced! Earn 2 stars in the other Cello Corner games first.'**
   String get advancedGameHint;
 
+  /// No description provided for @unlockHintProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep playing {module} to unlock this — {have} of {need} done!'**
+  String unlockHintProgress(String module, int have, int need);
+
   /// No description provided for @unlockHint.
   ///
   /// In en, this message translates to:
@@ -10526,6 +10532,18 @@ abstract class AppLocalizations {
   /// **'Continue here'**
   String get curContinueHere;
 
+  /// No description provided for @homeContinueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep going'**
+  String get homeContinueTitle;
+
+  /// No description provided for @homeContinueSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{level} · next up: {topic}'**
+  String homeContinueSubtitle(String level, String topic);
+
   /// No description provided for @curPractiseWeakest.
   ///
   /// In en, this message translates to:
@@ -11851,6 +11869,1290 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New best time! 🎉'**
   String get resultNewBest;
+
+  /// No description provided for @learnersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learners'**
+  String get learnersTitle;
+
+  /// No description provided for @learnerDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'Player 1'**
+  String get learnerDefaultName;
+
+  /// No description provided for @learnerAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a learner'**
+  String get learnerAdd;
+
+  /// No description provided for @learnerNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get learnerNameHint;
+
+  /// No description provided for @learnerRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get learnerRename;
+
+  /// No description provided for @learnerDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get learnerDelete;
+
+  /// No description provided for @learnerDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name} and all their progress? This cannot be undone.'**
+  String learnerDeleteConfirm(String name);
+
+  /// No description provided for @learnerBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up progress'**
+  String get learnerBackup;
+
+  /// No description provided for @learnerBackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save {name}’s stars and review data to a file'**
+  String learnerBackupSubtitle(String name);
+
+  /// No description provided for @learnerRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from a backup'**
+  String get learnerRestore;
+
+  /// No description provided for @learnerRestoreSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds the backup as a new learner — nothing is overwritten'**
+  String get learnerRestoreSubtitle;
+
+  /// No description provided for @learnerRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored {name}'**
+  String learnerRestored(String name);
+
+  /// No description provided for @learnerRestoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is not a CometBeat progress backup'**
+  String get learnerRestoreFailed;
+
+  /// No description provided for @learnerBackupSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved'**
+  String get learnerBackupSaved;
+
+  /// No description provided for @learnerSwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Who is playing?'**
+  String get learnerSwitchTitle;
+
+  /// No description provided for @a11yPianoKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Piano key {n}'**
+  String a11yPianoKey(int n);
+
+  /// No description provided for @a11yFretCell.
+  ///
+  /// In en, this message translates to:
+  /// **'String {string}, fret {fret}'**
+  String a11yFretCell(int string, int fret);
+
+  /// No description provided for @dawTrackFx.
+  ///
+  /// In en, this message translates to:
+  /// **'Track FX'**
+  String get dawTrackFx;
+
+  /// No description provided for @dawCopyChainToSelectedTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy chain to selected tracks'**
+  String get dawCopyChainToSelectedTracks;
+
+  /// No description provided for @dawCopyChainToAllTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy chain to all tracks'**
+  String get dawCopyChainToAllTracks;
+
+  /// No description provided for @dawApplyPresetToSelectedTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply preset to selected tracks'**
+  String get dawApplyPresetToSelectedTracks;
+
+  /// No description provided for @dawAddEffectToSelectedTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Add effect to selected tracks'**
+  String get dawAddEffectToSelectedTracks;
+
+  /// No description provided for @dawApplyPreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply preset'**
+  String get dawApplyPreset;
+
+  /// No description provided for @dawAddEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'Add effect'**
+  String get dawAddEffect;
+
+  /// No description provided for @dawNoTrackEffects.
+  ///
+  /// In en, this message translates to:
+  /// **'No track effects'**
+  String get dawNoTrackEffects;
+
+  /// No description provided for @dawSavedChains.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved chains'**
+  String get dawSavedChains;
+
+  /// No description provided for @dawCopyChain.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy chain'**
+  String get dawCopyChain;
+
+  /// No description provided for @dawPasteChain.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste chain'**
+  String get dawPasteChain;
+
+  /// No description provided for @dawStretchQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Stretch quality'**
+  String get dawStretchQuality;
+
+  /// No description provided for @dawClipTempoQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What tempo is this clip in?'**
+  String get dawClipTempoQuestion;
+
+  /// No description provided for @dawMasterFx.
+  ///
+  /// In en, this message translates to:
+  /// **'Master FX'**
+  String get dawMasterFx;
+
+  /// No description provided for @dawOutputBus.
+  ///
+  /// In en, this message translates to:
+  /// **'Output bus'**
+  String get dawOutputBus;
+
+  /// No description provided for @dawNoMasterEffects.
+  ///
+  /// In en, this message translates to:
+  /// **'No master effects'**
+  String get dawNoMasterEffects;
+
+  /// No description provided for @dawBuses.
+  ///
+  /// In en, this message translates to:
+  /// **'Buses'**
+  String get dawBuses;
+
+  /// No description provided for @dawAddBus.
+  ///
+  /// In en, this message translates to:
+  /// **'Add bus'**
+  String get dawAddBus;
+
+  /// No description provided for @dawRouteSelectedToMaster.
+  ///
+  /// In en, this message translates to:
+  /// **'Route selected to Master'**
+  String get dawRouteSelectedToMaster;
+
+  /// No description provided for @dawNoBuses.
+  ///
+  /// In en, this message translates to:
+  /// **'No buses'**
+  String get dawNoBuses;
+
+  /// No description provided for @dawMaster.
+  ///
+  /// In en, this message translates to:
+  /// **'Master'**
+  String get dawMaster;
+
+  /// No description provided for @dawRenameBus.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename bus'**
+  String get dawRenameBus;
+
+  /// No description provided for @dawBusName.
+  ///
+  /// In en, this message translates to:
+  /// **'Bus name'**
+  String get dawBusName;
+
+  /// No description provided for @dawRouteSelectedToBus.
+  ///
+  /// In en, this message translates to:
+  /// **'Route selected tracks to this bus'**
+  String get dawRouteSelectedToBus;
+
+  /// No description provided for @dawRemoveBus.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove bus'**
+  String get dawRemoveBus;
+
+  /// No description provided for @dawNoBusEffects.
+  ///
+  /// In en, this message translates to:
+  /// **'No bus effects'**
+  String get dawNoBusEffects;
+
+  /// No description provided for @dawRangeGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Range Gain'**
+  String get dawRangeGain;
+
+  /// No description provided for @dawTrackAutomation.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Automation'**
+  String get dawTrackAutomation;
+
+  /// No description provided for @dawMoveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move up'**
+  String get dawMoveUp;
+
+  /// No description provided for @dawMoveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move down'**
+  String get dawMoveDown;
+
+  /// No description provided for @dawRemoveEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove effect'**
+  String get dawRemoveEffect;
+
+  /// No description provided for @dawTakes.
+  ///
+  /// In en, this message translates to:
+  /// **'Takes'**
+  String get dawTakes;
+
+  /// No description provided for @dawStackAsTake.
+  ///
+  /// In en, this message translates to:
+  /// **'Stack in as another take'**
+  String get dawStackAsTake;
+
+  /// No description provided for @dawStackAsTakeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Moves it in — undoable'**
+  String get dawStackAsTakeHint;
+
+  /// No description provided for @dawClipGainLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'clip gain'**
+  String get dawClipGainLabel;
+
+  /// No description provided for @dawRemovePoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove point'**
+  String get dawRemovePoint;
+
+  /// No description provided for @dawCurve.
+  ///
+  /// In en, this message translates to:
+  /// **'Curve'**
+  String get dawCurve;
+
+  /// No description provided for @dawAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get dawAuto;
+
+  /// No description provided for @dawEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get dawEdit;
+
+  /// No description provided for @dawExportMix.
+  ///
+  /// In en, this message translates to:
+  /// **'Mix'**
+  String get dawExportMix;
+
+  /// No description provided for @dawExportStems.
+  ///
+  /// In en, this message translates to:
+  /// **'Stems'**
+  String get dawExportStems;
+
+  /// No description provided for @dawExportNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (MusicXML, MIDI, PDF…)'**
+  String get dawExportNotes;
+
+  /// No description provided for @dawExportProjectFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Project file'**
+  String get dawExportProjectFile;
+
+  /// No description provided for @dawExportMixTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export mix'**
+  String get dawExportMixTitle;
+
+  /// No description provided for @dawWholeLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole length'**
+  String get dawWholeLength;
+
+  /// No description provided for @dawMarkedRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked range'**
+  String get dawMarkedRange;
+
+  /// No description provided for @dawNormalizePeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Normalize peak'**
+  String get dawNormalizePeak;
+
+  /// No description provided for @dawChooseFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose format'**
+  String get dawChooseFormat;
+
+  /// No description provided for @dawClipFx.
+  ///
+  /// In en, this message translates to:
+  /// **'Clip FX'**
+  String get dawClipFx;
+
+  /// No description provided for @dawCopyFxToSelectedClips.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy FX to selected clips'**
+  String get dawCopyFxToSelectedClips;
+
+  /// No description provided for @dawApplyPresetToSelectedClips.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply preset to selected clips'**
+  String get dawApplyPresetToSelectedClips;
+
+  /// No description provided for @dawAddEffectToSelectedClips.
+  ///
+  /// In en, this message translates to:
+  /// **'Add effect to selected clips'**
+  String get dawAddEffectToSelectedClips;
+
+  /// No description provided for @dawClipEnvelope.
+  ///
+  /// In en, this message translates to:
+  /// **'Clip envelope'**
+  String get dawClipEnvelope;
+
+  /// No description provided for @dawCrossfadeNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Crossfade next'**
+  String get dawCrossfadeNext;
+
+  /// No description provided for @dawTranscribeToNotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribe → notation'**
+  String get dawTranscribeToNotation;
+
+  /// No description provided for @dawTranscribing.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribing the audio…'**
+  String get dawTranscribing;
+
+  /// No description provided for @dawTranscribedClipAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added a notation clip transcribed from the audio.'**
+  String get dawTranscribedClipAdded;
+
+  /// No description provided for @dawLoudness.
+  ///
+  /// In en, this message translates to:
+  /// **'Loudness'**
+  String get dawLoudness;
+
+  /// No description provided for @dawMarkIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark In'**
+  String get dawMarkIn;
+
+  /// No description provided for @dawMarkOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Out'**
+  String get dawMarkOut;
+
+  /// No description provided for @dawPreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset'**
+  String get dawPreset;
+
+  /// No description provided for @dawTrackAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Auto'**
+  String get dawTrackAuto;
+
+  /// No description provided for @dawRangeFade.
+  ///
+  /// In en, this message translates to:
+  /// **'Range Fade'**
+  String get dawRangeFade;
+
+  /// No description provided for @dawUnmute.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get dawUnmute;
+
+  /// No description provided for @dawRangeMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Range Mute'**
+  String get dawRangeMute;
+
+  /// No description provided for @dawRippleDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Ripple delete'**
+  String get dawRippleDelete;
+
+  /// No description provided for @dawRippleInsert.
+  ///
+  /// In en, this message translates to:
+  /// **'Ripple insert'**
+  String get dawRippleInsert;
+
+  /// No description provided for @dawConversionLossy.
+  ///
+  /// In en, this message translates to:
+  /// **'This conversion loses something'**
+  String get dawConversionLossy;
+
+  /// No description provided for @instrEdTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Instrument'**
+  String get instrEdTitle;
+
+  /// No description provided for @instrEdAdditiveVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Additive voice'**
+  String get instrEdAdditiveVoice;
+
+  /// No description provided for @instrEdMidiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'MIDI key'**
+  String get instrEdMidiKey;
+
+  /// No description provided for @instrEdNoZones.
+  ///
+  /// In en, this message translates to:
+  /// **'No mapped zones'**
+  String get instrEdNoZones;
+
+  /// No description provided for @instrEdMappedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Mapped Note'**
+  String get instrEdMappedNote;
+
+  /// No description provided for @instrEdAddMapping.
+  ///
+  /// In en, this message translates to:
+  /// **'Add key mapping'**
+  String get instrEdAddMapping;
+
+  /// No description provided for @instrEdRemap.
+  ///
+  /// In en, this message translates to:
+  /// **'Remap selected key'**
+  String get instrEdRemap;
+
+  /// No description provided for @instrEdRemoveMapping.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove key mapping'**
+  String get instrEdRemoveMapping;
+
+  /// No description provided for @instrEdLoopEditor.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop Editor'**
+  String get instrEdLoopEditor;
+
+  /// No description provided for @instrEdPingPongLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Ping-Pong Loop'**
+  String get instrEdPingPongLoop;
+
+  /// No description provided for @instrEdPingPongLoopHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Bounces forward and backward'**
+  String get instrEdPingPongLoopHint;
+
+  /// No description provided for @instrEdSustainLoopEditor.
+  ///
+  /// In en, this message translates to:
+  /// **'Sustain Loop Editor'**
+  String get instrEdSustainLoopEditor;
+
+  /// No description provided for @instrEdPingPongSustain.
+  ///
+  /// In en, this message translates to:
+  /// **'Ping-Pong Sustain'**
+  String get instrEdPingPongSustain;
+
+  /// No description provided for @instrEdPingPongSustainHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Bounces while the note is held'**
+  String get instrEdPingPongSustainHint;
+
+  /// No description provided for @instrEdBaseNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Base Note (Tuning)'**
+  String get instrEdBaseNote;
+
+  /// No description provided for @instrEdSampleVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample Volume'**
+  String get instrEdSampleVolume;
+
+  /// No description provided for @instrEdVolumeEnvelope.
+  ///
+  /// In en, this message translates to:
+  /// **'Native Volume Envelope'**
+  String get instrEdVolumeEnvelope;
+
+  /// No description provided for @instrEdEditVolumeEnvelope.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit native volume envelope'**
+  String get instrEdEditVolumeEnvelope;
+
+  /// No description provided for @instrEdPanEnvelope.
+  ///
+  /// In en, this message translates to:
+  /// **'Native Pan Envelope'**
+  String get instrEdPanEnvelope;
+
+  /// No description provided for @instrEdEditPanEnvelope.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit native pan envelope'**
+  String get instrEdEditPanEnvelope;
+
+  /// No description provided for @instrEdPitchEnvelope.
+  ///
+  /// In en, this message translates to:
+  /// **'Native Pitch Envelope'**
+  String get instrEdPitchEnvelope;
+
+  /// No description provided for @instrEdEditPitchEnvelope.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit native pitch envelope'**
+  String get instrEdEditPitchEnvelope;
+
+  /// No description provided for @instrEdNewNoteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'New Note Action'**
+  String get instrEdNewNoteAction;
+
+  /// No description provided for @instrEdActionCut.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut'**
+  String get instrEdActionCut;
+
+  /// No description provided for @instrEdActionContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get instrEdActionContinue;
+
+  /// No description provided for @instrEdActionNoteOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Note Off'**
+  String get instrEdActionNoteOff;
+
+  /// No description provided for @instrEdActionFade.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade'**
+  String get instrEdActionFade;
+
+  /// No description provided for @instrEdDuplicateCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate Check'**
+  String get instrEdDuplicateCheck;
+
+  /// No description provided for @instrEdNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get instrEdNone;
+
+  /// No description provided for @instrEdDupNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get instrEdDupNote;
+
+  /// No description provided for @instrEdDupSample.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample'**
+  String get instrEdDupSample;
+
+  /// No description provided for @instrEdDuplicateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate Action'**
+  String get instrEdDuplicateAction;
+
+  /// No description provided for @instrEdFadeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Fadeout'**
+  String get instrEdFadeout;
+
+  /// No description provided for @instrEdSustainPoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sustain point'**
+  String get instrEdSustainPoint;
+
+  /// No description provided for @instrEdLoopStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop start'**
+  String get instrEdLoopStart;
+
+  /// No description provided for @instrEdLoopEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop end'**
+  String get instrEdLoopEnd;
+
+  /// No description provided for @instrEdMacros.
+  ///
+  /// In en, this message translates to:
+  /// **'Instrument Macros'**
+  String get instrEdMacros;
+
+  /// No description provided for @instrEdAddMacro.
+  ///
+  /// In en, this message translates to:
+  /// **'Add macro'**
+  String get instrEdAddMacro;
+
+  /// No description provided for @instrEdNoMacros.
+  ///
+  /// In en, this message translates to:
+  /// **'No macros — add one to modulate the note per tick.'**
+  String get instrEdNoMacros;
+
+  /// No description provided for @instrEdEditMacro.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit macro'**
+  String get instrEdEditMacro;
+
+  /// No description provided for @instrEdRemoveMacro.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove macro'**
+  String get instrEdRemoveMacro;
+
+  /// No description provided for @instrEdSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Steps'**
+  String get instrEdSteps;
+
+  /// No description provided for @instrEdTo.
+  ///
+  /// In en, this message translates to:
+  /// **'to'**
+  String get instrEdTo;
+
+  /// No description provided for @instrEdReleaseAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Release at'**
+  String get instrEdReleaseAt;
+
+  /// No description provided for @dawExportMixDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything, as one file'**
+  String get dawExportMixDetail;
+
+  /// No description provided for @dawExportStemsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'One file per lane'**
+  String get dawExportStemsDetail;
+
+  /// No description provided for @dawExportProjectDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Reopen and keep editing'**
+  String get dawExportProjectDetail;
+
+  /// No description provided for @tabArticulateTechniques.
+  ///
+  /// In en, this message translates to:
+  /// **'Articulate techniques'**
+  String get tabArticulateTechniques;
+
+  /// No description provided for @tabLoopBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop bar'**
+  String get tabLoopBar;
+
+  /// No description provided for @tabSpeedTrainer.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed trainer'**
+  String get tabSpeedTrainer;
+
+  /// No description provided for @tabNoStaff.
+  ///
+  /// In en, this message translates to:
+  /// **'No staff'**
+  String get tabNoStaff;
+
+  /// No description provided for @tabGrandStaff.
+  ///
+  /// In en, this message translates to:
+  /// **'Grand staff'**
+  String get tabGrandStaff;
+
+  /// No description provided for @tabInstrumentDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get tabInstrumentDefault;
+
+  /// No description provided for @tabMeter.
+  ///
+  /// In en, this message translates to:
+  /// **'Meter'**
+  String get tabMeter;
+
+  /// No description provided for @tabTriplet.
+  ///
+  /// In en, this message translates to:
+  /// **'Triplet'**
+  String get tabTriplet;
+
+  /// No description provided for @tabBuildChord.
+  ///
+  /// In en, this message translates to:
+  /// **'Build a chord'**
+  String get tabBuildChord;
+
+  /// No description provided for @trackerBeatsAndBars.
+  ///
+  /// In en, this message translates to:
+  /// **'Beats and bars'**
+  String get trackerBeatsAndBars;
+
+  /// No description provided for @trackerFollowPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the pattern'**
+  String get trackerFollowPattern;
+
+  /// No description provided for @trackerPianoRollHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Higher notes to the right; time runs downward.'**
+  String get trackerPianoRollHint;
+
+  /// No description provided for @trackerOverviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to jump there. Press and drag a block to move it.'**
+  String get trackerOverviewHint;
+
+  /// No description provided for @exportSoundFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound file'**
+  String get exportSoundFile;
+
+  /// No description provided for @exportSongRenderedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The whole song, rendered'**
+  String get exportSongRenderedDetail;
+
+  /// No description provided for @exportTrackerModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracker module'**
+  String get exportTrackerModule;
+
+  /// No description provided for @exportTrackerModuleDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'.mod · .xm · .it · .s3m — what other trackers read'**
+  String get exportTrackerModuleDetail;
+
+  /// No description provided for @exportForNotationPrograms.
+  ///
+  /// In en, this message translates to:
+  /// **'For notation programs'**
+  String get exportForNotationPrograms;
+
+  /// No description provided for @trackerSongOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Song overview'**
+  String get trackerSongOverview;
+
+  /// No description provided for @trackerPianoRoll.
+  ///
+  /// In en, this message translates to:
+  /// **'Piano roll'**
+  String get trackerPianoRoll;
+
+  /// No description provided for @audioExportFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get audioExportFormat;
+
+  /// No description provided for @audioExportSampleRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample rate'**
+  String get audioExportSampleRate;
+
+  /// No description provided for @audioExportConversion.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversion'**
+  String get audioExportConversion;
+
+  /// No description provided for @audioExportBitDepth.
+  ///
+  /// In en, this message translates to:
+  /// **'Bit depth'**
+  String get audioExportBitDepth;
+
+  /// No description provided for @audioExportDither.
+  ///
+  /// In en, this message translates to:
+  /// **'Dither'**
+  String get audioExportDither;
+
+  /// No description provided for @audioExportDitherHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Smoother fades (adds a faint noise floor)'**
+  String get audioExportDitherHint;
+
+  /// No description provided for @audioExportBitrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitrate'**
+  String get audioExportBitrate;
+
+  /// No description provided for @audioExportMp3Encoder.
+  ///
+  /// In en, this message translates to:
+  /// **'MP3 encoder'**
+  String get audioExportMp3Encoder;
+
+  /// No description provided for @exportLoopRenderedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The loop, rendered'**
+  String get exportLoopRenderedDetail;
+
+  /// No description provided for @exportShareCodeDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'A short code someone else can paste in'**
+  String get exportShareCodeDetail;
+
+  /// No description provided for @errorLogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log'**
+  String get errorLogTitle;
+
+  /// No description provided for @errorLogCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Nothing recorded} =1{1 error recorded} other{{count} errors recorded}}'**
+  String errorLogCount(int count);
+
+  /// No description provided for @errorLogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No errors recorded on this device.'**
+  String get errorLogEmpty;
+
+  /// No description provided for @errorLogCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy all'**
+  String get errorLogCopy;
+
+  /// No description provided for @errorLogCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Error log copied'**
+  String get errorLogCopied;
+
+  /// No description provided for @errorLogClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the log'**
+  String get errorLogClear;
+
+  /// No description provided for @soundfontDownloadGm.
+  ///
+  /// In en, this message translates to:
+  /// **'Download General MIDI'**
+  String get soundfontDownloadGm;
+
+  /// No description provided for @soundfontLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Load SoundFont'**
+  String get soundfontLoad;
+
+  /// No description provided for @soundfontOpenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a .sf2 or .sf3 SoundFont to browse its instruments.'**
+  String get soundfontOpenHint;
+
+  /// No description provided for @soundfontChooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose SoundFont file…'**
+  String get soundfontChooseFile;
+
+  /// No description provided for @soundfontDownloadGmEllipsis.
+  ///
+  /// In en, this message translates to:
+  /// **'Download General MIDI…'**
+  String get soundfontDownloadGmEllipsis;
+
+  /// No description provided for @soundfontSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search instruments'**
+  String get soundfontSearch;
+
+  /// No description provided for @soundfontChangeFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Change file'**
+  String get soundfontChangeFile;
+
+  /// No description provided for @soundfontUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this sound'**
+  String get soundfontUse;
+
+  /// No description provided for @fxRackEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No effects — the sound passes through unchanged.'**
+  String get fxRackEmpty;
+
+  /// No description provided for @fxRackMoveEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Move earlier'**
+  String get fxRackMoveEarlier;
+
+  /// No description provided for @fxRackMoveLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Move later'**
+  String get fxRackMoveLater;
+
+  /// No description provided for @keymapEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No keyboard shortcuts on this screen yet.'**
+  String get keymapEmpty;
+
+  /// No description provided for @trackerNoNotesOnChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'No notes on this channel yet.'**
+  String get trackerNoNotesOnChannel;
+
+  /// No description provided for @exportNothingYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to export yet.'**
+  String get exportNothingYet;
+
+  /// No description provided for @dawPartN.
+  ///
+  /// In en, this message translates to:
+  /// **'Part {n}'**
+  String dawPartN(int n);
+
+  /// No description provided for @dawSummaryWhole.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole length: {summary}'**
+  String dawSummaryWhole(String summary);
+
+  /// No description provided for @dawSummaryTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'This track: {summary}'**
+  String dawSummaryTrack(String summary);
+
+  /// No description provided for @dawSummaryRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked range: {summary}'**
+  String dawSummaryRange(String summary);
+
+  /// No description provided for @dawDurationValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration {value}'**
+  String dawDurationValue(String value);
+
+  /// No description provided for @dawPeakValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak {value}'**
+  String dawPeakValue(String value);
+
+  /// No description provided for @dawExportPeakValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Export peak {value}'**
+  String dawExportPeakValue(String value);
+
+  /// No description provided for @dawWidthPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% wide'**
+  String dawWidthPercent(int percent);
+
+  /// No description provided for @dawNSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String dawNSelected(int count);
+
+  /// No description provided for @dawTranscribeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not transcribe: {error}'**
+  String dawTranscribeFailed(String error);
+
+  /// No description provided for @dawFadeInCurve.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade In {curve}'**
+  String dawFadeInCurve(String curve);
+
+  /// No description provided for @dawFadeOutCurve.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade Out {curve}'**
+  String dawFadeOutCurve(String curve);
+
+  /// No description provided for @dawRoutedToBusN.
+  ///
+  /// In en, this message translates to:
+  /// **'Routed to Bus {n}'**
+  String dawRoutedToBusN(int n);
+
+  /// No description provided for @dawRoutedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Routed to {bus}'**
+  String dawRoutedTo(String bus);
+
+  /// No description provided for @dawBusSends.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} bus sends'**
+  String dawBusSends(int count);
+
+  /// No description provided for @dawBusN.
+  ///
+  /// In en, this message translates to:
+  /// **'Bus {n}'**
+  String dawBusN(int n);
+
+  /// No description provided for @dawTrackCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tracks'**
+  String dawTrackCount(int count);
+
+  /// No description provided for @dawStartPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Start {percent}%'**
+  String dawStartPercent(int percent);
+
+  /// No description provided for @dawEndPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'End {percent}%'**
+  String dawEndPercent(int percent);
+
+  /// No description provided for @dawTakeN.
+  ///
+  /// In en, this message translates to:
+  /// **'Take {n}'**
+  String dawTakeN(int n);
+
+  /// No description provided for @dawEditAutomation.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit {label} automation'**
+  String dawEditAutomation(String label);
+
+  /// No description provided for @dawPointCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} points'**
+  String dawPointCount(int count);
+
+  /// No description provided for @dawPointN.
+  ///
+  /// In en, this message translates to:
+  /// **'Point {n}'**
+  String dawPointN(int n);
+
+  /// No description provided for @dawAutomate.
+  ///
+  /// In en, this message translates to:
+  /// **'Automate {label}'**
+  String dawAutomate(String label);
+
+  /// No description provided for @instrEdDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get instrEdDisabled;
+
+  /// No description provided for @instrEdRemovePointN.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove point {n}'**
+  String instrEdRemovePointN(int n);
+
+  /// No description provided for @instrEdStepCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} steps'**
+  String instrEdStepCount(int count);
+
+  /// No description provided for @instrEdMacroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{target} macro'**
+  String instrEdMacroTitle(String target);
+
+  /// No description provided for @instrEdMacroRangeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Range {lo}…{hi} · drag a bar to set its value'**
+  String instrEdMacroRangeHint(int lo, int hi);
+
+  /// No description provided for @a11yStepCell.
+  ///
+  /// In en, this message translates to:
+  /// **'{row}, step {step}'**
+  String a11yStepCell(String row, int step);
+
+  /// No description provided for @studioModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Studio tools'**
+  String get studioModeLabel;
+
+  /// No description provided for @studioModeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the score workshop, tracker, tab editor, Loop Studio, audio editor and projects on the home screen. For older kids and grown-ups.'**
+  String get studioModeSubtitle;
 
   /// No description provided for @showTimerLabel.
   ///

@@ -9,6 +9,8 @@ import 'package:comet_beat/core/audio/voice_options.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/debug_service.dart';
+import 'package:comet_beat/core/services/error_log.dart';
+import 'package:comet_beat/core/services/profile_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
@@ -36,6 +38,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // First, before anything can fail: catch what escapes a build or an
+  // unawaited future, and keep it (Settings ▸ Debug ▸ Error log).
+  installErrorHandlers(ErrorLog.instance);
+  unawaited(ErrorLog.instance.load());
   // Per the crisp_notation contract (CONTRACT.md §6): await the SMuFL metadata
   // up front so the first StaffView frame is never empty.
   await Bravura.load();
@@ -52,18 +58,34 @@ Future<void> main() async {
   // render callback that the pure container must not hold, so it registers
   // from this side.
   registerAudioProjectCodec();
-  runApp(const CometBeatApp());
+  // Learner profiles decide WHICH keys the per-learner stores read, so the
+  // active one has to be known before any of them loads.
+  final profiles = ProfileService();
+  await profiles.load();
+  runApp(CometBeatApp(profiles: profiles));
 }
 
 class CometBeatApp extends StatelessWidget {
-  const CometBeatApp({super.key});
+  const CometBeatApp({super.key, this.profiles});
+
+  /// The already-loaded profiles from [main]. Null (a test pumping the app
+  /// bare) gets a fresh service holding just the default learner.
+  final ProfileService? profiles;
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        if (profiles case final loaded?)
+          ChangeNotifierProvider<ProfileService>.value(value: loaded)
+        else
+          ChangeNotifierProvider(create: (_) => ProfileService()),
         ChangeNotifierProvider(
-          create: (_) => SriService()..loadSriData(),
+          create: (context) {
+            final sri = SriService()..loadSriData();
+            context.read<ProfileService>().addReloader(sri.loadSriData);
+            return sri;
+          },
         ),
         ChangeNotifierProvider(
           create: (_) => SettingsService()..load(),
@@ -78,10 +100,18 @@ class CometBeatApp extends StatelessWidget {
           dispose: (_, service) => service.dispose(),
         ),
         ChangeNotifierProvider(
-          create: (_) => ProgressService()..load(),
+          create: (context) {
+            final progress = ProgressService()..load();
+            context.read<ProfileService>().addReloader(progress.load);
+            return progress;
+          },
         ),
         ChangeNotifierProvider(
-          create: (_) => UserSongsService()..load(),
+          create: (context) {
+            final songs = UserSongsService()..load();
+            context.read<ProfileService>().addReloader(songs.load);
+            return songs;
+          },
         ),
         ChangeNotifierProvider(
           create: (_) => DebugService()..load(),

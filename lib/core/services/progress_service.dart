@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 
+import 'package:comet_beat/core/services/learner_scope.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -51,6 +52,8 @@ class ProgressService with ChangeNotifier {
   /// Days on which at least one game was finished, as `YYYY-MM-DD` keys.
   Set<String> _practiceDays = {};
 
+  Future<void> _lastSave = Future<void>.value();
+
   // The most recently recorded timed run, for the result screen.
   int _lastElapsedMs = 0;
   int _lastBestMs = 0;
@@ -68,18 +71,20 @@ class ProgressService with ChangeNotifier {
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_storageKey);
-      if (jsonString != null) {
-        final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
-        _byGame = jsonMap.map(
-          (key, value) => MapEntry(
-            key,
-            GameProgress.fromJson(value as Map<String, dynamic>),
-          ),
-        );
-      }
-      final days = prefs.getStringList(_daysKey);
-      if (days != null) _practiceDays = days.toSet();
+      // Start from empty every time: a load also runs on a learner switch, and
+      // a learner with nothing stored must not inherit the previous one's.
+      final jsonString = prefs.getString(learnerKey(_storageKey));
+      final jsonMap = jsonString == null
+          ? const <String, dynamic>{}
+          : json.decode(jsonString) as Map<String, dynamic>;
+      _byGame = jsonMap.map(
+        (key, value) => MapEntry(
+          key,
+          GameProgress.fromJson(value as Map<String, dynamic>),
+        ),
+      );
+      _practiceDays =
+          (prefs.getStringList(learnerKey(_daysKey)) ?? const []).toSet();
     } catch (e) {
       if (kDebugMode) debugPrint('[PROGRESS] load failed: $e');
       _byGame = {};
@@ -90,12 +95,24 @@ class ProgressService with ChangeNotifier {
 
   Future<void> _save() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        _storageKey,
-        json.encode(_byGame.map((key, v) => MapEntry(key, v.toJson()))),
-      );
-      await prefs.setStringList(_daysKey, _practiceDays.toList());
+      // Snapshot keys AND data before the first await: a learner switch
+      // landing in that gap must not send one learner's stars to the other.
+      final storageKey = learnerKey(_storageKey);
+      final daysKey = learnerKey(_daysKey);
+      final encoded =
+          json.encode(_byGame.map((key, v) => MapEntry(key, v.toJson())));
+      final days = _practiceDays.toList();
+      // Chained, so writes land in call order (see UserSongsService._save).
+      _lastSave = _lastSave.then((_) async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(storageKey, encoded);
+        await prefs.setStringList(daysKey, days);
+      }).catchError((Object e) {
+        // Caught on the chain itself, so one failed write cannot stall every
+        // later one.
+        if (kDebugMode) debugPrint('[PROGRESS] save failed: $e');
+      });
+      await _lastSave;
     } catch (e) {
       if (kDebugMode) debugPrint('[PROGRESS] save failed: $e');
     }

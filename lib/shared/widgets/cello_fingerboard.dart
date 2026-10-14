@@ -38,31 +38,39 @@ class CelloFingerboard extends StatelessWidget {
             children: [
               for (final offset in offsets)
                 Expanded(
-                  child: GestureDetector(
-                    onTap:
-                        onTap == null ? null : () => onTap!(openMidi + offset),
-                    child: Container(
-                      height: 34,
-                      margin: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: highlights[openMidi + offset] ??
-                            (offset == 0
-                                ? const Color(0xFF6D4C41)
-                                : const Color(0xFF8D6E63)),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.black26),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        noteNameFor(
-                          context,
-                          pitchFromMidi(openMidi + offset).step,
+                  // The cell's visible note name is its label; this adds that
+                  // it is a button, and whether a game has it lit.
+                  child: Semantics(
+                    button: true,
+                    enabled: onTap != null,
+                    selected: highlights.containsKey(openMidi + offset),
+                    child: GestureDetector(
+                      onTap: onTap == null
+                          ? null
+                          : () => onTap!(openMidi + offset),
+                      child: Container(
+                        height: 34,
+                        margin: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: highlights[openMidi + offset] ??
+                              (offset == 0
+                                  ? const Color(0xFF6D4C41)
+                                  : const Color(0xFF8D6E63)),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.black26),
                         ),
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          noteNameFor(
+                            context,
+                            pitchFromMidi(openMidi + offset).step,
+                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
                       ),
                     ),
                   ),

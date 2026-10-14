@@ -31,6 +31,7 @@ class SettingsService with ChangeNotifier {
   static const _smartTabFingeringKey = 'smart_tab_fingering';
   static const _authenticSlidesKey = 'tracker_authentic_slides';
   static const _chartLevelKey = 'chart_level';
+  static const _studioModeKey = 'studio_mode';
 
   Locale? _locale;
   NoteNaming _noteNaming = NoteNaming.auto;
@@ -43,6 +44,7 @@ class SettingsService with ChangeNotifier {
   bool _showNoteNames = false;
   bool _smartTabFingering = true;
   bool _authenticSlides = true;
+  bool _studioMode = false;
   ChartLevel _chartLevel = ChartLevel.learner;
   Instrument _instrument = Instrument.piano;
   String _voiceId = Instrument.piano.name;
@@ -152,6 +154,17 @@ class SettingsService with ChangeNotifier {
     _smartTabFingering = prefs.getBool(_smartTabFingeringKey) ?? true;
     _authenticSlides = prefs.getBool(_authenticSlidesKey) ?? true;
     _chartLevel = ChartLevel.fromName(prefs.getString(_chartLevelKey));
+    // Studio tools are opt-in for a NEW install, but an install that already
+    // holds data predates the switch and had them on the home bar — keep them
+    // there. Decided once and written back, so a fresh install does not flip
+    // to "existing" the moment its first game saves a score.
+    final studio = prefs.getBool(_studioModeKey);
+    if (studio == null) {
+      _studioMode = prefs.getKeys().isNotEmpty;
+      await prefs.setBool(_studioModeKey, _studioMode);
+    } else {
+      _studioMode = studio;
+    }
     trackerAuthenticSlidesDefault = _authenticSlides;
     _applyScoreFont();
     // Voice: prefer the new full-palette key; migrate from the legacy 4-way
@@ -192,6 +205,19 @@ class SettingsService with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_noteNamingKey, naming.name);
+  }
+
+  /// Whether the home bar offers the authoring tools (score workshop, tracker,
+  /// tab editor, Loop Studio, audio editor) and the project browser. Off, home
+  /// is the learning app only — the tools are a workstation, not something a
+  /// six-year-old should have to navigate around.
+  bool get studioMode => _studioMode;
+
+  Future<void> setStudioMode(bool value) async {
+    _studioMode = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_studioModeKey, value);
   }
 
   Future<void> setShowTimer(bool value) async {

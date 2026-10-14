@@ -8,6 +8,7 @@
 
 import 'package:comet_beat/core/audio/fx/fx_params.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,8 @@ class _HostState extends State<_Host> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SingleChildScrollView(
             child: FxRack(
@@ -121,6 +124,8 @@ void main() {
   testWidgets('the add button disables at the cap', (t) async {
     await t.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: FxRack(
             chain: [defaultFx(FxType.gain), defaultFx(FxType.pan)],
@@ -257,6 +262,8 @@ void main() {
   testWidgets('a chain of every effect renders in one rack', (t) async {
     await t.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SingleChildScrollView(
             child: FxRack(

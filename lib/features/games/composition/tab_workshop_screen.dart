@@ -1973,27 +1973,28 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
               CheckedPopupMenuItem(
                 value: 'articulate',
                 checked: _articulate,
-                child: const Text('Articulate techniques'),
+                child:
+                    Text(AppLocalizations.of(context)!.tabArticulateTechniques),
               ),
               CheckedPopupMenuItem(
                 value: 'loop',
                 checked: _loop,
-                child: const Text('Loop'),
+                child: Text(AppLocalizations.of(context)!.dawLoop),
               ),
               CheckedPopupMenuItem(
                 value: 'loopBar',
                 checked: _loopBar,
-                child: const Text('Loop bar'),
+                child: Text(AppLocalizations.of(context)!.tabLoopBar),
               ),
               CheckedPopupMenuItem(
                 value: 'metronome',
                 checked: _metronome,
-                child: const Text('Metronome'),
+                child: Text(AppLocalizations.of(context)!.trackerMetronome),
               ),
               CheckedPopupMenuItem(
                 value: 'speedTrainer',
                 checked: _speedTrainer,
-                child: const Text('Speed trainer'),
+                child: Text(AppLocalizations.of(context)!.tabSpeedTrainer),
               ),
               CheckedPopupMenuItem(
                 value: 'mic',
@@ -2313,20 +2314,20 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             ),
             showSelectedIcon: false,
             segments: [
-              const ButtonSegment(
+              ButtonSegment(
                 value: _Notation.off,
-                icon: Icon(Icons.not_interested, size: 18),
-                tooltip: 'No staff',
+                icon: const Icon(Icons.not_interested, size: 18),
+                tooltip: AppLocalizations.of(context)!.tabNoStaff,
               ),
               ButtonSegment(
                 value: _Notation.standard,
                 icon: const Icon(Icons.music_note, size: 18),
                 tooltip: l10n.tabShowStandard,
               ),
-              const ButtonSegment(
+              ButtonSegment(
                 value: _Notation.grand,
-                icon: Icon(Icons.piano, size: 18),
-                tooltip: 'Grand staff',
+                icon: const Icon(Icons.piano, size: 18),
+                tooltip: AppLocalizations.of(context)!.tabGrandStaff,
               ),
             ],
             selected: {_notation},
@@ -2375,7 +2376,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Mixer', style: Theme.of(ctx).textTheme.titleMedium),
+                  Text(
+                    AppLocalizations.of(context)!.mixerConsoleTitle,
+                    style: Theme.of(ctx).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
                   for (var i = 0; i < _tracks.length; i++) ...[
                     Row(
@@ -2394,7 +2398,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                           ),
                         ),
                         IconButton(
-                          tooltip: 'Mute',
+                          tooltip: AppLocalizations.of(context)!.mixerMute,
                           icon: Icon(
                             _tracks[i].muted
                                 ? Icons.volume_off
@@ -2405,7 +2409,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                               bump(() => _tracks[i].muted = !_tracks[i].muted),
                         ),
                         IconButton(
-                          tooltip: 'Solo',
+                          tooltip: AppLocalizations.of(context)!.mixerSolo,
                           icon: Icon(
                             Icons.headphones,
                             color: _tracks[i].soloed ? scheme.primary : null,
@@ -2421,9 +2425,12 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                       children: [
                         GestureDetector(
                           onTap: () => bump(() => _tracks[i].pan = 0),
-                          child: const SizedBox(
+                          child: SizedBox(
                             width: 84,
-                            child: Text('Pan', style: TextStyle(fontSize: 12)),
+                            child: Text(
+                              AppLocalizations.of(context)!.mixerPan,
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ),
                         ),
                         Expanded(
@@ -2536,16 +2543,27 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                       children: [
                         const Icon(Icons.piano, size: 18),
                         const SizedBox(width: 6),
-                        const Expanded(child: Text('Instrument')),
+                        Expanded(
+                          child: Text(
+                            AppLocalizations.of(context)!.dawInstrument,
+                          ),
+                        ),
                         DropdownButton<int?>(
                           value: _tracks[_active].instrument,
-                          hint: const Text('Default'),
+                          hint: Text(
+                            AppLocalizations.of(context)!.tabInstrumentDefault,
+                          ),
                           onChanged: (p) {
                             setState(() => _tracks[_active].instrument = p);
                             refresh();
                           },
                           items: [
-                            const DropdownMenuItem(child: Text('Default')),
+                            DropdownMenuItem(
+                              child: Text(
+                                AppLocalizations.of(context)!
+                                    .tabInstrumentDefault,
+                              ),
+                            ),
                             for (final (program, name) in kTabInstruments)
                               DropdownMenuItem(
                                 value: program,
@@ -2569,7 +2587,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                           children: [
                             const Icon(Icons.straighten, size: 18),
                             const SizedBox(width: 6),
-                            const Expanded(child: Text('Meter')),
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.of(context)!.tabMeter,
+                              ),
+                            ),
                             DropdownButton<String>(
                               value: cur,
                               items: [
@@ -2597,7 +2619,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                       children: [
                         const Icon(Icons.vpn_key_outlined, size: 18),
                         const SizedBox(width: 6),
-                        const Expanded(child: Text('Key')),
+                        Expanded(
+                          child: Text(
+                            AppLocalizations.of(context)!.workshopKey,
+                          ),
+                        ),
                         DropdownButton<int>(
                           value: _doc.keySignature.fifths.clamp(-7, 7),
                           items: [
@@ -2670,7 +2696,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                         // Tie: this note sustains into the next column.
                         FilterChip(
                           avatar: const Icon(Icons.link, size: 18),
-                          label: const Text('Tie'),
+                          label:
+                              Text(AppLocalizations.of(context)!.workshopTie),
                           selected: _selCol < _doc.columns.length &&
                               _doc.columns[_selCol].tieToNext,
                           onSelected: (v) {
@@ -2681,7 +2708,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                         // Triplet: mark this note as a 3:2 tuplet member.
                         FilterChip(
                           avatar: const Icon(Icons.more_horiz, size: 18),
-                          label: const Text('Triplet'),
+                          label: Text(AppLocalizations.of(context)!.tabTriplet),
                           selected: _selCol < _doc.columns.length &&
                               _doc.columns[_selCol].tuplet == (3, 2),
                           onSelected: (v) {
@@ -3413,7 +3440,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 const Divider(height: 24),
                 // Build ANY chord: root + quality → a voicing on this tuning.
                 Text(
-                  'Build a chord',
+                  AppLocalizations.of(context)!.tabBuildChord,
                   style: Theme.of(ctx).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),

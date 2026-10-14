@@ -19,6 +19,7 @@
 
 import 'package:comet_beat/core/audio/fx/fx_params.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// An ordered [FxSpec] chain, editable.
@@ -84,7 +85,7 @@ class FxRack extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
-              'No effects — the sound passes through unchanged.',
+              AppLocalizations.of(context)!.fxRackEmpty,
               style: theme.textTheme.bodySmall,
             ),
           ),
@@ -173,17 +174,17 @@ class _FxRow extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Move earlier',
+                  tooltip: AppLocalizations.of(context)!.fxRackMoveEarlier,
                   icon: const Icon(Icons.arrow_upward, size: 18),
                   onPressed: isFirst ? null : onMoveUp,
                 ),
                 IconButton(
-                  tooltip: 'Move later',
+                  tooltip: AppLocalizations.of(context)!.fxRackMoveLater,
                   icon: const Icon(Icons.arrow_downward, size: 18),
                   onPressed: isLast ? null : onMoveDown,
                 ),
                 IconButton(
-                  tooltip: 'Remove',
+                  tooltip: AppLocalizations.of(context)!.dawRemoveClip,
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: onRemove,
                 ),
@@ -344,7 +345,7 @@ class _AddFxButton extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              'Add effect',
+              AppLocalizations.of(context)!.dawAddEffect,
               style: TextStyle(
                 color: enabled ? null : Theme.of(context).disabledColor,
               ),

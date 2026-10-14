@@ -162,7 +162,8 @@ void main() {
           'tracker-fx-presets',
       'lib/features/games/composition/advanced_tracker_screen.dart':
           'tracker-channel-fx-presets',
-      'lib/features/games/composition/daw_screen.dart': 'daw-fx-presets',
+      // The Audio Editor's FX surface is a `part` of daw_screen.dart.
+      'lib/features/games/composition/daw_screen_mixing.dart': 'daw-fx-presets',
       'lib/features/games/composition/loop_mixer_screen.dart':
           'loop-fx-presets',
     };

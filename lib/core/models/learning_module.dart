@@ -17,9 +17,11 @@ class LearningModule {
   final IconData icon;
   final Color color;
 
-  /// Whether the module is available from the start. All modules with games
-  /// are currently unlocked (testing phase); planned gating: unlock when the
-  /// previous module reaches >=50% SRI mastery — see docs/PLAN.md.
+  /// Whether the module is available from the start. True for the two entry
+  /// modules and for the special-interest ones (instrument corners, Song Book,
+  /// transposition, drums) — a child who came for the cello should not have to
+  /// earn it. The rest form the theory chain and open in registry order; the
+  /// rule lives in `module_unlock.dart`.
   final bool initiallyUnlocked;
 
   final String Function(AppLocalizations) title;

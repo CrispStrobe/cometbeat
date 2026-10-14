@@ -18,6 +18,7 @@ import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/undo/undo_history_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,7 +37,11 @@ UndoEntry _entry(List<String> log, String label, {String? scope}) => UndoEntry(
 
 Future<void> _pump(WidgetTester tester, UndoService history) async {
   await tester.pumpWidget(
-    MaterialApp(home: Scaffold(body: UndoHistorySheetBody(history: history))),
+    MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(body: UndoHistorySheetBody(history: history)),
+    ),
   );
   await tester.pump();
 }

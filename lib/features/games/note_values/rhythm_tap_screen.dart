@@ -47,7 +47,10 @@ const _patterns = <_Pattern>[
 ];
 
 class RhythmTapScreen extends StatefulWidget {
-  const RhythmTapScreen({super.key});
+  const RhythmTapScreen({super.key, this.reviewItemIds});
+
+  /// Due `note_values.rhythm.p<index>` items to re-ask; null = a normal game.
+  final List<String>? reviewItemIds;
 
   static const beatMs = 600; // 100 BPM
   static const toleranceMs = 170;
@@ -96,9 +99,24 @@ class _RhythmTapScreenState extends State<RhythmTapScreen> with QuizRoundMixin {
     WidgetsBinding.instance.addPostFrameCallback((_) => _playPattern());
   }
 
+  /// The pattern indices behind [RhythmTapScreen.reviewItemIds]; null when
+  /// not reviewing.
+  late final List<int>? _reviewPatterns = () {
+    final indices = {
+      for (final id in widget.reviewItemIds ?? const <String>[])
+        if (int.tryParse(id.split('.').last.replaceFirst('p', '')) case final i?
+            when i >= 0 && i < _patterns.length)
+          i,
+    }.toList();
+    return indices.isEmpty ? null : indices;
+  }();
+
   @override
   void prepareRound() {
-    _patternIndex = _random.nextInt(_patterns.length);
+    final review = _reviewPatterns;
+    _patternIndex = review != null
+        ? review[_random.nextInt(review.length)]
+        : _random.nextInt(_patterns.length);
     _presses.clear();
     _pressStart = null;
     _holding = false;

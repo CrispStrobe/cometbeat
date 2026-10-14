@@ -26,9 +26,27 @@ See [docs/PLAN.md](docs/PLAN.md) for the full curriculum map and roadmap.
 | `songs` | Liederbuch (real songs) | Song Book (play-along cursor + lyrics) • Name That Tune (ear) • **Sing/Play along** + **Sight-sing** (endless generated in-key tunes, major & minor, difficulty scales with the player, read off a moving score + mic-graded with a starting-pitch cue) • **Play a MIDI file** (turn any `.mid` into a play-along) • **Import**: MusicXML (paste or file), ChordPro chord sheets (playable chips), MIDI, JAMS (MIR chord/melody datasets → chord sheet or notated song; `note_midi`+`tempo`+`beat`+`key_mode`), and **scan/photograph sheet music** (OMR — on-device optical music recognition via the CrispEmbed ggml engine, model downloaded on demand; native platforms) |
 | `keyboard` | Tasten-Ecke (piano corner) | Find the Key (staff→key) • Key Quiz (key→name) • Echo Keys (ear→key) • Play the Melody (sight-playing) • Chord Grip • Grand Staff (read both clefs) |
 
-SRI review runners: note-value symbols + note reading (per clef); the home
-review button routes to the biggest due bucket. Audio is synthesized in
-pure Dart (no assets). Web deep links: `?game=<id>`.
+**Home** leads with a **Continue** card: the curriculum's recommended level,
+opened as a short mixed session that starts on the least-ready topic. Below it
+sit the review button and the module grid. The core theory modules open one at
+a time as the child plays (a locked card shows a ring filling towards its
+unlock); the instrument corners, Song Book, transposition and drums are open
+from the start.
+
+**Review** covers every skill that records spaced-repetition items: quizzes
+that can re-ask specific items do so, and every other skill opens a round of
+the game that drills it (`lib/features/review/review_router.dart`). Audio is
+synthesized in pure Dart (no assets). Web deep links: `?game=<id>`.
+
+**Studio tools** — the score workshop, tracker, tab editor, Loop Studio, audio
+editor and project browser — are off the home bar on a new install, so a young
+child gets the learning app only. Turn them on under Settings ▸ Studio tools.
+An install that predates the switch keeps them.
+
+**Learners** (Settings ▸ Learners): several children can share a device, each
+with their own stars, streak, review data, seen-tutorials and imported songs. A learner's
+progress can be backed up to a JSON file and restored; a restore always adds a
+new learner and never overwrites one.
 
 Every game gets an illustrated, localized **tutorial** (`lib/shared/tutorial/`)
 shown once on first entry (and reopenable via **?**): plain-language text, a
@@ -54,6 +72,26 @@ Live web builds — two deploy regimes on purpose:
   constants in `lib/core/tuning.dart` (identical values to the sibling apps).
 - **Modules**: registered in `lib/core/models/learning_module.dart`; the home
   screen renders from that list. Adding a module = registry entry + ARB keys.
+- **Progression**: the unlock rule is `lib/core/models/module_unlock.dart` (an
+  engagement gate: `kModuleUnlockTracked` SRI items in the previous module).
+  "What next?" is `lib/features/curriculum/next_step.dart`, built on the
+  readiness maths in `lib/core/curriculum/curriculum.dart`.
+- **Review routing**: `lib/features/review/review_router.dart` maps every SRI
+  namespace to a review route. A game that records under a new
+  `<module>.<skill>.` namespace needs a line there; `review_router_test` fails
+  until it has one.
+- **Learner profiles**: `ProfileService` + `learner_scope.dart`. Per-learner
+  stores (review data, stars, streak, tutorials, user songs) build their keys
+  with `learnerKey(...)`; the first profile keeps the
+  original un-prefixed keys, so there is no migration. Device-wide settings
+  (language, sound, projects) are not scoped.
+- **Error log**: `lib/core/services/error_log.dart` catches errors that escape
+  a build or an unawaited future and keeps the last 50 on the device (Settings
+  ▸ Debug ▸ Error log, after seven taps on the home title). Nothing is sent
+  anywhere.
+- **Accessibility**: the shared piano keyboard, fretboards and home cards carry
+  semantics (`test/a11y_widgets_test.dart`). A keyboard used where the key's
+  name is the answer passes `semanticNames: false`.
 - **i18n**: `lib/l10n/app_{en,de}.arb`, generated via `flutter gen-l10n`
   (`generate: true`).
 - **Notation rendering**: comes from `crisp_notation`, the standalone MIT library
@@ -135,11 +173,17 @@ transcription paths).
 ## Development
 
 ```
-flutter pub get
+tool/bootstrap.sh        # clones the sibling repos if missing, then pub get
 flutter analyze          # strict: strict-casts / strict-raw-types
 flutter test             # add --coverage for lcov.info
 flutter run -d chrome    # or macos, etc.
 ```
+
+The app resolves three packages by relative path — `../crisp_notation`,
+`../CrispEmbed` and `../onnx_runtime_dart` — so a bare clone cannot run
+`flutter pub get`. `tool/bootstrap.sh` clones whichever is missing next to this
+repo (it never touches one that exists) and `tool/bootstrap.sh --check` only
+reports. They track `main`, as CI does; there is no pinned revision.
 
 CI (`.github/workflows/ci.yml`) runs format + analyze + test on every push and
 PR, checking out the sibling `crisp_notation` repo alongside so the path dependency

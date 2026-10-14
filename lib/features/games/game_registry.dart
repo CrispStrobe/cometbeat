@@ -13,10 +13,10 @@ import 'package:comet_beat/features/games/cello/bowing_screen.dart';
 import 'package:comet_beat/features/games/cello/cello_finger_quiz_screen.dart';
 import 'package:comet_beat/features/games/cello/cello_play_it_screen.dart';
 import 'package:comet_beat/features/games/cello/cello_string_quiz_screen.dart';
-import 'package:comet_beat/features/games/cello/tuner_spike_screen.dart';
+import 'package:comet_beat/features/games/cello/tuner_screen.dart';
 import 'package:comet_beat/features/games/chords/chord_builder_screen.dart';
 import 'package:comet_beat/features/games/chords/chord_chart_screen.dart';
-import 'package:comet_beat/features/games/chords/chord_listen_spike_screen.dart';
+import 'package:comet_beat/features/games/chords/chord_listener_screen.dart';
 import 'package:comet_beat/features/games/chords/chord_progression_screen.dart';
 import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
 import 'package:comet_beat/features/games/chords/interval_ear_screen.dart';
@@ -1012,11 +1012,12 @@ final Map<String, List<GameInfo>> kGamesByModule = {
   'chords': [
     // Fuzzy chord recognition from the live mic.
     GameInfo(
+      // The id keeps its historical name: stored stars are keyed by it.
       id: 'chord_listen_spike',
       icon: Icons.hearing,
       title: (l) => l.gameChordListener,
       subtitle: (l) => l.gameChordListenerSubtitle,
-      builder: (_) => const ChordListenSpikeScreen(),
+      builder: (_) => const ChordListenerScreen(),
     ),
     // Chord-progression play-along with a moving chart.
     GameInfo(
@@ -1308,7 +1309,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       icon: Icons.graphic_eq,
       title: (l) => l.gameTuner,
       subtitle: (l) => l.gameTunerSubtitle,
-      builder: (_) => const TunerSpikeScreen(),
+      builder: (_) => const TunerScreen(),
       tutorial: celloPrimer,
     ),
     // Play-along with a moving score.

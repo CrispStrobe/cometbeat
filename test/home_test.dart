@@ -3,8 +3,10 @@ import 'package:comet_beat/core/services/debug_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/measures/spot_upbeat_screen.dart';
 import 'package:comet_beat/features/games/note_values/note_value_quiz_screen.dart';
 import 'package:comet_beat/features/home/screens/home_screen.dart';
+import 'package:comet_beat/features/recital/recital_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -12,10 +14,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _wrap(Widget child, SriService sri, {ProgressService? progress}) {
+Widget _wrap(
+  Widget child,
+  SriService sri, {
+  ProgressService? progress,
+  bool studioMode = false,
+}) {
   return MultiProvider(
     providers: [
-      ChangeNotifierProvider(create: (_) => SettingsService()),
+      ChangeNotifierProvider(
+        create: (_) {
+          final settings = SettingsService();
+          if (studioMode) settings.setStudioMode(true);
+          return settings;
+        },
+      ),
       ChangeNotifierProvider<SriService>.value(value: sri),
       Provider<AudioService>(create: (_) => AudioService()),
       ChangeNotifierProvider<ProgressService>.value(
@@ -53,12 +66,89 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('authoring menu exposes the five product modes', (tester) async {
+  testWidgets('the Continue card opens the recommended level as a session',
+      (tester) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    await tester.pumpWidget(_wrap(const HomeScreen(), sri));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    final card = find.byKey(const Key('home-continue'));
+    expect(card, findsOneWidget);
+    // A brand-new learner starts at the first level.
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.textContaining(l10n.curLevelGrades12),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+    expect(find.byType(RecitalScreen), findsOneWidget);
+    expect(find.text(l10n.homeContinueTitle), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('home is the learning app only until Studio tools are on',
+      (tester) async {
     final sri = SriService(getNow: () => DateTime(2026, 7, 11));
     await tester.pumpWidget(_wrap(const HomeScreen(), sri));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.piano));
+    final bar = find.byType(AppBar);
+    expect(
+      find.descendant(of: bar, matching: find.byIcon(Icons.piano)),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('home-projects')), findsNothing);
+    // The learning destinations stay.
+    expect(find.byIcon(Icons.menu_book), findsOneWidget);
+    expect(find.byIcon(Icons.bar_chart), findsOneWidget);
+    expect(find.byIcon(Icons.settings), findsOneWidget);
+  });
+
+  testWidgets('a locked module shows how close it is to opening',
+      (tester) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    // Three of the six reading items that open Measures.
+    for (final n in ['c4', 'd4', 'e4']) {
+      sri.recordResponse('note_reading.treble.$n', true);
+    }
+    await tester.pumpWidget(_wrap(const HomeScreen(), sri));
+    await tester.pumpAndSettle();
+
+    final ring = find.byKey(const Key('unlock-progress-measures'));
+    await tester.scrollUntilVisible(ring, 200);
+    expect(
+      tester.widget<CircularProgressIndicator>(ring).value,
+      closeTo(0.5, 0.01),
+    );
+    // An open module carries no ring.
+    expect(find.byKey(const Key('unlock-progress-note_reading')), findsNothing);
+
+    await tester.tap(ring);
+    await tester.pump();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(
+      find.text(l10n.unlockHintProgress(l10n.moduleNoteReading, 3, 6)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('authoring menu exposes the five product modes', (tester) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    await tester.pumpWidget(_wrap(const HomeScreen(), sri, studioMode: true));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('home-projects')), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byIcon(Icons.piano),
+      ),
+    );
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
@@ -146,5 +236,26 @@ void main() {
 
     // Routed into the note-value review runner.
     expect(find.byType(NoteValueQuizScreen), findsOneWidget);
+  });
+
+  testWidgets('review reaches a skill that has no quiz runner of its own',
+      (tester) async {
+    // Before the review router this showed "N to review" and then answered
+    // the tap with "coming soon".
+    var now = DateTime(2026, 1, 15);
+    final sri = SriService(getNow: () => now);
+    for (final s in ['a', 'b']) {
+      sri.recordResponse('measures.upbeat.$s', false);
+    }
+    now = DateTime(2026, 3, 15);
+
+    await tester.pumpWidget(_wrap(const HomeScreen(), sri));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.replay));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SpotUpbeatScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

@@ -32,7 +32,8 @@ void main() {
 
   testWidgets('compose on the piano, copy/paste, and switch to grand staff',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    // The authoring menu is opt-in on a fresh install (Settings ▸ Studio tools).
+    SharedPreferences.setMockInitialValues({'studio_mode': true});
     await app.main();
     await tester.pumpAndSettle(const Duration(seconds: 2));
 

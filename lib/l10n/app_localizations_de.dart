@@ -155,6 +155,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Für Fortgeschrittene! Hol dir zuerst 2 Sterne in den anderen Cello-Ecke-Spielen.';
 
   @override
+  String unlockHintProgress(String module, int have, int need) {
+    return 'Spiele $module weiter, um das freizuschalten — $have von $need geschafft!';
+  }
+
+  @override
   String unlockHint(String module) {
     return 'Spiele zuerst $module, um das freizuschalten!';
   }
@@ -5711,6 +5716,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get curContinueHere => 'Hier weiter';
 
   @override
+  String get homeContinueTitle => 'Weiter geht’s';
+
+  @override
+  String homeContinueSubtitle(String level, String topic) {
+    return '$level · als Nächstes: $topic';
+  }
+
+  @override
   String get curPractiseWeakest => 'Schwächstes Thema üben';
 
   @override
@@ -6477,6 +6490,746 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get resultNewBest => 'Neue Bestzeit! 🎉';
+
+  @override
+  String get learnersTitle => 'Wer lernt hier?';
+
+  @override
+  String get learnerDefaultName => 'Spieler 1';
+
+  @override
+  String get learnerAdd => 'Profil hinzufügen';
+
+  @override
+  String get learnerNameHint => 'Name';
+
+  @override
+  String get learnerRename => 'Umbenennen';
+
+  @override
+  String get learnerDelete => 'Löschen';
+
+  @override
+  String learnerDeleteConfirm(String name) {
+    return '$name und den gesamten Fortschritt löschen? Das lässt sich nicht rückgängig machen.';
+  }
+
+  @override
+  String get learnerBackup => 'Fortschritt sichern';
+
+  @override
+  String learnerBackupSubtitle(String name) {
+    return 'Sterne und Wiederholungsdaten von $name in einer Datei speichern';
+  }
+
+  @override
+  String get learnerRestore => 'Aus Sicherung wiederherstellen';
+
+  @override
+  String get learnerRestoreSubtitle =>
+      'Fügt die Sicherung als neues Profil hinzu — nichts wird überschrieben';
+
+  @override
+  String learnerRestored(String name) {
+    return '$name wiederhergestellt';
+  }
+
+  @override
+  String get learnerRestoreFailed =>
+      'Diese Datei ist keine CometBeat-Fortschrittssicherung';
+
+  @override
+  String get learnerBackupSaved => 'Sicherung gespeichert';
+
+  @override
+  String get learnerSwitchTitle => 'Wer spielt?';
+
+  @override
+  String a11yPianoKey(int n) {
+    return 'Klaviertaste $n';
+  }
+
+  @override
+  String a11yFretCell(int string, int fret) {
+    return 'Saite $string, Bund $fret';
+  }
+
+  @override
+  String get dawTrackFx => 'Spur-FX';
+
+  @override
+  String get dawCopyChainToSelectedTracks =>
+      'Kette auf ausgewählte Spuren kopieren';
+
+  @override
+  String get dawCopyChainToAllTracks => 'Kette auf alle Spuren kopieren';
+
+  @override
+  String get dawApplyPresetToSelectedTracks =>
+      'Preset auf ausgewählte Spuren anwenden';
+
+  @override
+  String get dawAddEffectToSelectedTracks =>
+      'Effekt zu ausgewählten Spuren hinzufügen';
+
+  @override
+  String get dawApplyPreset => 'Preset anwenden';
+
+  @override
+  String get dawAddEffect => 'Effekt hinzufügen';
+
+  @override
+  String get dawNoTrackEffects => 'Keine Spur-Effekte';
+
+  @override
+  String get dawSavedChains => 'Gespeicherte Ketten';
+
+  @override
+  String get dawCopyChain => 'Kette kopieren';
+
+  @override
+  String get dawPasteChain => 'Kette einfügen';
+
+  @override
+  String get dawStretchQuality => 'Stretch-Qualität';
+
+  @override
+  String get dawClipTempoQuestion => 'In welchem Tempo ist dieser Clip?';
+
+  @override
+  String get dawMasterFx => 'Master-FX';
+
+  @override
+  String get dawOutputBus => 'Ausgangsbus';
+
+  @override
+  String get dawNoMasterEffects => 'Keine Master-Effekte';
+
+  @override
+  String get dawBuses => 'Busse';
+
+  @override
+  String get dawAddBus => 'Bus hinzufügen';
+
+  @override
+  String get dawRouteSelectedToMaster => 'Auswahl zum Master leiten';
+
+  @override
+  String get dawNoBuses => 'Keine Busse';
+
+  @override
+  String get dawMaster => 'Master';
+
+  @override
+  String get dawRenameBus => 'Bus umbenennen';
+
+  @override
+  String get dawBusName => 'Busname';
+
+  @override
+  String get dawRouteSelectedToBus => 'Ausgewählte Spuren zu diesem Bus leiten';
+
+  @override
+  String get dawRemoveBus => 'Bus entfernen';
+
+  @override
+  String get dawNoBusEffects => 'Keine Bus-Effekte';
+
+  @override
+  String get dawRangeGain => 'Bereichspegel';
+
+  @override
+  String get dawTrackAutomation => 'Spur-Automation';
+
+  @override
+  String get dawMoveUp => 'Nach oben';
+
+  @override
+  String get dawMoveDown => 'Nach unten';
+
+  @override
+  String get dawRemoveEffect => 'Effekt entfernen';
+
+  @override
+  String get dawTakes => 'Takes';
+
+  @override
+  String get dawStackAsTake => 'Als weiteren Take stapeln';
+
+  @override
+  String get dawStackAsTakeHint => 'Verschiebt ihn hinein — rückgängig machbar';
+
+  @override
+  String get dawClipGainLabel => 'Clip-Pegel';
+
+  @override
+  String get dawRemovePoint => 'Punkt entfernen';
+
+  @override
+  String get dawCurve => 'Kurve';
+
+  @override
+  String get dawAuto => 'Auto';
+
+  @override
+  String get dawEdit => 'Bearbeiten';
+
+  @override
+  String get dawExportMix => 'Mix';
+
+  @override
+  String get dawExportStems => 'Stems';
+
+  @override
+  String get dawExportNotes => 'Noten (MusicXML, MIDI, PDF …)';
+
+  @override
+  String get dawExportProjectFile => 'Projektdatei';
+
+  @override
+  String get dawExportMixTitle => 'Mix exportieren';
+
+  @override
+  String get dawWholeLength => 'Ganze Länge';
+
+  @override
+  String get dawMarkedRange => 'Markierter Bereich';
+
+  @override
+  String get dawNormalizePeak => 'Spitzenpegel normalisieren';
+
+  @override
+  String get dawChooseFormat => 'Format wählen';
+
+  @override
+  String get dawClipFx => 'Clip-FX';
+
+  @override
+  String get dawCopyFxToSelectedClips => 'FX auf ausgewählte Clips kopieren';
+
+  @override
+  String get dawApplyPresetToSelectedClips =>
+      'Preset auf ausgewählte Clips anwenden';
+
+  @override
+  String get dawAddEffectToSelectedClips =>
+      'Effekt zu ausgewählten Clips hinzufügen';
+
+  @override
+  String get dawClipEnvelope => 'Clip-Hüllkurve';
+
+  @override
+  String get dawCrossfadeNext => 'Überblenden zum nächsten';
+
+  @override
+  String get dawTranscribeToNotation => 'Transkribieren → Noten';
+
+  @override
+  String get dawTranscribing => 'Audio wird transkribiert …';
+
+  @override
+  String get dawTranscribedClipAdded =>
+      'Ein aus dem Audio transkribierter Noten-Clip wurde hinzugefügt.';
+
+  @override
+  String get dawLoudness => 'Lautheit';
+
+  @override
+  String get dawMarkIn => 'Anfang markieren';
+
+  @override
+  String get dawMarkOut => 'Ende markieren';
+
+  @override
+  String get dawPreset => 'Preset';
+
+  @override
+  String get dawTrackAuto => 'Spur-Auto';
+
+  @override
+  String get dawRangeFade => 'Bereichs-Blende';
+
+  @override
+  String get dawUnmute => 'Stumm aus';
+
+  @override
+  String get dawRangeMute => 'Bereich stumm';
+
+  @override
+  String get dawRippleDelete => 'Löschen und aufrücken';
+
+  @override
+  String get dawRippleInsert => 'Einfügen und verschieben';
+
+  @override
+  String get dawConversionLossy => 'Bei dieser Umwandlung geht etwas verloren';
+
+  @override
+  String get instrEdTitle => 'Instrument bearbeiten';
+
+  @override
+  String get instrEdAdditiveVoice => 'Additive Stimme';
+
+  @override
+  String get instrEdMidiKey => 'MIDI-Taste';
+
+  @override
+  String get instrEdNoZones => 'Keine zugeordneten Zonen';
+
+  @override
+  String get instrEdMappedNote => 'Zugeordnete Note';
+
+  @override
+  String get instrEdAddMapping => 'Tastenzuordnung hinzufügen';
+
+  @override
+  String get instrEdRemap => 'Gewählte Taste neu zuordnen';
+
+  @override
+  String get instrEdRemoveMapping => 'Tastenzuordnung entfernen';
+
+  @override
+  String get instrEdLoopEditor => 'Schleifen-Editor';
+
+  @override
+  String get instrEdPingPongLoop => 'Ping-Pong-Schleife';
+
+  @override
+  String get instrEdPingPongLoopHint => 'Läuft vor und zurück';
+
+  @override
+  String get instrEdSustainLoopEditor => 'Sustain-Schleifen-Editor';
+
+  @override
+  String get instrEdPingPongSustain => 'Ping-Pong-Sustain';
+
+  @override
+  String get instrEdPingPongSustainHint =>
+      'Läuft vor und zurück, solange die Note gehalten wird';
+
+  @override
+  String get instrEdBaseNote => 'Grundton (Stimmung)';
+
+  @override
+  String get instrEdSampleVolume => 'Sample-Lautstärke';
+
+  @override
+  String get instrEdVolumeEnvelope => 'Native Lautstärke-Hüllkurve';
+
+  @override
+  String get instrEdEditVolumeEnvelope =>
+      'Native Lautstärke-Hüllkurve bearbeiten';
+
+  @override
+  String get instrEdPanEnvelope => 'Native Panorama-Hüllkurve';
+
+  @override
+  String get instrEdEditPanEnvelope => 'Native Panorama-Hüllkurve bearbeiten';
+
+  @override
+  String get instrEdPitchEnvelope => 'Native Tonhöhen-Hüllkurve';
+
+  @override
+  String get instrEdEditPitchEnvelope => 'Native Tonhöhen-Hüllkurve bearbeiten';
+
+  @override
+  String get instrEdNewNoteAction => 'Aktion bei neuer Note';
+
+  @override
+  String get instrEdActionCut => 'Abschneiden';
+
+  @override
+  String get instrEdActionContinue => 'Weiterklingen';
+
+  @override
+  String get instrEdActionNoteOff => 'Note aus';
+
+  @override
+  String get instrEdActionFade => 'Ausblenden';
+
+  @override
+  String get instrEdDuplicateCheck => 'Duplikat-Prüfung';
+
+  @override
+  String get instrEdNone => 'Keine';
+
+  @override
+  String get instrEdDupNote => 'Note';
+
+  @override
+  String get instrEdDupSample => 'Sample';
+
+  @override
+  String get instrEdDuplicateAction => 'Aktion bei Duplikat';
+
+  @override
+  String get instrEdFadeout => 'Ausklingzeit';
+
+  @override
+  String get instrEdSustainPoint => 'Sustain-Punkt';
+
+  @override
+  String get instrEdLoopStart => 'Schleifenanfang';
+
+  @override
+  String get instrEdLoopEnd => 'Schleifenende';
+
+  @override
+  String get instrEdMacros => 'Instrument-Makros';
+
+  @override
+  String get instrEdAddMacro => 'Makro hinzufügen';
+
+  @override
+  String get instrEdNoMacros =>
+      'Keine Makros — füge eines hinzu, um die Note pro Tick zu modulieren.';
+
+  @override
+  String get instrEdEditMacro => 'Makro bearbeiten';
+
+  @override
+  String get instrEdRemoveMacro => 'Makro entfernen';
+
+  @override
+  String get instrEdSteps => 'Schritte';
+
+  @override
+  String get instrEdTo => 'bis';
+
+  @override
+  String get instrEdReleaseAt => 'Release bei';
+
+  @override
+  String get dawExportMixDetail => 'Alles in einer Datei';
+
+  @override
+  String get dawExportStemsDetail => 'Eine Datei pro Spur';
+
+  @override
+  String get dawExportProjectDetail => 'Wieder öffnen und weiterbearbeiten';
+
+  @override
+  String get tabArticulateTechniques => 'Spieltechniken hörbar machen';
+
+  @override
+  String get tabLoopBar => 'Takt wiederholen';
+
+  @override
+  String get tabSpeedTrainer => 'Tempo-Trainer';
+
+  @override
+  String get tabNoStaff => 'Ohne Notenzeile';
+
+  @override
+  String get tabGrandStaff => 'Klaviersystem';
+
+  @override
+  String get tabInstrumentDefault => 'Standard';
+
+  @override
+  String get tabMeter => 'Taktart';
+
+  @override
+  String get tabTriplet => 'Triole';
+
+  @override
+  String get tabBuildChord => 'Akkord bauen';
+
+  @override
+  String get trackerBeatsAndBars => 'Schläge und Takte';
+
+  @override
+  String get trackerFollowPattern => 'Dem Pattern folgen';
+
+  @override
+  String get trackerPianoRollHint =>
+      'Höhere Töne rechts; die Zeit läuft nach unten.';
+
+  @override
+  String get trackerOverviewHint =>
+      'Tippe, um dorthin zu springen. Halte und ziehe einen Block, um ihn zu verschieben.';
+
+  @override
+  String get exportSoundFile => 'Klangdatei';
+
+  @override
+  String get exportSongRenderedDetail => 'Das ganze Stück als Audio';
+
+  @override
+  String get exportTrackerModule => 'Tracker-Modul';
+
+  @override
+  String get exportTrackerModuleDetail =>
+      '.mod · .xm · .it · .s3m — was andere Tracker lesen';
+
+  @override
+  String get exportForNotationPrograms => 'Für Notationsprogramme';
+
+  @override
+  String get trackerSongOverview => 'Stück-Übersicht';
+
+  @override
+  String get trackerPianoRoll => 'Pianorolle';
+
+  @override
+  String get audioExportFormat => 'Format';
+
+  @override
+  String get audioExportSampleRate => 'Abtastrate';
+
+  @override
+  String get audioExportConversion => 'Umrechnung';
+
+  @override
+  String get audioExportBitDepth => 'Bittiefe';
+
+  @override
+  String get audioExportDither => 'Dither';
+
+  @override
+  String get audioExportDitherHint =>
+      'Weichere Ausblendungen (fügt ein leises Grundrauschen hinzu)';
+
+  @override
+  String get audioExportBitrate => 'Bitrate';
+
+  @override
+  String get audioExportMp3Encoder => 'MP3-Encoder';
+
+  @override
+  String get exportLoopRenderedDetail => 'Die Schleife als Audio';
+
+  @override
+  String get exportShareCodeDetail =>
+      'Ein kurzer Code, den jemand anderes einfügen kann';
+
+  @override
+  String get errorLogTitle => 'Fehlerprotokoll';
+
+  @override
+  String errorLogCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Fehler aufgezeichnet',
+      one: '1 Fehler aufgezeichnet',
+      zero: 'Nichts aufgezeichnet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get errorLogEmpty =>
+      'Auf diesem Gerät wurden keine Fehler aufgezeichnet.';
+
+  @override
+  String get errorLogCopy => 'Alles kopieren';
+
+  @override
+  String get errorLogCopied => 'Fehlerprotokoll kopiert';
+
+  @override
+  String get errorLogClear => 'Protokoll leeren';
+
+  @override
+  String get soundfontDownloadGm => 'General MIDI herunterladen';
+
+  @override
+  String get soundfontLoad => 'SoundFont laden';
+
+  @override
+  String get soundfontOpenHint =>
+      'Öffne eine .sf2- oder .sf3-SoundFont, um ihre Instrumente zu durchsuchen.';
+
+  @override
+  String get soundfontChooseFile => 'SoundFont-Datei wählen …';
+
+  @override
+  String get soundfontDownloadGmEllipsis => 'General MIDI herunterladen …';
+
+  @override
+  String get soundfontSearch => 'Instrumente suchen';
+
+  @override
+  String get soundfontChangeFile => 'Datei wechseln';
+
+  @override
+  String get soundfontUse => 'Diesen Klang verwenden';
+
+  @override
+  String get fxRackEmpty =>
+      'Keine Effekte — der Klang läuft unverändert durch.';
+
+  @override
+  String get fxRackMoveEarlier => 'Nach vorn';
+
+  @override
+  String get fxRackMoveLater => 'Nach hinten';
+
+  @override
+  String get keymapEmpty =>
+      'Auf diesem Bildschirm gibt es noch keine Tastenkürzel.';
+
+  @override
+  String get trackerNoNotesOnChannel => 'Noch keine Noten auf diesem Kanal.';
+
+  @override
+  String get exportNothingYet => 'Noch nichts zu exportieren.';
+
+  @override
+  String dawPartN(int n) {
+    return 'Stimme $n';
+  }
+
+  @override
+  String dawSummaryWhole(String summary) {
+    return 'Ganze Länge: $summary';
+  }
+
+  @override
+  String dawSummaryTrack(String summary) {
+    return 'Diese Spur: $summary';
+  }
+
+  @override
+  String dawSummaryRange(String summary) {
+    return 'Markierter Bereich: $summary';
+  }
+
+  @override
+  String dawDurationValue(String value) {
+    return 'Dauer $value';
+  }
+
+  @override
+  String dawPeakValue(String value) {
+    return 'Spitze $value';
+  }
+
+  @override
+  String dawExportPeakValue(String value) {
+    return 'Export-Spitze $value';
+  }
+
+  @override
+  String dawWidthPercent(int percent) {
+    return '$percent % Breite';
+  }
+
+  @override
+  String dawNSelected(int count) {
+    return '$count ausgewählt';
+  }
+
+  @override
+  String dawTranscribeFailed(String error) {
+    return 'Transkription fehlgeschlagen: $error';
+  }
+
+  @override
+  String dawFadeInCurve(String curve) {
+    return 'Einblenden $curve';
+  }
+
+  @override
+  String dawFadeOutCurve(String curve) {
+    return 'Ausblenden $curve';
+  }
+
+  @override
+  String dawRoutedToBusN(int n) {
+    return 'Zu Bus $n geleitet';
+  }
+
+  @override
+  String dawRoutedTo(String bus) {
+    return 'Zu $bus geleitet';
+  }
+
+  @override
+  String dawBusSends(int count) {
+    return '$count Bus-Sends';
+  }
+
+  @override
+  String dawBusN(int n) {
+    return 'Bus $n';
+  }
+
+  @override
+  String dawTrackCount(int count) {
+    return '$count Spuren';
+  }
+
+  @override
+  String dawStartPercent(int percent) {
+    return 'Anfang $percent %';
+  }
+
+  @override
+  String dawEndPercent(int percent) {
+    return 'Ende $percent %';
+  }
+
+  @override
+  String dawTakeN(int n) {
+    return 'Take $n';
+  }
+
+  @override
+  String dawEditAutomation(String label) {
+    return '$label-Automation bearbeiten';
+  }
+
+  @override
+  String dawPointCount(int count) {
+    return '$count Punkte';
+  }
+
+  @override
+  String dawPointN(int n) {
+    return 'Punkt $n';
+  }
+
+  @override
+  String dawAutomate(String label) {
+    return '$label automatisieren';
+  }
+
+  @override
+  String get instrEdDisabled => 'Aus';
+
+  @override
+  String instrEdRemovePointN(int n) {
+    return 'Punkt $n entfernen';
+  }
+
+  @override
+  String instrEdStepCount(int count) {
+    return '$count Schritte';
+  }
+
+  @override
+  String instrEdMacroTitle(String target) {
+    return '$target-Makro';
+  }
+
+  @override
+  String instrEdMacroRangeHint(int lo, int hi) {
+    return 'Bereich $lo…$hi · ziehe einen Balken, um seinen Wert zu setzen';
+  }
+
+  @override
+  String a11yStepCell(String row, int step) {
+    return '$row, Schritt $step';
+  }
+
+  @override
+  String get studioModeLabel => 'Studio-Werkzeuge';
+
+  @override
+  String get studioModeSubtitle =>
+      'Zeigt Notenwerkstatt, Tracker, Tab-Editor, Loop-Studio, Audio-Editor und Projekte auf der Startseite. Für Ältere und Erwachsene.';
 
   @override
   String get showTimerLabel => 'Zeit anzeigen';

@@ -1,4 +1,4 @@
-// lib/features/games/chords/chord_listen_spike_screen.dart
+// lib/features/games/chords/chord_listener_screen.dart
 //
 // Fuzzy chord recognition from the live mic. Strum a guitar or play a chord on a
 // keyboard; it names the closest chord and shows runner-up guesses plus the
@@ -19,8 +19,8 @@ import 'package:flutter/material.dart';
 String _candidateName(BuildContext context, ChordCandidate c) =>
     '${spelledMidiName(context, 60 + c.rootPc, withOctave: false)}${c.suffix}';
 
-class ChordListenSpikeScreen extends StatefulWidget {
-  const ChordListenSpikeScreen({super.key, this.debugChords});
+class ChordListenerScreen extends StatefulWidget {
+  const ChordListenerScreen({super.key, this.debugChords});
 
   /// Test-only seam: when provided, the screen listens to this stream instead
   /// of opening the microphone, so the detection→display path can be exercised
@@ -30,10 +30,10 @@ class ChordListenSpikeScreen extends StatefulWidget {
   final Stream<ChordReading>? debugChords;
 
   @override
-  State<ChordListenSpikeScreen> createState() => _ChordListenSpikeScreenState();
+  State<ChordListenerScreen> createState() => _ChordListenerScreenState();
 }
 
-class _ChordListenSpikeScreenState extends State<ChordListenSpikeScreen> {
+class _ChordListenerScreenState extends State<ChordListenerScreen> {
   // Lazily created so the fake-capture test path never constructs the plugin.
   MicrophonePitchService? _serviceOrNull;
   MicrophonePitchService get _service =>

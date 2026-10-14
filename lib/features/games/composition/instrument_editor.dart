@@ -167,13 +167,13 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
             Row(
               children: [
                 Text(
-                  'Edit Instrument',
+                  AppLocalizations.of(context)!.instrEdTitle,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const Spacer(),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(_inst),
-                  child: const Text('Done'),
+                  child: Text(AppLocalizations.of(context)!.performDone),
                 ),
               ],
             ),
@@ -232,11 +232,11 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
     return ListView(
       children: [
         ListTile(
-          title: const Text('Additive voice'),
+          title: Text(AppLocalizations.of(context)!.instrEdAdditiveVoice),
           subtitle: Text(add.instrument.name),
           trailing: TextButton.icon(
             icon: const Icon(Icons.graphic_eq),
-            label: const Text('Sound Lab'),
+            label: Text(AppLocalizations.of(context)!.soundLabTitle),
             onPressed: () => setState(() => _showSoundLab = true),
           ),
         ),
@@ -284,7 +284,7 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
     final value = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('MIDI key'),
+        title: Text(AppLocalizations.of(context)!.instrEdMidiKey),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -294,7 +294,7 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.dawCancel),
           ),
           FilledButton(
             onPressed: () {
@@ -303,7 +303,7 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
                 Navigator.of(ctx).pop(midi);
               }
             },
-            child: const Text('Apply'),
+            child: Text(AppLocalizations.of(context)!.dawAmplifyApply),
           ),
         ],
       ),
@@ -390,7 +390,9 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final keys = widget.inst.zones.keys.toList()..sort();
-    if (keys.isEmpty) return const Center(child: Text('No mapped zones'));
+    if (keys.isEmpty) {
+      return Center(child: Text(AppLocalizations.of(context)!.instrEdNoZones));
+    }
     if (!keys.contains(_selectedMidi)) _selectedMidi = keys.first;
     final zone = widget.inst.zones[_selectedMidi];
     final split = _selectedSplit;
@@ -399,7 +401,7 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
     return ListView(
       children: [
         ListTile(
-          title: const Text('Mapped Note'),
+          title: Text(AppLocalizations.of(context)!.instrEdMappedNote),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -415,17 +417,17 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
               ),
               IconButton(
                 icon: const Icon(Icons.add),
-                tooltip: 'Add key mapping',
+                tooltip: AppLocalizations.of(context)!.instrEdAddMapping,
                 onPressed: _addMapping,
               ),
               IconButton(
                 icon: const Icon(Icons.drive_file_rename_outline),
-                tooltip: 'Remap selected key',
+                tooltip: AppLocalizations.of(context)!.instrEdRemap,
                 onPressed: _remapSelected,
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline),
-                tooltip: 'Remove key mapping',
+                tooltip: AppLocalizations.of(context)!.instrEdRemoveMapping,
                 onPressed: _removeSelected,
               ),
             ],
@@ -531,7 +533,7 @@ class _SampleEditor extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Text(
-            'Loop Editor',
+            AppLocalizations.of(context)!.instrEdLoopEditor,
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
@@ -556,8 +558,8 @@ class _SampleEditor extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         SwitchListTile(
-          title: const Text('Ping-Pong Loop'),
-          subtitle: const Text('Bounces forward and backward'),
+          title: Text(AppLocalizations.of(context)!.instrEdPingPongLoop),
+          subtitle: Text(AppLocalizations.of(context)!.instrEdPingPongLoopHint),
           value: inst.pingPong,
           onChanged: (v) {
             onChanged(inst.copyWith(pingPong: v));
@@ -566,7 +568,7 @@ class _SampleEditor extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Text(
-            'Sustain Loop Editor',
+            AppLocalizations.of(context)!.instrEdSustainLoopEditor,
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
@@ -589,13 +591,14 @@ class _SampleEditor extends StatelessWidget {
           bg: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         SwitchListTile(
-          title: const Text('Ping-Pong Sustain'),
-          subtitle: const Text('Bounces while the note is held'),
+          title: Text(AppLocalizations.of(context)!.instrEdPingPongSustain),
+          subtitle:
+              Text(AppLocalizations.of(context)!.instrEdPingPongSustainHint),
           value: inst.sustainPingPong,
           onChanged: (v) => onChanged(inst.copyWith(sustainPingPong: v)),
         ),
         ListTile(
-          title: const Text('Base Note (Tuning)'),
+          title: Text(AppLocalizations.of(context)!.instrEdBaseNote),
           subtitle: Text('MIDI: ${inst.baseMidi}'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
@@ -620,7 +623,7 @@ class _SampleEditor extends StatelessWidget {
           ),
         ),
         ListTile(
-          title: const Text('Sample Volume'),
+          title: Text(AppLocalizations.of(context)!.instrEdSampleVolume),
           subtitle: Text('${(inst.volume * 100).round()}%'),
           trailing: SizedBox(
             width: 180,
@@ -631,77 +634,125 @@ class _SampleEditor extends StatelessWidget {
           ),
         ),
         ListTile(
-          title: const Text('Native Volume Envelope'),
-          subtitle: Text(_envelopeSummary(inst.nativeVolumeEnvelope)),
+          title: Text(AppLocalizations.of(context)!.instrEdVolumeEnvelope),
+          subtitle: Text(
+            _envelopeSummary(
+              AppLocalizations.of(context)!,
+              inst.nativeVolumeEnvelope,
+            ),
+          ),
           trailing: IconButton(
             icon: const Icon(Icons.tune),
-            tooltip: 'Edit native volume envelope',
+            tooltip: AppLocalizations.of(context)!.instrEdEditVolumeEnvelope,
             onPressed: () => _editVolumeEnvelope(context),
           ),
         ),
         ListTile(
-          title: const Text('Native Pan Envelope'),
+          title: Text(AppLocalizations.of(context)!.instrEdPanEnvelope),
           subtitle: Text(
-            _envelopeSummary(inst.nativePanEnvelope),
+            _envelopeSummary(
+              AppLocalizations.of(context)!,
+              inst.nativePanEnvelope,
+            ),
           ),
           trailing: IconButton(
             icon: const Icon(Icons.tune),
-            tooltip: 'Edit native pan envelope',
+            tooltip: AppLocalizations.of(context)!.instrEdEditPanEnvelope,
             onPressed: () => _editPanEnvelope(context),
           ),
         ),
         ListTile(
-          title: const Text('Native Pitch Envelope'),
-          subtitle: Text(_envelopeSummary(inst.nativePitchEnvelope)),
+          title: Text(AppLocalizations.of(context)!.instrEdPitchEnvelope),
+          subtitle: Text(
+            _envelopeSummary(
+              AppLocalizations.of(context)!,
+              inst.nativePitchEnvelope,
+            ),
+          ),
           trailing: IconButton(
             icon: const Icon(Icons.tune),
-            tooltip: 'Edit native pitch envelope',
+            tooltip: AppLocalizations.of(context)!.instrEdEditPitchEnvelope,
             onPressed: () => _editPitchEnvelope(context),
           ),
         ),
         ListTile(
-          title: const Text('New Note Action'),
+          title: Text(AppLocalizations.of(context)!.instrEdNewNoteAction),
           trailing: DropdownButton<int>(
             value: inst.nativeNna.clamp(0, 3).toInt(),
-            items: const [
-              DropdownMenuItem(value: 0, child: Text('Cut')),
-              DropdownMenuItem(value: 1, child: Text('Continue')),
-              DropdownMenuItem(value: 2, child: Text('Note Off')),
-              DropdownMenuItem(value: 3, child: Text('Fade')),
+            items: [
+              DropdownMenuItem(
+                value: 0,
+                child: Text(AppLocalizations.of(context)!.instrEdActionCut),
+              ),
+              DropdownMenuItem(
+                value: 1,
+                child: Text(
+                  AppLocalizations.of(context)!.instrEdActionContinue,
+                ),
+              ),
+              DropdownMenuItem(
+                value: 2,
+                child: Text(AppLocalizations.of(context)!.instrEdActionNoteOff),
+              ),
+              DropdownMenuItem(
+                value: 3,
+                child: Text(AppLocalizations.of(context)!.instrEdActionFade),
+              ),
             ],
             onChanged: (v) =>
                 v == null ? null : onChanged(inst.copyWith(nativeNna: v)),
           ),
         ),
         ListTile(
-          title: const Text('Duplicate Check'),
+          title: Text(AppLocalizations.of(context)!.instrEdDuplicateCheck),
           trailing: DropdownButton<int>(
             value: inst.nativeDct.clamp(0, 3).toInt(),
-            items: const [
-              DropdownMenuItem(value: 0, child: Text('None')),
-              DropdownMenuItem(value: 1, child: Text('Note')),
-              DropdownMenuItem(value: 2, child: Text('Sample')),
-              DropdownMenuItem(value: 3, child: Text('Instrument')),
+            items: [
+              DropdownMenuItem(
+                value: 0,
+                child: Text(AppLocalizations.of(context)!.instrEdNone),
+              ),
+              DropdownMenuItem(
+                value: 1,
+                child: Text(AppLocalizations.of(context)!.instrEdDupNote),
+              ),
+              DropdownMenuItem(
+                value: 2,
+                child: Text(AppLocalizations.of(context)!.instrEdDupSample),
+              ),
+              DropdownMenuItem(
+                value: 3,
+                child: Text(AppLocalizations.of(context)!.dawInstrument),
+              ),
             ],
             onChanged: (v) =>
                 v == null ? null : onChanged(inst.copyWith(nativeDct: v)),
           ),
         ),
         ListTile(
-          title: const Text('Duplicate Action'),
+          title: Text(AppLocalizations.of(context)!.instrEdDuplicateAction),
           trailing: DropdownButton<int>(
             value: inst.nativeDca.clamp(0, 2).toInt(),
-            items: const [
-              DropdownMenuItem(value: 0, child: Text('Cut')),
-              DropdownMenuItem(value: 1, child: Text('Note Off')),
-              DropdownMenuItem(value: 2, child: Text('Fade')),
+            items: [
+              DropdownMenuItem(
+                value: 0,
+                child: Text(AppLocalizations.of(context)!.instrEdActionCut),
+              ),
+              DropdownMenuItem(
+                value: 1,
+                child: Text(AppLocalizations.of(context)!.instrEdActionNoteOff),
+              ),
+              DropdownMenuItem(
+                value: 2,
+                child: Text(AppLocalizations.of(context)!.instrEdActionFade),
+              ),
             ],
             onChanged: (v) =>
                 v == null ? null : onChanged(inst.copyWith(nativeDca: v)),
           ),
         ),
         ListTile(
-          title: const Text('Fadeout'),
+          title: Text(AppLocalizations.of(context)!.instrEdFadeout),
           subtitle: Text('${inst.nativeFadeout} / 1024'),
           trailing: SizedBox(
             width: 180,
@@ -739,12 +790,12 @@ Int16List interleaveStereoPcm(Float64List left, Float64List right) {
   return out;
 }
 
-String _envelopeSummary(Object? envelope) {
-  if (envelope == null) return 'Disabled';
+String _envelopeSummary(AppLocalizations l10n, Object? envelope) {
+  if (envelope == null) return l10n.instrEdDisabled;
   final points = envelope is VolumeEnvelope
       ? envelope.points.length
       : (envelope as PanEnvelope).points.length;
-  return points == 0 ? 'Disabled' : '$points points';
+  return points == 0 ? l10n.instrEdDisabled : l10n.dawPointCount(points);
 }
 
 class _NativeVolumeEnvelopeDialog extends StatefulWidget {
@@ -843,7 +894,7 @@ class _NativeVolumeEnvelopeDialogState
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Native Volume Envelope'),
+        title: Text(AppLocalizations.of(context)!.instrEdVolumeEnvelope),
         content: SizedBox(
           width: 520,
           child: SingleChildScrollView(
@@ -861,22 +912,22 @@ class _NativeVolumeEnvelopeDialogState
                 TextButton.icon(
                   onPressed: _addRow,
                   icon: const Icon(Icons.add),
-                  label: const Text('Add point'),
+                  label: Text(AppLocalizations.of(context)!.trackerEnvAddPoint),
                 ),
                 _EnvelopeIndexRow(
-                  label: 'Sustain point',
+                  label: AppLocalizations.of(context)!.instrEdSustainPoint,
                   value: _sustain,
                   count: _rows.length,
                   onChanged: (v) => setState(() => _sustain = v),
                 ),
                 _EnvelopeIndexRow(
-                  label: 'Loop start',
+                  label: AppLocalizations.of(context)!.instrEdLoopStart,
                   value: _loopStart,
                   count: _rows.length,
                   onChanged: (v) => setState(() => _loopStart = v),
                 ),
                 _EnvelopeIndexRow(
-                  label: 'Loop end',
+                  label: AppLocalizations.of(context)!.instrEdLoopEnd,
                   value: _loopEnd,
                   count: _rows.length,
                   onChanged: (v) => setState(() => _loopEnd = v),
@@ -888,9 +939,12 @@ class _NativeVolumeEnvelopeDialogState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.dawCancel),
           ),
-          FilledButton(onPressed: _apply, child: const Text('Apply')),
+          FilledButton(
+            onPressed: _apply,
+            child: Text(AppLocalizations.of(context)!.dawAmplifyApply),
+          ),
         ],
       );
 }
@@ -988,7 +1042,7 @@ class _NativePanEnvelopeDialogState extends State<_NativePanEnvelopeDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Native Pan Envelope'),
+        title: Text(AppLocalizations.of(context)!.instrEdPanEnvelope),
         content: SizedBox(
           width: 520,
           child: SingleChildScrollView(
@@ -1006,22 +1060,22 @@ class _NativePanEnvelopeDialogState extends State<_NativePanEnvelopeDialog> {
                 TextButton.icon(
                   onPressed: _addRow,
                   icon: const Icon(Icons.add),
-                  label: const Text('Add point'),
+                  label: Text(AppLocalizations.of(context)!.trackerEnvAddPoint),
                 ),
                 _EnvelopeIndexRow(
-                  label: 'Sustain point',
+                  label: AppLocalizations.of(context)!.instrEdSustainPoint,
                   value: _sustain,
                   count: _rows.length,
                   onChanged: (v) => setState(() => _sustain = v),
                 ),
                 _EnvelopeIndexRow(
-                  label: 'Loop start',
+                  label: AppLocalizations.of(context)!.instrEdLoopStart,
                   value: _loopStart,
                   count: _rows.length,
                   onChanged: (v) => setState(() => _loopStart = v),
                 ),
                 _EnvelopeIndexRow(
-                  label: 'Loop end',
+                  label: AppLocalizations.of(context)!.instrEdLoopEnd,
                   value: _loopEnd,
                   count: _rows.length,
                   onChanged: (v) => setState(() => _loopEnd = v),
@@ -1033,9 +1087,12 @@ class _NativePanEnvelopeDialogState extends State<_NativePanEnvelopeDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.dawCancel),
           ),
-          FilledButton(onPressed: _apply, child: const Text('Apply')),
+          FilledButton(
+            onPressed: _apply,
+            child: Text(AppLocalizations.of(context)!.dawAmplifyApply),
+          ),
         ],
       );
 }
@@ -1137,7 +1194,7 @@ class _NativePitchEnvelopeDialogState
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Native Pitch Envelope'),
+        title: Text(AppLocalizations.of(context)!.instrEdPitchEnvelope),
         content: SizedBox(
           width: 520,
           child: SingleChildScrollView(
@@ -1155,22 +1212,22 @@ class _NativePitchEnvelopeDialogState
                 TextButton.icon(
                   onPressed: _addRow,
                   icon: const Icon(Icons.add),
-                  label: const Text('Add point'),
+                  label: Text(AppLocalizations.of(context)!.trackerEnvAddPoint),
                 ),
                 _EnvelopeIndexRow(
-                  label: 'Sustain point',
+                  label: AppLocalizations.of(context)!.instrEdSustainPoint,
                   value: _sustain,
                   count: _rows.length,
                   onChanged: (v) => setState(() => _sustain = v),
                 ),
                 _EnvelopeIndexRow(
-                  label: 'Loop start',
+                  label: AppLocalizations.of(context)!.instrEdLoopStart,
                   value: _loopStart,
                   count: _rows.length,
                   onChanged: (v) => setState(() => _loopStart = v),
                 ),
                 _EnvelopeIndexRow(
-                  label: 'Loop end',
+                  label: AppLocalizations.of(context)!.instrEdLoopEnd,
                   value: _loopEnd,
                   count: _rows.length,
                   onChanged: (v) => setState(() => _loopEnd = v),
@@ -1182,9 +1239,12 @@ class _NativePitchEnvelopeDialogState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.dawCancel),
           ),
-          FilledButton(onPressed: _apply, child: const Text('Apply')),
+          FilledButton(
+            onPressed: _apply,
+            child: Text(AppLocalizations.of(context)!.dawAmplifyApply),
+          ),
         ],
       );
 }
@@ -1227,7 +1287,7 @@ class _EnvelopePointRow extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: 'Remove point $index',
+            tooltip: AppLocalizations.of(context)!.instrEdRemovePointN(index),
             onPressed: onRemove,
           ),
         ],
@@ -1253,7 +1313,9 @@ class _EnvelopeIndexRow extends StatelessWidget {
         trailing: DropdownButton<int?>(
           value: value,
           items: [
-            const DropdownMenuItem<int?>(child: Text('None')),
+            DropdownMenuItem<int?>(
+              child: Text(AppLocalizations.of(context)!.instrEdNone),
+            ),
             for (var i = 0; i < count; i++)
               DropdownMenuItem<int?>(value: i, child: Text('$i')),
           ],
@@ -1272,8 +1334,8 @@ String _macroTargetLabel(MacroTarget t) => switch (t) {
       MacroTarget.duty => 'Duty',
     };
 
-String _macroSummary(MacroSequence m) {
-  final parts = <String>['${m.values.length} steps'];
+String _macroSummary(AppLocalizations l10n, MacroSequence m) {
+  final parts = <String>[l10n.instrEdStepCount(m.values.length)];
   if (m.hasLoop) parts.add('loop ${m.loopStart}–${m.loopEnd}');
   if (m.releaseStart != null) parts.add('rel ${m.releaseStart}');
   return parts.join(' · ');
@@ -1308,14 +1370,14 @@ class _MacroSection extends StatelessWidget {
           child: Row(
             children: [
               Text(
-                'Instrument Macros',
+                AppLocalizations.of(context)!.instrEdMacros,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const Spacer(),
               if (available.isNotEmpty)
                 PopupMenuButton<MacroTarget>(
                   icon: const Icon(Icons.add),
-                  tooltip: 'Add macro',
+                  tooltip: AppLocalizations.of(context)!.instrEdAddMacro,
                   onSelected: (t) =>
                       onChanged([...macros, MacroSequence.defaultFor(t)]),
                   itemBuilder: (_) => [
@@ -1330,27 +1392,28 @@ class _MacroSection extends StatelessWidget {
           ),
         ),
         if (macros.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text('No macros — add one to modulate the note per tick.'),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(AppLocalizations.of(context)!.instrEdNoMacros),
           ),
         for (var i = 0; i < macros.length; i++)
           ListTile(
             key: ValueKey('macro_${macros[i].target.name}'),
             contentPadding: EdgeInsets.zero,
             title: Text(_macroTargetLabel(macros[i].target)),
-            subtitle: Text(_macroSummary(macros[i])),
+            subtitle:
+                Text(_macroSummary(AppLocalizations.of(context)!, macros[i])),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
                   icon: const Icon(Icons.tune),
-                  tooltip: 'Edit macro',
+                  tooltip: AppLocalizations.of(context)!.instrEdEditMacro,
                   onPressed: () => _edit(context, i),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  tooltip: 'Remove macro',
+                  tooltip: AppLocalizations.of(context)!.instrEdRemoveMacro,
                   onPressed: () =>
                       onChanged(List<MacroSequence>.of(macros)..removeAt(i)),
                 ),
@@ -1378,9 +1441,11 @@ class _MacroEditorDialogState extends State<_MacroEditorDialog> {
     final n = _m.values.length;
     return DropdownButton<int>(
       value: value,
-      hint: const Text('None'),
+      hint: Text(AppLocalizations.of(context)!.instrEdNone),
       items: [
-        const DropdownMenuItem(child: Text('None')),
+        DropdownMenuItem(
+          child: Text(AppLocalizations.of(context)!.instrEdNone),
+        ),
         for (var i = 0; i < n; i++)
           DropdownMenuItem(value: i, child: Text('$i')),
       ],
@@ -1406,7 +1471,10 @@ class _MacroEditorDialogState extends State<_MacroEditorDialog> {
     final (lo, hi) = MacroSequence.rangeOf(_m.target);
     final n = _m.values.length;
     return AlertDialog(
-      title: Text('${_macroTargetLabel(_m.target)} macro'),
+      title: Text(
+        AppLocalizations.of(context)!
+            .instrEdMacroTitle(_macroTargetLabel(_m.target)),
+      ),
       content: SizedBox(
         width: 360,
         child: Column(
@@ -1421,10 +1489,10 @@ class _MacroEditorDialogState extends State<_MacroEditorDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            Text('Range $lo…$hi · drag a bar to set its value'),
+            Text(AppLocalizations.of(context)!.instrEdMacroRangeHint(lo, hi)),
             Row(
               children: [
-                const Text('Steps'),
+                Text(AppLocalizations.of(context)!.instrEdSteps),
                 IconButton(
                   icon: const Icon(Icons.remove),
                   onPressed: n > 1
@@ -1442,19 +1510,19 @@ class _MacroEditorDialogState extends State<_MacroEditorDialog> {
             ),
             Row(
               children: [
-                const Text('Loop'),
+                Text(AppLocalizations.of(context)!.dawLoop),
                 const SizedBox(width: 8),
                 _indexDropdown(
                   _m.loopStart,
                   (v) => _setLoop(start: v, startSet: true),
                 ),
-                const Text('to'),
+                Text(AppLocalizations.of(context)!.instrEdTo),
                 _indexDropdown(_m.loopEnd, (v) => _setLoop(end: v)),
               ],
             ),
             Row(
               children: [
-                const Text('Release at'),
+                Text(AppLocalizations.of(context)!.instrEdReleaseAt),
                 const SizedBox(width: 8),
                 _indexDropdown(
                   _m.releaseStart,
@@ -1471,11 +1539,11 @@ class _MacroEditorDialogState extends State<_MacroEditorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.dawCancel),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(_m),
-          child: const Text('Done'),
+          child: Text(AppLocalizations.of(context)!.performDone),
         ),
       ],
     );

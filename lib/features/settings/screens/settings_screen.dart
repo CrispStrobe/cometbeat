@@ -11,6 +11,7 @@ import 'package:comet_beat/core/harmony/chart_level.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/debug_service.dart';
+import 'package:comet_beat/core/services/error_log.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
@@ -22,6 +23,8 @@ import 'package:comet_beat/features/games/note_reading/note_names.dart';
 import 'package:comet_beat/features/library/attribution_screen.dart';
 import 'package:comet_beat/features/settings/screens/about_screen.dart';
 import 'package:comet_beat/features/settings/screens/downloads_screen.dart';
+import 'package:comet_beat/features/settings/screens/error_log_screen.dart';
+import 'package:comet_beat/features/settings/screens/learners_card.dart';
 import 'package:comet_beat/features/settings/screens/voice_models_screen.dart';
 import 'package:comet_beat/features/settings/screens/voice_picker_sheet.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -47,6 +50,7 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const LearnersSection(),
           Text(
             l10n.languageLabel,
             style: Theme.of(context).textTheme.titleMedium,
@@ -321,6 +325,17 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 20),
+          Card(
+            child: SwitchListTile(
+              key: const ValueKey('settings-studio-mode'),
+              secondary: const Icon(Icons.piano),
+              title: Text(l10n.studioModeLabel),
+              subtitle: Text(l10n.studioModeSubtitle),
+              value: settings.studioMode,
+              onChanged: settings.setStudioMode,
+            ),
+          ),
           if (context.watch<DebugService>().menuEnabled) ...[
             const SizedBox(height: 20),
             Text(
@@ -333,6 +348,25 @@ class SettingsScreen extends StatelessWidget {
                 title: Text(l10n.debugUnlockLabel),
                 value: context.watch<DebugService>().unlockAll,
                 onChanged: (v) => context.read<DebugService>().setUnlockAll(v),
+              ),
+            ),
+            Card(
+              child: ListenableBuilder(
+                listenable: ErrorLog.instance,
+                builder: (context, _) => ListTile(
+                  key: const ValueKey('settings-error-log'),
+                  leading: const Icon(Icons.bug_report_outlined),
+                  title: Text(l10n.errorLogTitle),
+                  subtitle: Text(
+                    l10n.errorLogCount(ErrorLog.instance.entries.length),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ErrorLogScreen(),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

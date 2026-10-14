@@ -12,6 +12,8 @@
 import 'dart:math';
 
 import 'package:comet_beat/core/audio/synth.dart' show Drum;
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music/drum_labels.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -168,7 +170,7 @@ class _DrumKitVisualState extends State<DrumKitVisual>
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return RepaintBoundary(
+    final kit = RepaintBoundary(
       child: GestureDetector(
         onTapDown: widget.onHit == null ? null : _onTapDown,
         child: CustomPaint(
@@ -181,6 +183,36 @@ class _DrumKitVisualState extends State<DrumKitVisual>
           child: const SizedBox.expand(),
         ),
       ),
+    );
+    final onHit = widget.onHit;
+    final l10n = AppLocalizations.of(context);
+    if (onHit == null || l10n == null) return kit;
+    // One named, tappable node per drawn piece, over the painting. The boxes
+    // have no hit-testable child, so finger taps still land on the kit below.
+    return LayoutBuilder(
+      builder: (context, c) {
+        final s = c.biggest.shortestSide;
+        final shown = widget.drums.toSet();
+        return Stack(
+          children: [
+            Positioned.fill(child: kit),
+            for (final piece in _kLayout)
+              if (shown.contains(piece.drum))
+                Positioned(
+                  left: piece.cx * c.maxWidth - piece.r * s,
+                  top: piece.cy * c.maxHeight - piece.r * s,
+                  width: 2 * piece.r * s,
+                  height: 2 * piece.r * s,
+                  child: Semantics(
+                    button: true,
+                    label: drumLabel(l10n, piece.drum),
+                    onTap: () => onHit(piece.drum),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+          ],
+        );
+      },
     );
   }
 }

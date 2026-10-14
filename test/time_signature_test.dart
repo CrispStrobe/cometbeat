@@ -14,7 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _app() => MultiProvider(
+Widget _app({List<String>? review}) => MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsService()),
         ChangeNotifierProvider(
@@ -23,15 +23,15 @@ Widget _app() => MultiProvider(
         Provider<AudioService>(create: (_) => AudioService()),
         ChangeNotifierProvider(create: (_) => ProgressService()),
       ],
-      child: const MaterialApp(
-        localizationsDelegates: [
+      child: MaterialApp(
+        localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: [Locale('en'), Locale('de')],
-        home: TimeSignatureScreen(),
+        supportedLocales: const [Locale('en'), Locale('de')],
+        home: TimeSignatureScreen(reviewItemIds: review),
       ),
     );
 
@@ -78,5 +78,17 @@ void main() {
     }
 
     expect(find.byIcon(Icons.star).evaluate().length, greaterThanOrEqualTo(1));
+  });
+
+  testWidgets('a review session asks only the due signatures', (tester) async {
+    // 6/8 is outside the beginner pool: review must still reach it.
+    await tester.pumpWidget(_app(review: ['measures.timesig.6_8']));
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 4; i++) {
+      expect(_game(tester).answerBeats, 6);
+      await _solveRound(tester);
+      await tester.pumpAndSettle();
+      if (find.byType(TimeSignatureScreen).evaluate().isEmpty) break;
+    }
   });
 }

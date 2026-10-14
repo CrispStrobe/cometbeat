@@ -17,7 +17,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class MeterDetectiveScreen extends StatefulWidget {
-  const MeterDetectiveScreen({super.key});
+  const MeterDetectiveScreen({super.key, this.reviewItemIds});
+
+  /// Due `measures.meter.<beats>_4` items to re-ask; null = a normal game.
+  final List<String>? reviewItemIds;
 
   static const beatMs = 480;
 
@@ -48,9 +51,22 @@ class _MeterDetectiveScreenState extends State<MeterDetectiveScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) => _playMeter());
   }
 
+  /// The meters behind [MeterDetectiveScreen.reviewItemIds]; null when not
+  /// reviewing.
+  late final List<int>? _reviewMeters = () {
+    final beats = {
+      for (final id in widget.reviewItemIds ?? const <String>[])
+        if (int.tryParse(id.split('.').last.split('_').first) case final b?
+            when _meters.contains(b))
+          b,
+    }.toList();
+    return beats.isEmpty ? null : beats;
+  }();
+
   @override
   void prepareRound() {
-    _beats = _meters[_random.nextInt(_meters.length)];
+    final pool = _reviewMeters ?? _meters;
+    _beats = pool[_random.nextInt(pool.length)];
     _tapped = null;
     _lastAnswer = null;
     if (round > 0) _playMeter();

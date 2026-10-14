@@ -49,7 +49,16 @@ const _affordances = <String, String>{
 void main() {
   group('every surface offers every interop affordance', () {
     for (final surface in _surfaces.entries) {
-      final source = File(surface.value).readAsStringSync();
+      // A surface is its file plus that file's `part`s: splitting a screen
+      // must not make it look as if an affordance was dropped.
+      final main = File(surface.value).readAsStringSync();
+      final dir = File(surface.value).parent.path;
+      final source = [
+        main,
+        for (final m
+            in RegExp(r"^part '([^']+)';", multiLine: true).allMatches(main))
+          File('$dir/${m[1]}').readAsStringSync(),
+      ].join('\n');
       for (final affordance in _affordances.entries) {
         test('${surface.key} — ${affordance.key}', () {
           expect(

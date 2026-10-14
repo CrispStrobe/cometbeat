@@ -38,6 +38,30 @@ void main() {
     expect(s.instrument, Instrument.piano);
   });
 
+  test('studio tools: off for a new install, and that decision sticks',
+      () async {
+    final s = await _loaded();
+    expect(s.studioMode, isFalse);
+    // The first game saving a score must not turn a new install "existing".
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('some_progress', '{}');
+    expect((await _reload()).studioMode, isFalse);
+  });
+
+  test('studio tools: an install that predates the switch keeps them',
+      () async {
+    SharedPreferences.setMockInitialValues({'sound_on': true});
+    expect((await _loaded()).studioMode, isTrue);
+  });
+
+  test('studio tools round-trip', () async {
+    final s = await _loaded();
+    await s.setStudioMode(true);
+    expect((await _reload()).studioMode, isTrue);
+    await s.setStudioMode(false);
+    expect((await _reload()).studioMode, isFalse);
+  });
+
   test('the sound / narration / auto-read booleans round-trip', () async {
     final s = await _loaded();
     await s.setSoundOn(false);

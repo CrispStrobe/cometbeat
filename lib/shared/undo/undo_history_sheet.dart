@@ -36,6 +36,7 @@
 // satisfies "the label says what it was" for the one entry that matters.
 
 import 'package:comet_beat/core/services/undo_service.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Human names for undo scopes, so a row can say "Loop Studio" and not "loop".
@@ -114,7 +115,10 @@ class UndoHistorySheetBody extends StatelessWidget {
           controller: controller,
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text('Edit history', style: theme.textTheme.titleLarge),
+            Text(
+              AppLocalizations.of(context)!.loopMixerEditHistory,
+              style: theme.textTheme.titleLarge,
+            ),
             const SizedBox(height: 4),
             Text(
               entries.isEmpty

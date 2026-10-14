@@ -8,6 +8,72 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## Follow-ups: songs per learner, more review, more splits (2026-10-14)
+
+- **User songs per learner** (`user_songs` via `learnerKey`, reloaded on a
+  switch, carried in the backup as optional `data.songs`).
+- **Saves serialised.** Snapshotting key and data before the first `await`
+  (2026-10-13) let an older save finish last; caught by
+  `user_songs_service_test`. Progress, review data and songs now chain their
+  writes, and a failed write cannot stall the chain.
+- **Review** re-asks exact items for Key Signatures, Key Quiz, Time
+  Signatures, Meter Detective, Find the Key and Rhythm Tap (`reviewItemIds` on each; a reviewed key outside the beginner set
+  still gets asked; Find the Key skips due notes its keyboard cannot show).
+- **Localisation**: the seven shared sheets and ~30 interpolated DAW /
+  instrument-editor strings.
+- **Accessibility**: step grid (one toggled button per cell) and drum kit (one
+  button per drawn piece), as overlays that leave finger taps untouched.
+- **Splits**: `advanced_tracker_screen_panels.dart` (960 lines),
+  `composition_workshop_screen_inspector.dart` (943), `loop_mixer_screen_panels.dart`
+  (767). `interop_parity_test` now reads a surface's `part`s too.
+
+## Learning path, learners, and field diagnostics (2026-10-13)
+
+**One-line status:** home now tells a child what to do next, review reaches
+every skill, several learners can share a device, and uncaught errors are kept
+on the device. Not yet merged when this was written — see the working tree.
+
+- **Continue card on home.** `recommendedLevel()` had existed since the
+  curriculum landed but only surfaced inside Progress. `next_step.dart` turns it
+  into a session: one game per topic of the recommended level, least-ready topic
+  first, and within a topic the game with the fewest stars. It opens through
+  `gameRoute`, so an unseen game shows its tutorial (`RecitalScreen` gained
+  `title` / `showTutorials`).
+- **Studio tools switch.** The authoring menu and project browser left the home
+  bar for new installs (`SettingsService.studioMode`). The default is decided
+  once and written back: an install that already holds data keeps the tools.
+- **Module gating made explicit.** The rule moved out of `HomeScreen.build`
+  into `module_unlock.dart`; a locked card shows a progress ring and the hint
+  says how far along the child is. The stale "testing phase" doc comment on
+  `initiallyUnlocked` is gone — the chain is deliberate, the corners are open
+  by design.
+- **Review router.** The home button counted every due item but could launch
+  only eight namespaces, and answered the rest with "coming soon". About 70
+  namespaces are now routed. Fallback routes open the game for a normal round
+  and mark the bucket handed-out for the session, so the count drops and the
+  next tap moves to another skill. `SriService` gained `dueItemIds()`,
+  `handedOutThisSession` and `markHandedOut()`.
+- **Learner profiles and backup.** `ProfileService`, `learner_scope.dart`,
+  Settings ▸ Learners, and a chip on home once there is more than one learner.
+  `ProgressService.load()` and `SriService.loadSriData()` now reset before
+  reading (they run again on a switch), and both saves snapshot key and data
+  before their first `await`.
+- **Accessibility.** Semantics on `PianoKeyboard`, `GuitarFretboard`,
+  `CelloFingerboard`, the home module cards and the streak bar; home passes
+  Flutter's labelled-tap-target and 48 dp guidelines in a test.
+- **Localisation.** ~150 hard-coded English strings in the audio editor,
+  instrument editor, tab workshop, tracker, loop mixer and audio export moved to
+  the ARB files with German translations.
+- **Error log.** `ErrorLog` + `installErrorHandlers` (first thing in `main`).
+  It writes nothing until the stored log has been read, so a start-up error
+  cannot overwrite earlier entries.
+- **Housekeeping.** `daw_screen.dart` lost 2,400 lines to
+  `daw_screen_mixing.dart` (a `part`, same methods in an extension).
+  `TunerSpikeScreen` → `TunerScreen`, `ChordListenSpikeScreen` →
+  `ChordListenerScreen`; the game id `chord_listen_spike` is unchanged because
+  stored stars are keyed by it. `tool/bootstrap.sh` makes a fresh clone
+  buildable.
+
 ## crisp_notation 0.7.1 — engraving fixes in every score view (2026-10-13)
 
 **One-line status:** the notation library (path dep, so already live; the

@@ -14,7 +14,14 @@
 
 import 'dart:math';
 
+import 'package:comet_beat/core/audio/synth.dart' show Drum;
+import 'package:comet_beat/core/note_naming.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music/drum_labels.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// One placed event on the grid: [row] is a MIDI pitch (melodic) or a drum lane
 /// (percussive), [step] is a 16th column, [len] the length in steps.
@@ -113,11 +120,59 @@ class StepGridView extends StatelessWidget {
                         final (stored, step) = hit(d.localPosition, c.maxWidth);
                         onLongPress!(stored, step);
                       },
-                child: paint,
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: paint),
+                    ..._cellSemantics(context, c.maxWidth),
+                  ],
+                ),
               ),
             )
           : paint,
     );
+  }
+
+  /// One screen-reader node per cell, laid over the painted grid: "Snare,
+  /// step 5", toggled when a note is there, tappable when the grid is. The
+  /// boxes hold no hit-testable child, so real taps still reach the
+  /// GestureDetector underneath. Empty without localisations in scope (a bare
+  /// test harness) — the grid then simply has no semantics, as before.
+  List<Widget> _cellSemantics(BuildContext context, double width) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null || onToggle == null) return const [];
+    final naming =
+        context.watch<SettingsService?>()?.noteNaming ?? NoteNaming.auto;
+    String rowName(int stored) => percussive
+        ? drumLabel(l10n, const [Drum.hat, Drum.snare, Drum.kick][stored])
+        : spelledMidiNameWith(l10n, naming, stored);
+    bool isOn(int stored, int step) => cells.any(
+          (cell) =>
+              cell.row == stored &&
+              step >= cell.step &&
+              step < cell.step + max(1, cell.len),
+        );
+    final cellW = width / steps;
+    final cellH = _h / _rowCount;
+    return [
+      for (var y = 0; y < _rowCount; y++)
+        for (var step = 0; step < steps; step++)
+          () {
+            final stored = percussive ? y : melodyRows[(_rowCount - 1) - y];
+            return Positioned(
+              left: step * cellW,
+              top: y * cellH,
+              width: cellW,
+              height: cellH,
+              child: Semantics(
+                button: true,
+                toggled: isOn(stored, step),
+                label: l10n.a11yStepCell(rowName(stored), step + 1),
+                onTap: () => onToggle!(stored, step),
+                child: const SizedBox.expand(),
+              ),
+            );
+          }(),
+    ];
   }
 }
 

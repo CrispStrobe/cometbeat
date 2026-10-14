@@ -12,6 +12,7 @@
 
 import 'dart:convert';
 
+import 'package:comet_beat/core/services/learner_scope.dart';
 import 'package:comet_beat/core/tuning.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -84,6 +85,7 @@ class SriService with ChangeNotifier {
   final DateTime Function() getNow;
 
   final Set<String> _alreadyReturnedThisSession = {};
+  Future<void> _lastSave = Future<void>.value();
   DateTime? _sessionStartTime;
 
   SriService({DateTime Function()? getNow}) : getNow = getNow ?? DateTime.now;
@@ -135,7 +137,10 @@ class SriService with ChangeNotifier {
     _log('Loading SRI database from storage...');
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_sriStorageKey);
+      final jsonString = prefs.getString(learnerKey(_sriStorageKey));
+      // A load also runs on a learner switch: start from empty, so a learner
+      // with nothing stored does not inherit the previous one's items.
+      _sriDatabase = {};
       if (jsonString != null) {
         final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
         _sriDatabase = jsonMap.map(
@@ -159,11 +164,22 @@ class SriService with ChangeNotifier {
 
   Future<void> saveSriData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      // Snapshot key AND data before the first await: a learner switch landing
+      // in that gap must not send one learner's items to the other's key.
+      final key = learnerKey(_sriStorageKey);
       final jsonString = json.encode(
         _sriDatabase.map((key, value) => MapEntry(key, value.toJson())),
       );
-      await prefs.setString(_sriStorageKey, jsonString);
+      // Chained, so writes land in call order (see UserSongsService._save).
+      _lastSave = _lastSave.then((_) async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(key, jsonString);
+      }).catchError((Object e) {
+        // Caught on the chain itself, so one failed write cannot stall every
+        // later one.
+        if (kDebugMode) debugPrint('[SRI] save failed: $e');
+      });
+      await _lastSave;
     } catch (e) {
       _log('❌ Error saving SRI data: $e');
     }
@@ -257,6 +273,40 @@ class SriService with ChangeNotifier {
 
     _log('Found ${itemIds.length} items due for review.');
     return itemIds;
+  }
+
+  /// Every due, not-yet-mastered item, hardest (lowest easiness) first. Unlike
+  /// [getItemsForReview] this hands nothing out — it is a read, safe from a
+  /// build method — and it ignores what was handed out this session; callers
+  /// that care consult [handedOutThisSession].
+  List<String> dueItemIds() {
+    final now = getNow();
+    final due = _sriDatabase.values
+        .where(
+          (data) =>
+              data.nextReviewDate.isBefore(now) && !isItemMastered(data.itemId),
+        )
+        .toList()
+      ..sort((a, b) {
+        final byEf = a.easinessFactor.compareTo(b.easinessFactor);
+        return byEf != 0 ? byEf : a.nextReviewDate.compareTo(b.nextReviewDate);
+      });
+    return [for (final d in due) d.itemId];
+  }
+
+  /// Items already offered for review in the current session.
+  Set<String> get handedOutThisSession {
+    _checkSessionExpiry();
+    return Set.unmodifiable(_alreadyReturnedThisSession);
+  }
+
+  /// Marks [itemIds] as offered this session, so they stop counting as
+  /// available until the session expires — for a review that opens a whole
+  /// game round rather than re-asking the items one by one.
+  void markHandedOut(Iterable<String> itemIds) {
+    _checkSessionExpiry();
+    _alreadyReturnedThisSession.addAll(itemIds);
+    notifyListeners();
   }
 
   int getAvailableReviewCount({Set<String>? excludeIds, String? moduleId}) {

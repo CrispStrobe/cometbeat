@@ -21,7 +21,10 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:provider/provider.dart';
 
 class KeyNameScreen extends StatefulWidget {
-  const KeyNameScreen({super.key});
+  const KeyNameScreen({super.key, this.reviewItemIds});
+
+  /// Due `keyboard.name.<step>` items to re-ask; null = a normal game.
+  final List<String>? reviewItemIds;
 
   @override
   State<KeyNameScreen> createState() => _KeyNameScreenState();
@@ -47,9 +50,21 @@ class _KeyNameScreenState extends State<KeyNameScreen> with QuizRoundMixin {
     prepareRound();
   }
 
+  /// The notes behind [KeyNameScreen.reviewItemIds]; null when not reviewing.
+  late final List<Step>? _reviewSteps = () {
+    final steps = [
+      for (final id in widget.reviewItemIds ?? const <String>[])
+        if (Step.values.asNameMap()[id.split('.').last] case final step?) step,
+    ];
+    return steps.isEmpty ? null : steps;
+  }();
+
   @override
   void prepareRound() {
-    final step = Step.values[_random.nextInt(Step.values.length)];
+    final review = _reviewSteps;
+    final step = review != null
+        ? review[_random.nextInt(review.length)]
+        : Step.values[_random.nextInt(Step.values.length)];
     _target = Pitch(step);
     final distractors = [...Step.values]
       ..remove(step)
@@ -111,6 +126,8 @@ class _KeyNameScreenState extends State<KeyNameScreen> with QuizRoundMixin {
                         child: SizedBox(
                           height: 180,
                           child: PianoKeyboard(
+                            // The key's name is the answer here.
+                            semanticNames: false,
                             keyColors: {
                               _target.midiNumber: _lastAnswer == null
                                   ? scheme.primaryContainer

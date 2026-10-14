@@ -23,6 +23,7 @@
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/tray/tray.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// The icon for a kind. Small and recognisable rather than a real thumbnail:
@@ -245,7 +246,7 @@ class _TrayChip extends StatelessWidget {
           right: -6,
           child: IconButton(
             key: Key('tray-remove-${item.id}'),
-            tooltip: 'Remove',
+            tooltip: AppLocalizations.of(context)!.dawRemoveClip,
             iconSize: 16,
             visualDensity: VisualDensity.compact,
             constraints: const BoxConstraints.tightFor(width: 28, height: 28),

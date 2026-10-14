@@ -125,6 +125,14 @@
   "comingSoon": "Coming soon!",
   "locked": "Locked",
   "advancedGameHint": "Advanced! Earn 2 stars in the other Cello Corner games first.",
+  "unlockHintProgress": "Keep playing {module} to unlock this — {have} of {need} done!",
+  "@unlockHintProgress": {
+    "placeholders": {
+      "module": {"type": "String"},
+      "have": {"type": "int"},
+      "need": {"type": "int"}
+    }
+  },
   "unlockHint": "Play {module} first to unlock this!",
   "@unlockHint": {
     "placeholders": {
@@ -2608,6 +2616,14 @@
   },
   "curPracticeLevel": "Practise this level",
   "curContinueHere": "Continue here",
+  "homeContinueTitle": "Keep going",
+  "homeContinueSubtitle": "{level} · next up: {topic}",
+  "@homeContinueSubtitle": {
+    "placeholders": {
+      "level": {"type": "String"},
+      "topic": {"type": "String"}
+    }
+  },
   "curPractiseWeakest": "Practise your weakest topic",
   "curTopicsHeader": "Topics",
   "curGuideNote": "A practice guide — topics arranged by grade, distilled from public school curricula.",
@@ -2974,6 +2990,398 @@
     }
   },
   "resultNewBest": "New best time! 🎉",
+  "learnersTitle": "Learners",
+  "learnerDefaultName": "Player 1",
+  "learnerAdd": "Add a learner",
+  "learnerNameHint": "Name",
+  "learnerRename": "Rename",
+  "learnerDelete": "Delete",
+  "learnerDeleteConfirm": "Delete {name} and all their progress? This cannot be undone.",
+  "@learnerDeleteConfirm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "learnerBackup": "Back up progress",
+  "learnerBackupSubtitle": "Save {name}’s stars and review data to a file",
+  "@learnerBackupSubtitle": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "learnerRestore": "Restore from a backup",
+  "learnerRestoreSubtitle": "Adds the backup as a new learner — nothing is overwritten",
+  "learnerRestored": "Restored {name}",
+  "@learnerRestored": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "learnerRestoreFailed": "That file is not a CometBeat progress backup",
+  "learnerBackupSaved": "Backup saved",
+  "learnerSwitchTitle": "Who is playing?",
+  "a11yPianoKey": "Piano key {n}",
+  "@a11yPianoKey": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "a11yFretCell": "String {string}, fret {fret}",
+  "@a11yFretCell": {
+    "placeholders": {
+      "string": {"type": "int"},
+      "fret": {"type": "int"}
+    }
+  },
+  "dawTrackFx": "Track FX",
+  "dawCopyChainToSelectedTracks": "Copy chain to selected tracks",
+  "dawCopyChainToAllTracks": "Copy chain to all tracks",
+  "dawApplyPresetToSelectedTracks": "Apply preset to selected tracks",
+  "dawAddEffectToSelectedTracks": "Add effect to selected tracks",
+  "dawApplyPreset": "Apply preset",
+  "dawAddEffect": "Add effect",
+  "dawNoTrackEffects": "No track effects",
+  "dawSavedChains": "Saved chains",
+  "dawCopyChain": "Copy chain",
+  "dawPasteChain": "Paste chain",
+  "dawStretchQuality": "Stretch quality",
+  "dawClipTempoQuestion": "What tempo is this clip in?",
+  "dawMasterFx": "Master FX",
+  "dawOutputBus": "Output bus",
+  "dawNoMasterEffects": "No master effects",
+  "dawBuses": "Buses",
+  "dawAddBus": "Add bus",
+  "dawRouteSelectedToMaster": "Route selected to Master",
+  "dawNoBuses": "No buses",
+  "dawMaster": "Master",
+  "dawRenameBus": "Rename bus",
+  "dawBusName": "Bus name",
+  "dawRouteSelectedToBus": "Route selected tracks to this bus",
+  "dawRemoveBus": "Remove bus",
+  "dawNoBusEffects": "No bus effects",
+  "dawRangeGain": "Range Gain",
+  "dawTrackAutomation": "Track Automation",
+  "dawMoveUp": "Move up",
+  "dawMoveDown": "Move down",
+  "dawRemoveEffect": "Remove effect",
+  "dawTakes": "Takes",
+  "dawStackAsTake": "Stack in as another take",
+  "dawStackAsTakeHint": "Moves it in — undoable",
+  "dawClipGainLabel": "clip gain",
+  "dawRemovePoint": "Remove point",
+  "dawCurve": "Curve",
+  "dawAuto": "Auto",
+  "dawEdit": "Edit",
+  "dawExportMix": "Mix",
+  "dawExportStems": "Stems",
+  "dawExportNotes": "Notes (MusicXML, MIDI, PDF…)",
+  "dawExportProjectFile": "Project file",
+  "dawExportMixTitle": "Export mix",
+  "dawWholeLength": "Whole length",
+  "dawMarkedRange": "Marked range",
+  "dawNormalizePeak": "Normalize peak",
+  "dawChooseFormat": "Choose format",
+  "dawClipFx": "Clip FX",
+  "dawCopyFxToSelectedClips": "Copy FX to selected clips",
+  "dawApplyPresetToSelectedClips": "Apply preset to selected clips",
+  "dawAddEffectToSelectedClips": "Add effect to selected clips",
+  "dawClipEnvelope": "Clip envelope",
+  "dawCrossfadeNext": "Crossfade next",
+  "dawTranscribeToNotation": "Transcribe → notation",
+  "dawTranscribing": "Transcribing the audio…",
+  "dawTranscribedClipAdded": "Added a notation clip transcribed from the audio.",
+  "dawLoudness": "Loudness",
+  "dawMarkIn": "Mark In",
+  "dawMarkOut": "Mark Out",
+  "dawPreset": "Preset",
+  "dawTrackAuto": "Track Auto",
+  "dawRangeFade": "Range Fade",
+  "dawUnmute": "Unmute",
+  "dawRangeMute": "Range Mute",
+  "dawRippleDelete": "Ripple delete",
+  "dawRippleInsert": "Ripple insert",
+  "dawConversionLossy": "This conversion loses something",
+  "instrEdTitle": "Edit Instrument",
+  "instrEdAdditiveVoice": "Additive voice",
+  "instrEdMidiKey": "MIDI key",
+  "instrEdNoZones": "No mapped zones",
+  "instrEdMappedNote": "Mapped Note",
+  "instrEdAddMapping": "Add key mapping",
+  "instrEdRemap": "Remap selected key",
+  "instrEdRemoveMapping": "Remove key mapping",
+  "instrEdLoopEditor": "Loop Editor",
+  "instrEdPingPongLoop": "Ping-Pong Loop",
+  "instrEdPingPongLoopHint": "Bounces forward and backward",
+  "instrEdSustainLoopEditor": "Sustain Loop Editor",
+  "instrEdPingPongSustain": "Ping-Pong Sustain",
+  "instrEdPingPongSustainHint": "Bounces while the note is held",
+  "instrEdBaseNote": "Base Note (Tuning)",
+  "instrEdSampleVolume": "Sample Volume",
+  "instrEdVolumeEnvelope": "Native Volume Envelope",
+  "instrEdEditVolumeEnvelope": "Edit native volume envelope",
+  "instrEdPanEnvelope": "Native Pan Envelope",
+  "instrEdEditPanEnvelope": "Edit native pan envelope",
+  "instrEdPitchEnvelope": "Native Pitch Envelope",
+  "instrEdEditPitchEnvelope": "Edit native pitch envelope",
+  "instrEdNewNoteAction": "New Note Action",
+  "instrEdActionCut": "Cut",
+  "instrEdActionContinue": "Continue",
+  "instrEdActionNoteOff": "Note Off",
+  "instrEdActionFade": "Fade",
+  "instrEdDuplicateCheck": "Duplicate Check",
+  "instrEdNone": "None",
+  "instrEdDupNote": "Note",
+  "instrEdDupSample": "Sample",
+  "instrEdDuplicateAction": "Duplicate Action",
+  "instrEdFadeout": "Fadeout",
+  "instrEdSustainPoint": "Sustain point",
+  "instrEdLoopStart": "Loop start",
+  "instrEdLoopEnd": "Loop end",
+  "instrEdMacros": "Instrument Macros",
+  "instrEdAddMacro": "Add macro",
+  "instrEdNoMacros": "No macros — add one to modulate the note per tick.",
+  "instrEdEditMacro": "Edit macro",
+  "instrEdRemoveMacro": "Remove macro",
+  "instrEdSteps": "Steps",
+  "instrEdTo": "to",
+  "instrEdReleaseAt": "Release at",
+  "dawExportMixDetail": "Everything, as one file",
+  "dawExportStemsDetail": "One file per lane",
+  "dawExportProjectDetail": "Reopen and keep editing",
+  "tabArticulateTechniques": "Articulate techniques",
+  "tabLoopBar": "Loop bar",
+  "tabSpeedTrainer": "Speed trainer",
+  "tabNoStaff": "No staff",
+  "tabGrandStaff": "Grand staff",
+  "tabInstrumentDefault": "Default",
+  "tabMeter": "Meter",
+  "tabTriplet": "Triplet",
+  "tabBuildChord": "Build a chord",
+  "trackerBeatsAndBars": "Beats and bars",
+  "trackerFollowPattern": "Follow the pattern",
+  "trackerPianoRollHint": "Higher notes to the right; time runs downward.",
+  "trackerOverviewHint": "Tap to jump there. Press and drag a block to move it.",
+  "exportSoundFile": "Sound file",
+  "exportSongRenderedDetail": "The whole song, rendered",
+  "exportTrackerModule": "Tracker module",
+  "exportTrackerModuleDetail": ".mod · .xm · .it · .s3m — what other trackers read",
+  "exportForNotationPrograms": "For notation programs",
+  "trackerSongOverview": "Song overview",
+  "trackerPianoRoll": "Piano roll",
+  "audioExportFormat": "Format",
+  "audioExportSampleRate": "Sample rate",
+  "audioExportConversion": "Conversion",
+  "audioExportBitDepth": "Bit depth",
+  "audioExportDither": "Dither",
+  "audioExportDitherHint": "Smoother fades (adds a faint noise floor)",
+  "audioExportBitrate": "Bitrate",
+  "audioExportMp3Encoder": "MP3 encoder",
+  "exportLoopRenderedDetail": "The loop, rendered",
+  "exportShareCodeDetail": "A short code someone else can paste in",
+  "errorLogTitle": "Error log",
+  "errorLogCount": "{count, plural, =0{Nothing recorded} =1{1 error recorded} other{{count} errors recorded}}",
+  "@errorLogCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "errorLogEmpty": "No errors recorded on this device.",
+  "errorLogCopy": "Copy all",
+  "errorLogCopied": "Error log copied",
+  "errorLogClear": "Clear the log",
+  "soundfontDownloadGm": "Download General MIDI",
+  "soundfontLoad": "Load SoundFont",
+  "soundfontOpenHint": "Open a .sf2 or .sf3 SoundFont to browse its instruments.",
+  "soundfontChooseFile": "Choose SoundFont file…",
+  "soundfontDownloadGmEllipsis": "Download General MIDI…",
+  "soundfontSearch": "Search instruments",
+  "soundfontChangeFile": "Change file",
+  "soundfontUse": "Use this sound",
+  "fxRackEmpty": "No effects — the sound passes through unchanged.",
+  "fxRackMoveEarlier": "Move earlier",
+  "fxRackMoveLater": "Move later",
+  "keymapEmpty": "No keyboard shortcuts on this screen yet.",
+  "trackerNoNotesOnChannel": "No notes on this channel yet.",
+  "exportNothingYet": "Nothing to export yet.",
+  "dawPartN": "Part {n}",
+  "@dawPartN": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "dawSummaryWhole": "Whole length: {summary}",
+  "@dawSummaryWhole": {
+    "placeholders": {
+      "summary": {"type": "String"}
+    }
+  },
+  "dawSummaryTrack": "This track: {summary}",
+  "@dawSummaryTrack": {
+    "placeholders": {
+      "summary": {"type": "String"}
+    }
+  },
+  "dawSummaryRange": "Marked range: {summary}",
+  "@dawSummaryRange": {
+    "placeholders": {
+      "summary": {"type": "String"}
+    }
+  },
+  "dawDurationValue": "Duration {value}",
+  "@dawDurationValue": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
+  "dawPeakValue": "Peak {value}",
+  "@dawPeakValue": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
+  "dawExportPeakValue": "Export peak {value}",
+  "@dawExportPeakValue": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
+  "dawWidthPercent": "{percent}% wide",
+  "@dawWidthPercent": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "dawNSelected": "{count} selected",
+  "@dawNSelected": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dawTranscribeFailed": "Could not transcribe: {error}",
+  "@dawTranscribeFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "dawFadeInCurve": "Fade In {curve}",
+  "@dawFadeInCurve": {
+    "placeholders": {
+      "curve": {"type": "String"}
+    }
+  },
+  "dawFadeOutCurve": "Fade Out {curve}",
+  "@dawFadeOutCurve": {
+    "placeholders": {
+      "curve": {"type": "String"}
+    }
+  },
+  "dawRoutedToBusN": "Routed to Bus {n}",
+  "@dawRoutedToBusN": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "dawRoutedTo": "Routed to {bus}",
+  "@dawRoutedTo": {
+    "placeholders": {
+      "bus": {"type": "String"}
+    }
+  },
+  "dawBusSends": "{count} bus sends",
+  "@dawBusSends": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dawBusN": "Bus {n}",
+  "@dawBusN": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "dawTrackCount": "{count} tracks",
+  "@dawTrackCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dawStartPercent": "Start {percent}%",
+  "@dawStartPercent": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "dawEndPercent": "End {percent}%",
+  "@dawEndPercent": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "dawTakeN": "Take {n}",
+  "@dawTakeN": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "dawEditAutomation": "Edit {label} automation",
+  "@dawEditAutomation": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  },
+  "dawPointCount": "{count} points",
+  "@dawPointCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dawPointN": "Point {n}",
+  "@dawPointN": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "dawAutomate": "Automate {label}",
+  "@dawAutomate": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  },
+  "instrEdDisabled": "Disabled",
+  "instrEdRemovePointN": "Remove point {n}",
+  "@instrEdRemovePointN": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "instrEdStepCount": "{count} steps",
+  "@instrEdStepCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "instrEdMacroTitle": "{target} macro",
+  "@instrEdMacroTitle": {
+    "placeholders": {
+      "target": {"type": "String"}
+    }
+  },
+  "instrEdMacroRangeHint": "Range {lo}…{hi} · drag a bar to set its value",
+  "@instrEdMacroRangeHint": {
+    "placeholders": {
+      "lo": {"type": "int"},
+      "hi": {"type": "int"}
+    }
+  },
+  "a11yStepCell": "{row}, step {step}",
+  "@a11yStepCell": {
+    "placeholders": {
+      "row": {"type": "String"},
+      "step": {"type": "int"}
+    }
+  },
+  "studioModeLabel": "Studio tools",
+  "studioModeSubtitle": "Show the score workshop, tracker, tab editor, Loop Studio, audio editor and projects on the home screen. For older kids and grown-ups.",
   "showTimerLabel": "Show your time",
   "soundOnLabel": "Sound",
   "soundOnSubtitle": "Notes, chords and sound effects (the microphone still works)",

@@ -18,6 +18,7 @@
 
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/features/games/composition/tracker_meter.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// One sounding note: rows `[startRow, endRow)` at [midi].
@@ -126,7 +127,7 @@ class TrackerPianoRoll extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            'No notes on this channel yet.',
+            AppLocalizations.of(context)!.trackerNoNotesOnChannel,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),

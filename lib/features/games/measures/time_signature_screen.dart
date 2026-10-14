@@ -38,7 +38,10 @@ const _advanced = <_Sig>[
 ];
 
 class TimeSignatureScreen extends StatefulWidget {
-  const TimeSignatureScreen({super.key});
+  const TimeSignatureScreen({super.key, this.reviewItemIds});
+
+  /// Due `measures.timesig.<id>` items to re-ask; null = a normal game.
+  final List<String>? reviewItemIds;
 
   @override
   State<TimeSignatureScreen> createState() => _TimeSignatureScreenState();
@@ -77,9 +80,23 @@ class _TimeSignatureScreenState extends State<TimeSignatureScreen>
     prepareRound();
   }
 
+  /// The signatures behind [TimeSignatureScreen.reviewItemIds]; null when
+  /// not reviewing.
+  late final List<_Sig>? _reviewSigs = () {
+    final ids = {
+      for (final id in widget.reviewItemIds ?? const <String>[])
+        id.split('.').last,
+    };
+    final sigs = [
+      for (final sig in [..._basic, ..._advanced])
+        if (ids.contains(sig.id)) sig,
+    ];
+    return sigs.isEmpty ? null : sigs;
+  }();
+
   @override
   void prepareRound() {
-    final pool = _wide ? [..._basic, ..._advanced] : _basic;
+    final pool = _reviewSigs ?? (_wide ? [..._basic, ..._advanced] : _basic);
     _sig = pool[_random.nextInt(pool.length)];
     _tapped = null;
     _lastAnswer = null;

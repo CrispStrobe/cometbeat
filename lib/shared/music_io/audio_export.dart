@@ -518,7 +518,7 @@ Future<void> showAudioExportSheet(
               ),
               const SizedBox(height: 12),
               _ExportChoiceRow<AudioExportFormat>(
-                label: 'Format',
+                label: AppLocalizations.of(context)!.audioExportFormat,
                 values: formats,
                 selected: selectedFormat,
                 labelFor: (format) => _formatLabel(l10n, format),
@@ -527,7 +527,7 @@ Future<void> showAudioExportSheet(
               ),
               const SizedBox(height: 10),
               _ExportChoiceRow<int>(
-                label: 'Sample rate',
+                label: AppLocalizations.of(context)!.audioExportSampleRate,
                 values: rateChoices,
                 selected: selectedRate,
                 labelFor: _sampleRateLabel,
@@ -540,7 +540,7 @@ Future<void> showAudioExportSheet(
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: _ExportChoiceRow<ResampleQuality>(
-                    label: 'Conversion',
+                    label: AppLocalizations.of(context)!.audioExportConversion,
                     values: ResampleQuality.values,
                     selected: selectedResampleQuality,
                     labelFor: (q) => switch (q) {
@@ -566,7 +566,7 @@ Future<void> showAudioExportSheet(
               const SizedBox(height: 10),
               if (!selectedFormat.isCompressed) ...[
                 _ExportChoiceRow<int>(
-                  label: 'Bit depth',
+                  label: AppLocalizations.of(context)!.audioExportBitDepth,
                   values: const [8, 16, 24, 32],
                   selected: selectedWavBitDepth,
                   labelFor: (depth) => '$depth-bit',
@@ -578,15 +578,15 @@ Future<void> showAudioExportSheet(
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
-                  title: const Text('Dither'),
+                  title: Text(AppLocalizations.of(context)!.audioExportDither),
                   subtitle:
-                      const Text('Smoother fades (adds a faint noise floor)'),
+                      Text(AppLocalizations.of(context)!.audioExportDitherHint),
                   value: selectedDither,
                   onChanged: (v) => setSheetState(() => selectedDither = v),
                 ),
               ] else
                 _ExportChoiceRow<int>(
-                  label: 'Bitrate',
+                  label: AppLocalizations.of(context)!.audioExportBitrate,
                   values: const [128, 192, 320],
                   selected: selectedBitrate,
                   labelFor: (bitrate) => '$bitrate kbps',
@@ -599,7 +599,7 @@ Future<void> showAudioExportSheet(
                   nativeAudioEncoder() != null) ...[
                 const SizedBox(height: 10),
                 _ExportChoiceRow<Mp3Encoder>(
-                  label: 'MP3 encoder',
+                  label: AppLocalizations.of(context)!.audioExportMp3Encoder,
                   values: Mp3Encoder.values,
                   selected: selectedMp3Encoder,
                   labelFor: (e) => e.label,
@@ -754,7 +754,7 @@ Future<void> showAudioStemsExportSheet(
               Text(l10n.audioExportStemsCount(sounding.length)),
               const SizedBox(height: 12),
               _ExportChoiceRow<AudioExportFormat>(
-                label: 'Format',
+                label: AppLocalizations.of(context)!.audioExportFormat,
                 values: formats,
                 selected: format,
                 labelFor: (f) => _formatLabel(l10n, f),
@@ -764,7 +764,7 @@ Future<void> showAudioStemsExportSheet(
                   nativeAudioEncoder() != null) ...[
                 const SizedBox(height: 8),
                 _ExportChoiceRow<Mp3Encoder>(
-                  label: 'MP3 encoder',
+                  label: AppLocalizations.of(context)!.audioExportMp3Encoder,
                   values: Mp3Encoder.values,
                   selected: mp3Encoder,
                   labelFor: (e) => e.label,

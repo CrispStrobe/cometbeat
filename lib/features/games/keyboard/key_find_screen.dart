@@ -27,7 +27,15 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:provider/provider.dart';
 
 class KeyFindScreen extends StatefulWidget {
-  const KeyFindScreen({super.key, this.clef = Clef.treble});
+  const KeyFindScreen({
+    super.key,
+    this.clef = Clef.treble,
+    this.reviewItemIds,
+  });
+
+  /// Due `keyboard.find.<note>` items to re-ask; null = a normal game. Items
+  /// this clef's keyboard cannot show are skipped.
+  final List<String>? reviewItemIds;
 
   /// Reading clef: treble (keyboard around middle C) or bass (two octaves down).
   final Clef clef;
@@ -108,8 +116,40 @@ class _KeyFindScreenState extends State<KeyFindScreen>
           Pitch(Step.e, alter: -1, octave: 5), // Eb5
         ];
 
+  /// The reviewable pitches: due items that match a note this screen can
+  /// show (a staff natural or one of its black-key targets). Null when not
+  /// reviewing, or when none of them fit.
+  late final List<Pitch>? _reviewTargets = () {
+    final due = {
+      for (final id in widget.reviewItemIds ?? const <String>[])
+        id.split('.').last,
+    };
+    if (due.isEmpty) return null;
+    String token(Pitch p) {
+      final acc = switch (p.alter) { 1 => '#', -1 => 'b', _ => '' };
+      return '${p.step.name}$acc${p.octave}';
+    }
+
+    final candidates = [
+      for (var i = 0; i < 9; i++) widget.clef.pitchAt(i),
+      ..._alteredTargets,
+    ];
+    final hits = [
+      for (final p in candidates)
+        if (due.contains(token(p))) p,
+    ];
+    return hits.isEmpty ? null : hits;
+  }();
+
   @override
   void prepareRound() {
+    final review = _reviewTargets;
+    if (review != null) {
+      _target = review[_random.nextInt(review.length)];
+      _tappedMidi = null;
+      _lastAnswer = null;
+      return;
+    }
     // Staff naturals (positions 0..8) — all inside the shown keys. At 3 stars,
     // every third round targets a black key (accidental!).
     final stars = context.read<ProgressService>().starsFor(progressId);

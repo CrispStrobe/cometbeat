@@ -1,132 +1,78 @@
 // lib/features/home/screens/home_screen.dart
 //
-// Module overview: one card per learning module from the registry.
-// Tapping an unlocked module will navigate to its game selection screen
-// (features/games, not yet implemented — shows a "coming soon" snackbar).
+// The home screen: the Continue card (the curriculum's next step), the review
+// button, and one card per learning module from the registry.
 
 import 'dart:async';
 
+import 'package:comet_beat/core/curriculum/curriculum.dart';
 import 'package:comet_beat/core/models/learning_module.dart';
+import 'package:comet_beat/core/models/module_unlock.dart';
 import 'package:comet_beat/core/services/debug_service.dart';
+import 'package:comet_beat/core/services/profile_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/project_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
-import 'package:comet_beat/core/tuning.dart';
-import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
+import 'package:comet_beat/features/curriculum/next_step.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/games/composition/loop_studio_screen.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
-import 'package:comet_beat/features/games/harmony/function_ear_screen.dart';
-import 'package:comet_beat/features/games/harmony/harmony_quiz_screen.dart';
-import 'package:comet_beat/features/games/note_reading/note_reading_quiz_screen.dart';
-import 'package:comet_beat/features/games/note_values/note_value_quiz_screen.dart';
-import 'package:comet_beat/features/games/scales/scale_detective_screen.dart';
 import 'package:comet_beat/features/games/screens/module_screen.dart';
 import 'package:comet_beat/features/progress/screens/progress_screen.dart';
+import 'package:comet_beat/features/recital/recital_screen.dart';
+import 'package:comet_beat/features/review/review_router.dart';
+import 'package:comet_beat/features/settings/screens/learners_card.dart';
 import 'package:comet_beat/features/settings/screens/settings_screen.dart';
 import 'package:comet_beat/features/textbook/textbook_screen.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/widgets/project_browser_sheet.dart';
 import 'package:comet_beat/shared/widgets/sound_toggle.dart';
-import 'package:crisp_notation/crisp_notation.dart' show Clef;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  /// Starts a review session over due items. Runners exist for the
-  /// note_values symbol items and the note_reading items (per clef);
-  /// per session, the biggest due bucket wins. Other skills join as
-  /// their review runners land.
-  void _startReview(BuildContext context) {
-    final sri = context.read<SriService>();
-
-    // Collect due items of the reviewable modules (one fetch per module;
-    // resetSessionFirst so the buckets are complete).
-    final symbolIds = sri
-        .getItemsForReview(
-          limit: 10,
-          moduleId: 'note_values',
-          resetSessionFirst: true,
-        )
-        .where((id) => id.startsWith('note_values.symbol.'))
-        .toList();
-    final readingIds = sri.getItemsForReview(
-      limit: 20,
-      moduleId: 'note_reading',
-      resetSessionFirst: true,
-    );
-    final treble = readingIds
-        .where((id) => id.startsWith('note_reading.treble.'))
-        .toList();
-    final bass =
-        readingIds.where((id) => id.startsWith('note_reading.bass.')).toList();
-    final tenor =
-        readingIds.where((id) => id.startsWith('note_reading.tenor.')).toList();
-    List<String> dueOf(String moduleId, String prefix) => sri
-        .getItemsForReview(
-          limit: 10,
-          moduleId: moduleId,
-          resetSessionFirst: true,
-        )
-        .where((id) => id.startsWith(prefix))
-        .toList();
-    final scaleSpots = dueOf('scales', 'scales.spot.');
-    final triads = dueOf('chords', 'chords.triad.');
-    final functions = dueOf('harmony', 'harmony.function.');
-    final hearFunctions = dueOf('harmony', 'harmony.hear.');
-
-    // Pick the biggest due bucket.
-    final buckets = <(int, Widget Function())>[
-      (symbolIds.length, () => NoteValueQuizScreen(reviewItemIds: symbolIds)),
-      (
-        treble.length,
-        () => NoteReadingQuizScreen(
-              clef: Clef.treble,
-              reviewItemIds: treble.take(10).toList(),
+  /// "Who is playing?" — one tap per learner.
+  Future<void> _switchLearner(
+    BuildContext context,
+    ProfileService profiles,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              title: Text(
+                l10n.learnerSwitchTitle,
+                style: Theme.of(sheet).textTheme.titleMedium,
+              ),
             ),
-      ),
-      (
-        bass.length,
-        () => NoteReadingQuizScreen(
-              clef: Clef.bass,
-              reviewItemIds: bass.take(10).toList(),
-            ),
-      ),
-      (
-        tenor.length,
-        () => NoteReadingQuizScreen(
-              clef: Clef.tenor,
-              reviewItemIds: tenor.take(10).toList(),
-            ),
-      ),
-      (
-        scaleSpots.length,
-        () => ScaleDetectiveScreen(reviewItemIds: scaleSpots),
-      ),
-      (triads.length, () => ChordQuizScreen(reviewItemIds: triads)),
-      (functions.length, () => HarmonyQuizScreen(reviewItemIds: functions)),
-      (
-        hearFunctions.length,
-        () => FunctionEarScreen(reviewItemIds: hearFunctions),
-      ),
-    ]..sort((a, b) => b.$1.compareTo(a.$1));
-    final runner = buckets.first.$1 > 0 ? buckets.first.$2() : null;
-
-    if (runner == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.comingSoon),
-          duration: const Duration(seconds: 1),
+            for (final profile in profiles.profiles)
+              ListTile(
+                key: Key('home-learner-${profile.id}'),
+                leading: Icon(
+                  profile.id == profiles.active.id
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(learnerDisplayName(l10n, profile)),
+                onTap: () {
+                  Navigator.of(sheet).pop();
+                  profiles.switchTo(profile.id);
+                },
+              ),
+          ],
         ),
-      );
-      return;
-    }
-
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => runner));
+      ),
+    );
   }
 
   @override
@@ -135,22 +81,26 @@ class HomeScreen extends StatelessWidget {
     final sri = context.watch<SriService>();
     final progress = context.watch<ProgressService>();
     final debugUnlockAll = context.watch<DebugService>().unlockAll;
+    final studioMode = context.watch<SettingsService>().studioMode;
+    final profiles = context.watch<ProfileService?>();
     final dueCount = sri.getAvailableReviewCount();
+    // What the review button opens (features/review/review_router.dart); null
+    // when nothing due can be reviewed, in which case there is no button.
+    final review = planReview(sri);
+    // The one-tap answer to "what should I do now?": the curriculum's
+    // recommended level, opening on its least-ready topic.
+    final next =
+        nextStep(kCurricula.first, progress.starsFor, sri.masteryUnder);
 
-    // Soft engagement gate: a module unlocks once the previous one has
-    // kModuleUnlockTracked SRI items (docs/PLAN.md). Debug mode opens all.
+    // The progression gate (core/models/module_unlock.dart). Debug mode opens
+    // everything.
     final breakdown = sri.getDetailedBreakdown();
-    int trackedIn(String moduleId) => (breakdown[moduleId] ?? const {})
-        .values
-        .fold(0, (sum, s) => sum + s.tracked);
-    final unlockedById = <String, bool>{};
-    for (var i = 0; i < kLearningModules.length; i++) {
-      final module = kLearningModules[i];
-      unlockedById[module.id] = debugUnlockAll ||
-          module.initiallyUnlocked ||
-          (i > 0 &&
-              trackedIn(kLearningModules[i - 1].id) >= kModuleUnlockTracked);
-    }
+    final gates = moduleUnlocks(
+      (moduleId) => (breakdown[moduleId] ?? const {})
+          .values
+          .fold(0, (sum, s) => sum + s.tracked),
+      unlockAll: debugUnlockAll,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -158,102 +108,106 @@ class HomeScreen extends StatelessWidget {
         centerTitle: true,
         actions: [
           const SoundToggle(),
-          // WS-W6 slice 1 — the projects browser. On the home bar rather than
-          // inside an authoring surface: a project spans all of them, so it
-          // does not belong to any one, and the alternative was editing four
-          // screens that other agents are live in.
-          IconButton(
-            key: const Key('home-projects'),
-            icon: const Icon(Icons.folder_open),
-            tooltip: l10n.projectBrowser,
-            onPressed: () => showProjectBrowserSheet(
-              context,
-              service: context.read<ProjectService>(),
+          // Studio tools — off by default on a new install (Settings ▸ Studio
+          // tools). Home is the learning app first.
+          if (studioMode) ...[
+            // WS-W6 slice 1 — the projects browser. On the home bar rather than
+            // inside an authoring surface: a project spans all of them, so it
+            // does not belong to any one, and the alternative was editing four
+            // screens that other agents are live in.
+            IconButton(
+              key: const Key('home-projects'),
+              icon: const Icon(Icons.folder_open),
+              tooltip: l10n.projectBrowser,
+              onPressed: () => showProjectBrowserSheet(
+                context,
+                service: context.read<ProjectService>(),
+              ),
             ),
-          ),
+            // Authoring: one menu exposes the five product modes. Legacy
+            // Perform/Drumkit/Transcribe screens remain internal integration
+            // surfaces while their workflows move into Loop Studio and Audio.
+            PopupMenuButton<int>(
+              icon: const Icon(Icons.piano),
+              tooltip: l10n.workshopTitle,
+              onSelected: (v) => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => switch (v) {
+                    1 => const AdvancedTrackerScreen(),
+                    2 => const TabWorkshopScreen(),
+                    3 => const LoopStudioScreen(),
+                    8 => const DawScreen(),
+                    _ => const CompositionWorkshopScreen(),
+                  },
+                ),
+              ),
+              itemBuilder: (ctx) => [
+                PopupMenuItem(
+                  value: 0,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit_note, size: 20),
+                      const SizedBox(width: 12),
+                      Text(l10n.workshopModeScore),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 1,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.grid_view, size: 20),
+                      const SizedBox(width: 12),
+                      Text(l10n.workshopModeTracker),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 2,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.straighten, size: 20),
+                      const SizedBox(width: 12),
+                      Text(l10n.workshopModeTab),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 3,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.queue_music, size: 20),
+                      const SizedBox(width: 12),
+                      Text(l10n.workshopModeLoopStudio),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 8,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.view_agenda, size: 20),
+                      const SizedBox(width: 12),
+                      Text(l10n.dawTitle),
+                    ],
+                  ),
+                ),
+                // WS-W5's project mixer used to sit here as a SIXTH entry beside
+                // the five authoring modes. It is not a mode: you mix while you
+                // arrange, and making it a separate destination meant leaving the
+                // thing you were mixing to move a fader. It is now an overlay
+                // inside Loop Studio and the Audio Editor
+                // (`showMixerConsoleSheet`), where the arrangement stays visible
+                // behind it.
+              ],
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.menu_book),
             tooltip: l10n.textbookTitle,
             onPressed: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const TextbookScreen())),
-          ),
-          // Authoring: one menu exposes the five product modes. Legacy
-          // Perform/Drumkit/Transcribe screens remain internal integration
-          // surfaces while their workflows move into Loop Studio and Audio.
-          PopupMenuButton<int>(
-            icon: const Icon(Icons.piano),
-            tooltip: l10n.workshopTitle,
-            onSelected: (v) => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => switch (v) {
-                  1 => const AdvancedTrackerScreen(),
-                  2 => const TabWorkshopScreen(),
-                  3 => const LoopStudioScreen(),
-                  8 => const DawScreen(),
-                  _ => const CompositionWorkshopScreen(),
-                },
-              ),
-            ),
-            itemBuilder: (ctx) => [
-              PopupMenuItem(
-                value: 0,
-                child: Row(
-                  children: [
-                    const Icon(Icons.edit_note, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.workshopModeScore),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 1,
-                child: Row(
-                  children: [
-                    const Icon(Icons.grid_view, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.workshopModeTracker),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 2,
-                child: Row(
-                  children: [
-                    const Icon(Icons.straighten, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.workshopModeTab),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 3,
-                child: Row(
-                  children: [
-                    const Icon(Icons.queue_music, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.workshopModeLoopStudio),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 8,
-                child: Row(
-                  children: [
-                    const Icon(Icons.view_agenda, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.dawTitle),
-                  ],
-                ),
-              ),
-              // WS-W5's project mixer used to sit here as a SIXTH entry beside
-              // the five authoring modes. It is not a mode: you mix while you
-              // arrange, and making it a separate destination meant leaving the
-              // thing you were mixing to move a fader. It is now an overlay
-              // inside Loop Studio and the Audio Editor
-              // (`showMixerConsoleSheet`), where the arrangement stays visible
-              // behind it.
-            ],
           ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -283,16 +237,29 @@ class HomeScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ),
+            // Only once there is someone to tell apart: a single-learner
+            // install never sees this.
+            if (profiles != null && profiles.profiles.length > 1)
+              Center(
+                child: ActionChip(
+                  key: const Key('home-learner'),
+                  avatar: const Icon(Icons.person, size: 18),
+                  label: Text(learnerDisplayName(l10n, profiles.active)),
+                  tooltip: l10n.learnerSwitchTitle,
+                  onPressed: () => _switchLearner(context, profiles),
+                ),
+              ),
             if (progress.currentStreak > 0)
               _StreakBar(progress: progress, l10n: l10n),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              child: dueCount > 0
+              child: dueCount > 0 && review != null
                   ? Center(
                       child: FilledButton.tonalIcon(
                         icon: const Icon(Icons.replay),
                         label: Text(l10n.dueForReview(dueCount)),
-                        onPressed: () => _startReview(context),
+                        onPressed: () =>
+                            Navigator.of(context).push(review.open(sri)),
                       ),
                     )
                   : Text(
@@ -301,6 +268,7 @@ class HomeScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
             ),
+            if (next != null) _ContinueCard(next: next, l10n: l10n),
             Expanded(
               child: GridView.builder(
                 padding: const EdgeInsets.all(16),
@@ -322,9 +290,7 @@ class HomeScreen extends StatelessWidget {
                   return _ModuleCard(
                     module: module,
                     l10n: l10n,
-                    unlocked: unlockedById[module.id] ?? true,
-                    previousModule:
-                        index > 0 ? kLearningModules[index - 1] : null,
+                    gate: gates[module.id]!,
                   );
                 },
               ),
@@ -387,6 +353,62 @@ class _DebugTapTitleState extends State<_DebugTapTitle> {
   }
 }
 
+/// The home screen's primary action: continue the curriculum where the child
+/// left off. Opens the recommended level as a short mixed session, least-ready
+/// topic first, with each new game's tutorial in front of it.
+class _ContinueCard extends StatelessWidget {
+  final NextStep next;
+  final AppLocalizations l10n;
+
+  const _ContinueCard({required this.next, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: Card(
+        key: const Key('home-continue'),
+        color: scheme.primaryContainer,
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading: Text(next.level.badge, style: const TextStyle(fontSize: 30)),
+          title: Text(
+            l10n.homeContinueTitle,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: scheme.onPrimaryContainer,
+                ),
+          ),
+          subtitle: Text(
+            l10n.homeContinueSubtitle(
+              next.level.name(l10n),
+              next.topic.title(l10n),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: scheme.onPrimaryContainer),
+          ),
+          trailing: Icon(
+            Icons.play_circle_fill,
+            size: 40,
+            color: scheme.primary,
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => RecitalScreen(
+                program: next.program,
+                title: l10n.homeContinueTitle,
+                showTutorials: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StreakBar extends StatelessWidget {
   final ProgressService progress;
   final AppLocalizations l10n;
@@ -401,45 +423,53 @@ class _StreakBar extends StatelessWidget {
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.local_fire_department,
-                color: Colors.deepOrange,
-                size: 20,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                l10n.streakDays(progress.currentStreak),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (final d in days)
-                Container(
-                  width: 12,
-                  height: 12,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: progress.practicedOn(d)
-                        ? Colors.deepOrange
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                  ),
+      // One announcement — "3-day streak" — instead of a flame and seven
+      // anonymous dots.
+      child: Semantics(
+        label: l10n.streakDays(progress.currentStreak),
+        excludeSemantics: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.local_fire_department,
+                  color: Colors.deepOrange,
+                  size: 20,
                 ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 6),
+                Text(
+                  l10n.streakDays(progress.currentStreak),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (final d in days)
+                  Container(
+                    width: 12,
+                    height: 12,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: progress.practicedOn(d)
+                          ? Colors.deepOrange
+                          : Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -448,116 +478,161 @@ class _StreakBar extends StatelessWidget {
 class _ModuleCard extends StatelessWidget {
   final LearningModule module;
   final AppLocalizations l10n;
-  final bool unlocked;
-  final LearningModule? previousModule;
+  final ModuleUnlock gate;
+
+  bool get unlocked => gate.unlocked;
 
   const _ModuleCard({
     required this.module,
     required this.l10n,
-    required this.unlocked,
-    required this.previousModule,
+    required this.gate,
   });
+
+  /// What to do about the lock — and, once the child has started on the
+  /// module before it, how far along they are.
+  String _lockedHint() {
+    final requires = gate.requires;
+    if (requires == null) return l10n.locked;
+    return gate.tracked == 0
+        ? l10n.unlockHint(requires.title(l10n))
+        : l10n.unlockHintProgress(
+            requires.title(l10n),
+            gate.tracked,
+            gate.needed,
+          );
+  }
+
+  /// Opens the module, or — locked — says what unlocks it.
+  void _open(BuildContext context) {
+    if (unlocked) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ModuleScreen(module: module)),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_lockedHint()),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          if (unlocked) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => ModuleScreen(module: module)),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  previousModule != null
-                      ? l10n.unlockHint(previousModule!.title(l10n))
-                      : l10n.locked,
-                ),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: module.color.withValues(
-                  alpha: unlocked ? 1.0 : 0.3,
-                ),
-                child: Icon(
-                  unlocked ? module.icon : Icons.lock,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                module.title(l10n),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: unlocked ? null : Colors.grey,
+      child: Semantics(
+        // One node per card: "Scales, <subtitle>", or — locked — the title
+        // plus what opens it. Without it a screen reader meets an unnamed lock
+        // and has to set off the snackbar to learn why.
+        button: true,
+        label: unlocked
+            ? '${module.title(l10n)}, ${module.subtitle(l10n)}'
+            : '${module.title(l10n)}, ${l10n.locked}. ${_lockedHint()}',
+        excludeSemantics: true,
+        onTap: () => _open(context),
+        child: InkWell(
+          onTap: () => _open(context),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // The lock wears its own progress: a ring that fills as the
+                // child plays the module before this one, so "locked" reads as
+                // "nearly there" rather than as a wall. Same footprint as the
+                // open avatar — the card is height-critical (see below).
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: module.color.withValues(
+                        alpha: unlocked ? 1.0 : 0.3,
+                      ),
+                      child: Icon(
+                        unlocked ? module.icon : Icons.lock,
+                        color: Colors.white,
+                        size: 28,
+                      ),
                     ),
-              ),
-              const SizedBox(height: 4),
-              // ⚠️ This used to be a plain `Flexible` + `maxLines: 2`, and the
-              // comment on it said the subtitle would "clip instead of
-              // overflowing". It does — but clipping a Text does NOT ellipsize
-              // it: `maxLines: 2` means the widget still LAYS OUT two lines, and
-              // when Flexible hands it room for one and a half, the Card's
-              // `Clip.antiAlias` slices the second line through the middle of
-              // the glyphs. On a 390-wide phone that reads as "Fill the measure
-              // so" simply cut off — no ellipsis, no indication there is more.
-              //
-              // It is invisible to `layout_audit_test` because nothing
-              // overflows: the text is clipped, which is exactly what the widget
-              // was asked to do. Only looking at it catches this.
-              //
-              // So ask for the number of lines that actually FIT, and let Text
-              // ellipsize within that. A title that wraps to two lines leaves
-              // room for one subtitle line; a short title leaves room for two.
-              Flexible(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final style =
-                        Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: unlocked ? null : Colors.grey,
-                            );
-                    // Measure a real line rather than guessing from fontSize:
-                    // `TextStyle.height` is usually null, so the true line box
-                    // comes from the font's own metrics.
-                    final probe = TextPainter(
-                      text: TextSpan(text: 'Xg', style: style),
-                      textDirection: Directionality.of(context),
-                      maxLines: 1,
-                    )..layout();
-                    final lines = constraints.maxHeight.isFinite
-                        ? (constraints.maxHeight / probe.height).floor()
-                        : 2;
-                    // No room for even ONE line: draw nothing. `maxLines: 1`
-                    // would not help — a one-line Text cannot be shorter than a
-                    // line, so it would be clipped through the glyphs again.
-                    // A missing subtitle reads as "this card has no subtitle";
-                    // a half-sliced one reads as broken.
-                    if (lines < 1) return const SizedBox.shrink();
-                    return Text(
-                      module.subtitle(l10n),
-                      style: style,
-                      maxLines: lines > 2 ? 2 : lines,
-                      overflow: TextOverflow.ellipsis,
-                    );
-                  },
+                    if (!unlocked)
+                      SizedBox(
+                        width: 52,
+                        height: 52,
+                        child: CircularProgressIndicator(
+                          key: Key('unlock-progress-${module.id}'),
+                          value: gate.fraction,
+                          strokeWidth: 4,
+                          color: module.color,
+                          backgroundColor: Colors.transparent,
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                Text(
+                  module.title(l10n),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: unlocked ? null : Colors.grey,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                // ⚠️ This used to be a plain `Flexible` + `maxLines: 2`, and the
+                // comment on it said the subtitle would "clip instead of
+                // overflowing". It does — but clipping a Text does NOT ellipsize
+                // it: `maxLines: 2` means the widget still LAYS OUT two lines, and
+                // when Flexible hands it room for one and a half, the Card's
+                // `Clip.antiAlias` slices the second line through the middle of
+                // the glyphs. On a 390-wide phone that reads as "Fill the measure
+                // so" simply cut off — no ellipsis, no indication there is more.
+                //
+                // It is invisible to `layout_audit_test` because nothing
+                // overflows: the text is clipped, which is exactly what the widget
+                // was asked to do. Only looking at it catches this.
+                //
+                // So ask for the number of lines that actually FIT, and let Text
+                // ellipsize within that. A title that wraps to two lines leaves
+                // room for one subtitle line; a short title leaves room for two.
+                Flexible(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final style =
+                          Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: unlocked ? null : Colors.grey,
+                              );
+                      // Measure a real line rather than guessing from fontSize:
+                      // `TextStyle.height` is usually null, so the true line box
+                      // comes from the font's own metrics.
+                      final probe = TextPainter(
+                        text: TextSpan(text: 'Xg', style: style),
+                        textDirection: Directionality.of(context),
+                        maxLines: 1,
+                      )..layout();
+                      final lines = constraints.maxHeight.isFinite
+                          ? (constraints.maxHeight / probe.height).floor()
+                          : 2;
+                      // No room for even ONE line: draw nothing. `maxLines: 1`
+                      // would not help — a one-line Text cannot be shorter than a
+                      // line, so it would be clipped through the glyphs again.
+                      // A missing subtitle reads as "this card has no subtitle";
+                      // a half-sliced one reads as broken.
+                      if (lines < 1) return const SizedBox.shrink();
+                      return Text(
+                        module.subtitle(l10n),
+                        style: style,
+                        maxLines: lines > 2 ? 2 : lines,
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

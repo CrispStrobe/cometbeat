@@ -52,4 +52,21 @@ void main() {
     expect(_game(tester).isFinished, isTrue);
     expect(sri.getDetailedBreakdown()['keyboard']!.keys, ['find']);
   });
+
+  testWidgets('a review asks only the due notes, and skips ones it cannot show',
+      (tester) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    await pumpGame(
+      tester,
+      const KeyFindScreen(
+        // G4 fits the treble keyboard; C2 does not and must be ignored.
+        reviewItemIds: ['keyboard.find.g4', 'keyboard.find.c2'],
+      ),
+      sri: sri,
+    );
+    for (var i = 0; i < 5 && !_game(tester).isFinished; i++) {
+      expect(_game(tester).targetMidi, 67);
+      await _answerCorrectly(tester);
+    }
+  });
 }

@@ -15,6 +15,7 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/tuning.dart';
 import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/features/games/tutorial_gate.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -34,9 +35,23 @@ List<GameInfo> buildRecitalProgram(BuildContext context) {
 }
 
 class RecitalScreen extends StatefulWidget {
-  const RecitalScreen({super.key, required this.program});
+  const RecitalScreen({
+    super.key,
+    required this.program,
+    this.title,
+    this.showTutorials = false,
+  });
 
   final List<GameInfo> program;
+
+  /// App-bar title; defaults to the recital's own.
+  final String? title;
+
+  /// Whether each piece opens through [gameRoute], so a game the child has
+  /// never seen introduces itself first. Off for a recital proper (a showcase
+  /// of known games); on for the home screen's Continue session, whose whole
+  /// point is the games the child has NOT done yet.
+  final bool showTutorials;
 
   @override
   State<RecitalScreen> createState() => _RecitalScreenState();
@@ -53,7 +68,9 @@ class _RecitalScreenState extends State<RecitalScreen> {
     // Plain route (no first-run tutorial): a recital is a showcase of games the
     // child already knows — tutorials belong on the module browse, not here.
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: game.builder),
+      widget.showTutorials
+          ? gameRoute(game)
+          : MaterialPageRoute<void>(builder: game.builder),
     );
     if (!mounted) return;
     setState(() => _performed.add(game.id));
@@ -85,7 +102,7 @@ class _RecitalScreenState extends State<RecitalScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.recitalTitle)),
+      appBar: AppBar(title: Text(widget.title ?? l10n.recitalTitle)),
       body: SafeArea(
         child: Column(
           children: [

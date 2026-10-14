@@ -7,6 +7,7 @@
 // Grouped by what the intent is FOR rather than alphabetically, because someone
 // opens this asking "how do I move around", not "what does Alt+PgDn do".
 
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/keymap/intents.dart';
 import 'package:comet_beat/shared/keymap/keymap.dart';
 import 'package:comet_beat/shared/keymap/keymap_service.dart';
@@ -80,19 +81,22 @@ class KeymapSheetBody extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text('Keyboard', style: theme.textTheme.titleMedium),
+              child: Text(
+                AppLocalizations.of(context)!.trackerKeyHelp,
+                style: theme.textTheme.titleMedium,
+              ),
             ),
             if (service != null && service!.isCustomised)
               TextButton(
                 onPressed: () => service!.reset(),
-                child: const Text('Reset'),
+                child: Text(AppLocalizations.of(context)!.chartTransposeReset),
               ),
           ],
         ),
         if (shown.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Text('No keyboard shortcuts on this screen yet.'),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(AppLocalizations.of(context)!.keymapEmpty),
           ),
         for (final group in AppIntentGroup.values)
           if (groups[group] case final intents? when intents.isNotEmpty) ...[
