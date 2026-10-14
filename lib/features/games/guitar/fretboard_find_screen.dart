@@ -25,7 +25,10 @@ import 'package:provider/provider.dart';
 const int _maxFret = 4;
 
 class FretboardFindScreen extends StatefulWidget {
-  const FretboardFindScreen({super.key});
+  const FretboardFindScreen({super.key, this.reviewItemIds});
+
+  /// SRI ids (`guitar.fret.pc<n>`) to re-ask instead of the usual rotation.
+  final List<String>? reviewItemIds;
 
   @override
   State<FretboardFindScreen> createState() => _FretboardFindScreenState();
@@ -59,8 +62,27 @@ class _FretboardFindScreenState extends State<FretboardFindScreen>
     prepareRound();
   }
 
+  /// The pitch classes behind [FretboardFindScreen.reviewItemIds], in a
+  /// fixed order; null when not reviewing.
+  late final List<int>? _reviewTargets = () {
+    final pcs = {
+      for (final id in widget.reviewItemIds ?? const <String>[])
+        if (RegExp(r'^guitar\.fret\.pc(\d+)$').firstMatch(id) case final m?)
+          if (int.parse(m.group(1)!) case final pc when pc < 12) pc,
+    }.toList();
+    return pcs.isEmpty ? null : pcs;
+  }();
+
   @override
   void prepareRound() {
+    final review = _reviewTargets;
+    if (review != null) {
+      _target = review[_round % review.length];
+      _round++;
+      _tapped = null;
+      _lastAnswer = null;
+      return;
+    }
     // Naturals-only for the first half, then all twelve — a difficulty ramp.
     // Round 0 lands on C (pitch class 0), keeping the rotation test-stable.
     final firstHalf = _round < totalRounds ~/ 2;

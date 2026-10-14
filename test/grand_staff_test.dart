@@ -53,4 +53,36 @@ void main() {
     expect(sri.getDetailedBreakdown()['keyboard']!.keys, ['grand']);
     await tester.pumpAndSettle();
   });
+
+  testWidgets('review mode re-asks the due note on its own staff', (
+    tester,
+  ) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => SettingsService()),
+          ChangeNotifierProvider<SriService>.value(value: sri),
+          Provider<AudioService>(create: (_) => AudioService()),
+          ChangeNotifierProvider(create: (_) => ProgressService()),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: [Locale('en'), Locale('de')],
+          home: GrandStaffReadScreen(reviewItemIds: ['keyboard.grand.f3']),
+        ),
+      ),
+    );
+    await tester.pump();
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.widgetWithText(FilledButton, 'F'));
+      await tester.pumpAndSettle();
+    }
+    expect(sri.totalTrackedItems, 1);
+  });
 }

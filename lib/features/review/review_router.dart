@@ -22,9 +22,11 @@ import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/features/games/cello/cello_string_quiz_screen.dart';
 import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
 import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/features/games/guitar/fretboard_find_screen.dart';
 import 'package:comet_beat/features/games/guitar/guitar_string_quiz_screen.dart';
 import 'package:comet_beat/features/games/harmony/function_ear_screen.dart';
 import 'package:comet_beat/features/games/harmony/harmony_quiz_screen.dart';
+import 'package:comet_beat/features/games/keyboard/grand_staff_read_screen.dart';
 import 'package:comet_beat/features/games/keyboard/key_find_screen.dart';
 import 'package:comet_beat/features/games/keyboard/key_name_screen.dart';
 import 'package:comet_beat/features/games/measures/meter_detective_screen.dart';
@@ -62,6 +64,8 @@ final Map<String, Widget Function(List<String> ids)> kReviewRunners = {
   'note_values.rhythm.': (ids) => RhythmTapScreen(reviewItemIds: ids),
   'guitar.string.': (ids) => GuitarStringQuizScreen(reviewItemIds: ids),
   'cello.string.': (ids) => CelloStringQuizScreen(reviewItemIds: ids),
+  'keyboard.grand.': (ids) => GrandStaffReadScreen(reviewItemIds: ids),
+  'guitar.fret.': (ids) => FretboardFindScreen(reviewItemIds: ids),
 };
 
 /// The game that drills each remaining skill, by SRI prefix → game id. A new
@@ -84,7 +88,6 @@ const Map<String, String> kReviewGameBySkill = {
   'composition.form.': 'form_read',
   'expression.hear.': 'charades',
   'guitar.capo.': 'capo_match',
-  'guitar.fret.': 'fretboard_find',
   'guitar.play_along': 'guitar_play_along',
   'guitar.power.': 'power_chord',
   'harmony.cadence.': 'cadence_workshop',
@@ -93,7 +96,6 @@ const Map<String, String> kReviewGameBySkill = {
   'harmony.roman.': 'roman_numeral',
   'keyboard.chord.': 'key_chord',
   'keyboard.ear.': 'key_ear',
-  'keyboard.grand.': 'grand_staff_read',
   'keyboard.melody.': 'key_melody',
   'keyboard.play_along': 'keyboard_play_along',
   'measures.accent.': 'strong_beat',

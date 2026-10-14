@@ -24,7 +24,11 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:provider/provider.dart';
 
 class GrandStaffReadScreen extends StatefulWidget {
-  const GrandStaffReadScreen({super.key});
+  const GrandStaffReadScreen({super.key, this.reviewItemIds});
+
+  /// SRI ids (`keyboard.grand.<step><octave>`) to re-ask instead of a random
+  /// note.
+  final List<String>? reviewItemIds;
 
   @override
   State<GrandStaffReadScreen> createState() => _GrandStaffReadScreenState();
@@ -55,8 +59,31 @@ class _GrandStaffReadScreenState extends State<GrandStaffReadScreen>
     prepareRound();
   }
 
+  /// The notes behind [GrandStaffReadScreen.reviewItemIds]; null when not
+  /// reviewing.
+  late final List<Pitch>? _reviewPitches = () {
+    final pitches = [
+      for (final id in widget.reviewItemIds ?? const <String>[])
+        if (RegExp(r'^keyboard\.grand\.([a-g])(-?\d+)$').firstMatch(id)
+            case final m?)
+          Pitch(
+            Step.values.byName(m.group(1)!),
+            octave: int.parse(m.group(2)!),
+          ),
+    ];
+    return pitches.isEmpty ? null : pitches;
+  }();
+
   @override
   void prepareRound() {
+    final review = _reviewPitches;
+    if (review != null) {
+      // A due note goes back on its own staff: middle C and up on the treble.
+      _target = review[_random.nextInt(review.length)];
+      _clef = _target.midiNumber >= 60 ? Clef.treble : Clef.bass;
+      _setOptions();
+      return;
+    }
     // 2+ stars widen each staff into the middle-C ledger region between them.
     final stars = context.read<ProgressService>().starsFor(progressId);
     _clef = _random.nextBool() ? Clef.treble : Clef.bass;
@@ -65,7 +92,11 @@ class _GrandStaffReadScreenState extends State<GrandStaffReadScreen>
     _target = stars >= 2
         ? _clef.pitchAt(-3 + _random.nextInt(13)) // -3..9
         : _clef.pitchAt(_random.nextInt(9)); // 0..8
+    _setOptions();
+  }
 
+  /// The target's letter plus three random other letters, shuffled.
+  void _setOptions() {
     final distractors = [...Step.values]
       ..remove(_target.step)
       ..shuffle(_random);

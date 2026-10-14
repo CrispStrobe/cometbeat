@@ -76,4 +76,23 @@ void main() {
     expect(sri.getDetailedBreakdown()['guitar']!.keys, contains('fret'));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('review mode asks only the due pitch classes', (tester) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 19));
+    await tester.pumpWidget(
+      _wrap(
+        // pc7 = G; pc40 is out of range and ignored.
+        const FretboardFindScreen(
+          reviewItemIds: ['guitar.fret.pc7', 'guitar.fret.pc40'],
+        ),
+        sri,
+      ),
+    );
+    await tester.pump();
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byType(OutlinedButton).at(_firstCellFor(Step.g)));
+      await tester.pumpAndSettle();
+    }
+    expect(sri.totalTrackedItems, 1);
+  });
 }
