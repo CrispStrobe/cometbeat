@@ -119,7 +119,9 @@ must be learned three times.
 
 > **STATUS, audited against the code 2026-07-28** (`origin/main` @ `3a018344`).
 > The Loop D1–D4 arc and the Audio swiss-army arc closed **12 of the 39** tasks
-> since this was written and narrowed three more; **27 remain open.** ✅ = shipped
+> since this was written and narrowed three more. **Markers re-checked against
+> HISTORY 2026-10-14:** only WS-W7 is still fully open; the 🔶 cards have a
+> shipped first slice and their remainder in PLAN.md. ✅ = shipped
 > and verified by symbol · 🔶 = narrowed, still open · ⬜ = open. The
 > canonical, per-task detail is the ladder in [PLAN.md](../PLAN.md); this file is
 > kept in step with it but is the *reasoning*, not the board.
@@ -131,7 +133,7 @@ must be learned three times.
 The highest-leverage work in this document. Build it first; the per-surface
 ladders in §4–§6 get materially cheaper afterwards.
 
-- ⬜ **WS-W1 — `Project`: one document, many track kinds.** A `Project` holds an
+- ✅ **WS-W1 — `Project`: one document, many track kinds.** *(Shipped — see HISTORY.)* A `Project` holds an
   ordered list of `ProjectTrack`s, each carrying a `kind` (audio · tracker ·
   loop · score · tab) plus its native document — *the existing document types,
   unchanged*. Not a new music model: a container. `daw_timeline.dart`'s
@@ -140,23 +142,23 @@ ladders in §4–§6 get materially cheaper afterwards.
   serialization thinking is done. Acceptance: a project with one track of every
   kind round-trips; opening it in any mode shows that mode's tracks editable and
   the others read-only-but-audible.
-- ⬜ **WS-W2 — `TransportService`: one clock.** Position, tempo map, loop range,
+- 🔶 **WS-W2 — `TransportService`: one clock.** *(Partly shipped — see PLAN.md.)* Position, tempo map, loop range,
   play/stop/record, count-in, metronome — a single `ChangeNotifier` every
   surface listens to. Today three clocks exist and none can follow another.
   Acceptance: pressing play in the Tracker moves the Loop Studio playhead.
-- ⬜ **WS-W3 — one transport bar widget.** `shared/widgets/transport_bar.dart`,
+- 🔶 **WS-W3 — one transport bar widget.** *(Partly shipped — see PLAN.md.)* `shared/widgets/transport_bar.dart`,
   driven by WS-W2, hosted identically by all three surfaces. Kills three
   divergent implementations. Pure UI once WS-W2 lands.
-- ⬜ **WS-W4 — one undo history.** Each service has its own stack
+- ✅ **WS-W4 — one undo history.** *(Shipped — see HISTORY.)* Each service has its own stack
   (`daw_service.dart:2553 _Snapshot`, `LoopStack`, tracker `_clipboard`
   history). One `UndoService` with per-track scoping; the surfaces push
   labelled entries. Acceptance: an edit in Loop Studio is undoable from the
   Audio Editor's history list, and the label says what it was.
-- ⬜ **WS-W5 — the mixer console.** One screen: a strip per project track (any
+- 🔶 **WS-W5 — the mixer console.** *(Partly shipped — see PLAN.md.)* One screen: a strip per project track (any
   kind) with level · pan · mute · solo · inserts (the shared `FxRack`) · sends ·
   meter. `daw_screen.dart` already has `_busMixerMatrix`, `_levelMeter` and the
   bus editor — this is a generalization of shipped code, not new DSP.
-- ⬜ **WS-W6 — the browser.** One left-side panel: projects · templates ·
+- 🔶 **WS-W6 — the browser.** *(Partly shipped — see PLAN.md.)* One left-side panel: projects · templates ·
   instruments (the shared Sound Library) · samples · FX presets (chain strings)
   · the licensed asset catalog. Drag from it onto any surface. This is where
   the 157-tile registry and the asset catalog finally meet the authoring modes.
@@ -178,18 +180,18 @@ The deepest editor we have, and the one closest to parity. Gaps are ergonomic
 and connective, not musical.
 
 ### T-UX
-- ⬜ **WS-T1 — eased playhead follow.** `_playFrac` already tracks sub-row
+- ✅ **WS-T1 — eased playhead follow.** *(Shipped — `followScrollOffset`; see HISTORY.)* `_playFrac` already tracks sub-row
   position; the follow scroll still `jumpTo`s per row. Ease it. (Carried over
   from `PLAN.md` §3.2 — small, and it is the difference between "a grid that
   jerks" and "a machine that runs".)
-- ⬜ **WS-T2 — pattern-matrix overview.** A block-per-pattern bird's-eye of the
+- ✅ **WS-T2 — pattern-matrix overview.** *(Shipped — see HISTORY.)* A block-per-pattern bird's-eye of the
   order list with drag-to-reorder, so a 64-pattern song is navigable.
-- ⬜ **WS-T3 — the keymap becomes shared.** The tracker's 33 key handlers are the
+- ✅ **WS-T3 — the keymap becomes shared.** *(Shipped — see HISTORY.)* The tracker's 33 key handlers are the
   app's best interaction work and they are trapped in one file. Extract to
   `shared/keymap/` with named intents (`transposeUp`, `blockCopy`,
   `toggleFollow`, …) so the Audio Editor and Loop Studio inherit them. A
   discoverable, printable, **rebindable** keymap sheet is the deliverable.
-- ⬜ **WS-T4 — a piano-roll view of a channel.** The tracker row grid is exact and
+- ✅ **WS-T4 — a piano-roll view of a channel.** *(Shipped — see HISTORY.)* The tracker row grid is exact and
   unapproachable; `StepGridView` is approachable and quantized. Neither is a
   continuous piano roll, and the app has none anywhere (`pianoRoll`: 0 hits).
   One channel, one roll, same document — the single biggest legibility win for
@@ -199,9 +201,9 @@ and connective, not musical.
 - ✅ **WS-T5 — per-channel FX rack.** `FxSpec` is mode-neutral; the tracker exposes
   only per-cell hex commands. Surface the shared rack on a channel's output
   (`AUDIO_EDITOR_SUITE.md` C7).
-- ⬜ **WS-T6 — pattern-level time signature / groove templates** beyond global
+- ✅ **WS-T6 — pattern-level time signature / groove templates** *(Shipped — see HISTORY.)* beyond global
   speed/tempo.
-- ⬜ **WS-T7 — record from the transport.** Live-record notes into a pattern from
+- ✅ **WS-T7 — record from the transport.** *(Shipped — see HISTORY.)* Live-record notes into a pattern from
   the on-screen keyboard or a hardware controller (see WS-X5), with quantize.
 
 ---
@@ -212,9 +214,9 @@ The most *approachable* surface and the least *equipped*. Under the Scratch
 model (auto-memory `cometbeat-audience-scratch-model`) the ceiling is the point.
 
 ### L-UX
-- ⬜ **WS-L1 — a keyboard at all.** Zero shortcuts today. Space = play, arrows =
+- ✅ **WS-L1 — a keyboard at all.** *(Shipped — see HISTORY.)* Zero shortcuts today. Space = play, arrows =
   navigate cells, digits = velocity, Cmd/Ctrl+D = duplicate. Inherits from WS-T3.
-- ⬜ **WS-L2 — zoom and a real timeline ruler.** No zoom exists. A 4-bar loop and a
+- 🔶 **WS-L2 — zoom and a real timeline ruler.** *(Partly shipped — see PLAN.md.)* No zoom exists. A 4-bar loop and a
   32-bar arrangement cannot both be legible at one scale.
 - ✅ **WS-L3 — show the session grid.** Tracks × scenes as a matrix. *The data
   already exists* (each scene stores a per-track variant); it is rendered as a
@@ -224,7 +226,7 @@ model (auto-memory `cometbeat-audience-scratch-model`) the ceiling is the point.
   while audio swaps at the loop seam, so correct musical timing reads as lag.
   Show the pending state. Small; it is what makes a performance surface feel
   professional.
-- 🔶 **WS-L5 — duplicate a PATTERN** (narrowed twice; see PLAN.md). A section
+- ✅ **WS-L5 — duplicate a PATTERN** *(shipped 2026-07-28; see HISTORY)* (narrowed twice; see PLAN.md). A section
   *is* a `GrooveScene`, so `_duplicateSection` already covers both; only the
   pattern half is open, and it needs a product decision first.
   "Copy A to B, change one thing" is how sequencer users work.
@@ -239,7 +241,7 @@ model (auto-memory `cometbeat-audience-scratch-model`) the ceiling is the point.
 - ✅ **WS-L8 — add / rename tracks.** `duplicateTrack` + `removeExtraTrack` ship;
   arbitrary add and rename do not. Decision **D1** on the board.
 - ✅ **WS-L9 — per-track swing.**
-- ⬜ **WS-L10 — audio tracks in the loop.** Today a Loop Studio track is symbolic
+- ✅ **WS-L10 — audio tracks in the loop.** *(Shipped — see HISTORY.)* Today a Loop Studio track is symbolic
   only. A recorded audio loop, tempo-matched, belongs here — and after WS-W1 it is
   the *same* clip type the Audio Editor holds.
 
@@ -250,17 +252,17 @@ model (auto-memory `cometbeat-audience-scratch-model`) the ceiling is the point.
 Engine-complete; the gaps are direct-manipulation and workflow.
 
 ### A-UX
-- ⬜ **WS-A1 — edge trim handles + fade handles on the clip.** Move works
+- ✅ **WS-A1 — edge trim handles + fade handles on the clip.** *(Shipped; see HISTORY.)* Move works
   (long-press-drag, cross-lane, snapped). Trim and fade do not — they are
   inspector round trips, and they are the two most-used gestures in any
   timeline.
 - ✅ **WS-A2 — ripple edit and time selection.** `daw_service.dart` has ripple
   primitives; the timeline has no time-range selection to apply them to. Select
   a span across tracks → delete/insert/silence, everything after moves.
-- ⬜ **WS-A3 — the keymap** (inherits WS-T3): 4 shortcuts today for a surface that
+- ✅ **WS-A3 — the keymap** *(Shipped — see HISTORY.)* (inherits WS-T3): 4 shortcuts today for a surface that
   lives on shortcuts.
 - ✅ **WS-A4 — clip groups / linked clips, and nudge by grid or ms.**
-- ⬜ **WS-A5 — loudness metering as a first-class view.** `crisp_dsp/loudness.dart`
+- ✅ **WS-A5 — loudness metering as a first-class view.** *(Shipped; see HISTORY.)* `crisp_dsp/loudness.dart`
   computes LUFS and the CLI reports it; the GUI does not show integrated /
   short-term / momentary, true-peak, or a correlation meter.
 
@@ -268,7 +270,7 @@ Engine-complete; the gaps are direct-manipulation and workflow.
 - ✅ **WS-A6 — take lanes and comping.** Record several passes, choose per phrase.
   `findPhrases` already finds the phrase boundaries. Zero matches for `takeLane`
   today.
-- ⬜ **WS-A7 — clip warp / tempo-match.** Time-stretch exists as an effect; a clip
+- ✅ **WS-A7 — clip warp / tempo-match.** *(Shipped — see HISTORY.)* Time-stretch exists as an effect; a clip
   cannot *follow the project tempo map*. With WS-W2's tempo map this is a clip flag
   plus a render-time stretch factor.
 - ✅ **WS-A8 — per-clip gain envelope**, distinct from lane automation.
@@ -282,25 +284,25 @@ Engine-complete; the gaps are direct-manipulation and workflow.
 The conversion matrix is built and honest. What is missing is *liveness* and
 *reach*.
 
-- ⬜ **WS-X1 — live links, not copies.** After WS-W1, "Open in Tracker" on a project
+- ✅ **WS-X1 — live links, not copies.** *(Shipped — see HISTORY.)* After WS-W1, "Open in Tracker" on a project
   track should open **that track**, not a duplicate — edits land in the project.
   Keep `ProjectBridge`'s loss report as the gate for a *kind change*; a same-kind
   open needs no conversion at all. This is the single change that turns five
   editors into one workstation.
-- ⬜ **WS-X2 — drag between surfaces.** Drag a tracker pattern onto the timeline;
+- ✅ **WS-X2 — drag between surfaces.** *(Shipped — see HISTORY.)* Drag a tracker pattern onto the timeline;
   drag a loop track into the Tab editor; drag an instrument from the browser
   onto any track. One `DragTarget` protocol carrying `(kind, document)`, with
   the loss report shown on drop when the kinds differ.
-- 🔶 **WS-X3 — the FX rack in every mode** (`AUDIO_EDITOR_SUITE.md` C7). The model
+- ✅ **WS-X3 — the FX rack in every mode** *(shipped 2026-07-29; see HISTORY)* (`AUDIO_EDITOR_SUITE.md` C7). The model
   is already mode-neutral; Tracker/Loop/Tab/Score simply do not expose it. The
   chain string is the interchange format, so a chain travels with the track.
 - ✅ **WS-X4 — lane-level send** (C6). You can send a clip somewhere; not a lane.
-- ⬜ **WS-X5 — hardware and virtual controllers.** No MIDI input exists
+- 🔶 **WS-X5 — hardware and virtual controllers.** *(Partly shipped — see PLAN.md.)* No MIDI input exists
   (`MidiDevice`: 0 hits). A MIDI-in seam feeding *any* surface's record path —
   tracker pattern, loop track, score, timeline — plus a shared on-screen
   keyboard/pad widget for platforms without one. Prerequisite for WS-T7 and for
   real-time play (D-RT).
-- ⬜ **WS-X6 — one export sheet.** Every mode exports differently. One sheet:
+- ✅ **WS-X6 — one export sheet.** *(Shipped — see HISTORY.)* Every mode exports differently. One sheet:
   stems · master · symbolic (MusicXML/MIDI/module) · project archive · share
   token, with the codec matrix already in `AUDIO_CODEC_MATRIX.md`.
 

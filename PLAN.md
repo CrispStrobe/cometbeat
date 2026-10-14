@@ -1697,9 +1697,10 @@ prefix.
 
 ### Cheap wins — no phase, no dependency, pull any time
 
-**WS-A1** (clip trim/fade handles) · **WS-T1** (eased playhead follow) ·
-**WS-A5** (loudness view) · **WS-L5** (duplicate a scene or a pattern) ·
-**WS-X3** (the rack in Score, the last mode without one).
+*Empty as of 2026-10-14.* The five listed here (WS-A1 clip handles, WS-T1
+eased follow, WS-A5 loudness view, WS-L5 duplicate a pattern, WS-X3 the rack in
+Score) had all shipped by 2026-07-29 — see HISTORY — and are now marked so in
+`docs/WORKSTATION_PARITY.md`.
 
 *(WS-L3, WS-L4 and WS-L7 were on this list and all three shipped in the D1–D4
 arc — which is the argument for the list.)*
