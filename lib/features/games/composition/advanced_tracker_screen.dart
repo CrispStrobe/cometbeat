@@ -99,6 +99,7 @@ import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
+import 'package:comet_beat/features/games/composition/tracker_field_entry.dart';
 import 'package:comet_beat/features/games/composition/tracker_meter.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/composition/tracker_piano_roll.dart';
@@ -952,26 +953,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   Int16List? _scopePcm;
   bool _scopeDirty = true;
 
-  /// Two-digit hex volume entry (FT2's 00–40 volume column): the accumulator and
-  /// how many digits have been typed in the current cell (resets on a move).
-  int _volAccum = 0;
-  int _volDigits = 0;
-
-  /// In-grid effect entry: cmd nibble then two param nibbles (resets on a move).
-  int _fxCmd = 0;
-  int _fxParam = 0;
-  int _fxDigits = 0;
-
-  /// Two-digit DECIMAL instrument entry (the FT2 instrument column, a 1-based
-  /// pool index; 0 = channel default): accumulator + digits typed (resets on a
-  /// move).
-  int _instAccum = 0;
-  int _instDigits = 0;
-
-  /// Pending state for note-name entry ("F" then "2"): the note's semitone and
-  /// whether a sharp was typed, awaiting the octave digit. Null = nothing armed.
-  int? _pendingSemi;
-  bool _pendingSharp = false;
+  /// What has been typed into the cursor cell's columns so far — hex volume,
+  /// effect, decimal instrument, and the armed note name
+  /// (tracker_field_entry.dart).
+  final _entry = TrackerFieldEntry();
 
   /// Show the computer-key hints near the on-screen piano.
   bool _showKeyHints = false;
@@ -2110,9 +2095,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   /// Move the cursor and drop any selection (a plain move / click).
   void _moveCursorClearing(int channel, int row) {
-    _resetVolEntry();
-    _resetFxEntry();
-    _resetInstEntry();
+    _entry.resetColumns();
     setState(() {
       _cursorChannel = channel.clamp(0, _song.channelCount - 1);
       _cursorRow = row.clamp(0, _song.rows - 1);
@@ -2125,9 +2108,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// Extend the selection to (channel,row): arm the anchor at the current cursor
   /// if none, then move the cursor to the new corner.
   void _extendTo(int channel, int row) {
-    _resetVolEntry();
-    _resetFxEntry();
-    _resetInstEntry();
+    _entry.resetColumns();
     setState(() {
       _anchorChannel ??= _cursorChannel;
       _anchorRow ??= _cursorRow;
@@ -2448,34 +2429,15 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   // --- Keyboard ---
 
-  void _resetVolEntry() {
-    _volAccum = 0;
-    _volDigits = 0;
-  }
-
-  void _resetFxEntry() {
-    _fxCmd = 0;
-    _fxParam = 0;
-    _fxDigits = 0;
-  }
-
-  void _resetInstEntry() {
-    _instAccum = 0;
-    _instDigits = 0;
-  }
-
   /// Feeds one decimal digit into the per-cell instrument column (a 1-based
   /// pool index; value clamps to the pool size, 0 = channel default). No-op on
   /// a cell without a note — the instrument column belongs to a note.
   void _enterInstrumentDigit(int d) {
     if (_song.engine.cellAt(_cursorChannel, _cursorRow).midi == null) return;
     _pushUndo();
-    final raw = _instDigits == 0 ? d : _instAccum * 10 + d;
-    _instAccum = raw.clamp(0, _song.instruments.length);
-    _instDigits = (_instDigits + 1) % 2;
+    final index = _entry.typeInstrument(d, poolSize: _song.instruments.length);
     setState(
-      () => _song.engine
-          .setCellInstrument(_cursorChannel, _cursorRow, _instAccum),
+      () => _song.engine.setCellInstrument(_cursorChannel, _cursorRow, index),
     );
     _syncPlayback();
   }
@@ -2484,17 +2446,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// command nibble, the next two build the parameter byte (resets after 3 or on
   /// a move). Applies progressively so it builds visibly.
   void _enterEffectHex(int hex) {
-    switch (_fxDigits) {
-      case 0:
-        _fxCmd = hex;
-        _fxParam = 0;
-      case 1:
-        _fxParam = hex;
-      default:
-        _fxParam = (_fxParam * 16 + hex) & 0xFF;
-    }
-    _fxDigits = (_fxDigits + 1) % 3;
-    _setCellCommand(_cursorChannel, _cursorRow, _fxCmd, _fxParam);
+    final fx = _entry.typeEffect(hex);
+    _setCellCommand(_cursorChannel, _cursorRow, fx.command, fx.param);
   }
 
   /// Feeds one hex digit into the FT2 volume column (high nibble then low →
@@ -2502,9 +2455,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void _enterVolumeHex(int hex) {
     if (_song.engine.cellAt(_cursorChannel, _cursorRow).midi == null) return;
     _pushUndo();
-    _volAccum = (_volDigits == 0 ? hex : (_volAccum * 16 + hex)).clamp(0, 64);
-    _volDigits = (_volDigits + 1) % 2;
-    final v = _volAccum / 64.0;
+    final v = _entry.typeVolume(hex) / 64.0;
     setState(
       () => _song.engine
           .setCellVolume(_cursorChannel, _cursorRow, v >= 0.999 ? null : v),
@@ -2523,9 +2474,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           ? (_field.index - 1 + vals.length) % vals.length
           : (_field.index + 1) % vals.length;
       setState(() => _field = vals[next]);
-      _resetVolEntry();
-      _resetFxEntry();
-      _resetInstEntry();
+      _entry.resetColumns();
       return KeyEventResult.handled;
     }
     if (_field == _CellField.volume) {
@@ -2548,7 +2497,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       // Backspace/Delete clears the effect column (leaving the note).
       if (key == LogicalKeyboardKey.backspace ||
           key == LogicalKeyboardKey.delete) {
-        _resetFxEntry();
+        _entry.resetEffect();
         _setCellCommand(_cursorChannel, _cursorRow, 0, 0);
         return KeyEventResult.handled;
       }
@@ -2566,7 +2515,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       // Backspace/Delete resets the cell to the channel default voice.
       if (key == LogicalKeyboardKey.backspace ||
           key == LogicalKeyboardKey.delete) {
-        _resetInstEntry();
+        _entry.resetInstrument();
         setState(
           () => _song.engine.setCellInstrument(_cursorChannel, _cursorRow, 0),
         );
@@ -2785,29 +2734,20 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     final ch = event.character?.toLowerCase();
     if (ch == null) return null;
     if (_kLetterSemitone.containsKey(ch)) {
-      setState(() {
-        _pendingSemi = _kLetterSemitone[ch];
-        _pendingSharp = false;
-      });
+      setState(() => _entry.armNote(_kLetterSemitone[ch]!));
       return KeyEventResult.handled;
     }
     if (ch == '#' || ch == '+') {
-      if (_pendingSemi != null) setState(() => _pendingSharp = true);
+      if (_entry.noteArmed) setState(_entry.sharpen);
       return KeyEventResult.handled;
     }
     if (ch.length == 1 &&
         ch.codeUnitAt(0) >= 0x30 &&
         ch.codeUnitAt(0) <= 0x39) {
-      if (_pendingSemi != null) {
-        final octave = int.parse(ch);
-        final midi =
-            ((octave + 1) * 12 + _pendingSemi! + (_pendingSharp ? 1 : 0))
-                .clamp(0, 127);
+      final midi = _entry.commitOctave(int.parse(ch));
+      if (midi != null) {
         _enterNoteAtCursor(midi);
-        setState(() {
-          _pendingSemi = null;
-          _pendingSharp = false;
-        });
+        setState(() {}); // the armed label clears
       }
       return KeyEventResult.handled;
     }
@@ -2815,9 +2755,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   }
 
   /// The armed note-name entry as a label ("F#…"), or empty when nothing armed.
-  String get _pendingLabel => _pendingSemi == null
-      ? ''
-      : '${_kNoteNames[(_pendingSemi! + (_pendingSharp ? 1 : 0)) % 12]}…';
+  String get _pendingLabel => switch (_entry.armedPitchClass) {
+        final pc? => '${_kNoteNames[pc]}…',
+        null => '',
+      };
 
   // --- Transport (Play / Pause / Stop / Back / Forward — real-tracker set) ---
 
@@ -6849,7 +6790,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                             onSelectionChanged: (s) {
                               setState(() {
                                 _entryMode = s.first;
-                                _pendingSemi = null;
+                                _entry.cancelNote();
                               });
                               refresh();
                             },
