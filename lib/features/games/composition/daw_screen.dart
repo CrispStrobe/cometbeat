@@ -62,6 +62,7 @@ import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/tray/tray.dart';
 import 'package:comet_beat/features/games/composition/automation_curve_editor.dart';
 import 'package:comet_beat/features/games/composition/daw_help_sheet.dart';
+import 'package:comet_beat/features/games/composition/daw_marked_range.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart'
     show grooveParts;
 import 'package:comet_beat/features/games/composition/mixer_console_screen.dart'
@@ -438,8 +439,9 @@ class _DawScreenState extends State<DawScreen>
   final Set<int> _selectedTracks = <int>{};
   final Set<DawClipTarget> _selectedClips = <DawClipTarget>{};
   final List<DawClipCopy> _clipClipboard = <DawClipCopy>[];
-  double? _rangeInMs;
-  double? _rangeOutMs;
+
+  /// Mark In / Mark Out (daw_marked_range.dart).
+  final _range = DawMarkedRange();
 
   // Playhead: driven by the Ticker's own elapsed (NOT wall-clock), so it stays
   // in step with the baked audio AND is deterministic under `tester.pump`.

@@ -1205,37 +1205,21 @@ extension _DawScreenMixing on _DawScreenState {
     if (_playing) play();
   }
 
-  bool get _hasFxRange =>
-      _rangeInMs != null &&
-      _rangeOutMs != null &&
-      (_rangeInMs! - _rangeOutMs!).abs() > 5;
+  bool get _hasFxRange => _range.isSet;
 
-  double get _rangeStartMs => math.min(_rangeInMs ?? 0, _rangeOutMs ?? 0);
-  double get _rangeEndMs => math.max(_rangeInMs ?? 0, _rangeOutMs ?? 0);
+  double get _rangeStartMs => _range.startMs;
+  double get _rangeEndMs => _range.endMs;
 
-  String _rangeLabel() {
-    String seconds(double ms) => (ms / 1000).toStringAsFixed(2);
-    if (!_hasFxRange) {
-      final inText = _rangeInMs == null ? '--' : seconds(_rangeInMs!);
-      final outText = _rangeOutMs == null ? '--' : seconds(_rangeOutMs!);
-      return 'Range $inText-$outText s';
-    }
-    return 'Range ${seconds(_rangeStartMs)}-${seconds(_rangeEndMs)} s';
-  }
+  String _rangeLabel() => _range.label();
 
-  List<int> _rangeTargetTracks() {
-    final selected = [
-      for (final i in _selectedTracks)
-        if (i >= 0 && i < _daw.timeline.tracks.length) i,
-    ]..sort();
-    return selected.isNotEmpty
-        ? selected
-        : Iterable<int>.generate(_daw.timeline.tracks.length).toList();
-  }
+  List<int> _rangeTargetTracks() => DawMarkedRange.targetTracks(
+        _selectedTracks,
+        _daw.timeline.tracks.length,
+      );
 
-  void _markRangeIn() => _rebuild(() => _rangeInMs = playheadMs);
+  void _markRangeIn() => _rebuild(() => _range.markIn(playheadMs));
 
-  void _markRangeOut() => _rebuild(() => _rangeOutMs = playheadMs);
+  void _markRangeOut() => _rebuild(() => _range.markOut(playheadMs));
 
   void _addRangeEffect(DawClipEffectType type) {
     if (!_hasFxRange) return;
