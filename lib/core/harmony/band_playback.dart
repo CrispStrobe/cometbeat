@@ -72,6 +72,14 @@ class BandPerformance {
   }
 }
 
+/// The bar sounding at [ms] in [bars], or null.
+BandBarSpan? bandBarAt(List<BandBarSpan> bars, int ms) {
+  for (final span in bars) {
+    if (ms >= span.startMs && ms < span.endMs) return span;
+  }
+  return null;
+}
+
 /// How loud each role sits. Authored gains, not per-combination normalisation:
 /// `mixStemsFloat` is unit-peak per stem × gain, so these ARE the balance.
 class BandMix {

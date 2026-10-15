@@ -10172,6 +10172,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get chartSwing => 'Swing';
 
   @override
+  String get chartLoopSection => 'Diesen Teil wiederholen';
+
+  @override
+  String get chartCountIn => 'Einzähltakte';
+
+  @override
+  String get chartCountInClick => 'Einzählen mit Klick';
+
+  @override
+  String get chartClick => 'Klick';
+
+  @override
+  String get chartClickOff => 'Aus';
+
+  @override
+  String get chartClickEveryBeat => 'Jeder Schlag';
+
+  @override
+  String get chartClickDownbeat => 'Nur die Eins';
+
+  @override
   String get chartStyle => 'Stil';
 
   @override

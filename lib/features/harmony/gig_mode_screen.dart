@@ -20,11 +20,11 @@ import 'dart:async';
 import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/setlist.dart';
-import 'package:comet_beat/core/harmony/streamed_band.dart';
 import 'package:comet_beat/core/harmony/style_library.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
+import 'package:comet_beat/features/harmony/streamed_band.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -149,6 +149,7 @@ class _GigModeScreenState extends State<GigModeScreen> {
   Timer? _ticker;
   Stopwatch? _clock;
   final _streamed = StreamedBand();
+  bool _streaming = false;
   int _songMs = 0;
 
   @override
@@ -177,14 +178,16 @@ class _GigModeScreenState extends State<GigModeScreen> {
     // BB-T1: streamed where the platform can, so the next song of the set
     // starts in about a second rather than after a whole render.
     _stopClock();
-    final run = await _streamed.play(chart, style: styleFor(chart.styleId));
+    final streamed = await _streamed.play(
+      chart,
+      BandSettings(style: styleFor(chart.styleId)),
+    );
     if (!mounted) return;
-    if (run != null) {
+    if (streamed) {
       setState(() {
         _playing = true;
-        _songMs = run.totalMs;
+        _streaming = true;
       });
-      _clock = run.clock;
       _ticker =
           Timer.periodic(const Duration(milliseconds: 100), (_) => _tick());
       return;
@@ -210,15 +213,22 @@ class _GigModeScreenState extends State<GigModeScreen> {
 
   Future<void> _stop() async {
     _stopClock();
+    _streaming = false;
     unawaited(_streamed.stop());
     if (mounted) setState(() => _playing = false);
     await widget.audio?.stop();
   }
 
   void _tick() {
-    final clock = _clock;
-    if (clock == null) return;
-    if (clock.elapsedMilliseconds < _songMs) return;
+    if (_streaming) {
+      _streamed.sync();
+      if (!_streamed.finished) return;
+      _streaming = false;
+    } else {
+      final clock = _clock;
+      if (clock == null) return;
+      if (clock.elapsedMilliseconds < _songMs) return;
+    }
 
     // The song ended.
     _stopClock();

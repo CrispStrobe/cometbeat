@@ -10110,6 +10110,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartSwing => 'Swing';
 
   @override
+  String get chartLoopSection => 'Loop this section';
+
+  @override
+  String get chartCountIn => 'Count-in bars';
+
+  @override
+  String get chartCountInClick => 'Click count-in';
+
+  @override
+  String get chartClick => 'Click';
+
+  @override
+  String get chartClickOff => 'Off';
+
+  @override
+  String get chartClickEveryBeat => 'Every beat';
+
+  @override
+  String get chartClickDownbeat => 'Downbeat';
+
+  @override
   String get chartStyle => 'Style';
 
   @override

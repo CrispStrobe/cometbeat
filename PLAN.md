@@ -1912,7 +1912,14 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     a cache-hit counter. Window boundaries are click-free — assert continuity at
     the seam sample, not by ear.
 
-- ⬜ **BB-T2 — the transport a player actually needs.** `M`
+- ✅ **BB-T2 — the transport a player actually needs.** `M` · **SHIPPED
+  2026-10-15** (see HISTORY): `chart_transport.dart` bar queue over
+  `TransportService` (headless test: play → loop wrap → jump → tempo change →
+  stop through `advance`); 1–2 bar count-in, kit or click; click off / every
+  beat / downbeat; loop a section (button) or any bar range N times (API); tap
+  a bar to jump on the next bar line; tempo slider live; per-role mix from
+  BB-U3. The UI loops a section until cleared — a repeat-N picker is API-only.
+  *(original card below)*
   - **Goal.** Count-in, loop a section, jump, mute a role — all *during*
     playback.
   - **Depends.** BB-T1. **Files.** New

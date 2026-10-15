@@ -1,4 +1,4 @@
-import 'package:comet_beat/core/harmony/streamed_band.dart';
+import 'package:comet_beat/features/harmony/streamed_band.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// BB-U3 — the live per-role mix rule.

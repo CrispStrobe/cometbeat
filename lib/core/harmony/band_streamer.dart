@@ -25,8 +25,12 @@ typedef WindowRenderer = Future<BandStems> Function(
 );
 
 /// Renders window [index] on a background isolate.
-Future<BandStems> renderWindowInIsolate(PreparedBand band, int index) =>
-    Isolate.run(() => renderWindowStems(band, index));
+Future<BandStems> renderWindowInIsolate(
+  PreparedBand band,
+  int index, {
+  WindowPart part = WindowPart.all,
+}) =>
+    Isolate.run(() => renderWindowStems(band, index, part: part));
 
 /// Plans and prepares [chart]'s band on a background isolate — the part of
 /// Play that has to finish before the first window can render. Null when
@@ -38,13 +42,23 @@ Future<PreparedBand?> prepareBandInIsolate(
   int sampleRate = kSampleRate,
   Instrument compInstrument = Instrument.piano,
   Instrument bassInstrument = Instrument.piano,
+  int barsPerWindow = 4,
+  BandClick click = BandClick.off,
+  bool clickCountIn = false,
 }) =>
     Isolate.run(() {
-      final plan = planBand(chart, style: style, form: form);
+      final plan = planBand(
+        chart,
+        style: style,
+        form: form,
+        click: click,
+        clickCountIn: clickCountIn,
+      );
       return plan == null
           ? null
           : prepareBand(
               plan,
+              barsPerWindow: barsPerWindow,
               sampleRate: sampleRate,
               compInstrument: compInstrument,
               bassInstrument: bassInstrument,

@@ -8,6 +8,30 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## BB-T2 — the transport a player needs (2026-10-15)
+
+- **A bar queue, not a timeline.** `features/harmony/chart_transport.dart`
+  decides, one bar at a time and ~2 s ahead of the playhead, which realised
+  bar plays next: the next one, the top of a loop (N times or until cleared),
+  a jump target, or the next bar of a re-planned piece. Each queued bar is
+  stamped with its start on a `TransportService` — the app's one clock —
+  which the streamed band advances with the audio's own elapsed time, so the
+  highlight is a lookup, never a second clock. Headless test drives play →
+  loop wrap → jump → tempo change → stop through `advance` alone.
+- **One-bar windows, spliced.** The band streams one bar per window; wherever
+  the queue is not continuous (wrap, jump, re-plan) the bar is the previous
+  source's carry-in plus the new bar's own starts, each at its own plan's
+  levels — so a loop or a tempo change neither cuts a ring-out nor rings in a
+  note that never started. A jump always lands on a bar line.
+- **On the chart screen while streaming:** tap a bar to jump there (in the
+  chorus playing), a loop button for the section playing, the tempo slider
+  live (re-plans when the drag ends). In the Band mix sheet: count-in 1 or 2
+  bars, kit or click; a click track off / every beat / downbeat only.
+- `FormOptions.countInBars` and `planBand(click:, clickCountIn:)` default to
+  the old output exactly (band regression fingerprints unchanged).
+- `StreamedBand` moved to `features/harmony` (it drives the feature's
+  transport); `bandBarAt` moved to `band_playback.dart`.
+
 ## BB-U3 — change the band while it plays (2026-10-15)
 
 - **Style mid-song.** The style menu stays live while a streamed band plays;

@@ -18290,6 +18290,48 @@ abstract class AppLocalizations {
   /// **'Swing'**
   String get chartSwing;
 
+  /// No description provided for @chartLoopSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop this section'**
+  String get chartLoopSection;
+
+  /// No description provided for @chartCountIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Count-in bars'**
+  String get chartCountIn;
+
+  /// No description provided for @chartCountInClick.
+  ///
+  /// In en, this message translates to:
+  /// **'Click count-in'**
+  String get chartCountInClick;
+
+  /// No description provided for @chartClick.
+  ///
+  /// In en, this message translates to:
+  /// **'Click'**
+  String get chartClick;
+
+  /// No description provided for @chartClickOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get chartClickOff;
+
+  /// No description provided for @chartClickEveryBeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Every beat'**
+  String get chartClickEveryBeat;
+
+  /// No description provided for @chartClickDownbeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Downbeat'**
+  String get chartClickDownbeat;
+
   /// No description provided for @chartStyle.
   ///
   /// In en, this message translates to:

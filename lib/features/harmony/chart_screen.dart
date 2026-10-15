@@ -25,7 +25,6 @@ import 'package:comet_beat/core/harmony/chart_share.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/chart_transpose.dart';
 import 'package:comet_beat/core/harmony/form_realizer.dart';
-import 'package:comet_beat/core/harmony/streamed_band.dart';
 import 'package:comet_beat/core/harmony/style_library.dart';
 import 'package:comet_beat/core/harmony/style_spec.dart' show StyleSpec;
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -37,6 +36,7 @@ import 'package:comet_beat/features/harmony/chart_grid_view.dart';
 import 'package:comet_beat/features/harmony/chart_library_sheet.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
 import 'package:comet_beat/features/harmony/setlist_screen.dart';
+import 'package:comet_beat/features/harmony/streamed_band.dart';
 import 'package:comet_beat/features/harmony/transpose_sheet.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/widgets/mixer_strip.dart';
@@ -117,8 +117,41 @@ class _ChartScreenState extends State<ChartScreen> {
     return swing == null ? style : style.withSwing(swing);
   }
 
-  FormOptions get _bandForm =>
-      FormOptions(choruses: _choruses, baseIntensity: _intensity);
+  FormOptions get _bandForm => FormOptions(
+        choruses: _choruses,
+        baseIntensity: _intensity,
+        countInBars: _countInBars,
+      );
+
+  /// BB-T2 band settings: voices, count-in length and sound, the click.
+  Instrument _compVoice = Instrument.piano;
+  Instrument _bassVoice = Instrument.piano;
+  int _countInBars = 1;
+  bool _clickCountIn = false;
+  BandClick _click = BandClick.off;
+
+  BandSettings get _bandSettings => BandSettings(
+        style: _bandStyle,
+        form: _bandForm,
+        compInstrument: _compVoice,
+        bassInstrument: _bassVoice,
+        click: _click,
+        clickCountIn: _clickCountIn,
+      );
+
+  /// Whether the band in play is the streamed one (live controls work).
+  bool _streaming = false;
+
+  /// Applies the current band settings to a streamed band from its next bar.
+  void _replanLive({bool tempo = false}) {
+    if (!_streaming) return;
+    unawaited(
+      _streamed.replan(
+        chart: tempo ? soundingChart(_chart, _transpose) : null,
+        settings: _bandSettings,
+      ),
+    );
+  }
 
   /// Null until SharedPreferences resolves. Every write goes through
   /// [_persist], which is a no-op until then rather than a queue — losing the
@@ -186,7 +219,7 @@ class _ChartScreenState extends State<ChartScreen> {
     final style = _bandStyle;
     final form = _bandForm;
 
-    if (await _playStreamed(sounding, style, form)) return;
+    if (await _playStreamed(sounding)) return;
     if (!mounted) return;
 
     // The band is the real path; the plain one is the fallback. A band that
@@ -195,8 +228,8 @@ class _ChartScreenState extends State<ChartScreen> {
       sounding,
       style: style,
       form: form,
-      compInstrument: _streamed.compInstrument,
-      bassInstrument: _streamed.bassInstrument,
+      compInstrument: _compVoice,
+      bassInstrument: _bassVoice,
     );
 
     if (band != null) {
@@ -226,25 +259,34 @@ class _ChartScreenState extends State<ChartScreen> {
 
   /// Plays the band through the window stream. False when streaming is not
   /// available here (or there is no band), so the caller falls back.
-  Future<bool> _playStreamed(
-    Chart sounding,
-    StyleSpec style,
-    FormOptions form,
-  ) async {
-    final run = await _streamed.play(sounding, style: style, form: form);
-    if (run == null) return false;
+  Future<bool> _playStreamed(Chart sounding) async {
+    if (!await _streamed.play(sounding, _bandSettings)) return false;
     if (!mounted) {
       await _streamed.stop();
       return true;
     }
-    _band = (bars: run.bars, totalMs: run.totalMs);
-    _clock = run.clock;
+    _streaming = true;
     _ticker = Timer.periodic(const Duration(milliseconds: 50), (_) => _tick());
     setState(() {});
     return true;
   }
 
   void _tick() {
+    if (_streaming) {
+      _streamed.sync();
+      if (_streamed.finished) {
+        _stop();
+        return;
+      }
+      // A realised bar carries the DOCUMENT bar it came from, so the highlight
+      // lands on the bar the user is looking at even across repeats and loops.
+      final source = _streamed.current?.span?.bar.sourceBar;
+      final ref =
+          source == null ? null : ChartBarRef(source.section, source.bar);
+      if (ref != _playingBar) setState(() => _playingBar = ref);
+      return;
+    }
+
     final clock = _clock;
     if (clock == null) return;
     final ms = clock.elapsedMilliseconds;
@@ -297,6 +339,7 @@ class _ChartScreenState extends State<ChartScreen> {
 
   Future<void> _stop() async {
     unawaited(_streamed.stop());
+    _streaming = false;
     _ticker?.cancel();
     _ticker = null;
     _clock = null;
@@ -308,7 +351,63 @@ class _ChartScreenState extends State<ChartScreen> {
 
   // ------------------------------------------------------------------ editing
 
+  /// BB-T2: while a streamed band plays, a tapped bar is where to go next —
+  /// on the next bar line, in the chorus that is playing.
+  void _jumpTo(ChartBarRef ref) {
+    final target = _realisedBarFor(ref);
+    if (target != null) _streamed.transport.jumpTo(target);
+  }
+
+  /// The realised bar playing [ref], preferring the chorus now sounding.
+  int? _realisedBarFor(ChartBarRef ref) {
+    final bars = _streamedBars;
+    final chorus = _streamed.current?.span?.bar.chorusIndex ?? 0;
+    int? fallback;
+    for (var i = 0; i < bars.length; i++) {
+      final source = bars[i].bar.sourceBar;
+      if (source == null ||
+          source.section != ref.sectionIndex ||
+          source.bar != ref.barIndex) {
+        continue;
+      }
+      if (bars[i].bar.chorusIndex == chorus) return i;
+      fallback ??= i;
+    }
+    return fallback;
+  }
+
+  List<BandBarSpan> get _streamedBars => _streamed.barsInPlay;
+
+  /// BB-T2: loop (or stop looping) the section that is playing, in this
+  /// chorus.
+  void _toggleSectionLoop() {
+    final t = _streamed.transport;
+    if (t.loop != null) {
+      setState(t.clearLoop);
+      return;
+    }
+    final now = _streamed.current?.span?.bar;
+    final source = now?.sourceBar;
+    if (now == null || source == null) return;
+    final bars = _streamedBars;
+    int? first;
+    int? last;
+    for (var i = 0; i < bars.length; i++) {
+      final b = bars[i].bar;
+      if (b.chorusIndex == now.chorusIndex &&
+          b.sourceBar?.section == source.section) {
+        first ??= i;
+        last = i;
+      }
+    }
+    if (first != null && last != null) setState(() => t.setLoop(first!, last!));
+  }
+
   Future<void> _editBar(ChartBarRef ref) async {
+    if (_streaming) {
+      _jumpTo(ref);
+      return;
+    }
     // Editing while the band plays is how you lose your place, and the card
     // asks for "no accidental edits while playing".
     if (_playing) return;
@@ -566,7 +665,7 @@ class _ChartScreenState extends State<ChartScreen> {
     _persist();
     // BB-U3: a streamed band takes the new style from its next window, which
     // is always a bar line.
-    if (_streamed.playing) unawaited(_streamed.restyle(_bandStyle));
+    _replanLive();
   }
 
   /// BB-U3: the band's live mix — one strip per role, the same strip the
@@ -599,9 +698,7 @@ class _ChartScreenState extends State<ChartScreen> {
                 Instrument.musicBox => l10n.instrumentMusicBox,
               };
           Widget voicePicker(BandRole role) {
-            final current = role == BandRole.comp
-                ? _streamed.compInstrument
-                : _streamed.bassInstrument;
+            final current = role == BandRole.comp ? _compVoice : _bassVoice;
             return DropdownButton<Instrument>(
               key: ValueKey('band-voice-${role.name}'),
               value: current,
@@ -611,20 +708,15 @@ class _ChartScreenState extends State<ChartScreen> {
               ],
               onChanged: (i) {
                 if (i == null) return;
-                setSheet(() {
+                setSheet(() {});
+                setState(() {
                   if (role == BandRole.comp) {
-                    _streamed.compInstrument = i;
+                    _compVoice = i;
                   } else {
-                    _streamed.bassInstrument = i;
+                    _bassVoice = i;
                   }
                 });
-                if (_streamed.playing) {
-                  unawaited(
-                    role == BandRole.comp
-                        ? _streamed.replan(comp: i)
-                        : _streamed.replan(bass: i),
-                  );
-                }
+                _replanLive();
               },
             );
           }
@@ -656,9 +748,7 @@ class _ChartScreenState extends State<ChartScreen> {
                             onSelectionChanged: (v) {
                               setSheet(() {});
                               setState(() => _intensity = v.single);
-                              if (_streamed.playing) {
-                                unawaited(_streamed.replan(form: _bandForm));
-                              }
+                              _replanLive();
                             },
                           ),
                         ),
@@ -682,9 +772,77 @@ class _ChartScreenState extends State<ChartScreen> {
                             },
                             // Re-plan once per drag, not per frame.
                             onChangeEnd: (_) {
-                              if (_streamed.playing) {
-                                unawaited(_streamed.restyle(_bandStyle));
-                              }
+                              _replanLive();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(l10n.chartCountIn),
+                        SegmentedButton<int>(
+                          key: const Key('bandCountIn'),
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(value: 1, label: Text('1')),
+                            ButtonSegment(value: 2, label: Text('2')),
+                          ],
+                          selected: {_countInBars},
+                          onSelectionChanged: (v) {
+                            setSheet(() {});
+                            // Takes effect on the next Play: the count-in is
+                            // over by the time anything could change it.
+                            setState(() => _countInBars = v.single);
+                          },
+                        ),
+                        FilterChip(
+                          key: const Key('bandClickCountIn'),
+                          label: Text(l10n.chartCountInClick),
+                          selected: _clickCountIn,
+                          onSelected: (v) {
+                            setSheet(() {});
+                            setState(() => _clickCountIn = v);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Text(l10n.chartClick),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SegmentedButton<BandClick>(
+                            key: const Key('bandClick'),
+                            showSelectedIcon: false,
+                            segments: [
+                              ButtonSegment(
+                                value: BandClick.off,
+                                label: Text(l10n.chartClickOff),
+                              ),
+                              ButtonSegment(
+                                value: BandClick.everyBeat,
+                                label: Text(l10n.chartClickEveryBeat),
+                              ),
+                              ButtonSegment(
+                                value: BandClick.downbeat,
+                                label: Text(l10n.chartClickDownbeat),
+                              ),
+                            ],
+                            selected: {_click},
+                            onSelectionChanged: (v) {
+                              setSheet(() {});
+                              setState(() => _click = v.single);
+                              _replanLive();
                             },
                           ),
                         ),
@@ -749,7 +907,7 @@ class _ChartScreenState extends State<ChartScreen> {
             tooltip: l10n.chartStyle,
             // A streamed band can change style mid-song (BB-U3); the
             // whole-render fallback cannot.
-            enabled: !_playing || _streamed.playing,
+            enabled: !_playing || _streaming,
             initialValue: styleFor(_chart.styleId).id,
             onSelected: _setStyle,
             itemBuilder: (context) => [
@@ -892,6 +1050,15 @@ class _ChartScreenState extends State<ChartScreen> {
                   icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
                   label: Text(_playing ? l10n.chartStop : l10n.chartPlay),
                 ),
+                if (_streaming)
+                  IconButton(
+                    key: const Key('chartLoopSectionButton'),
+                    tooltip: l10n.chartLoopSection,
+                    isSelected: _streamed.transport.loop != null,
+                    icon: const Icon(Icons.repeat),
+                    selectedIcon: const Icon(Icons.repeat_on),
+                    onPressed: _toggleSectionLoop,
+                  ),
                 IconButton(
                   key: const Key('chartBandMixButton'),
                   tooltip: l10n.chartBandMix,
@@ -909,9 +1076,13 @@ class _ChartScreenState extends State<ChartScreen> {
                     value: _chart.tempoBpm.toDouble().clamp(40, 300),
                     min: 40,
                     max: 300,
-                    // Changing tempo mid-playback would desync the highlight
-                    // from audio that is already rendered and playing.
-                    onChanged: _playing ? null : (v) => _setTempo(v.round()),
+                    // BB-T2: a streamed band takes a new tempo from its next
+                    // bar (re-planned once the drag ends); the whole-render
+                    // fallback cannot follow, so it stays locked there.
+                    onChanged: _playing && !_streaming
+                        ? null
+                        : (v) => _setTempo(v.round()),
+                    onChangeEnd: (_) => _replanLive(tempo: true),
                   ),
                 ),
               ],

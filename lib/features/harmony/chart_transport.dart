@@ -33,6 +33,7 @@ class QueuedBar {
     required this.startMs,
     required this.durationMs,
     required this.generation,
+    this.span,
   });
 
   /// Index into the realised bars of the plan it was queued from.
@@ -42,6 +43,9 @@ class QueuedBar {
 
   /// Which plan (tempo) it was queued from; bumps on every [ChartTransport.setBars].
   final int generation;
+
+  /// The realised bar itself (what the highlight follows).
+  final BandBarSpan? span;
 
   double get endMs => startMs + durationMs;
 }
@@ -150,6 +154,7 @@ class ChartTransport {
       startMs: last?.endMs ?? 0,
       durationMs: _bars[next].durationMs.toDouble(),
       generation: _generation,
+      span: _bars[next],
     );
     _queue.add(queued);
     return queued;
