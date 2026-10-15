@@ -1243,68 +1243,93 @@ class _ChartScreenState extends State<ChartScreen> {
           top: false,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                FilledButton.icon(
-                  key: const Key('chartPlayButton'),
-                  onPressed: _playing ? _stop : _play,
-                  icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
-                  label: Text(_playing ? l10n.chartStop : l10n.chartPlay),
-                ),
-                if (_streaming && _practiceOn)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      l10n.chartPracticePass(_shownPass + 1),
-                      key: const Key('chartPracticePass'),
+            // One row on a wide screen; on a phone the tempo gets a line of
+            // its own — Play, the practice / mix / loop buttons and the tempo
+            // together overflowed 375 px in German (the layout audit).
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final controls = <Widget>[
+                  FilledButton.icon(
+                    key: const Key('chartPlayButton'),
+                    onPressed: _playing ? _stop : _play,
+                    icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
+                    label: Text(_playing ? l10n.chartStop : l10n.chartPlay),
+                  ),
+                  if (_streaming && _practiceOn)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        l10n.chartPracticePass(_shownPass + 1),
+                        key: const Key('chartPracticePass'),
+                      ),
+                    ),
+                  // Practice owns the loop (the whole tune, round and round).
+                  if (_streaming && !_practiceOn)
+                    IconButton(
+                      key: const Key('chartLoopSectionButton'),
+                      tooltip: l10n.chartLoopSection,
+                      isSelected: _streamed.transport.loop != null,
+                      icon: const Icon(Icons.repeat),
+                      selectedIcon: const Icon(Icons.repeat_on),
+                      onPressed: _toggleSectionLoop,
+                    ),
+                  IconButton(
+                    key: const Key('chartPracticeButton'),
+                    tooltip: l10n.chartPractice,
+                    isSelected: _practiceOn,
+                    icon: const Icon(Icons.fitness_center_outlined),
+                    selectedIcon: const Icon(Icons.fitness_center),
+                    // Settings apply from the next Play.
+                    onPressed: _playing ? null : _openPractice,
+                  ),
+                  IconButton(
+                    key: const Key('chartBandMixButton'),
+                    tooltip: l10n.chartBandMix,
+                    icon: const Icon(Icons.tune),
+                    onPressed: _openBandMix,
+                  ),
+                ];
+                final tempo = <Widget>[
+                  Text(
+                    '${_chart.tempoBpm}',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  Text(
+                    ' ${l10n.chartBpm}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Expanded(
+                    child: Slider(
+                      value: _chart.tempoBpm.toDouble().clamp(40, 300),
+                      min: 40,
+                      max: 300,
+                      // BB-T2: a streamed band takes a new tempo from its next
+                      // bar (re-planned once the drag ends); the whole-render
+                      // fallback cannot follow, so it stays locked there.
+                      onChanged: _playing && !_streaming
+                          ? null
+                          : (v) => _setTempo(v.round()),
+                      onChangeEnd: (_) => _replanLive(tempo: true),
                     ),
                   ),
-                // Practice owns the loop (the whole tune, round and round).
-                if (_streaming && !_practiceOn)
-                  IconButton(
-                    key: const Key('chartLoopSectionButton'),
-                    tooltip: l10n.chartLoopSection,
-                    isSelected: _streamed.transport.loop != null,
-                    icon: const Icon(Icons.repeat),
-                    selectedIcon: const Icon(Icons.repeat_on),
-                    onPressed: _toggleSectionLoop,
-                  ),
-                IconButton(
-                  key: const Key('chartPracticeButton'),
-                  tooltip: l10n.chartPractice,
-                  isSelected: _practiceOn,
-                  icon: const Icon(Icons.fitness_center_outlined),
-                  selectedIcon: const Icon(Icons.fitness_center),
-                  // Settings apply from the next Play.
-                  onPressed: _playing ? null : _openPractice,
-                ),
-                IconButton(
-                  key: const Key('chartBandMixButton'),
-                  tooltip: l10n.chartBandMix,
-                  icon: const Icon(Icons.tune),
-                  onPressed: _openBandMix,
-                ),
-                const SizedBox(width: 16),
-                Text('${_chart.tempoBpm}', style: theme.textTheme.titleMedium),
-                Text(
-                  ' ${l10n.chartBpm}',
-                  style: theme.textTheme.bodySmall,
-                ),
-                Expanded(
-                  child: Slider(
-                    value: _chart.tempoBpm.toDouble().clamp(40, 300),
-                    min: 40,
-                    max: 300,
-                    // BB-T2: a streamed band takes a new tempo from its next
-                    // bar (re-planned once the drag ends); the whole-render
-                    // fallback cannot follow, so it stays locked there.
-                    onChanged: _playing && !_streaming
-                        ? null
-                        : (v) => _setTempo(v.round()),
-                    onChangeEnd: (_) => _replanLive(tempo: true),
-                  ),
-                ),
-              ],
+                ];
+                if (box.maxWidth >= 480) {
+                  return Row(
+                    children: [
+                      ...controls,
+                      const SizedBox(width: 16),
+                      ...tempo,
+                    ],
+                  );
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(children: controls),
+                    Row(children: tempo),
+                  ],
+                );
+              },
             ),
           ),
         ),
