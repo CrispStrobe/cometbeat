@@ -8,6 +8,15 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## BB-U5(c) — a chart opens in Loop Studio (2026-10-15)
+
+- The chart menu's *Open in Loop Studio* projects the chart's first four bars
+  onto the loop engine's six diatonic chords (BB-A0) and opens Loop Studio on
+  that harmony, the chart's key (`grooveKeyOf`: a minor chart sits on its
+  relative major — the engine has no minor) and tempo. The harmony is added to
+  the player's own, so it stays pickable. Anything simplified or left out is
+  said in a snackbar; a chart with nothing playable does not open at all.
+
 ## BB-U4b — tags and recently played (2026-10-15)
 
 - `ChartStore` keeps, by chart NAME (like favourites, so re-saving a chart

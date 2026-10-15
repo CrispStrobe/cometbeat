@@ -2080,7 +2080,7 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     simplification.
   - 📌 A missing chart must stay VISIBLE in the set — `SetlistStore.missingCharts`
     reports it and the entry is deliberately not pruned.
-- 🔶 **BB-U5 — the front door.** `S` — *two of three entry points shipped.*
+- ✅ **BB-U5 — the front door.** `S` — *all three entry points shipped (Loop Studio 2026-10-15).*
   - ✅ **(a) The home tile** — a `chart` `GameInfo` in `game_registry.dart` with
     its `chord_charts` placement in `concept_map.dart`.
   - ✅ **(b) "Play with band" on a Song Book item** (2026-08-02). The chord
@@ -2097,8 +2097,12 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     - **Acceptance asserted both ways:** a song with chords offers the band, a
       song without shows NO dead affordance, and tapping it opens the chart
       carrying the song's own chords rather than the starter chart.
-  - ⬜ **(c) Loop Studio** — an open chart appearing as a band you can drive.
-    Still to build; `BB-A0` is the cheap version of the same idea.
+  - ✅ **(c) Loop Studio** (2026-10-15) — *Open in Loop Studio* in the chart
+    menu projects the first four bars through BB-A0 (`chartToProgression`)
+    and opens Loop Studio on that harmony, key and tempo; the harmony joins
+    the player's own (`LoopMixerScreen.initialProgression`). What the engine
+    cannot play is reported in a snackbar (bars used, chords left out,
+    simplified) — never silently played wrong; nothing playable → no push.
   - **Superseded card text below (kept for its reasoning).**
 
 - ⬜ **BB-U5 (original) — the front door (DECIDED: library document, not a sixth mode).** `S`

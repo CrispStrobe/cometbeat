@@ -124,6 +124,12 @@ class ChartProjection {
   }
 }
 
+/// The groove key (`GrooveSpec.key`) a projection of [chart] is relative to:
+/// its tonic, or its relative major's for a minor chart (see the note in
+/// [chartToProgression]).
+int grooveKeyOf(Chart chart) =>
+    chart.minor ? (chart.tonicPitchClass + 3) % 12 : chart.tonicPitchClass;
+
 /// How many bars the existing engine's progression path holds.
 ///
 /// Four, because `Progression` is documented as "a 4-chord progression: one bar
@@ -155,8 +161,7 @@ ChartProjection chartToProgression(
   // triads serve both keys — but the numerals are relative-major ones. Mapping
   // minor onto the minor tonic instead would put a MAJOR triad on `Am`, which is
   // a wrong chord rather than an odd label.
-  final tonic =
-      chart.minor ? (chart.tonicPitchClass + 3) % 12 : chart.tonicPitchClass;
+  final tonic = grooveKeyOf(chart);
   final reductions = <ChartReduction>[];
   final degrees = <ChordDegree>[];
 

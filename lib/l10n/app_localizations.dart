@@ -18428,6 +18428,24 @@ abstract class AppLocalizations {
   /// **'Tags for {name}'**
   String chartTagsFor(String name);
 
+  /// No description provided for @chartOpenInLoopStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Loop Studio'**
+  String get chartOpenInLoopStudio;
+
+  /// No description provided for @chartLoopNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'None of these chords fit Loop Studio\'s band, which plays the six main chords of a key.'**
+  String get chartLoopNothing;
+
+  /// No description provided for @chartLoopReduced.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop Studio plays bars 1–{used} of {total}: {skipped} chords left out, {simplified} simplified.'**
+  String chartLoopReduced(int used, int total, int skipped, int simplified);
+
   /// No description provided for @chartStyle.
   ///
   /// In en, this message translates to:

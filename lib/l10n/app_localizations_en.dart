@@ -10187,6 +10187,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get chartOpenInLoopStudio => 'Open in Loop Studio';
+
+  @override
+  String get chartLoopNothing =>
+      'None of these chords fit Loop Studio\'s band, which plays the six main chords of a key.';
+
+  @override
+  String chartLoopReduced(int used, int total, int skipped, int simplified) {
+    return 'Loop Studio plays bars 1–$used of $total: $skipped chords left out, $simplified simplified.';
+  }
+
+  @override
   String get chartStyle => 'Style';
 
   @override

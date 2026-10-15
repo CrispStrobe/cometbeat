@@ -179,6 +179,7 @@ class LoopMixerScreen extends StatefulWidget {
     super.key,
     this.aecFactory,
     this.initialSpec,
+    this.initialProgression,
     this.showAppBar = true,
     this.simpleLayout = false,
     this.onReturnToDaw,
@@ -194,6 +195,11 @@ class LoopMixerScreen extends StatefulWidget {
   /// [GrooveSpec] over (e.g. a tracker pattern → a groove). Null = the default
   /// starter groove.
   final GrooveSpec? initialSpec;
+
+  /// BB-U5(c): a harmony to open on — a chord chart projected onto the
+  /// engine's degrees. It joins the player's own harmonies (so it is kept and
+  /// can be picked again) and is selected.
+  final Progression? initialProgression;
 
   /// The Loop Studio shell owns the app bar when embedding this editor.
   final bool showAppBar;
@@ -668,6 +674,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     // (dispose calls `clearScope`), so registering on mount is always in time.
     registerUndoScopeName(kLoopUndoScope, 'Loop Studio');
     if (widget.initialSpec != null) _engine.applySpec(widget.initialSpec!);
+    if (widget.initialProgression case final p?) {
+      // Not playing yet, so no restart: just select it.
+      _engine.progression = _harmonies.add(p.degrees);
+    }
     // Anchor undo history at the opening state so the very first edit is
     // reversible (without this, base seeds on the first change and loses it).
     _historyBase = _engine.spec;

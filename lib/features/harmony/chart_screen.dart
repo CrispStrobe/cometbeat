@@ -15,6 +15,7 @@ library;
 
 import 'dart:async';
 
+import 'package:comet_beat/core/audio/loop_engine.dart' show GrooveSpec;
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
@@ -23,12 +24,14 @@ import 'package:comet_beat/core/harmony/chart_import.dart';
 import 'package:comet_beat/core/harmony/chart_playback.dart';
 import 'package:comet_beat/core/harmony/chart_share.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
+import 'package:comet_beat/core/harmony/chart_to_groove.dart';
 import 'package:comet_beat/core/harmony/chart_transpose.dart';
 import 'package:comet_beat/core/harmony/form_realizer.dart';
 import 'package:comet_beat/core/harmony/style_library.dart';
 import 'package:comet_beat/core/harmony/style_spec.dart' show StyleSpec;
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
+import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
     show AnalysisDepth;
 import 'package:comet_beat/features/harmony/chart_analysis_panel.dart';
@@ -577,6 +580,48 @@ class _ChartScreenState extends State<ChartScreen> {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// BB-U5(c): the chart as a band you can drive in Loop Studio — its first
+  /// bars projected onto the loop engine's six chords (BB-A0), every
+  /// compromise said out loud rather than played wrong.
+  Future<void> _openInLoopStudio() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final sounding = soundingChart(_chart, _transpose);
+    final projection = chartToProgression(sounding);
+    final progression = projection.progression;
+    if (progression == null) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.chartLoopNothing)));
+      return;
+    }
+    if (_playing) await _stop();
+    if (!mounted) return;
+    if (!projection.isExact) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.chartLoopReduced(
+              projection.barsUsed,
+              projection.barsAvailable,
+              projection.unrepresentable.length,
+              projection.reductions.length - projection.unrepresentable.length,
+            ),
+          ),
+        ),
+      );
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LoopMixerScreen(
+          initialSpec: GrooveSpec(
+            tempoBpm: sounding.tempoBpm,
+            key: grooveKeyOf(sounding),
+          ),
+          initialProgression: progression,
         ),
       ),
     );
@@ -1134,6 +1179,15 @@ class _ChartScreenState extends State<ChartScreen> {
                 ),
               ),
               PopupMenuItem(
+                key: const Key('chartLoopStudioButton'),
+                value: 'loop',
+                child: ListTile(
+                  leading: const Icon(Icons.loop),
+                  title: Text(l10n.chartOpenInLoopStudio),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
                 key: const Key('chartTextButton'),
                 value: 'text',
                 child: ListTile(
@@ -1148,6 +1202,7 @@ class _ChartScreenState extends State<ChartScreen> {
               'transpose' => _transposeDialog(),
               'share' => _share(),
               'library' => _openLibrary(),
+              'loop' => _openInLoopStudio(),
               'setlists' => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const SetlistScreen(),

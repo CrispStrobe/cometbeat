@@ -10249,6 +10249,18 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get chartOpenInLoopStudio => 'Im Loop-Studio öffnen';
+
+  @override
+  String get chartLoopNothing =>
+      'Keiner dieser Akkorde passt zur Band im Loop-Studio – sie spielt nur die sechs Hauptakkorde einer Tonart.';
+
+  @override
+  String chartLoopReduced(int used, int total, int skipped, int simplified) {
+    return 'Das Loop-Studio spielt die Takte 1–$used von $total: $skipped Akkorde weggelassen, $simplified vereinfacht.';
+  }
+
+  @override
   String get chartStyle => 'Stil';
 
   @override
