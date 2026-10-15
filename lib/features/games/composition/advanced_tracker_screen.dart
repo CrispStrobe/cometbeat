@@ -135,6 +135,7 @@ import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:comet_beat/shared/widgets/performance_pads.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
+import 'package:comet_beat/shared/widgets/text_prompt_dialog.dart';
 import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -4835,29 +4836,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   Future<void> _loadSong() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final controller = TextEditingController();
-    final token = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.trackerLoadSong),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
-          decoration: InputDecoration(hintText: l10n.trackerPasteToken),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n.trackerCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: Text(l10n.trackerLoad),
-          ),
-        ],
-      ),
+    final token = await showTextPrompt(
+      context,
+      title: l10n.trackerLoadSong,
+      hint: l10n.trackerPasteToken,
+      maxLines: 4,
+      cancelLabel: l10n.trackerCancel,
+      confirmLabel: l10n.trackerLoad,
     );
-    controller.dispose();
     if (token == null || !mounted) return;
     if (!debugLoadToken(token.trim())) {
       messenger.showSnackBar(

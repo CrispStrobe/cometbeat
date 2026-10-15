@@ -9,6 +9,7 @@ import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
+import 'package:comet_beat/shared/widgets/text_prompt_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -280,36 +281,24 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
   }
 
   Future<int?> _askMidi({int? initial}) async {
-    final controller = TextEditingController(text: '${initial ?? 60}');
-    final value = await showDialog<int>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.instrEdMidiKey),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: '0-127'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(AppLocalizations.of(context)!.dawCancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              final midi = int.tryParse(controller.text.trim());
-              if (midi != null && midi >= 0 && midi <= 127) {
-                Navigator.of(ctx).pop(midi);
-              }
-            },
-            child: Text(AppLocalizations.of(context)!.dawAmplifyApply),
-          ),
-        ],
-      ),
+    int? parse(String text) {
+      final midi = int.tryParse(text.trim());
+      return midi != null && midi >= 0 && midi <= 127 ? midi : null;
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    final text = await showTextPrompt(
+      context,
+      title: l10n.instrEdMidiKey,
+      initial: '${initial ?? 60}',
+      label: '0-127',
+      keyboardType: TextInputType.number,
+      // Stays open on an out-of-range number, as it always did.
+      accept: (t) => parse(t) != null,
+      cancelLabel: l10n.dawCancel,
+      confirmLabel: l10n.dawAmplifyApply,
     );
-    controller.dispose();
-    return value;
+    return text == null ? null : parse(text);
   }
 
   Future<void> _addMapping() async {

@@ -114,6 +114,7 @@ import 'package:comet_beat/shared/undo/undo_history_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/step_grid.dart';
+import 'package:comet_beat/shared/widgets/text_prompt_dialog.dart';
 import 'package:comet_beat/shared/widgets/tray_panel.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -2287,26 +2288,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   Future<void> _saveGrooveSlot() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: Text(l10n.loopMixerSaveSlot),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: l10n.loopMixerSlotNameHint),
-          onSubmitted: (v) => Navigator.pop(dialog, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog, controller.text),
-            child: Text(l10n.loopMixerSave),
-          ),
-        ],
-      ),
+    final name = await showTextPrompt(
+      context,
+      title: l10n.loopMixerSaveSlot,
+      hint: l10n.loopMixerSlotNameHint,
+      confirmLabel: l10n.loopMixerSave,
     );
-    controller.dispose();
     if (!mounted || name == null || name.trim().isEmpty) return;
     await (await _slotsService()).save(name, grooveToken);
     if (!mounted) return;
@@ -2704,30 +2691,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final messenger = ScaffoldMessenger.of(context);
     final songs = context.read<UserSongsService>();
 
-    final controller = TextEditingController(text: l10n.gameLoopMixer);
-    final title = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.loopMixerSaveTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (v) => Navigator.of(ctx).pop(v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: Text(l10n.myMelodySave),
-          ),
-        ],
-      ),
+    final title = await showTextPrompt(
+      context,
+      title: l10n.loopMixerSaveTitle,
+      initial: l10n.gameLoopMixer,
+      cancelLabel: MaterialLocalizations.of(context).cancelButtonLabel,
+      confirmLabel: l10n.myMelodySave,
     );
-    controller.dispose();
     if (title == null || !mounted) return;
 
     final name = title.trim().isEmpty ? l10n.gameLoopMixer : title.trim();
@@ -2785,25 +2755,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   Future<void> _promptForToken() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final controller = TextEditingController();
-    final token = await showDialog<String>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: Text(l10n.loopMixerPasteCode),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'KU1.…'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog, controller.text),
-            child: Text(l10n.loopMixerLoad),
-          ),
-        ],
-      ),
+    final token = await showTextPrompt(
+      context,
+      title: l10n.loopMixerPasteCode,
+      hint: 'KU1.…',
+      confirmLabel: l10n.loopMixerLoad,
     );
-    controller.dispose();
     if (!mounted || token == null || token.isEmpty) return;
     if (!loadGrooveToken(token)) {
       messenger.showSnackBar(
@@ -4983,33 +4940,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// Renames [id], or clears the name back to the app's own with a blank entry.
   Future<void> _renameTrack(String id) async {
     final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(text: _engine.trackName(id) ?? '');
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: Text(l10n.loopMixerRenameTrack),
-        content: TextField(
-          key: const Key('loop-rename-field'),
-          controller: controller,
-          autofocus: true,
-          maxLength: 40,
-          decoration: InputDecoration(hintText: l10n.loopMixerRenameHint),
-          onSubmitted: (v) => Navigator.pop(dialog, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog),
-            child: Text(l10n.loopMixerCancel),
-          ),
-          TextButton(
-            key: const Key('loop-rename-ok'),
-            onPressed: () => Navigator.pop(dialog, controller.text),
-            child: Text(l10n.loopMixerSave),
-          ),
-        ],
-      ),
+    final name = await showTextPrompt(
+      context,
+      title: l10n.loopMixerRenameTrack,
+      initial: _engine.trackName(id) ?? '',
+      hint: l10n.loopMixerRenameHint,
+      maxLength: 40,
+      cancelLabel: l10n.loopMixerCancel,
+      confirmLabel: l10n.loopMixerSave,
+      fieldKey: const Key('loop-rename-field'),
+      confirmKey: const Key('loop-rename-ok'),
     );
-    controller.dispose();
     if (!mounted || name == null) return;
     setState(() => _engine.setTrackName(id, name));
   }

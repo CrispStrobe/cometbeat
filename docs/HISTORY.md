@@ -8,6 +8,17 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## One text prompt, and a latent crash gone (2026-10-15)
+
+- `shared/widgets/text_prompt_dialog.dart` — `showTextPrompt`: one field in a
+  dialog, the controller owned by the dialog's own State. Six call sites that
+  created a controller, awaited `showDialog` and disposed it at once (so the
+  exit animation could rebuild against a disposed controller) now use it:
+  Loop Studio's save-slot, rename-track, save-to-Song-Book and paste-code, the
+  Tracker's load-song, and the instrument editor's MIDI key (which keeps its
+  stay-open-until-valid behaviour via `accept`). Tested through the exit
+  animation frame by frame.
+
 ## WS-W2 step 2 — the transport drives Loop Studio (2026-10-15)
 
 - Loop Studio now listens to the shared `TransportService`: a play or pause

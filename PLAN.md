@@ -1497,6 +1497,10 @@ prefix.
     on that frame, which is why the pattern survives casual use — **the same
     shape is in `loop_mixer_screen`'s `_saveGrooveSlot` and `_renameTrack`**
     (mine), latent there because those dialogs do not rebuild on the way out.
+    ✅ **Fixed everywhere it disposed early (2026-10-15):** a shared
+    `shared/widgets/text_prompt_dialog.dart` (`showTextPrompt`, its own State
+    owns the controller) replaces six call sites — Loop Studio ×4, the
+    Tracker's load-song, the instrument editor's MIDI key.
 
 > ✅ **WS-X4 SHIPPED** — `DawService.trackSend`/`setTrackSend` (plus
 > `setTrackSendForTracks` for a multi-selection) send a whole lane to a bus, and
