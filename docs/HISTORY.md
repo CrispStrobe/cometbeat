@@ -33,8 +33,9 @@ the repo root (detailed roadmap planning and the agent board are in
 - **Measured** on the shared dev box (loaded): a 96-bar chart took 5.6–7.9 s to
   render whole; first sound now needs 1.2–1.4 s (plan ~0.3 s, peaks ~1 s, first
   window ~0.15 s), independent of chart length. A mid device should beat that.
-- Not yet: Gig mode still renders whole; changing style or levels *while*
-  playing is BB-U3, which this card unblocks.
+- Gig mode streams too (shared `StreamedBand`), so the next song of a set
+  starts as fast. Changing style or levels *while* playing is BB-U3, which this
+  card unblocks.
 
 ## Logic out of the big screens, first pieces (2026-10-14)
 

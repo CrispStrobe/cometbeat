@@ -1885,7 +1885,7 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
   HISTORY. Exact windows (seams asserted sample-equal), content-keyed cache (a
   bar-40 edit re-renders ≤ 2 windows), isolate render, SoLoud buffer stream.
   First sound 1.2–1.4 s vs 5.6–7.9 s whole on the loaded dev box. Gig mode
-  still renders whole. *(original card below)*
+  streams too. *(original card below)*
   - **Goal.** A 96-bar chart starts playing in well under a second, and an edit
     re-renders only what it touched.
   - **Depends.** BB-A5. **Files.** New

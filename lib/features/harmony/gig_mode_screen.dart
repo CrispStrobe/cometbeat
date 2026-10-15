@@ -20,6 +20,7 @@ import 'dart:async';
 import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/setlist.dart';
+import 'package:comet_beat/core/harmony/streamed_band.dart';
 import 'package:comet_beat/core/harmony/style_library.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
@@ -147,6 +148,7 @@ class _GigModeScreenState extends State<GigModeScreen> {
   bool _playing = false;
   Timer? _ticker;
   Stopwatch? _clock;
+  final _streamed = StreamedBand();
   int _songMs = 0;
 
   @override
@@ -161,6 +163,7 @@ class _GigModeScreenState extends State<GigModeScreen> {
     // after one gig is a bug the user blames on the app, correctly.
     widget.keepAwake.disable();
     _ticker?.cancel();
+    unawaited(_streamed.stop());
     widget.audio?.stop();
     super.dispose();
   }
@@ -171,10 +174,25 @@ class _GigModeScreenState extends State<GigModeScreen> {
     final chart = _chart;
     if (audio == null || chart == null) return;
 
+    // BB-T1: streamed where the platform can, so the next song of the set
+    // starts in about a second rather than after a whole render.
+    _stopClock();
+    final run = await _streamed.play(chart, style: styleFor(chart.styleId));
+    if (!mounted) return;
+    if (run != null) {
+      setState(() {
+        _playing = true;
+        _songMs = run.totalMs;
+      });
+      _clock = run.clock;
+      _ticker =
+          Timer.periodic(const Duration(milliseconds: 100), (_) => _tick());
+      return;
+    }
+
     final band = renderBand(chart, style: styleFor(chart.styleId));
     if (band == null) return;
 
-    _stopClock();
     setState(() {
       _playing = true;
       _songMs = band.totalMs;
@@ -192,6 +210,7 @@ class _GigModeScreenState extends State<GigModeScreen> {
 
   Future<void> _stop() async {
     _stopClock();
+    unawaited(_streamed.stop());
     if (mounted) setState(() => _playing = false);
     await widget.audio?.stop();
   }
