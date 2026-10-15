@@ -8,6 +8,16 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## Release 1.0.2 (build 7) — TestFlight, internal and external (2026-10-15)
+
+- Everything below since 1.0.1: the streamed, live-controllable backing band
+  with its transport and practice trainer, chart tags / recently played / open
+  in Loop Studio, mixer inserts and effects buses, Loop Studio driven by the
+  shared transport and recordable as an arrangement, the shared text prompt.
+- `ios-release.yml` now distributes after upload
+  (`tool/testflight_distribute.py`): every beta group, "What to Test" note,
+  Beta App Review submission for external testers.
+
 ## WS-W7 — a Loop Studio session, recorded as an arrangement (2026-10-15)
 
 - Loop Studio's menu: *Record arrangement* starts logging every finished loop

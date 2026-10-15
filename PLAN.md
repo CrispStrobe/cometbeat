@@ -13,6 +13,63 @@
 > looking for how something already-built came out, or for the reasoning behind
 > a shipped decision, it is in HISTORY. 46 ⬜ cards remain.
 
+## Handover — pending work, scoped for a fresh agent (2026-10-15)
+
+State at handover: `main` is green; 1.0.2 (build 7) went to TestFlight
+(internal + external review). Each card is self-contained: **Goal · Files ·
+Build · Acceptance**. Read README "Architecture notes" first. Rules that always
+apply: run `test/layout_audit_test.dart` after any UI change; ask for text with
+`showTextPrompt`; a render change must leave untouched input byte-identical.
+
+**Needs a device, not code**
+- ⬜ **H1 — verify streamed band audio on a real phone.** The SoLoud buffer
+  stream (`core/services/band_stream_player.dart`) cannot run headless; tests
+  use the whole-render fallback. *Do:* play a 96-bar chart, loop a section,
+  jump, change tempo/style mid-song, practice with key cycling. *Accept:* no
+  gaps or clicks at bar lines; the bar highlight stays on the sounding bar
+  (clock = `StreamedBand.sync`); muting a role is instant. Fix or file what
+  fails.
+- ⬜ **H2 — watch the Continue card and Studio-tools default with children**
+  (from "Now" below).
+
+**Needs a decision from the maintainer first (do not start without it)**
+- ⬜ **H3 — where the shared count-in lives** (WS-W2). `TransportService` has
+  `countInBars` but no surface consumes it; the band has its own count-in in
+  the plan. Decide: transport-owned for all surfaces, or per-surface.
+- ⬜ **H4 — MIDI/controller input platform binding** (WS-X5). The seam exists;
+  binding needs a plugin across five targets — a dependency decision.
+- ⬜ **H5 — browser tabs: instruments · samples · asset catalog** (WS-W6). The
+  Sound Library owner's domain; projects, templates and FX presets ship.
+
+**Ready to build**
+- ⬜ **H6 — band voices from the full sound registry** (BB-U3 remainder).
+  *Goal:* comp/bass voices beyond the synth's four `Instrument`s (soundfonts,
+  the user's instruments). *Files:* `core/harmony/chart_render_cache.dart`
+  (`_renderSegment` uses `renderSegmentsRaw(timbre:)`), `band_playback.dart`,
+  the Sound Library's sampler API. *Build:* a voice abstraction the window
+  renderer can call per segment; keep `Instrument` as one implementation.
+  *Accept:* windows stay sample-exact vs `renderBand` for every voice (extend
+  `chart_render_cache_test`); the voice picker in the Band mix sheet lists
+  registry voices.
+- ⬜ **H7 — WS-W7 second half: the arrangement edits back into the session.**
+  *Now:* Loop Studio records passes (`arrangement_recorder.dart`) and sends
+  them to the Audio Editor (`DawService.addArrangement`). *Goal:* one project,
+  two live views — editing the arrangement updates what the session would
+  play, and vice versa. *Files:* `loop_mixer_screen.dart`, `daw_service.dart`,
+  `core/project/`. *Start by* writing the design note (what is the source of
+  truth?) on this board before code. Size L.
+- ⬜ **H8 — mixer: per-surface playback of the project mix.** The console plays
+  `renderProject`; the Audio Editor / Tracker / Loop Studio play their own
+  documents without the project's inserts, sends or faders. *Accept:* a track
+  muted in the console is silent when its surface plays inside a project.
+- ⬜ **H9 — practice repeat-N in the UI.** `ChartTransport.setLoop(times:)`
+  exists; the chart screen's loop button loops until cleared. Add a count
+  picker. *Accept:* widget test loops a section N times then plays on.
+- ⬜ **H10 — more review runners** for multi-item games (sorting, play-along):
+  each needs a design for "re-ask exactly these items" (see "Now" below).
+- ⬜ **H11 — BB-X / BB-H ladders** (chord charts at scale, chord recognition):
+  research cards further down this file, each already scoped with acceptance.
+
 ## Now / next / later (one page — added 2026-10-13)
 
 This file and `docs/PLAN.md` run to fifteen thousand lines between them. This

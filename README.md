@@ -65,6 +65,17 @@ Live web builds — two deploy regimes on purpose:
   intentional "release" cut. Cut a release with `git tag v1.2.3 && git push
   origin v1.2.3`.
 
+### iOS / TestFlight
+
+`ios-release.yml` builds, signs and uploads to App Store Connect (manual
+dispatch with `dry_run=false`, or a `v*` tag — which also deploys Vercel). After
+upload, `tool/testflight_distribute.py` waits for processing, adds the build to
+**every** beta group (internal and external), sets the "What to Test" note
+(`testflight_notes` input) and submits it for Beta App Review. Bump
+`version: x.y.z+BUILD` in `pubspec.yaml` first — a reused BUILD is rejected
+(builds ≤ 7 are taken). Dispatch from a `main` commit whose CI is green:
+`gh workflow run ios-release.yml --ref main -f dry_run=false -f testflight_notes="…"`.
+
 ## Architecture notes
 
 - **SRI**: `lib/core/services/sri_service.dart` — SM-2, generalized to opaque
@@ -92,6 +103,22 @@ Live web builds — two deploy regimes on purpose:
 - **Accessibility**: the shared piano keyboard, fretboards and home cards carry
   semantics (`test/a11y_widgets_test.dart`). A keyboard used where the key's
   name is the answer passes `semanticNames: false`.
+- **Backing band** (`lib/core/harmony/`, `lib/features/harmony/`): a chart is
+  planned once (`planBand`) and rendered a bar or four at a time
+  (`chart_render_cache.dart`, exact windows, content-keyed cache), streamed
+  through SoLoud (`band_stream_player.dart`) by `StreamedBand`, which also owns
+  the bar queue (`chart_transport.dart`: loop / jump / tempo), live re-plans
+  (style, swing, intensity, voices) and practice passes (`practice_modes.dart`).
+  Without SoLoud (tests) the chart screen falls back to `renderBand`.
+- **Project mix** (`lib/core/project/`): a track's mix has level, pan, mute,
+  solo, an insert chain (`fxChain`) and sends to the project's effects buses;
+  `renderProject` is the one mixdown. The mixer console draws every strip with
+  `shared/widgets/mixer_strip.dart`.
+- **Dialogs**: ask for one line of text with `showTextPrompt`
+  (`shared/widgets/text_prompt_dialog.dart`) — never create a
+  `TextEditingController` around `showDialog` and dispose it when the await
+  returns (the exit animation still uses it).
+- **UI changes**: run `test/layout_audit_test.dart` (375 px, en + de) — CI does.
 - **i18n**: `lib/l10n/app_{en,de}.arb`, generated via `flutter gen-l10n`
   (`generate: true`).
 - **Notation rendering**: comes from `crisp_notation`, the standalone MIT library

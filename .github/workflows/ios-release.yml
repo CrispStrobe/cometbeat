@@ -30,6 +30,10 @@ on:
         description: 'Build & sign only, do NOT upload'
         type: boolean
         default: true
+      testflight_notes:
+        description: 'TestFlight "What to Test" (empty = none)'
+        type: string
+        default: ''
 
 env:
   BUNDLE_ID: com.crispstrobe.cometBeat
@@ -39,7 +43,7 @@ env:
 jobs:
   build-upload:
     runs-on: macos-latest
-    timeout-minutes: 40
+    timeout-minutes: 90
     # The app path-depends on the sibling crisp_notation library
     # (../crisp_notation), so lay the two repos out as siblings and run from
     # within this one — same layout as ci.yml / deploy.yml.
@@ -231,3 +235,22 @@ jobs:
             --bundle-short-version-string "$VER" \
             --api-key "${{ secrets.ASC_KEY_ID }}" \
             --api-issuer "${{ secrets.ASC_ISSUER_ID }}"
+
+      # TestFlight: altool only uploads. Wait for processing, add the build to
+      # every beta group (internal AND external) and submit it for Beta App
+      # Review so external testers get it once approved. tool/testflight_distribute.py.
+      - name: Distribute on TestFlight (internal + external)
+        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          NOTES: ${{ inputs.testflight_notes }}
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pyjwt cryptography requests
+          VER=$(grep '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/+.*//')
+          BUILD=$(grep '^version:' pubspec.yaml | sed 's/.*+//')
+          ASC_KEY_PATH=".appstoreconnect/AuthKey_${ASC_KEY_ID}.p8" \
+            python3 tool/testflight_distribute.py \
+              --version "$VER" --build "$BUILD" --notes "${NOTES:-}"
