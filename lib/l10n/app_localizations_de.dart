@@ -10193,6 +10193,48 @@ class AppLocalizationsDe extends AppLocalizations {
   String get chartClickDownbeat => 'Nur die Eins';
 
   @override
+  String get chartPractice => 'Üben';
+
+  @override
+  String get chartPracticeHelp =>
+      'Das Stück läuft in Schleife; jede Runde ändert sich wie unten eingestellt.';
+
+  @override
+  String get chartPracticeTempoStep => 'Tempo pro Runde (BPM)';
+
+  @override
+  String get chartPracticeKeys => 'Tonarten';
+
+  @override
+  String get chartPracticeKeysChromatic => 'Aufwärts';
+
+  @override
+  String get chartPracticeKeysFourths => 'Quarten';
+
+  @override
+  String get chartPracticeKeysRandom => 'Zufällig';
+
+  @override
+  String get chartPracticeFade => 'Harmonie ausblenden';
+
+  @override
+  String get chartPracticeFadeHelp =>
+      'Erst fallen die Akkorde weg, dann der Bass, dann alles außer einem Klick.';
+
+  @override
+  String get chartPracticeTaper => 'Band ausdünnen';
+
+  @override
+  String chartPracticeDropOut(int percent) {
+    return 'Stille Takte: $percent %';
+  }
+
+  @override
+  String chartPracticePass(int n) {
+    return 'Runde $n';
+  }
+
+  @override
   String get chartStyle => 'Stil';
 
   @override

@@ -1932,7 +1932,13 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
     → stop through `TransportService.advance(elapsedMs)` with no wall clock (the
     reason that API is shaped that way). A jump lands on a bar line, never mid-bar.
 
-- ⬜ **BB-T3 — the practice trainer.** `M`
+- ✅ **BB-T3 — the practice trainer.** `M` · **SHIPPED 2026-10-15** (see
+  HISTORY): `practice_modes.dart` rules over (pass, bar) — tempo ramp, key
+  cycling spelled per key, harmony fade to click-only, seeded drop-outs,
+  density taper; each pass prepared a pass ahead and swapped in at the loop
+  wrap; a Practice sheet on the chart screen. No mode needed real-time, so
+  D-RT stays closed. Practice needs the streamed band (the whole-render
+  fallback plays the tune once). *(original card below)*
   - **Goal.** The pedagogical reason to open this instead of a metronome.
   - **Depends.** BB-T2. **Files.** New `lib/features/harmony/practice_modes.dart`.
   - **Build.** Tempo **ramp** per pass (+N BPM each chorus, or ramp to a target

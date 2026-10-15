@@ -381,6 +381,24 @@ void _screenTests() {
     );
   });
 
+  testWidgets('practice settings are set from their own sheet', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    final button = find.byKey(const Key('chartPracticeButton'));
+    expect(tester.widget<IconButton>(button).isSelected, isFalse);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('practiceOn')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('practiceKeys')), findsOneWidget);
+    expect(find.byKey(const Key('practiceDropOut')), findsOneWidget);
+    // Close the sheet; the toolbar shows practice is on.
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(tester.widget<IconButton>(button).isSelected, isTrue);
+  });
+
   testWidgets('restores the working chart from a previous visit',
       (tester) async {
     // What makes leaving the screen non-destructive.

@@ -45,6 +45,7 @@ Future<PreparedBand?> prepareBandInIsolate(
   int barsPerWindow = 4,
   BandClick click = BandClick.off,
   bool clickCountIn = false,
+  bool kit = true,
 }) =>
     Isolate.run(() {
       final plan = planBand(
@@ -53,6 +54,7 @@ Future<PreparedBand?> prepareBandInIsolate(
         form: form,
         click: click,
         clickCountIn: clickCountIn,
+        kit: kit,
       );
       return plan == null
           ? null

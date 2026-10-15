@@ -18332,6 +18332,78 @@ abstract class AppLocalizations {
   /// **'Downbeat'**
   String get chartClickDownbeat;
 
+  /// No description provided for @chartPractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get chartPractice;
+
+  /// No description provided for @chartPracticeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop the tune; each time round changes as set below.'**
+  String get chartPracticeHelp;
+
+  /// No description provided for @chartPracticeTempoStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo each time round (BPM)'**
+  String get chartPracticeTempoStep;
+
+  /// No description provided for @chartPracticeKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Keys'**
+  String get chartPracticeKeys;
+
+  /// No description provided for @chartPracticeKeysChromatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Up'**
+  String get chartPracticeKeysChromatic;
+
+  /// No description provided for @chartPracticeKeysFourths.
+  ///
+  /// In en, this message translates to:
+  /// **'Fourths'**
+  String get chartPracticeKeysFourths;
+
+  /// No description provided for @chartPracticeKeysRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'Random'**
+  String get chartPracticeKeysRandom;
+
+  /// No description provided for @chartPracticeFade.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade the harmony'**
+  String get chartPracticeFade;
+
+  /// No description provided for @chartPracticeFadeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Drops the chords, then the bass, then all but a click.'**
+  String get chartPracticeFadeHelp;
+
+  /// No description provided for @chartPracticeTaper.
+  ///
+  /// In en, this message translates to:
+  /// **'Thin the band out'**
+  String get chartPracticeTaper;
+
+  /// No description provided for @chartPracticeDropOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Silent bars: {percent}%'**
+  String chartPracticeDropOut(int percent);
+
+  /// No description provided for @chartPracticePass.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {n}'**
+  String chartPracticePass(int n);
+
   /// No description provided for @chartStyle.
   ///
   /// In en, this message translates to:

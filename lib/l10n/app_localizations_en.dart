@@ -10131,6 +10131,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartClickDownbeat => 'Downbeat';
 
   @override
+  String get chartPractice => 'Practice';
+
+  @override
+  String get chartPracticeHelp =>
+      'Loop the tune; each time round changes as set below.';
+
+  @override
+  String get chartPracticeTempoStep => 'Tempo each time round (BPM)';
+
+  @override
+  String get chartPracticeKeys => 'Keys';
+
+  @override
+  String get chartPracticeKeysChromatic => 'Up';
+
+  @override
+  String get chartPracticeKeysFourths => 'Fourths';
+
+  @override
+  String get chartPracticeKeysRandom => 'Random';
+
+  @override
+  String get chartPracticeFade => 'Fade the harmony';
+
+  @override
+  String get chartPracticeFadeHelp =>
+      'Drops the chords, then the bass, then all but a click.';
+
+  @override
+  String get chartPracticeTaper => 'Thin the band out';
+
+  @override
+  String chartPracticeDropOut(int percent) {
+    return 'Silent bars: $percent%';
+  }
+
+  @override
+  String chartPracticePass(int n) {
+    return 'Round $n';
+  }
+
+  @override
   String get chartStyle => 'Style';
 
   @override

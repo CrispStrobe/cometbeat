@@ -39,6 +39,7 @@ import 'package:comet_beat/core/harmony/style_spec.dart';
 import 'package:comet_beat/core/services/band_stream_player.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/harmony/chart_transport.dart';
+import 'package:comet_beat/features/harmony/practice_modes.dart';
 
 /// The band's three voices, in stream order.
 enum BandRole { comp, bass, drums }
@@ -74,6 +75,7 @@ class BandSettings {
     this.bassInstrument = Instrument.piano,
     this.click = BandClick.off,
     this.clickCountIn = false,
+    this.kit = true,
   });
 
   final StyleSpec style;
@@ -82,6 +84,31 @@ class BandSettings {
   final Instrument bassInstrument;
   final BandClick click;
   final bool clickCountIn;
+
+  /// Whether the drum kit plays (a practice pass may leave only the click).
+  final bool kit;
+
+  /// These settings for one practice [pass] of [practice].
+  BandSettings forPass(PassPlan pass) => BandSettings(
+        style: style,
+        form: FormOptions(
+          choruses: form.choruses,
+          countIn: form.countIn,
+          ending: form.ending,
+          baseIntensity: pass.intensity,
+          liftLastChorus: form.liftLastChorus,
+          phraseLength: form.phraseLength,
+          seed: form.seed,
+          countInBars: form.countInBars,
+        ),
+        compInstrument: compInstrument,
+        bassInstrument: bassInstrument,
+        click: pass.clickOnly && click == BandClick.off
+            ? BandClick.everyBeat
+            : click,
+        clickCountIn: clickCountIn,
+        kit: pass.kit,
+      );
 }
 
 class StreamedBand {
@@ -114,6 +141,17 @@ class StreamedBand {
   PreparedBand? _band;
   final Map<int, PreparedBand> _bandByGeneration = {};
 
+  // BB-T3 practice: the base chart every pass is derived from, the pass now
+  // playing and what it silences, and the NEXT pass already being prepared.
+  PracticeConfig? _practice;
+  Chart? _practiceChart;
+  int _pass = 0;
+  PassPlan? _passPlan;
+  Future<({PreparedBand band, PassPlan plan})?>? _nextPass;
+
+  /// The practice pass playing (0 = first time through); 0 when not practising.
+  int get pass => _pass;
+
   bool get playing => _band != null;
 
   /// The bar sounding now, or null.
@@ -127,13 +165,33 @@ class StreamedBand {
 
   /// Starts [chart]'s band. False when streaming is unavailable or there is no
   /// band — the caller falls back.
-  Future<bool> play(Chart chart, BandSettings settings) async {
+  /// With [practice], the form's body loops for ever and every time round is
+  /// a practice pass (BB-T3).
+  Future<bool> play(
+    Chart chart,
+    BandSettings settings, {
+    PracticeConfig? practice,
+  }) async {
     await stop();
     final run = _run;
     if (!await _player.start(kSampleRate, voices: BandRole.values.length)) {
       return false;
     }
-    final band = await _prepare(chart, settings);
+    _practice = practice;
+    _practiceChart = chart;
+    _pass = 0;
+    final first = practice == null
+        ? null
+        : passPlan(
+            practice,
+            chart,
+            0,
+            baseIntensity: settings.form.baseIntensity,
+          );
+    _passPlan = first;
+    final band = first == null
+        ? await _prepare(chart, settings)
+        : await _prepare(first.chart, settings.forPass(first));
     if (band == null || run != _run) {
       await _player.stop();
       return false;
@@ -153,6 +211,14 @@ class StreamedBand {
     _bandByGeneration
       ..clear()
       ..[transport.generation] = band;
+    if (practice != null) {
+      // Loop the tune itself — not the count-in, not the ending.
+      final bars = band.plan.bars;
+      final first = bars.indexWhere((b) => b.bar.role == BarRole.tune);
+      final last = bars.lastIndexWhere((b) => b.bar.role == BarRole.tune);
+      if (first >= 0) transport.setLoop(first, last);
+      _nextPass = _preparePass(1);
+    }
     unawaited(_pump(run, clock));
     return true;
   }
@@ -173,6 +239,8 @@ class StreamedBand {
     _band = next;
     transport.setBars(next.plan.bars);
     _bandByGeneration[transport.generation] = next;
+    // The next pass was prepared with the old settings; prepare it again.
+    if (_practice != null) _nextPass = _preparePass(_pass + 1);
     return true;
   }
 
@@ -198,6 +266,11 @@ class StreamedBand {
     _chart = null;
     _settings = null;
     _bandByGeneration.clear();
+    _practice = null;
+    _practiceChart = null;
+    _passPlan = null;
+    _nextPass = null;
+    _pass = 0;
     transport.stop();
     await _player.stop();
   }
@@ -214,6 +287,7 @@ class StreamedBand {
         barsPerWindow: 1,
         click: s.click,
         clickCountIn: s.clickCountIn,
+        kit: s.kit,
       );
 
   void _applyRoles() {
@@ -232,6 +306,9 @@ class StreamedBand {
       if (transport.queuedAheadMs > leadMs) {
         await Future<void>.delayed(const Duration(milliseconds: 50));
         continue;
+      }
+      if (_atPassWrap()) {
+        if (!await _advancePass(run)) return;
       }
       final queued = transport.enqueueNext();
       if (queued == null) {
@@ -257,13 +334,73 @@ class StreamedBand {
         voices = scaleStems(band, stems);
       }
       if (run != _run) return;
-      _player.add(voices);
+      _player.add(_practiced(voices, queued));
       if (first) {
         clock.start();
         first = false;
       }
       previous = queued;
     }
+  }
+
+  /// Whether the next bar queued starts a new practice pass (the loop wraps).
+  bool _atPassWrap() {
+    if (_practice == null) return false;
+    final loop = transport.loop;
+    final queue = transport.queue;
+    return loop != null &&
+        queue.isNotEmpty &&
+        queue.last.bar == loop.last &&
+        transport.peekNext() == loop.first;
+  }
+
+  /// Swaps in the prepared next pass and starts preparing the one after.
+  /// False when the run ended while waiting.
+  Future<bool> _advancePass(int run) async {
+    final next = await _nextPass;
+    if (run != _run) return false;
+    if (next == null) return true; // nothing to play differently: keep going
+    _pass++;
+    _passPlan = next.plan;
+    _band = next.band;
+    _chart = next.plan.chart;
+    transport.setBars(next.band.plan.bars);
+    _bandByGeneration[transport.generation] = next.band;
+    _nextPass = _preparePass(_pass + 1);
+    return true;
+  }
+
+  Future<({PreparedBand band, PassPlan plan})?> _preparePass(int pass) async {
+    final practice = _practice;
+    final chart = _practiceChart;
+    final settings = _settings;
+    if (practice == null || chart == null || settings == null) return null;
+    final plan = passPlan(
+      practice,
+      chart,
+      pass,
+      baseIntensity: settings.form.baseIntensity,
+    );
+    final band = await _prepare(plan.chart, settings.forPass(plan));
+    return band == null ? null : (band: band, plan: plan);
+  }
+
+  /// A queued bar's voices with the pass's faded roles silenced, or all of
+  /// them on a drop-out bar.
+  List<Float32List> _practiced(List<Float32List> voices, QueuedBar queued) {
+    final practice = _practice;
+    final plan = _passPlan;
+    if (practice == null || plan == null) return voices;
+    final role = queued.span?.bar.role;
+    if (role != BarRole.tune) return voices; // never silence the count-in
+    final drop = isDropOut(practice, _pass, queued.bar);
+    if (!drop && plan.silent.isEmpty) return voices;
+    return [
+      for (final r in BandRole.values)
+        drop || plan.silent.contains(r)
+            ? Float32List(voices[r.index].length)
+            : voices[r.index],
+    ];
   }
 
   /// The bar [toBar] of [to], entered from [from] where bar [fromNext] would

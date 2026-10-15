@@ -8,6 +8,28 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## BB-T3 — the practice trainer (2026-10-15)
+
+- **Rules, not renders.** `features/harmony/practice_modes.dart` answers, for
+  pass *p* and bar *b*: the tempo (+N a pass, or a ramp to a target that then
+  holds), the key (chromatic, round the fourths, or seeded random never
+  repeating the last), which roles are faded (comp → bass → all but a click),
+  whether the bar drops out (a seeded share, never on the first pass), and the
+  density (a level less each pass).
+- **Spelled for the key.** `transposeChartToKey` + `conventionalFifths` (≤ 6
+  accidentals, G♭/E♭m for the tritone): the 12-key test checks every chord
+  moves by the right amount and no sharp root appears in a flat key, or flat
+  in a sharp one.
+- **A pass is a plan.** Practising loops the tune (not the count-in or ending);
+  the next pass is prepared a pass ahead and swapped in at the wrap — already a
+  splice point, so a key or tempo change never clicks. Fades and drop-outs are
+  applied as each bar is queued, so they land exactly on bar lines.
+  `planBand(kit: false)` drops the groove but keeps the pulse for the
+  click-only step.
+- **UI:** a Practice button (sheet: on/off, tempo step, keys, fade, taper,
+  silent-bar share) and a "Round N" counter while practising. Every mode
+  composes with the others; none needed a real-time path (D-RT stays closed).
+
 ## BB-T2 — the transport a player needs (2026-10-15)
 
 - **A bar queue, not a timeline.** `features/harmony/chart_transport.dart`

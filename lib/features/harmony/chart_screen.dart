@@ -35,6 +35,7 @@ import 'package:comet_beat/features/harmony/chart_analysis_panel.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
 import 'package:comet_beat/features/harmony/chart_library_sheet.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
+import 'package:comet_beat/features/harmony/practice_modes.dart';
 import 'package:comet_beat/features/harmony/setlist_screen.dart';
 import 'package:comet_beat/features/harmony/streamed_band.dart';
 import 'package:comet_beat/features/harmony/transpose_sheet.dart';
@@ -141,6 +142,13 @@ class _ChartScreenState extends State<ChartScreen> {
 
   /// Whether the band in play is the streamed one (live controls work).
   bool _streaming = false;
+
+  /// BB-T3: practice mode — the tune loops and each time round is a pass with
+  /// its own tempo, key, fade and drop-outs. Needs the streamed band; the
+  /// whole-render fallback plays the tune once, plainly.
+  bool _practiceOn = false;
+  int _shownPass = 0;
+  PracticeConfig _practice = const PracticeConfig();
 
   /// Applies the current band settings to a streamed band from its next bar.
   void _replanLive({bool tempo = false}) {
@@ -260,7 +268,13 @@ class _ChartScreenState extends State<ChartScreen> {
   /// Plays the band through the window stream. False when streaming is not
   /// available here (or there is no band), so the caller falls back.
   Future<bool> _playStreamed(Chart sounding) async {
-    if (!await _streamed.play(sounding, _bandSettings)) return false;
+    if (!await _streamed.play(
+      sounding,
+      _bandSettings,
+      practice: _practiceOn ? _practice : null,
+    )) {
+      return false;
+    }
     if (!mounted) {
       await _streamed.stop();
       return true;
@@ -283,7 +297,12 @@ class _ChartScreenState extends State<ChartScreen> {
       final source = _streamed.current?.span?.bar.sourceBar;
       final ref =
           source == null ? null : ChartBarRef(source.section, source.bar);
-      if (ref != _playingBar) setState(() => _playingBar = ref);
+      if (ref != _playingBar || _streamed.pass != _shownPass) {
+        setState(() {
+          _playingBar = ref;
+          _shownPass = _streamed.pass;
+        });
+      }
       return;
     }
 
@@ -668,6 +687,127 @@ class _ChartScreenState extends State<ChartScreen> {
     _replanLive();
   }
 
+  /// BB-T3: the practice trainer's settings. They apply from the next Play.
+  Future<void> _openPractice() async {
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheet) {
+          final p = _practice;
+          void set(PracticeConfig next) {
+            setSheet(() {});
+            setState(() => _practice = next);
+          }
+
+          PracticeConfig copy({
+            int? tempoStep,
+            KeyCycle? keyCycle,
+            bool? harmonyFade,
+            double? dropOut,
+            bool? densityTaper,
+          }) =>
+              PracticeConfig(
+                tempoStep: tempoStep ?? p.tempoStep,
+                keyCycle: keyCycle ?? p.keyCycle,
+                harmonyFade: harmonyFade ?? p.harmonyFade,
+                dropOut: dropOut ?? p.dropOut,
+                densityTaper: densityTaper ?? p.densityTaper,
+                seed: p.seed,
+              );
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SwitchListTile(
+                    key: const Key('practiceOn'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.chartPractice),
+                    subtitle: Text(l10n.chartPracticeHelp),
+                    value: _practiceOn,
+                    onChanged: (v) {
+                      setSheet(() {});
+                      setState(() => _practiceOn = v);
+                    },
+                  ),
+                  Text(l10n.chartPracticeTempoStep),
+                  SegmentedButton<int>(
+                    key: const Key('practiceTempoStep'),
+                    showSelectedIcon: false,
+                    segments: [
+                      for (final n in const [0, 2, 5, 10])
+                        ButtonSegment(
+                          value: n,
+                          label: Text(n == 0 ? '±0' : '+$n'),
+                        ),
+                    ],
+                    selected: {p.tempoStep},
+                    onSelectionChanged: (v) => set(copy(tempoStep: v.single)),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(l10n.chartPracticeKeys),
+                  SegmentedButton<KeyCycle>(
+                    key: const Key('practiceKeys'),
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment(
+                        value: KeyCycle.none,
+                        label: Text(l10n.chartClickOff),
+                      ),
+                      ButtonSegment(
+                        value: KeyCycle.chromatic,
+                        label: Text(l10n.chartPracticeKeysChromatic),
+                      ),
+                      ButtonSegment(
+                        value: KeyCycle.fourths,
+                        label: Text(l10n.chartPracticeKeysFourths),
+                      ),
+                      ButtonSegment(
+                        value: KeyCycle.random,
+                        label: Text(l10n.chartPracticeKeysRandom),
+                      ),
+                    ],
+                    selected: {p.keyCycle},
+                    onSelectionChanged: (v) => set(copy(keyCycle: v.single)),
+                  ),
+                  SwitchListTile(
+                    key: const Key('practiceFade'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.chartPracticeFade),
+                    subtitle: Text(l10n.chartPracticeFadeHelp),
+                    value: p.harmonyFade,
+                    onChanged: (v) => set(copy(harmonyFade: v)),
+                  ),
+                  SwitchListTile(
+                    key: const Key('practiceTaper'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.chartPracticeTaper),
+                    value: p.densityTaper,
+                    onChanged: (v) => set(copy(densityTaper: v)),
+                  ),
+                  Text(l10n.chartPracticeDropOut((p.dropOut * 100).round())),
+                  Slider(
+                    key: const Key('practiceDropOut'),
+                    value: p.dropOut,
+                    max: 0.5,
+                    divisions: 5,
+                    onChanged: (v) => set(copy(dropOut: v)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   /// BB-U3: the band's live mix — one strip per role, the same strip the
   /// project mixer draws. Voice volumes: instant, nothing re-renders, and it
   /// holds for the next Play too.
@@ -1050,7 +1190,16 @@ class _ChartScreenState extends State<ChartScreen> {
                   icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
                   label: Text(_playing ? l10n.chartStop : l10n.chartPlay),
                 ),
-                if (_streaming)
+                if (_streaming && _practiceOn)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      l10n.chartPracticePass(_shownPass + 1),
+                      key: const Key('chartPracticePass'),
+                    ),
+                  ),
+                // Practice owns the loop (the whole tune, round and round).
+                if (_streaming && !_practiceOn)
                   IconButton(
                     key: const Key('chartLoopSectionButton'),
                     tooltip: l10n.chartLoopSection,
@@ -1059,6 +1208,15 @@ class _ChartScreenState extends State<ChartScreen> {
                     selectedIcon: const Icon(Icons.repeat_on),
                     onPressed: _toggleSectionLoop,
                   ),
+                IconButton(
+                  key: const Key('chartPracticeButton'),
+                  tooltip: l10n.chartPractice,
+                  isSelected: _practiceOn,
+                  icon: const Icon(Icons.fitness_center_outlined),
+                  selectedIcon: const Icon(Icons.fitness_center),
+                  // Settings apply from the next Play.
+                  onPressed: _playing ? null : _openPractice,
+                ),
                 IconButton(
                   key: const Key('chartBandMixButton'),
                   tooltip: l10n.chartBandMix,
