@@ -201,6 +201,30 @@ void main() {
       expect(back.track('score-1')!.mix.muted, isTrue);
       expect(back.track('loop-1')!.mix, const ProjectTrackMix());
     });
+
+    test('a track\'s FX insert travels; one this build cannot read is dropped',
+        () {
+      final base = _everyKind();
+      Project withFx(String chain) => Project(
+            name: base.name,
+            tracks: [
+              for (final t in base.tracks)
+                t.id == 'loop-1'
+                    ? ProjectTrack(
+                        id: t.id,
+                        kind: t.kind,
+                        name: t.name,
+                        document: t.document,
+                        mix: t.mix.copyWith(fxChain: chain),
+                      )
+                    : t,
+            ],
+          );
+      final good = _roundTrip(withFx('gain gainDb=-6'));
+      expect(good.track('loop-1')!.mix.fxChain, 'gain gainDb=-6');
+      final bad = _roundTrip(withFx('no-such-effect'));
+      expect(bad.track('loop-1')!.mix.fxChain, isEmpty);
+    });
   });
 
   group('a kind with no codec', () {

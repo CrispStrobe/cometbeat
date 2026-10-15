@@ -48,6 +48,7 @@ class ProjectTrackMix {
     this.pan = 0.0,
     this.muted = false,
     this.soloed = false,
+    this.fxChain = '',
   });
 
   /// 0 = silent … 1 = unity. Not decibels: every mixer in the app is already
@@ -66,21 +67,31 @@ class ProjectTrackMix {
   /// leaves the arithmetic to the transport.
   final bool soloed;
 
+  /// WS-W5: the track's insert FX, as a chain string (`fx_chain_codec.dart`'s
+  /// `formatFxChain`) — the same form the FX presets keep. Empty = none. A
+  /// string, not a list of specs, so the mix keeps value equality and the
+  /// codec stays trivial; per-param automation is a clip-level feature and is
+  /// not part of a track's insert.
+  final String fxChain;
+
   /// True when this is exactly a default mix — the common case, and the one the
   /// codec omits so an untouched project stays small.
-  bool get isDefault => level == 1.0 && pan == 0.0 && !muted && !soloed;
+  bool get isDefault =>
+      level == 1.0 && pan == 0.0 && !muted && !soloed && fxChain.isEmpty;
 
   ProjectTrackMix copyWith({
     double? level,
     double? pan,
     bool? muted,
     bool? soloed,
+    String? fxChain,
   }) =>
       ProjectTrackMix(
         level: level ?? this.level,
         pan: pan ?? this.pan,
         muted: muted ?? this.muted,
         soloed: soloed ?? this.soloed,
+        fxChain: fxChain ?? this.fxChain,
       );
 
   @override
@@ -89,15 +100,16 @@ class ProjectTrackMix {
       other.level == level &&
       other.pan == pan &&
       other.muted == muted &&
-      other.soloed == soloed;
+      other.soloed == soloed &&
+      other.fxChain == fxChain;
 
   @override
-  int get hashCode => Object.hash(level, pan, muted, soloed);
+  int get hashCode => Object.hash(level, pan, muted, soloed, fxChain);
 
   @override
   String toString() =>
       'ProjectTrackMix(level: $level, pan: $pan, muted: $muted, '
-      'soloed: $soloed)';
+      'soloed: $soloed, fx: "$fxChain")';
 }
 
 /// One track: a mode's document, plus where it sits in the project.

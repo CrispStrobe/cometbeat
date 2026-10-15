@@ -1149,8 +1149,11 @@ prefix.
   ⚠️ Hosting it found that the bar **overflowed a phone by 51 px**; it scrolls
   now rather than overflowing, which fixes it for every host. ⛔ **The Tracker is
   a considered NO** — its row is not a divergent copy (the overlap is play/stop
-  only) and the bar's tempo/loop mean different things there. ⬜ Loop Studio
-  waits on its lane taking step 2; the six duplicate redo ARB keys stay until
+  only) and the bar's tempo/loop mean different things there. ⛔ **Loop Studio
+  is the same considered NO (2026-10-15):** step 2 has landed (the transport
+  plays / pauses it), but the bar's tempo field, loop and record would be inert
+  there — its tempo is the engine's, and a groove always loops — and an inert
+  control is the failure this ladder keeps finding; the six duplicate redo ARB keys stay until
   the picture settles. Play/pause · stop · record-arm · loop · bar.beat readout · tempo field ·
   undo/redo · metronome, all driven by `TransportService`; per-surface extras go
   in `trailing`. **The card below is the ORIGINAL.** Four things it did not say:
@@ -1454,7 +1457,11 @@ prefix.
       **gated on `AudioService.soundOn`**, the app-wide mute every other surface
       honours. A silent mix does **not** enter the playing state, because a stop
       button on silence is a lie.
-  - ⬜ **FX inserts and sends** are not here — they belong with `WS-X3`.
+  - ✅ **FX inserts — SHIPPED 2026-10-15.** `ProjectTrackMix.fxChain` (a chain
+    string, the FX-preset form), applied in `renderProject` before level and
+    pan; each strip's *Effects* button opens the shared `FxRack`, undoable
+    like any fader. No insert renders byte-identically. ⬜ **Sends** (a bus
+    with its own chain) remain: they need a bus in the project model first.
 - 🔶 **WS-W6 — the browser.** `M` · **SLICE 1 (projects) SHIPPED 2026-07-28**;
   **the FX-PRESETS tab shipped 2026-07-30** (opus, daw-suite) — a store in the
   `ProjectStore` shape holding chain STRINGS, a shared sheet on the

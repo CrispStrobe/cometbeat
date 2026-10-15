@@ -9658,6 +9658,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mixerPan => 'Pan';
 
   @override
+  String get mixerFx => 'Effects';
+
+  @override
+  String mixerFxCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count effects',
+      one: '1 effect',
+      zero: 'Effects',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mixerFxTitle(String track) {
+    return 'Effects on $track';
+  }
+
+  @override
   String get mixerMute => 'Mute';
 
   @override

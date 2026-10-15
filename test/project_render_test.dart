@@ -11,6 +11,9 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/daw_project_codec.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart'
     show Clip, DawTimeline, DawTrack, SampleSource;
+import 'package:comet_beat/core/audio/fx/fx_chain_codec.dart'
+    show formatFxChain;
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart' show GrooveSpec;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/project/project.dart';
@@ -120,6 +123,36 @@ void main() {
     expect(_rms(mix.left), greaterThan(0));
     expect(mix.left.length, mix.right.length);
     expect(mix.skipped, isEmpty);
+  });
+
+  test('a track\'s FX insert is heard; no insert renders exactly as before',
+      () {
+    final plain = renderProject(_projectWith([_loopTrack('a')]));
+    final same = renderProject(
+      _projectWith([
+        // An emptied rack: a chain that was set and then cleared.
+        _loopTrack(
+          'a',
+          mix: const ProjectTrackMix().copyWith(fxChain: formatFxChain([])),
+        ),
+      ]),
+    );
+    expect(same.left, plain.left, reason: 'byte-identical without inserts');
+
+    final quieter = renderProject(
+      _projectWith([
+        _loopTrack(
+          'a',
+          mix: ProjectTrackMix(
+            fxChain: formatFxChain(const [
+              FxSpec(type: FxType.gain, params: {'gainDb': -6, 'mix': 1}),
+            ]),
+          ),
+        ),
+      ]),
+    );
+    final ratio = _rms(quieter.left) / _rms(plain.left);
+    expect(ratio, closeTo(0.5, 0.02), reason: '-6 dB is about half');
   });
 
   test('an empty project is silent, not an error', () {

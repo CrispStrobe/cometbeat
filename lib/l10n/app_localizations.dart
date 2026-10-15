@@ -17492,6 +17492,24 @@ abstract class AppLocalizations {
   /// **'Pan'**
   String get mixerPan;
 
+  /// No description provided for @mixerFx.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects'**
+  String get mixerFx;
+
+  /// No description provided for @mixerFxCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =0{Effects} =1{1 effect} other{{count} effects}}'**
+  String mixerFxCount(int count);
+
+  /// No description provided for @mixerFxTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects on {track}'**
+  String mixerFxTitle(String track);
+
   /// No description provided for @mixerMute.
   ///
   /// In en, this message translates to:

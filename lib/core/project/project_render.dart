@@ -35,6 +35,8 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart'
     show ClipSource, DawTimeline, kDawSampleRate, renderTimeline;
+import 'package:comet_beat/core/audio/fx/fx_chain.dart' show applyFxChain;
+import 'package:comet_beat/core/audio/fx/fx_chain_codec.dart' show parseFxChain;
 import 'package:comet_beat/core/audio/loop_engine.dart' show GrooveSpec;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/interop/app_mode.dart';
@@ -112,8 +114,18 @@ ProjectMixdown renderProject(
       skipped.add(SkippedTrack(track.id, _whyNoSound(track)));
       continue;
     }
-    final pcm = source.render(sampleRate);
+    var pcm = source.render(sampleRate);
     if (pcm.isEmpty) continue;
+    // WS-W5: the track's inserts, before level and pan — where an insert sits
+    // on a console strip. No chain, no change: an untouched project renders
+    // exactly as before.
+    if (track.mix.fxChain.isNotEmpty) {
+      pcm = applyFxChain(
+        pcm,
+        parseFxChain(track.mix.fxChain).chain,
+        sampleRate,
+      );
+    }
     rendered.add((pcm, track.mix));
   }
 

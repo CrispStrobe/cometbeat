@@ -34,6 +34,7 @@
 import 'dart:convert';
 
 import 'package:comet_beat/core/audio/daw_tempo_map.dart';
+import 'package:comet_beat/core/audio/fx/fx_chain_codec.dart' show parseFxChain;
 import 'package:comet_beat/core/audio/loop_engine.dart' show GrooveSpec;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/audio/tracker_song_codec.dart'
@@ -194,6 +195,7 @@ Map<String, dynamic> _mixToJson(ProjectTrackMix mix) => {
       if (mix.pan != 0.0) 'pan': _round(mix.pan),
       if (mix.muted) 'muted': true,
       if (mix.soloed) 'soloed': true,
+      if (mix.fxChain.isNotEmpty) 'fx': mix.fxChain,
     };
 
 double _round(double v) => double.parse(v.toStringAsFixed(3));
@@ -303,5 +305,10 @@ ProjectTrackMix _mixFromJson(Object? raw) {
     pan: pan is num ? pan.toDouble().clamp(-1.0, 1.0) : 0.0,
     muted: raw['muted'] == true,
     soloed: raw['soloed'] == true,
+    // Kept as written only if it parses; a chain this build cannot read is
+    // dropped rather than played wrong.
+    fxChain: raw['fx'] is String && parseFxChain(raw['fx'] as String).ok
+        ? raw['fx'] as String
+        : '',
   );
 }

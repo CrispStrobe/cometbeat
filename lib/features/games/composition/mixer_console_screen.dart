@@ -34,6 +34,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/fx/fx_chain_codec.dart'
+    show formatFxChain, parseFxChain;
 import 'package:comet_beat/core/audio/synth.dart' show wavBytesStereo;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/project/project.dart';
@@ -43,6 +45,7 @@ import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/mixer_strip.dart';
 import 'package:comet_beat/shared/widgets/transport_bar.dart';
 import 'package:flutter/material.dart';
@@ -361,8 +364,63 @@ class _Strip extends StatelessWidget {
         coalesceKey: 'pan:${track.id}',
       ),
       onDragEnd: () => _endDrag(context),
+      // WS-W5: the track's inserts, edited in the shared rack every mode uses.
+      trailing: TextButton.icon(
+        key: ValueKey('mixer-fx-${track.id}'),
+        icon: const Icon(Icons.graphic_eq, size: 18),
+        label: Text(
+          l10n.mixerFxCount(parseFxChain(mix.fxChain).chain.length),
+        ),
+        onPressed: () => _editFx(context, mix, l10n),
+      ),
     );
   }
+
+  Future<void> _editFx(
+    BuildContext context,
+    ProjectTrackMix mix,
+    AppLocalizations l10n,
+  ) =>
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (sheet) {
+          var chain = parseFxChain(mix.fxChain).chain;
+          return StatefulBuilder(
+            builder: (sheet, setSheet) => SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(12),
+                child: FxRack(
+                  key: ValueKey('mixer-fx-rack-${track.id}'),
+                  title: l10n.mixerFxTitle(
+                    track.name.isEmpty ? track.id : track.name,
+                  ),
+                  chain: chain,
+                  dense: true,
+                  onChanged: (next) {
+                    setSheet(() => chain = next);
+                    // Read the CURRENT mix: level or pan may have moved since
+                    // the sheet opened.
+                    final now = projects.project.tracks
+                        .firstWhere(
+                          (t) => t.id == track.id,
+                          orElse: () => track,
+                        )
+                        .mix;
+                    _setMix(
+                      context,
+                      now.copyWith(fxChain: formatFxChain(next)),
+                      l10n.mixerFx,
+                      coalesceKey: 'fx:${track.id}',
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      );
 }
 
 /// Names the tracks the mix could not sound. Shown after a play rather than

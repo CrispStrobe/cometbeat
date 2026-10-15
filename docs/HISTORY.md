@@ -8,6 +8,17 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## WS-W5 — FX inserts on the mixer console (2026-10-15)
+
+- A project track's mix carries an insert chain (`ProjectTrackMix.fxChain`,
+  the chain-string form FX presets use; round-trips in the project codec, a
+  chain this build cannot parse is dropped rather than played wrong).
+  `renderProject` applies it before level and pan; with no chain the mixdown
+  is byte-identical (asserted), and a −6 dB gain insert halves the RMS.
+- Each console strip has an *Effects* button (showing the count) opening the
+  shared `FxRack`; a change is an undo step like a fader move.
+- Sends need a bus in the project model and are not done.
+
 ## One text prompt, and a latent crash gone (2026-10-15)
 
 - `shared/widgets/text_prompt_dialog.dart` — `showTextPrompt`: one field in a

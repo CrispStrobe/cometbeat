@@ -5,6 +5,7 @@
 // and solo existed since WS-W1 and nothing outside `project.dart` and its codec
 // ever touched them. This is the screen that makes them real.
 
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart' show GrooveSpec;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/project/project.dart';
@@ -14,6 +15,7 @@ import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/features/games/composition/mixer_console_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/transport_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -92,6 +94,37 @@ void main() {
       undo.undo();
       await tester.pump();
       expect(projects.track(id)!.mix.muted, isFalse);
+    });
+
+    testWidgets('a strip edits its FX insert in the shared rack, undoably', (
+      tester,
+    ) async {
+      final undo = UndoService();
+      final projects = ProjectService();
+      final id = projects.addTrack(kind: AppMode.loop, document: null);
+      await _pump(tester, projects, undo: undo);
+
+      final fx = find.byKey(ValueKey('mixer-fx-$id'));
+      expect(
+        find.descendant(of: fx, matching: find.text('Effects')),
+        findsOneWidget,
+      );
+      await tester.tap(fx);
+      await tester.pumpAndSettle();
+      final rack = find.byKey(ValueKey('mixer-fx-rack-$id'));
+      expect(rack, findsOneWidget);
+
+      // The rack reports a new chain; the track's insert follows it.
+      tester.widget<FxRack>(rack).onChanged(const [
+        FxSpec(type: FxType.gain, params: {'gainDb': -6, 'mix': 1}),
+      ]);
+      await tester.pump();
+      expect(projects.track(id)!.mix.fxChain, isNotEmpty);
+      expect(undo.nextUndoLabel, 'Effects');
+
+      undo.undo();
+      await tester.pump();
+      expect(projects.track(id)!.mix.fxChain, isEmpty);
     });
 
     testWidgets('a fader DRAG is one undo, not one per frame', (tester) async {
