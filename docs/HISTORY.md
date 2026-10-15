@@ -8,6 +8,21 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## BB-U4b — tags and recently played (2026-10-15)
+
+- `ChartStore` keeps, by chart NAME (like favourites, so re-saving a chart
+  never clears them and sharing a chart never carries them): when each chart
+  was last played (capped, newest kept) and the player's tags (trimmed,
+  de-duplicated ignoring case). Deleting a chart drops both. Corrupt stored
+  values read as empty.
+- Playing a saved chart, or any song in gig mode, records it. The library
+  sheet gains a *Recently played* toggle (played charts only, last played
+  first), tag chips on each row (`#gig #latin`), and a tag editor offering the
+  tags already in use; the search box matches tags like any other field.
+- The tag dialog owns its text controller in its own State — disposing it when
+  `showDialog` returned crashed the closing animation, which the UI test
+  caught.
+
 ## BB-T3 — the practice trainer (2026-10-15)
 
 - **Rules, not renders.** `features/harmony/practice_modes.dart` answers, for

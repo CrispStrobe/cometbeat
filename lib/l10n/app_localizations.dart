@@ -18404,6 +18404,30 @@ abstract class AppLocalizations {
   /// **'Round {n}'**
   String chartPracticePass(int n);
 
+  /// No description provided for @chartRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently played'**
+  String get chartRecent;
+
+  /// No description provided for @chartTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get chartTags;
+
+  /// No description provided for @chartTagsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Separate tags with commas'**
+  String get chartTagsHelp;
+
+  /// No description provided for @chartTagsFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags for {name}'**
+  String chartTagsFor(String name);
+
   /// No description provided for @chartStyle.
   ///
   /// In en, this message translates to:

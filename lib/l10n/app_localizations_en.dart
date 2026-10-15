@@ -10173,6 +10173,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get chartRecent => 'Recently played';
+
+  @override
+  String get chartTags => 'Tags';
+
+  @override
+  String get chartTagsHelp => 'Separate tags with commas';
+
+  @override
+  String chartTagsFor(String name) {
+    return 'Tags for $name';
+  }
+
+  @override
   String get chartStyle => 'Style';
 
   @override

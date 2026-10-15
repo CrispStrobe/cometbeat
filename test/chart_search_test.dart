@@ -147,4 +147,42 @@ void main() {
       expect(run(query: 'f', favouritesOnly: true), ['Blues']);
     });
   });
+
+  group('tags and recently played', () {
+    final rows = ['Blues', 'Waltz', 'Bossa'];
+    final tags = {
+      'Blues': ['gig', 'Jam'],
+      'Bossa': ['gig'],
+    };
+    List<String> run({
+      String query = '',
+      Map<String, int>? played,
+      bool recentOnly = false,
+    }) =>
+        filterCharts(
+          rows,
+          nameOf: (r) => r,
+          chartOf: (_) => null,
+          isFavourite: (_) => false,
+          query: query,
+          tagsOf: (r) => tags[r] ?? const [],
+          playedAt: played,
+          recentOnly: recentOnly,
+        );
+
+    test('a tag is searched like any field, ignoring case', () {
+      expect(run(query: 'gig'), ['Blues', 'Bossa']);
+      expect(run(query: 'jam'), ['Blues']);
+    });
+
+    test('recent shows only played charts, last played first', () {
+      final played = {'Bossa': 100, 'Blues': 300};
+      expect(run(played: played, recentOnly: true), ['Blues', 'Bossa']);
+      expect(run(played: played), rows, reason: 'off: the list is unchanged');
+      expect(
+        run(query: 'gig', played: {'Bossa': 5}, recentOnly: true),
+        ['Bossa'],
+      );
+    });
+  });
 }

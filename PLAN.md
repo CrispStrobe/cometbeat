@@ -1981,7 +1981,7 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
   - **Acceptance.** A style change mid-playback lands on a bar line with no click
     (assert the seam sample). Role mute is instant and does not re-render.
 
-- 🔶 **BB-U4b — the setlist SURFACE.** `M` — *the editor is shipped; gig mode and search remain.*
+- ✅ **BB-U4b — the setlist SURFACE.** `M` — *all shipped; tags and recently played landed 2026-10-15 (see HISTORY).*
   - ✅ **Shipped (2026-08-02):** `features/harmony/setlist_screen.dart` —
     the setlist list, and one set's songs with reorder, remove, per-song
     key/tempo/cue, and multi-select add from the chart library. Reachable from
@@ -2059,10 +2059,10 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
       be visible, so a player can see WHY a result came back.
     - Matching is pure Dart so its edge cases are testable without pumping a
       sheet.
-  - ⬜ **Still to build, and both need MODEL work rather than UI.** **Tags** —
-    `Chart` has no tag field. **"Recently played"** — needs tracking distinct
-    from `savedAtMs`, which records when a chart was SAVED, not when it was
-    played.
+  - ✅ **Tags and "recently played" SHIPPED 2026-10-15** — kept in
+    `ChartStore` by NAME beside the favourites (player facts, not chart data;
+    re-saving keeps them, deleting drops them). Tags are searched like any
+    field; "Recent" filters to played charts, last played first.
   - ⚠️ **Do not move the per-song override onto the chart.** Still the one thing
     the model exists to prevent, and it will still look like a simplification.
   - **Superseded card text below (kept for its reasoning).**

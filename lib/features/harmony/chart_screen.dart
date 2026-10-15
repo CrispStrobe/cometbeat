@@ -223,6 +223,12 @@ class _ChartScreenState extends State<ChartScreen> {
 
   Future<void> _play() async {
     final audio = context.read<AudioService>();
+    // BB-U4b: a saved chart joins "recently played".
+    final name = _name;
+    final store = _store;
+    if (name != null && store != null) {
+      unawaited(store.markPlayed(name).catchError((_) {}));
+    }
     final sounding = soundingChart(_chart, _transpose);
     final style = _bandStyle;
     final form = _bandForm;

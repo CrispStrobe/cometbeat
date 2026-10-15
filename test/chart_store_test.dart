@@ -193,4 +193,51 @@ void main() {
       expect(after.sections[1].bars[1].chords, isEmpty);
     });
   });
+
+  group('recently played and tags (BB-U4b)', () {
+    test('play times are kept by name, newest first, capped', () async {
+      final store = await _store();
+      await store.markPlayed('A', nowMs: 1);
+      await store.markPlayed('B', nowMs: 2);
+      await store.markPlayed('A', nowMs: 3);
+      expect(store.playedAt(), {'A': 3, 'B': 2});
+      for (var i = 0; i < ChartStore.maxCharts + 5; i++) {
+        await store.markPlayed('x$i', nowMs: 10 + i);
+      }
+      expect(store.playedAt(), hasLength(ChartStore.maxCharts));
+      expect(store.playedAt().containsKey('A'), isFalse, reason: 'oldest');
+    });
+
+    test('tags are trimmed, de-duplicated ignoring case, and sorted', () async {
+      final store = await _store();
+      await store.setTags('Blues', [' gig ', 'Jam', 'GIG', '', 'jam']);
+      expect(store.tagsOf('Blues'), ['Jam', 'gig']);
+      await store.setTags('Bossa', ['latin']);
+      expect(store.allTags(), ['Jam', 'gig', 'latin']);
+      await store.setTags('Blues', const []);
+      expect(store.tagsOf('Blues'), isEmpty);
+    });
+
+    test('re-saving keeps tags; deleting drops tags and history', () async {
+      final store = await _store();
+      final chart = _chart('| C | F |');
+      await store.save('Tune', chart);
+      await store.setTags('Tune', ['gig']);
+      await store.markPlayed('Tune', nowMs: 5);
+      await store.save('Tune', chart);
+      expect(store.tagsOf('Tune'), ['gig']);
+      await store.remove('Tune');
+      expect(store.tagsOf('Tune'), isEmpty);
+      expect(store.playedAt(), isEmpty);
+    });
+
+    test('corrupt history or tags read as empty', () async {
+      final store = await _store({
+        'chart_played_v1': 'nope',
+        'chart_tags_v1': '[1,2]',
+      });
+      expect(store.playedAt(), isEmpty);
+      expect(store.allTags(), isEmpty);
+    });
+  });
 }

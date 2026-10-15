@@ -68,6 +68,8 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
   late Set<String> _favourites = widget.store.favourites();
   late final TextEditingController _query = TextEditingController();
   var _favouritesOnly = false;
+  var _recentOnly = false;
+  late Map<String, int> _played = widget.store.playedAt();
   late final TextEditingController _name = TextEditingController(
     // The chart's own title is the name the user already chose; making them
     // type it again is the fastest way to end up with "Untitled".
@@ -91,7 +93,26 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
         isFavourite: (row) => _favourites.contains(row.name),
         query: _query.text,
         favouritesOnly: _favouritesOnly,
+        tagsOf: (row) => widget.store.tagsOf(row.name),
+        playedAt: _played,
+        recentOnly: _recentOnly,
       );
+
+  /// Edits [chart]'s tags: one comma-separated field, existing tags offered
+  /// as chips to tap in.
+  Future<void> _editTags(SavedChart chart) async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => _TagsDialog(
+        name: chart.name,
+        initial: widget.store.tagsOf(chart.name),
+        known: widget.store.allTags(),
+      ),
+    );
+    if (result == null) return;
+    await widget.store.setTags(chart.name, result.split(','));
+    if (mounted) setState(() {});
+  }
 
   Future<void> _toggleFavourite(SavedChart chart) async {
     final next = await widget.store.toggleFavourite(chart.name);
@@ -117,6 +138,7 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
     setState(() {
       _saved = saved;
       _favourites = widget.store.favourites();
+      _played = widget.store.playedAt();
     });
   }
 
@@ -200,6 +222,13 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
                     onPressed: () =>
                         setState(() => _favouritesOnly = !_favouritesOnly),
                   ),
+                  IconButton.filledTonal(
+                    key: const Key('chartRecentOnly'),
+                    isSelected: _recentOnly,
+                    tooltip: l10n.chartRecent,
+                    icon: const Icon(Icons.history),
+                    onPressed: () => setState(() => _recentOnly = !_recentOnly),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -236,15 +265,23 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
                     final saved = _visible[i];
                     final chart = saved.chart;
                     final starred = _favourites.contains(saved.name);
+                    final tags = widget.store.tagsOf(saved.name);
                     return ListTile(
                       key: Key('chartRow_${saved.name}'),
                       title: Text(saved.name),
                       subtitle: Text(
-                        chart == null
-                            ? l10n.chartUnreadableSaved
-                            : _rowSummary(l10n, chart),
+                        [
+                          if (chart == null)
+                            l10n.chartUnreadableSaved
+                          else
+                            _rowSummary(l10n, chart),
+                          // Tags on the row: they are searched, so they show.
+                          if (tags.isNotEmpty) tags.map((t) => '#$t').join(' '),
+                        ].join('\n'),
                       ),
+                      isThreeLine: tags.isNotEmpty,
                       onTap: () => _open(saved),
+                      onLongPress: () => _editTags(saved),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -257,6 +294,12 @@ class _ChartLibrarySheetState extends State<_ChartLibrarySheet> {
                               starred ? Icons.star : Icons.star_border,
                             ),
                             onPressed: () => _toggleFavourite(saved),
+                          ),
+                          IconButton(
+                            key: Key('chartTags_${saved.name}'),
+                            tooltip: l10n.chartTags,
+                            icon: const Icon(Icons.sell_outlined),
+                            onPressed: () => _editTags(saved),
                           ),
                           IconButton(
                             tooltip: l10n.chartDelete,
@@ -285,4 +328,87 @@ String _rowSummary(AppLocalizations l10n, Chart chart) {
     '${chart.tempoBpm} bpm',
     l10n.chartBarCount(chart.totalBars),
   ].join(' · ');
+}
+
+/// The tag editor. Its own State owns the text controller, so it lives exactly
+/// as long as the dialog — including the closing animation, which still reads
+/// the field after the dialog has returned.
+class _TagsDialog extends StatefulWidget {
+  const _TagsDialog({
+    required this.name,
+    required this.initial,
+    required this.known,
+  });
+
+  final String name;
+  final List<String> initial;
+  final List<String> known;
+
+  @override
+  State<_TagsDialog> createState() => _TagsDialogState();
+}
+
+class _TagsDialogState extends State<_TagsDialog> {
+  late final _controller = TextEditingController(
+    text: widget.initial.join(', '),
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _add(String tag) {
+    final parts = _controller.text
+        .split(',')
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    if (!parts.contains(tag)) parts.add(tag);
+    setState(() => _controller.text = parts.join(', '));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.chartTagsFor(widget.name)),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              key: const Key('chartTagsField'),
+              controller: _controller,
+              autofocus: true,
+              decoration: InputDecoration(helperText: l10n.chartTagsHelp),
+            ),
+            if (widget.known.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                children: [
+                  for (final tag in widget.known)
+                    ActionChip(label: Text(tag), onPressed: () => _add(tag)),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.chartCancel),
+        ),
+        FilledButton(
+          key: const Key('chartTagsSave'),
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: Text(l10n.chartOk),
+        ),
+      ],
+    );
+  }
 }

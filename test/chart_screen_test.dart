@@ -955,6 +955,53 @@ void _shareTests() {
       expect(find.byKey(const Key('chartSearchNone')), findsOneWidget);
     });
 
+    testWidgets('a tag set on a row shows on it and is searchable',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await seed(tester);
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      await openLibrary(tester);
+
+      await tester.tap(find.byKey(const Key('chartTags_Bossa')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('chartTagsField')),
+        'latin, gig',
+      );
+      await tester.tap(find.byKey(const Key('chartTagsSave')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('#gig #latin'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('chartSearchField')),
+        'latin',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('chartRow_Bossa')), findsOneWidget);
+      expect(find.byKey(const Key('chartRow_Fast Blues')), findsNothing);
+    });
+
+    testWidgets('recently played lists only played charts, newest first',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await seed(tester);
+      final store = ChartStore(await SharedPreferences.getInstance());
+      await store.markPlayed('The Waltz', nowMs: 1);
+      await store.markPlayed('Bossa', nowMs: 2);
+      await tester.pumpWidget(screen());
+      await tester.pumpAndSettle();
+      await openLibrary(tester);
+
+      await tester.tap(find.byKey(const Key('chartRecentOnly')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('chartRow_Slow Blues')), findsNothing);
+      final bossa = tester.getTopLeft(find.byKey(const Key('chartRow_Bossa')));
+      final waltz =
+          tester.getTopLeft(find.byKey(const Key('chartRow_The Waltz')));
+      expect(bossa.dy, lessThan(waltz.dy), reason: 'last played first');
+    });
+
     testWidgets('starring survives reopening the sheet', (tester) async {
       SharedPreferences.setMockInitialValues({});
       await seed(tester);

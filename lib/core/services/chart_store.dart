@@ -79,6 +79,8 @@ class ChartStore {
   static const _key = 'charts_v1';
   static const _workingKey = 'chart_working_v1';
   static const _favouritesKey = 'chart_favourites_v1';
+  static const _playedKey = 'chart_played_v1';
+  static const _tagsKey = 'chart_tags_v1';
 
   /// The names the player has starred.
   ///
@@ -98,6 +100,83 @@ class ChartStore {
     if (!next.remove(name)) next.add(name);
     await _prefs.setStringList(_favouritesKey, next.toList()..sort());
     return next;
+  }
+
+  // BB-U4b — recently played and tags. Both are facts about the PLAYER, kept
+  // by name beside the favourites for the same reason: re-saving a chart must
+  // not clear them, and they never ride along when a chart is shared.
+
+  /// When each chart was last played (ms since epoch), by name.
+  Map<String, int> playedAt() {
+    final raw = _prefs.getString(_playedKey);
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      return {
+        for (final e in decoded.entries)
+          if (e.key is String && e.value is num)
+            e.key as String: (e.value as num).toInt(),
+      };
+    } catch (_) {
+      return {}; // a corrupt history is an empty one, not a crash
+    }
+  }
+
+  /// Records that [name] was just played. Keeps the [maxCharts] most recent.
+  Future<void> markPlayed(String name, {int? nowMs}) async {
+    if (name.isEmpty) return;
+    final next = playedAt()
+      ..[name] = nowMs ?? DateTime.now().millisecondsSinceEpoch;
+    final kept = next.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    await _prefs.setString(
+      _playedKey,
+      jsonEncode({for (final e in kept.take(maxCharts)) e.key: e.value}),
+    );
+  }
+
+  /// The player's tags for [name], sorted.
+  List<String> tagsOf(String name) => _tags()[name] ?? const [];
+
+  /// Every tag in use, sorted — what a tag picker offers.
+  List<String> allTags() =>
+      {for (final tags in _tags().values) ...tags}.toList()..sort();
+
+  /// Replaces [name]'s tags. Blank tags are dropped, case is kept, duplicates
+  /// (ignoring case) collapse.
+  Future<void> setTags(String name, Iterable<String> tags) async {
+    final clean = <String, String>{};
+    for (final t in tags) {
+      final tag = t.trim();
+      if (tag.isNotEmpty) clean.putIfAbsent(tag.toLowerCase(), () => tag);
+    }
+    final all = _tags();
+    if (clean.isEmpty) {
+      all.remove(name);
+    } else {
+      all[name] = clean.values.toList()..sort();
+    }
+    await _prefs.setString(_tagsKey, jsonEncode(all));
+  }
+
+  Map<String, List<String>> _tags() {
+    final raw = _prefs.getString(_tagsKey);
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      return {
+        for (final e in decoded.entries)
+          if (e.key is String && e.value is List)
+            e.key as String: [
+              for (final t in e.value as List)
+                if (t is String) t,
+            ],
+      };
+    } catch (_) {
+      return {};
+    }
   }
 
   /// How many are kept, oldest dropped. Same reasoning as the sibling stores:
@@ -163,6 +242,12 @@ class ChartStore {
     // come and go — and a chart the player deleted should not quietly come
     // back starred if they later save something under the same name.
     if (isFavourite(name)) await toggleFavourite(name);
+    // Same for its tags and play history.
+    if (tagsOf(name).isNotEmpty) await setTags(name, const []);
+    final played = playedAt();
+    if (played.remove(name) != null) {
+      await _prefs.setString(_playedKey, jsonEncode(played));
+    }
     return _write([
       for (final saved in list())
         if (saved.name != name) saved,

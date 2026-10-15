@@ -10235,6 +10235,20 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get chartRecent => 'Zuletzt gespielt';
+
+  @override
+  String get chartTags => 'Schlagwörter';
+
+  @override
+  String get chartTagsHelp => 'Schlagwörter mit Kommas trennen';
+
+  @override
+  String chartTagsFor(String name) {
+    return 'Schlagwörter für $name';
+  }
+
+  @override
   String get chartStyle => 'Stil';
 
   @override

@@ -39,7 +39,14 @@ String? keyNameOf(int fifths, {bool minor = false}) {
 ///
 /// An empty query matches everything, so an unfiltered list is the same code
 /// path as a filtered one.
-bool chartMatchesQuery(String name, Chart? chart, String query) {
+///
+/// [tags] are the player's tags for the chart; they match like any field.
+bool chartMatchesQuery(
+  String name,
+  Chart? chart,
+  String query, {
+  Iterable<String> tags = const [],
+}) {
   final tokens = query
       .toLowerCase()
       .split(RegExp(r'\s+'))
@@ -49,6 +56,7 @@ bool chartMatchesQuery(String name, Chart? chart, String query) {
 
   final haystack = <String>{
     name.toLowerCase(),
+    for (final tag in tags) tag.toLowerCase(),
     if (chart != null) ...[
       chart.title.toLowerCase(),
       if (chart.composer != null) chart.composer!.toLowerCase(),
@@ -83,10 +91,27 @@ List<T> filterCharts<T>(
   required bool Function(T) isFavourite,
   String query = '',
   bool favouritesOnly = false,
-}) =>
-    [
-      for (final row in saved)
-        if ((!favouritesOnly || isFavourite(row)) &&
-            chartMatchesQuery(nameOf(row), chartOf(row), query))
-          row,
-    ];
+  Iterable<String> Function(T)? tagsOf,
+  Map<String, int>? playedAt,
+  bool recentOnly = false,
+}) {
+  final out = [
+    for (final row in saved)
+      if ((!favouritesOnly || isFavourite(row)) &&
+          (!recentOnly || (playedAt?.containsKey(nameOf(row)) ?? false)) &&
+          chartMatchesQuery(
+            nameOf(row),
+            chartOf(row),
+            query,
+            tags: tagsOf?.call(row) ?? const [],
+          ))
+        row,
+  ];
+  // "Recent" is an order as well as a filter: last played first.
+  if (recentOnly && playedAt != null) {
+    out.sort(
+      (a, b) => (playedAt[nameOf(b)] ?? 0).compareTo(playedAt[nameOf(a)] ?? 0),
+    );
+  }
+  return out;
+}

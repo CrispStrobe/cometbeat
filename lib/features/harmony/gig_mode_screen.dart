@@ -175,6 +175,12 @@ class _GigModeScreenState extends State<GigModeScreen> {
     final chart = _chart;
     if (audio == null || chart == null) return;
 
+    // BB-U4b: every song of the set joins "recently played".
+    final entry = _entry;
+    if (entry != null) {
+      unawaited(widget.charts.markPlayed(entry.chartName).catchError((_) {}));
+    }
+
     // BB-T1: streamed where the platform can, so the next song of the set
     // starts in about a second rather than after a whole render.
     _stopClock();
