@@ -10166,6 +10166,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get chartBandMix => 'Band-Mix';
 
   @override
+  String get chartIntensity => 'Intensität';
+
+  @override
+  String get chartSwing => 'Swing';
+
+  @override
   String get chartStyle => 'Stil';
 
   @override

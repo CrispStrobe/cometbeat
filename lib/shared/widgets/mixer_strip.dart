@@ -24,6 +24,7 @@ class MixerStripView extends StatelessWidget {
     this.pan,
     this.onPan,
     this.onDragEnd,
+    this.trailing,
     super.key,
   });
 
@@ -47,6 +48,9 @@ class MixerStripView extends StatelessWidget {
 
   /// A level or pan drag ended.
   final VoidCallback? onDragEnd;
+
+  /// Extra control under the title row (the band's voice picker, say).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +100,7 @@ class MixerStripView extends StatelessWidget {
                 ),
               ],
             ),
+            if (trailing != null) trailing!,
             Row(
               children: [
                 SizedBox(width: 44, child: Text(l10n.mixerLevel)),

@@ -15,6 +15,7 @@ library;
 
 import 'dart:async';
 
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_analysis.dart';
@@ -105,6 +106,20 @@ class _ChartScreenState extends State<ChartScreen> {
   /// playing it again (or after a small edit) reuses what was rendered.
   final _streamed = StreamedBand();
 
+  /// BB-U3 band settings, kept for the next Play and applied live to a
+  /// streamed band. Intensity 0–3 (the form's base); swing null = the style's.
+  int _intensity = 2;
+  double? _swing;
+
+  StyleSpec get _bandStyle {
+    final style = styleFor(_chart.styleId);
+    final swing = _swing;
+    return swing == null ? style : style.withSwing(swing);
+  }
+
+  FormOptions get _bandForm =>
+      FormOptions(choruses: _choruses, baseIntensity: _intensity);
+
   /// Null until SharedPreferences resolves. Every write goes through
   /// [_persist], which is a no-op until then rather than a queue — losing the
   /// first half-second of edits to a cold start is not a real failure mode, and
@@ -168,15 +183,21 @@ class _ChartScreenState extends State<ChartScreen> {
   Future<void> _play() async {
     final audio = context.read<AudioService>();
     final sounding = soundingChart(_chart, _transpose);
-    final style = styleFor(_chart.styleId);
-    final form = FormOptions(choruses: _choruses);
+    final style = _bandStyle;
+    final form = _bandForm;
 
     if (await _playStreamed(sounding, style, form)) return;
     if (!mounted) return;
 
     // The band is the real path; the plain one is the fallback. A band that
     // fails to assemble must degrade to something that plays, not to silence.
-    final band = renderBand(sounding, style: style, form: form);
+    final band = renderBand(
+      sounding,
+      style: style,
+      form: form,
+      compInstrument: _streamed.compInstrument,
+      bassInstrument: _streamed.bassInstrument,
+    );
 
     if (band != null) {
       _band = (bars: band.bars, totalMs: band.totalMs);
@@ -545,7 +566,7 @@ class _ChartScreenState extends State<ChartScreen> {
     _persist();
     // BB-U3: a streamed band takes the new style from its next window, which
     // is always a bar line.
-    if (_streamed.playing) unawaited(_streamed.restyle(styleFor(id)));
+    if (_streamed.playing) unawaited(_streamed.restyle(_bandStyle));
   }
 
   /// BB-U3: the band's live mix — one strip per role, the same strip the
@@ -571,11 +592,105 @@ class _ChartScreenState extends State<ChartScreen> {
             _streamed.applyRoles();
           }
 
+          String voice(Instrument i) => switch (i) {
+                Instrument.piano => l10n.instrumentPiano,
+                Instrument.cello => l10n.instrumentCello,
+                Instrument.flute => l10n.instrumentFlute,
+                Instrument.musicBox => l10n.instrumentMusicBox,
+              };
+          Widget voicePicker(BandRole role) {
+            final current = role == BandRole.comp
+                ? _streamed.compInstrument
+                : _streamed.bassInstrument;
+            return DropdownButton<Instrument>(
+              key: ValueKey('band-voice-${role.name}'),
+              value: current,
+              items: [
+                for (final i in Instrument.values)
+                  DropdownMenuItem(value: i, child: Text(voice(i))),
+              ],
+              onChanged: (i) {
+                if (i == null) return;
+                setSheet(() {
+                  if (role == BandRole.comp) {
+                    _streamed.compInstrument = i;
+                  } else {
+                    _streamed.bassInstrument = i;
+                  }
+                });
+                if (_streamed.playing) {
+                  unawaited(
+                    role == BandRole.comp
+                        ? _streamed.replan(comp: i)
+                        : _streamed.replan(bass: i),
+                  );
+                }
+              },
+            );
+          }
+
+          final swing = _swing ?? styleFor(_chart.styleId).swing;
           return SafeArea(
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Text(l10n.chartIntensity),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SegmentedButton<int>(
+                            key: const Key('bandIntensity'),
+                            showSelectedIcon: false,
+                            segments: [
+                              for (var i = 0; i <= 3; i++)
+                                ButtonSegment(
+                                  value: i,
+                                  label: Text('${i + 1}'),
+                                ),
+                            ],
+                            selected: {_intensity},
+                            onSelectionChanged: (v) {
+                              setSheet(() {});
+                              setState(() => _intensity = v.single);
+                              if (_streamed.playing) {
+                                unawaited(_streamed.replan(form: _bandForm));
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Text(l10n.chartSwing),
+                        Expanded(
+                          child: Slider(
+                            key: const Key('bandSwing'),
+                            value: swing,
+                            divisions: 10,
+                            label: '${(swing * 100).round()}%',
+                            onChanged: (v) {
+                              setSheet(() {});
+                              setState(() => _swing = v);
+                            },
+                            // Re-plan once per drag, not per frame.
+                            onChangeEnd: (_) {
+                              if (_streamed.playing) {
+                                unawaited(_streamed.restyle(_bandStyle));
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   for (final role in BandRole.values)
                     MixerStripView(
                       id: 'band-${role.name}',
@@ -596,6 +711,8 @@ class _ChartScreenState extends State<ChartScreen> {
                       ),
                       onLevel: (v) => change(() => roles.setLevel(role, v)),
                       onPan: (v) => change(() => roles.setPan(role, v)),
+                      trailing:
+                          role == BandRole.drums ? null : voicePicker(role),
                     ),
                 ],
               ),

@@ -18278,6 +18278,18 @@ abstract class AppLocalizations {
   /// **'Band mix'**
   String get chartBandMix;
 
+  /// No description provided for @chartIntensity.
+  ///
+  /// In en, this message translates to:
+  /// **'Intensity'**
+  String get chartIntensity;
+
+  /// No description provided for @chartSwing.
+  ///
+  /// In en, this message translates to:
+  /// **'Swing'**
+  String get chartSwing;
+
   /// No description provided for @chartStyle.
   ///
   /// In en, this message translates to:

@@ -66,6 +66,8 @@ class PreparedBand {
     required this.plan,
     required this.sampleRate,
     required this.windows,
+    required this.compInstrument,
+    required this.bassInstrument,
     required this.compPeak,
     required this.bassPeak,
     required this.drumPeak,
@@ -79,6 +81,10 @@ class PreparedBand {
   final BandPlan plan;
   final int sampleRate;
   final List<BandWindow> windows;
+
+  /// The voices the comp and bass are synthesised with.
+  final Instrument compInstrument;
+  final Instrument bassInstrument;
 
   /// Whole-piece peaks, as `mixStemsFloat` would measure them. Zero = silent.
   final double compPeak;
@@ -110,6 +116,8 @@ PreparedBand prepareBand(
   BandPlan plan, {
   int barsPerWindow = 4,
   int sampleRate = kSampleRate,
+  Instrument compInstrument = Instrument.piano,
+  Instrument bassInstrument = Instrument.piano,
   Map<String, Float64List>? segmentCache,
 }) {
   final cache = segmentCache ?? <String, Float64List>{};
@@ -137,8 +145,10 @@ PreparedBand prepareBand(
     plan: plan,
     sampleRate: sampleRate,
     windows: windows,
-    compPeak: _segmentPeak(plan.comp, sampleRate, cache),
-    bassPeak: _segmentPeak(plan.bass, sampleRate, cache),
+    compInstrument: compInstrument,
+    bassInstrument: bassInstrument,
+    compPeak: _segmentPeak(plan.comp, compInstrument, sampleRate, cache),
+    bassPeak: _segmentPeak(plan.bass, bassInstrument, sampleRate, cache),
     drumPeak: 0,
     compOffsets: _offsets(plan.comp, sampleRate),
     bassOffsets: _offsets(plan.bass, sampleRate),
@@ -161,6 +171,8 @@ PreparedBand prepareBand(
     plan: plan,
     sampleRate: sampleRate,
     windows: windows,
+    compInstrument: compInstrument,
+    bassInstrument: bassInstrument,
     compPeak: prepared.compPeak,
     bassPeak: prepared.bassPeak,
     drumPeak: drumPeak,
@@ -173,8 +185,9 @@ PreparedBand prepareBand(
 /// The cache key of one segment's audio (its window position aside).
 String segmentKey(Segment s) => '${s.ms}:${s.freqs.join(',')}';
 
-// A note cache may outlive one sample rate; its keys must not.
-String _cacheKey(Segment s, int sampleRate) => '$sampleRate@${segmentKey(s)}';
+// A note cache may outlive one sample rate or voice; its keys must not.
+String _cacheKey(Segment s, Instrument voice, int sampleRate) =>
+    '$sampleRate@${voice.name}@${segmentKey(s)}';
 
 /// Which events a window render includes.
 ///
@@ -195,8 +208,24 @@ BandStems renderWindowStems(
   final cache = segmentCache ?? <String, Float64List>{};
   final w = band.windows[index];
   return BandStems(
-    _segmentWindow(band.plan.comp, band._compOffsets, w, band, cache, part),
-    _segmentWindow(band.plan.bass, band._bassOffsets, w, band, cache, part),
+    _segmentWindow(
+      band.plan.comp,
+      band._compOffsets,
+      band.compInstrument,
+      w,
+      band,
+      cache,
+      part,
+    ),
+    _segmentWindow(
+      band.plan.bass,
+      band._bassOffsets,
+      band.bassInstrument,
+      w,
+      band,
+      cache,
+      part,
+    ),
     _drumWindow(band, w, <Drum, Float64List>{}, part),
   );
 }
@@ -250,7 +279,10 @@ List<Float32List> scaleStems(
 /// sample-identical stems.
 String windowKey(PreparedBand band, int index) {
   final w = band.windows[index];
-  final out = StringBuffer('${band.sampleRate}|${w.endSample - w.startSample}');
+  final out = StringBuffer(
+    '${band.sampleRate}|${w.endSample - w.startSample}'
+    '|${band.compInstrument.name}|${band.bassInstrument.name}',
+  );
   void segments(String tag, List<Segment> segs, List<int> offsets) {
     out.write('|$tag');
     for (var k = 0; k < segs.length; k++) {
@@ -397,16 +429,21 @@ List<int> _offsets(List<Segment> segments, int sampleRate) {
 
 Float64List _renderSegment(
   Segment s,
+  Instrument voice,
   int sampleRate,
   Map<String, Float64List> cache,
 ) =>
-    cache[_cacheKey(s, sampleRate)] ??=
-        renderSegmentsRaw([s], sampleRate: sampleRate);
+    cache[_cacheKey(s, voice, sampleRate)] ??= renderSegmentsRaw(
+      [s],
+      sampleRate: sampleRate,
+      timbre: timbreFor(voice),
+    );
 
 /// The peak of a back-to-back segment stem: segments never overlap, so it is
 /// the largest single-segment peak.
 double _segmentPeak(
   List<Segment> segments,
+  Instrument voice,
   int sampleRate,
   Map<String, Float64List> cache,
 ) {
@@ -414,7 +451,7 @@ double _segmentPeak(
   final seen = <String>{};
   for (final s in segments) {
     if (s.freqs.isEmpty || !seen.add(segmentKey(s))) continue;
-    for (final v in _renderSegment(s, sampleRate, cache)) {
+    for (final v in _renderSegment(s, voice, sampleRate, cache)) {
       if (v.abs() > peak) peak = v.abs();
     }
   }
@@ -424,6 +461,7 @@ double _segmentPeak(
 Float64List _segmentWindow(
   List<Segment> segments,
   List<int> offsets,
+  Instrument voice,
   BandWindow w,
   PreparedBand band,
   Map<String, Float64List> cache,
@@ -437,7 +475,7 @@ Float64List _segmentWindow(
     if (start >= w.endSample) break;
     if (segments[k].freqs.isEmpty) continue;
     if (!_included(start, w, part)) continue;
-    final audio = _renderSegment(segments[k], band.sampleRate, cache);
+    final audio = _renderSegment(segments[k], voice, band.sampleRate, cache);
     final from = max(start, w.startSample);
     final to = min(end, w.endSample);
     for (var i = from; i < to; i++) {

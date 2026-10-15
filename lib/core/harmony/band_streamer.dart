@@ -10,7 +10,7 @@ library;
 
 import 'dart:isolate';
 
-import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
+import 'package:comet_beat/core/audio/synth.dart' show Instrument, kSampleRate;
 import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_render_cache.dart';
@@ -36,10 +36,19 @@ Future<PreparedBand?> prepareBandInIsolate(
   required StyleSpec style,
   FormOptions form = const FormOptions(),
   int sampleRate = kSampleRate,
+  Instrument compInstrument = Instrument.piano,
+  Instrument bassInstrument = Instrument.piano,
 }) =>
     Isolate.run(() {
       final plan = planBand(chart, style: style, form: form);
-      return plan == null ? null : prepareBand(plan, sampleRate: sampleRate);
+      return plan == null
+          ? null
+          : prepareBand(
+              plan,
+              sampleRate: sampleRate,
+              compInstrument: compInstrument,
+              bassInstrument: bassInstrument,
+            );
     });
 
 class BandStreamer {

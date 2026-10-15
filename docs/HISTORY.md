@@ -25,7 +25,13 @@ the repo root (detailed roadmap planning and the agent board are in
 - **One strip.** The console's strip became `MixerStripView`
   (`shared/widgets/mixer_strip.dart`); the project mixer and the new *Band mix*
   sheet both draw it.
-- Still open on the card: intensity dial, swing, per-role instrument.
+- **Intensity, swing, voices.** The Band mix sheet also sets the intensity
+  (1–4), the swing (overriding the style's) and the comp and bass voice (the
+  synth's four instruments); each re-plans from the next window while
+  streaming, and holds for the next Play (the whole-render fallback honours
+  them too). Windows stay exact for any voice (asserted).
+- Still open: voices from the full sound registry (soundfonts, the user's own
+  instruments) rather than the synth's four.
 
 ## BB-T1 — the backing band starts in about a second (2026-10-15)
 

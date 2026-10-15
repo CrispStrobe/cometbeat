@@ -3628,6 +3628,8 @@
   },
   "chartUnreadableSaved": "Dieses Chart wurde mit einer neueren Version gesichert und lässt sich nicht öffnen.",
   "chartBandMix": "Band-Mix",
+  "chartIntensity": "Intensität",
+  "chartSwing": "Swing",
   "chartStyle": "Stil",
   "chartChoruses": "Durchgänge",
   "chartTranspose": "Transponieren",

@@ -150,6 +150,17 @@ class StyleSpec {
   /// Optional label for the kick feel, carried for the UI only.
   final String? kickPattern;
 
+  /// This style with its swing replaced (a live swing control).
+  StyleSpec withSwing(double swing) => StyleSpec(
+        id: id,
+        name: name,
+        levels: levels,
+        swing: swing.clamp(0.0, 1.0),
+        meters: meters,
+        tempoRange: tempoRange,
+        kickPattern: kickPattern,
+      );
+
   StyleLevel levelAt(int intensity) =>
       levels[intensity.clamp(0, levels.length - 1)];
 

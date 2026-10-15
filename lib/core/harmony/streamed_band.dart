@@ -20,7 +20,7 @@ library;
 
 import 'dart:async';
 
-import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
+import 'package:comet_beat/core/audio/synth.dart' show Instrument, kSampleRate;
 import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/band_streamer.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
@@ -81,8 +81,14 @@ class StreamedBand {
   Stopwatch? _clock;
   PreparedBand? _band;
   Chart? _chart;
+  StyleSpec? _style;
   FormOptions _form = const FormOptions();
   int _sent = 0;
+
+  /// The voices comp and bass are synthesised with; set them through
+  /// [replan] while playing, directly otherwise.
+  Instrument compInstrument = Instrument.piano;
+  Instrument bassInstrument = Instrument.piano;
 
   bool get playing => _band != null;
 
@@ -97,7 +103,13 @@ class StreamedBand {
     if (!await _player.start(kSampleRate, voices: BandRole.values.length)) {
       return null;
     }
-    final band = await prepareBandInIsolate(chart, style: style, form: form);
+    final band = await prepareBandInIsolate(
+      chart,
+      style: style,
+      form: form,
+      compInstrument: compInstrument,
+      bassInstrument: bassInstrument,
+    );
     if (band == null) {
       await _player.stop();
       return null;
@@ -106,6 +118,7 @@ class StreamedBand {
     _clock = clock;
     _band = band;
     _chart = chart;
+    _style = style;
     _form = form;
     _sent = 0;
     _player.onBuffering = (buffering) {
@@ -119,18 +132,42 @@ class StreamedBand {
 
   /// Switches to [style] from the next window not yet queued. False when not
   /// playing, or too late (everything is queued).
-  Future<bool> restyle(StyleSpec style) async {
+  Future<bool> restyle(StyleSpec style) => replan(style: style);
+
+  /// Re-plans with whatever is given — a style (swing included), form options
+  /// (the intensity), a comp or bass voice — and takes over from the next
+  /// window not yet queued, which is always a bar line. False when not
+  /// playing, too late, or when the change would move the bar lines.
+  Future<bool> replan({
+    StyleSpec? style,
+    FormOptions? form,
+    Instrument? comp,
+    Instrument? bass,
+  }) async {
+    if (comp != null) compInstrument = comp;
+    if (bass != null) bassInstrument = bass;
     final old = _band;
     final chart = _chart;
-    if (old == null || chart == null) return false;
-    final next = await prepareBandInIsolate(chart, style: style, form: _form);
+    final current = _style;
+    if (old == null || chart == null || current == null) return false;
+    final nextStyle = style ?? current;
+    final nextForm = form ?? _form;
+    final next = await prepareBandInIsolate(
+      chart,
+      style: nextStyle,
+      form: nextForm,
+      compInstrument: compInstrument,
+      bassInstrument: bassInstrument,
+    );
     if (next == null || _band != old) return false;
-    // A style changes what plays, not where the bars are; if the windows ever
+    // These change what plays, not where the bars are; if the windows ever
     // disagreed, splicing would misplace the music, so refuse instead.
     if (!_sameWindows(old, next)) return false;
     final from = _sent;
     if (from >= next.windows.length) return false;
     _band = next;
+    _style = nextStyle;
+    _form = nextForm;
     _feed(next, from: from, previous: old);
     return true;
   }
@@ -182,6 +219,7 @@ class StreamedBand {
     _clock = null;
     _band = null;
     _chart = null;
+    _style = null;
     await _player.stop();
   }
 }

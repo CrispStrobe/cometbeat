@@ -1945,12 +1945,14 @@ Size is `S` (a session) · `M` (a day) · `L` (several days — split it).
 ### Phase 4 — the surface (fixes G5/G6)
 
 - 🔶 **BB-U3 — band controls, live (and they are Loop Studio's).** `S` ·
-  **Mostly shipped 2026-10-15** (see HISTORY): style changes mid-song land on
+  **Nearly all shipped 2026-10-15** (see HISTORY): style changes mid-song land on
   the next window's bar line, with carry-in so nothing is cut off; per-role
   level / mute / solo / pan are voice volumes (instant, no re-render), drawn
-  with the console's own strip (`shared/widgets/mixer_strip.dart`). **Still
-  open:** an intensity dial, a swing control, per-role instrument choice.
-  *(original card below)*
+  with the console's own strip (`shared/widgets/mixer_strip.dart`). Intensity,
+  swing and the comp/bass voice re-plan live the same way. **Left:** the
+  instrument list is the synth's four voices, not the full sound registry
+  (soundfonts / the user's instruments) — that needs the band rendered through
+  the registry's sampler, a bigger change. *(original card below)*
   - **Goal.** Change the feel without stopping.
   - **Depends.** BB-T1, BB-A7. **Files.** `chart_screen.dart`; reuse
     `composition/mixer_console_screen.dart` strips rather than new ones.

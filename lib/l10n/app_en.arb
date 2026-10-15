@@ -4389,6 +4389,8 @@
   },
   "chartUnreadableSaved": "This chart was saved by a newer version and cannot be opened.",
   "chartBandMix": "Band mix",
+  "chartIntensity": "Intensity",
+  "chartSwing": "Swing",
   "chartStyle": "Style",
   "chartChoruses": "Times through",
   "chartTranspose": "Transpose",

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/harmony/band_playback.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_render_cache.dart';
@@ -87,6 +88,32 @@ void main() {
         expect(_windowed(chart, barsPerWindow: bars), whole, reason: '$bars');
       }
     });
+  });
+
+  test('other comp and bass voices stay exact, and key their own windows', () {
+    final chart = _chart(_blues);
+    final wav = renderBand(
+      chart,
+      style: styleFor('straight'),
+      sampleRate: _rate,
+      compInstrument: Instrument.flute,
+      bassInstrument: Instrument.cello,
+    )!
+        .wav;
+    final whole = Int16List.sublistView(Uint8List.fromList(wav.sublist(44)));
+    final band = prepareBand(
+      _plan(chart),
+      sampleRate: _rate,
+      compInstrument: Instrument.flute,
+      bassInstrument: Instrument.cello,
+    );
+    final out = <int>[
+      for (var i = 0; i < band.windows.length; i++)
+        ...mixWindow(band, renderWindowStems(band, i)),
+    ];
+    expect(out, whole);
+    final piano = prepareBand(_plan(chart), sampleRate: _rate);
+    expect(windowKey(band, 0), isNot(windowKey(piano, 0)));
   });
 
   test('windows tile the piece on bar lines', () {

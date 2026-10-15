@@ -136,6 +136,8 @@ BandPerformance? renderBand(
   int seed = 0,
   int sampleRate = kSampleRate,
   List<MixStem> extraStems = const [],
+  Instrument compInstrument = Instrument.piano,
+  Instrument bassInstrument = Instrument.piano,
 }) {
   final plan = planBand(
     chart,
@@ -158,12 +160,20 @@ BandPerformance? renderBand(
   final stems = <MixStem>[
     if (compEvents.isNotEmpty)
       (
-        samples: renderSegmentsRaw(compEvents, sampleRate: sampleRate),
+        samples: renderSegmentsRaw(
+          compEvents,
+          sampleRate: sampleRate,
+          timbre: timbreFor(compInstrument),
+        ),
         gain: mix.comp
       ),
     if (bassEvents.isNotEmpty)
       (
-        samples: renderSegmentsRaw(bassEvents, sampleRate: sampleRate),
+        samples: renderSegmentsRaw(
+          bassEvents,
+          sampleRate: sampleRate,
+          timbre: timbreFor(bassInstrument),
+        ),
         gain: mix.bass
       ),
     if (drumHits.isNotEmpty)

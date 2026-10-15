@@ -358,6 +358,10 @@ void _screenTests() {
     await tester.tap(find.byKey(const Key('chartBandMixButton')));
     await tester.pumpAndSettle();
     expect(find.byType(MixerStripView), findsNWidgets(3));
+    expect(find.byKey(const Key('bandIntensity')), findsOneWidget);
+    expect(find.byKey(const Key('bandSwing')), findsOneWidget);
+    expect(find.byKey(const ValueKey('band-voice-comp')), findsOneWidget);
+    expect(find.byKey(const ValueKey('band-voice-bass')), findsOneWidget);
     for (final label in ['Chords', 'Bass', 'Drums']) {
       expect(find.text(label), findsOneWidget);
     }
@@ -367,6 +371,8 @@ void _screenTests() {
       find.descendant(of: mute, matching: find.byIcon(Icons.volume_up)),
       findsOneWidget,
     );
+    await tester.ensureVisible(mute);
+    await tester.pumpAndSettle();
     await tester.tap(mute);
     await tester.pump();
     expect(
