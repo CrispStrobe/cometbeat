@@ -211,6 +211,45 @@ void main() {
       expect(transport.positionMs, 0);
     });
 
+    testWidgets('a transport bar elsewhere pauses and resumes the groove',
+        (tester) async {
+      // WS-W2 step 2: the transport DRIVES Loop Studio, not only mirrors it.
+      final transport = TransportService();
+      await pumpGame(
+        tester,
+        const LoopMixerScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<TransportService>.value(value: transport),
+        ],
+      );
+      final game = _game(tester);
+
+      // Nothing enabled: a play from outside has nothing to start.
+      transport.play();
+      await tester.pump();
+      expect(game.isPlaying, isFalse);
+      transport.pause();
+
+      game.toggleTrack('drums');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(game.isPlaying, isTrue);
+
+      transport.pause();
+      await tester.pump();
+      expect(game.isPlaying, isFalse, reason: 'paused from the transport');
+      expect(game.enabledTracks, contains('drums'), reason: 'paused, not off');
+
+      transport.play();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(game.isPlaying, isTrue, reason: 'resumed from the transport');
+
+      game.toggleTrack('drums');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+    });
+
     testWidgets('mounts and plays with NO transport provided', (tester) async {
       await pumpGame(tester, const LoopMixerScreen());
       final game = _game(tester);

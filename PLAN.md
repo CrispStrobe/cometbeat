@@ -1033,7 +1033,8 @@ prefix.
   transport can now DRIVE the Audio Editor and the Tracker, not only mirror
   them, and record-arm is two-way on the Tracker. Position authority stays with
   each surface's own clock, which is what `syncTo` requires for a pre-rendered
-  loop. ⬜ Loop Studio is the third surface (its lane, ~15 lines) and the shared
+  loop. ✅ Loop Studio is the third surface (2026-10-15: a transport play /
+  pause resumes / pauses its groove; an empty groove ignores play) and the shared
   count-in is still unreachable — a decision about where count-in lives, not
   code. **The card below is the ORIGINAL, kept because its warnings still bind
   WS-W3 and the three migrations.** One decision it did not anticipate:
@@ -1118,7 +1119,7 @@ prefix.
     `transport.togglePlay`, the surfaces listened to nothing, so a hosted bar
     would have been an inert control — and `transport_bar_test` would still have
     passed, because it asserts the bar drives the service.
-    ⬜ Loop Studio is the third surface (its lane's, ~15 lines). ⬜ The count-in
+    ✅ Loop Studio is the third surface (2026-10-15). ⬜ The count-in
     question is still open and still a decision, not code.
 
   **WS-W2 — the original card, for reference (NOT a task):**

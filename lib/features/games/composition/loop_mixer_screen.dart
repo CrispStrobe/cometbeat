@@ -718,8 +718,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     try {
-      _transport = Provider.of<TransportService>(context, listen: false);
+      final shared = Provider.of<TransportService>(context, listen: false);
+      if (!identical(shared, _transport)) {
+        _transport?.removeListener(_onTransportCommand);
+        _transport = shared..addListener(_onTransportCommand);
+      }
     } on ProviderNotFoundException {
+      _transport?.removeListener(_onTransportCommand);
       _transport = null;
     }
     try {
@@ -895,6 +900,29 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     return linker.writeBack(link, _engine.spec);
   }
 
+  /// WS-W2 step 2 for Loop Studio — the shared transport can DRIVE this
+  /// surface, as it does the Audio Editor and the Tracker: a play or pause
+  /// from a transport bar anywhere resumes or pauses the groove. Position
+  /// authority stays with this screen's clock (`syncTo`), and an empty groove
+  /// (nothing enabled) has nothing to start, so a play then is ignored.
+  ///
+  /// [_applyingTransport] breaks the echo: our own play/pause is published
+  /// back through [_publishTransport], which notifies us again.
+  bool _applyingTransport = false;
+
+  void _onTransportCommand() {
+    final transport = _transport;
+    if (transport == null || _applyingTransport || !mounted) return;
+    if (transport.isPlaying == _clock.isRunning) return;
+    if (_engine.enabled.isEmpty) return;
+    _applyingTransport = true;
+    try {
+      _pauseOrResume();
+    } finally {
+      _applyingTransport = false;
+    }
+  }
+
   /// Publishes this surface's phase and play state into the SHARED transport.
   ///
   /// Driven from the ticker rather than from the play/stop call sites: `_clock`
@@ -923,6 +951,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     // Only the SHARED one is cleared: the private fallback dies with the
     // screen anyway, and clearing it would be busywork.
     _undo.removeListener(_onHistoryChanged);
+    _transport?.removeListener(_onTransportCommand);
     _sharedUndo?.clearScope(kLoopUndoScope);
     _ownUndo.dispose();
     _keyFocus.dispose();

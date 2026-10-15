@@ -8,6 +8,15 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## WS-W2 step 2 — the transport drives Loop Studio (2026-10-15)
+
+- Loop Studio now listens to the shared `TransportService`: a play or pause
+  from a transport bar anywhere resumes or pauses its groove (paused, not
+  switched off). Position authority stays with Loop Studio's clock (`syncTo`);
+  an empty groove ignores a play, since there is nothing to start. The same
+  echo guard as the Audio Editor keeps its own publish from re-triggering it.
+  All three surfaces are now driven by the one transport, not only mirrored.
+
 ## BB-U5(c) — a chart opens in Loop Studio (2026-10-15)
 
 - The chart menu's *Open in Loop Studio* projects the chart's first four bars
