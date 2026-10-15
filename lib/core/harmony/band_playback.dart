@@ -233,6 +233,7 @@ BandPlan? planBand(
   int seed = 0,
   BandClick click = BandClick.off,
   bool clickCountIn = false,
+  bool kit = true,
 }) {
   final bars = realizeForm(chart, options: form);
   if (bars.isEmpty) return null;
@@ -296,7 +297,7 @@ BandPlan? planBand(
 
     // ---- drums -----------------------------------------------------------
     final drumPattern = level[StyleRole.drums];
-    final kit = bar.role == BarRole.countIn
+    final kitHits = bar.role == BarRole.countIn
         ? countInBar(beats, voice: clickCountIn ? kDrumRim : kDrumHat)
         : generateDrumBar(
             pattern: drumPattern,
@@ -310,7 +311,10 @@ BandPlan? planBand(
             ),
             seed: seed,
           );
-    for (final hit in kit) {
+    // [kit] false (a practice pass that leaves only the click) keeps the
+    // count-in — it is the pulse — and drops the groove.
+    for (final hit
+        in kit || bar.role == BarRole.countIn ? kitHits : const <DrumHit>[]) {
       final placed = _place(
         hit.beat,
         hit.velocity,

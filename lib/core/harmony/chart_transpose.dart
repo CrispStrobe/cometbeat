@@ -221,6 +221,37 @@ Chart transposeChartBySemitones(Chart chart, int semitones) {
   );
 }
 
+/// [chart] moved into the key whose signature is [targetFifths] (−7…7), the
+/// chords spelled for that key — the move BB-T3's key cycling makes. Up from
+/// the current tonic to the nearest target tonic at or above it.
+Chart transposeChartToKey(Chart chart, int targetFifths) {
+  if (targetFifths == chart.keyFifths) return chart;
+  final from = _tonicPitch(chart.keyFifths, minor: chart.minor);
+  final target = _tonicPitch(targetFifths, minor: chart.minor);
+  var to = Pitch(target.step, alter: target.alter, octave: from.octave);
+  if (to.diatonicIndex < from.diatonicIndex ||
+      (to.diatonicIndex == from.diatonicIndex &&
+          to.midiNumber < from.midiNumber)) {
+    to = Pitch(target.step, alter: target.alter, octave: from.octave + 1);
+  }
+  final out = transposeChart(chart, Interval.between(from, to));
+  // transposeChart only respells to keep a signature legal; the target here
+  // is already legal, so it must have landed exactly there.
+  assert(out.keyFifths == targetFifths, '${out.keyFifths} != $targetFifths');
+  return out;
+}
+
+/// The conventional signature for a key whose tonic is pitch class [pc]:
+/// at most six accidentals, the tritone key as G♭ / E♭ minor. What a player
+/// cycling through all twelve keys expects to read.
+int conventionalFifths(int pc, {required bool minor}) {
+  // Major tonic pitch class → fifths, ≤ 6 accidentals.
+  const major = [0, -5, 2, -3, 4, -1, -6, 1, -4, 3, -2, 5];
+  final p = ((pc % 12) + 12) % 12;
+  // A minor key shares its relative major's signature (three semitones up).
+  return minor ? major[(p + 3) % 12] : major[p];
+}
+
 /// The interval a musician means by [semitones] (1..11).
 ///
 /// Two of these are choices rather than facts: 6 could be an augmented fourth
