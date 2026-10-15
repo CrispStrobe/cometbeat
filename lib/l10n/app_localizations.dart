@@ -17510,6 +17510,42 @@ abstract class AppLocalizations {
   /// **'Effects on {track}'**
   String mixerFxTitle(String track);
 
+  /// No description provided for @mixerAddBus.
+  ///
+  /// In en, this message translates to:
+  /// **'Add effects bus'**
+  String get mixerAddBus;
+
+  /// No description provided for @mixerBus.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects bus'**
+  String get mixerBus;
+
+  /// No description provided for @mixerRemoveBus.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove bus'**
+  String get mixerRemoveBus;
+
+  /// No description provided for @mixerSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get mixerSend;
+
+  /// No description provided for @mixerBusName.
+  ///
+  /// In en, this message translates to:
+  /// **'Bus {n}'**
+  String mixerBusName(int n);
+
+  /// No description provided for @mixerSendTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To {bus}'**
+  String mixerSendTo(String bus);
+
   /// No description provided for @mixerMute.
   ///
   /// In en, this message translates to:

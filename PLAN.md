@@ -1460,8 +1460,14 @@ prefix.
   - ✅ **FX inserts — SHIPPED 2026-10-15.** `ProjectTrackMix.fxChain` (a chain
     string, the FX-preset form), applied in `renderProject` before level and
     pan; each strip's *Effects* button opens the shared `FxRack`, undoable
-    like any fader. No insert renders byte-identically. ⬜ **Sends** (a bus
-    with its own chain) remain: they need a bus in the project model first.
+    like any fader. No insert renders byte-identically.
+  - ✅ **Sends and effects buses — SHIPPED 2026-10-15.** `ProjectBus` (name,
+    return level, mute, chain) on the project; `ProjectTrackMix.sends` per
+    bus, post-fader; the mixdown sums each bus's sends, runs its chain and
+    returns it at the centre. Console: *Add effects bus*, a strip per bus,
+    a send slider per bus on every track; removing a bus takes its sends with
+    it, and every step is undoable. 🔶 **WS-W5 is now complete** bar
+    per-surface playback using the project mix (the console plays it).
 - 🔶 **WS-W6 — the browser.** `M` · **SLICE 1 (projects) SHIPPED 2026-07-28**;
   **the FX-PRESETS tab shipped 2026-07-30** (opus, daw-suite) — a store in the
   `ProjectStore` shape holding chain STRINGS, a shared sheet on the

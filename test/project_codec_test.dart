@@ -202,6 +202,33 @@ void main() {
       expect(back.track('loop-1')!.mix, const ProjectTrackMix());
     });
 
+    test('buses and sends travel', () {
+      final base = _everyKind();
+      final p = Project(
+        name: base.name,
+        buses: const [
+          ProjectBus(id: 'bus-1', name: 'Verb', level: 0.7, fxChain: 'gain'),
+          ProjectBus(id: 'bus-2', muted: true),
+        ],
+        tracks: [
+          for (final t in base.tracks)
+            t.id == 'loop-1'
+                ? ProjectTrack(
+                    id: t.id,
+                    kind: t.kind,
+                    name: t.name,
+                    document: t.document,
+                    mix: t.mix.withSend('bus-1', 0.4),
+                  )
+                : t,
+        ],
+      );
+      final back = _roundTrip(p);
+      expect(back.buses, p.buses);
+      expect(back.track('loop-1')!.mix.sendTo('bus-1'), closeTo(0.4, 1e-9));
+      expect(back.track('tracker-1')!.mix.sends, isEmpty);
+    });
+
     test('a track\'s FX insert travels; one this build cannot read is dropped',
         () {
       final base = _everyKind();

@@ -118,6 +118,47 @@ class ProjectService extends ChangeNotifier {
     return true;
   }
 
+  // ------------------------------------------------------- WS-W5 buses
+
+  /// Adds an effects bus called [name] and returns its id.
+  String addBus({String name = ''}) {
+    final id = _project.freeBusId();
+    project = _project.copyWith(
+      buses: [..._project.buses, ProjectBus(id: id, name: name)],
+    );
+    return id;
+  }
+
+  /// Replaces the bus with [bus]'s id. False when there is no such bus.
+  bool updateBus(ProjectBus bus) {
+    if (_project.bus(bus.id) == null) return false;
+    project = _project.copyWith(
+      buses: [
+        for (final b in _project.buses) b.id == bus.id ? bus : b,
+      ],
+    );
+    return true;
+  }
+
+  /// Removes the bus [id] AND every track's send to it — a send to a bus
+  /// that no longer exists would come back to life if the id were reused.
+  bool removeBus(String id) {
+    if (_project.bus(id) == null) return false;
+    project = _project.copyWith(
+      buses: [
+        for (final b in _project.buses)
+          if (b.id != id) b,
+      ],
+      tracks: [
+        for (final t in _project.tracks)
+          t.mix.sends.containsKey(id)
+              ? t.copyWith(mix: t.mix.withSend(id, 0))
+              : t,
+      ],
+    );
+    return true;
+  }
+
   /// Starts a new, empty project.
   void reset({String name = 'Untitled'}) => project = Project(name: name);
 

@@ -129,6 +129,35 @@ void _pushMixUndo(
   );
 }
 
+/// Applies [next] as the whole project and records it as one undo step — for
+/// the edits that are not one track's mix (adding, removing or changing an
+/// effects bus).
+void _pushProjectUndo(
+  BuildContext context,
+  ProjectService projects,
+  Project next,
+  String label, {
+  Object? coalesceKey,
+}) {
+  final before = projects.project;
+  projects.project = next;
+  UndoService? undo;
+  try {
+    undo = Provider.of<UndoService>(context, listen: false);
+  } on ProviderNotFoundException {
+    undo = null;
+  }
+  undo?.push(
+    UndoEntry(
+      label: label,
+      scope: 'mixer:buses',
+      coalesceKey: coalesceKey,
+      undo: () => projects.project = before,
+      redo: () => projects.project = next,
+    ),
+  );
+}
+
 class _MixerConsoleScreenState extends State<MixerConsoleScreen>
     implements MixerConsoleTester {
   bool _playing = false;
@@ -220,6 +249,7 @@ class _MixerConsoleScreenState extends State<MixerConsoleScreen>
     final l10n = AppLocalizations.of(context)!;
     final projects = context.watch<ProjectService>();
     final tracks = projects.tracks;
+    final buses = projects.project.buses;
 
     final playButton = IconButton(
       key: const ValueKey('mixer-play'),
@@ -251,12 +281,51 @@ class _MixerConsoleScreenState extends State<MixerConsoleScreen>
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: tracks.length,
-                  itemBuilder: (context, i) => _Strip(
-                    key: ValueKey('mixer-strip-${tracks[i].id}'),
-                    track: tracks[i],
-                    projects: projects,
-                  ),
+                  // Tracks, then the effects buses they feed, then a way to
+                  // add one.
+                  itemCount: tracks.length + buses.length + 1,
+                  itemBuilder: (context, i) {
+                    if (i < tracks.length) {
+                      return _Strip(
+                        key: ValueKey('mixer-strip-${tracks[i].id}'),
+                        track: tracks[i],
+                        projects: projects,
+                      );
+                    }
+                    final b = i - tracks.length;
+                    if (b < buses.length) {
+                      return _BusStrip(
+                        key: ValueKey('mixer-bus-${buses[b].id}'),
+                        bus: buses[b],
+                        projects: projects,
+                      );
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: OutlinedButton.icon(
+                        key: const ValueKey('mixer-add-bus'),
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.mixerAddBus),
+                        onPressed: () {
+                          final next = projects.project.copyWith(
+                            buses: [
+                              ...projects.project.buses,
+                              ProjectBus(
+                                id: projects.project.freeBusId(),
+                                name: l10n.mixerBusName(buses.length + 1),
+                              ),
+                            ],
+                          );
+                          _pushProjectUndo(
+                            context,
+                            projects,
+                            next,
+                            l10n.mixerAddBus,
+                          );
+                        },
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -365,13 +434,45 @@ class _Strip extends StatelessWidget {
       ),
       onDragEnd: () => _endDrag(context),
       // WS-W5: the track's inserts, edited in the shared rack every mode uses.
-      trailing: TextButton.icon(
-        key: ValueKey('mixer-fx-${track.id}'),
-        icon: const Icon(Icons.graphic_eq, size: 18),
-        label: Text(
-          l10n.mixerFxCount(parseFxChain(mix.fxChain).chain.length),
-        ),
-        onPressed: () => _editFx(context, mix, l10n),
+      trailing: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextButton.icon(
+            key: ValueKey('mixer-fx-${track.id}'),
+            icon: const Icon(Icons.graphic_eq, size: 18),
+            label: Text(
+              l10n.mixerFxCount(parseFxChain(mix.fxChain).chain.length),
+            ),
+            onPressed: () => _editFx(context, mix, l10n),
+          ),
+          // WS-W5: one send per effects bus, post-fader.
+          for (final bus in projects.project.buses)
+            Row(
+              children: [
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    l10n.mixerSendTo(bus.name.isEmpty ? bus.id : bus.name),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Slider(
+                    key: ValueKey('mixer-send-${track.id}-${bus.id}'),
+                    value: mix.sendTo(bus.id),
+                    onChanged: (v) => _setMix(
+                      context,
+                      mix.withSend(bus.id, v),
+                      l10n.mixerSend,
+                      coalesceKey: 'send:${track.id}:${bus.id}',
+                    ),
+                    onChangeEnd: (_) => _endDrag(context),
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -464,4 +565,135 @@ class _SkippedBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// WS-W5: one effects bus — its return level, mute and chain. Drawn with the
+/// same strip as a track; no pan (it returns at the centre) and no solo.
+class _BusStrip extends StatelessWidget {
+  const _BusStrip({super.key, required this.bus, required this.projects});
+
+  final ProjectBus bus;
+  final ProjectService projects;
+
+  void _set(
+    BuildContext context,
+    ProjectBus next,
+    String label, {
+    Object? key,
+  }) {
+    final project = projects.project;
+    _pushProjectUndo(
+      context,
+      projects,
+      project.copyWith(
+        buses: [
+          for (final b in project.buses) b.id == bus.id ? next : b,
+        ],
+      ),
+      label,
+      coalesceKey: key,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return MixerStripView(
+      id: 'bus-${bus.id}',
+      title: bus.name.isEmpty ? bus.id : bus.name,
+      subtitle: l10n.mixerBus,
+      muted: bus.muted,
+      soloed: false,
+      level: bus.level,
+      onMute: () =>
+          _set(context, bus.copyWith(muted: !bus.muted), l10n.mixerMute),
+      onLevel: (v) => _set(
+        context,
+        bus.copyWith(level: v),
+        l10n.mixerLevel,
+        key: 'bus-level:${bus.id}',
+      ),
+      onDragEnd: () {
+        try {
+          Provider.of<UndoService>(context, listen: false).breakCoalescing();
+        } on ProviderNotFoundException {
+          // No undo provided; nothing to end.
+        }
+      },
+      trailing: Row(
+        children: [
+          TextButton.icon(
+            key: ValueKey('mixer-bus-fx-${bus.id}'),
+            icon: const Icon(Icons.graphic_eq, size: 18),
+            label: Text(
+              l10n.mixerFxCount(parseFxChain(bus.fxChain).chain.length),
+            ),
+            onPressed: () => _editFx(context, l10n),
+          ),
+          const Spacer(),
+          IconButton(
+            key: ValueKey('mixer-bus-remove-${bus.id}'),
+            tooltip: l10n.mixerRemoveBus,
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () {
+              final project = projects.project;
+              _pushProjectUndo(
+                context,
+                projects,
+                project.copyWith(
+                  buses: [
+                    for (final b in project.buses)
+                      if (b.id != bus.id) b,
+                  ],
+                  // Its sends go with it, or a reused id would revive them.
+                  tracks: [
+                    for (final t in project.tracks)
+                      t.mix.sends.containsKey(bus.id)
+                          ? t.copyWith(mix: t.mix.withSend(bus.id, 0))
+                          : t,
+                  ],
+                ),
+                l10n.mixerRemoveBus,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editFx(BuildContext context, AppLocalizations l10n) =>
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (sheet) {
+          var chain = parseFxChain(bus.fxChain).chain;
+          return StatefulBuilder(
+            builder: (sheet, setSheet) => SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(12),
+                child: FxRack(
+                  key: ValueKey('mixer-bus-fx-rack-${bus.id}'),
+                  title: l10n.mixerFxTitle(
+                    bus.name.isEmpty ? bus.id : bus.name,
+                  ),
+                  chain: chain,
+                  dense: true,
+                  onChanged: (next) {
+                    setSheet(() => chain = next);
+                    final now = projects.project.bus(bus.id) ?? bus;
+                    _set(
+                      context,
+                      now.copyWith(fxChain: formatFxChain(next)),
+                      l10n.mixerFx,
+                      key: 'bus-fx:${bus.id}',
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      );
 }

@@ -155,6 +155,63 @@ void main() {
     expect(ratio, closeTo(0.5, 0.02), reason: '-6 dB is about half');
   });
 
+  group('effects buses (WS-W5 sends)', () {
+    Project withBus(
+      ProjectTrackMix mix, {
+      ProjectBus bus = const ProjectBus(id: 'bus-1'),
+    }) =>
+        Project(
+          name: 'Mix',
+          tracks: [_loopTrack('a', mix: mix)],
+          buses: [bus],
+        );
+
+    test('a send adds the bus return; no send adds nothing', () {
+      final dry = renderProject(_projectWith([_loopTrack('a')]));
+      final noSend = renderProject(withBus(const ProjectTrackMix()));
+      expect(noSend.left, dry.left, reason: 'an unfed bus is silent');
+
+      final sent = renderProject(
+        withBus(const ProjectTrackMix().withSend('bus-1', 1)),
+      );
+      // A centred track plus a full send of itself through an empty bus is
+      // twice the dry signal.
+      expect(_rms(sent.left) / _rms(dry.left), closeTo(2, 0.01));
+    });
+
+    test('the bus chain, level and mute shape only the return', () {
+      final dry = renderProject(_projectWith([_loopTrack('a')]));
+      final send = const ProjectTrackMix().withSend('bus-1', 1);
+      final muted = renderProject(
+        withBus(send, bus: const ProjectBus(id: 'bus-1', muted: true)),
+      );
+      expect(muted.left, dry.left);
+      final halfBus = renderProject(
+        withBus(
+          send,
+          bus: ProjectBus(
+            id: 'bus-1',
+            fxChain: formatFxChain(const [
+              FxSpec(type: FxType.gain, params: {'gainDb': -6, 'mix': 1}),
+            ]),
+          ),
+        ),
+      );
+      expect(_rms(halfBus.left) / _rms(dry.left), closeTo(1.5, 0.02));
+    });
+
+    test('sends are post-fader and silenced with their track', () {
+      final send = const ProjectTrackMix(level: 0.5).withSend('bus-1', 1);
+      final half = renderProject(withBus(send));
+      final dryHalf = renderProject(
+        _projectWith([_loopTrack('a', mix: const ProjectTrackMix(level: 0.5))]),
+      );
+      expect(_rms(half.left) / _rms(dryHalf.left), closeTo(2, 0.01));
+      final mutedTrack = renderProject(withBus(send.copyWith(muted: true)));
+      expect(mutedTrack.isSilent, isTrue);
+    });
+  });
+
   test('an empty project is silent, not an error', () {
     final mix = renderProject(_projectWith([]));
     expect(mix.isSilent, isTrue);

@@ -156,6 +156,8 @@ Map<String, dynamic> projectToJson(Project project) {
     if (!project.tempo.isConstant || project.tempo.changes.first.bpm != 120)
       'tempo': project.tempo.toJson(),
     'tracks': [for (final track in project.tracks) _trackToJson(track)],
+    if (project.buses.isNotEmpty)
+      'buses': [for (final bus in project.buses) _busToJson(bus)],
   };
 }
 
@@ -196,7 +198,39 @@ Map<String, dynamic> _mixToJson(ProjectTrackMix mix) => {
       if (mix.muted) 'muted': true,
       if (mix.soloed) 'soloed': true,
       if (mix.fxChain.isNotEmpty) 'fx': mix.fxChain,
+      if (mix.sends.isNotEmpty)
+        'sends': {
+          for (final e in mix.sends.entries) e.key: _round(e.value),
+        },
     };
+
+Map<String, dynamic> _busToJson(ProjectBus bus) => {
+      'id': bus.id,
+      if (bus.name.isNotEmpty) 'name': bus.name,
+      if (bus.level != 1.0) 'level': _round(bus.level),
+      if (bus.muted) 'muted': true,
+      if (bus.fxChain.isNotEmpty) 'fx': bus.fxChain,
+    };
+
+ProjectBus? _busFromJson(Object? raw) {
+  if (raw is! Map) return null;
+  final id = raw['id'];
+  if (id is! String || id.isEmpty) return null;
+  final name = raw['name'];
+  final level = raw['level'];
+  return ProjectBus(
+    id: id,
+    name: name is String ? name : '',
+    level: level is num ? level.toDouble().clamp(0.0, 1.0) : 1.0,
+    muted: raw['muted'] == true,
+    fxChain: _readableChain(raw['fx']),
+  );
+}
+
+/// A chain string kept only if this build can parse it — a chain it cannot
+/// read is dropped rather than played wrong.
+String _readableChain(Object? raw) =>
+    raw is String && parseFxChain(raw).ok ? raw : '';
 
 double _round(double v) => double.parse(v.toStringAsFixed(3));
 
@@ -223,7 +257,13 @@ Project? projectFromJson(Object? raw) {
   final name = raw['name'];
   final tempo = raw['tempo'];
   final tracksRaw = raw['tracks'];
+  final busesRaw = raw['buses'];
   return Project(
+    buses: [
+      if (busesRaw is List)
+        for (final entry in busesRaw)
+          if (_busFromJson(entry) case final bus?) bus,
+    ],
     name: name is String ? name : '',
     tempo: tempo is List ? TempoMap.fromJson(tempo) : TempoMap.constant(120),
     tracks: [
@@ -305,10 +345,12 @@ ProjectTrackMix _mixFromJson(Object? raw) {
     pan: pan is num ? pan.toDouble().clamp(-1.0, 1.0) : 0.0,
     muted: raw['muted'] == true,
     soloed: raw['soloed'] == true,
-    // Kept as written only if it parses; a chain this build cannot read is
-    // dropped rather than played wrong.
-    fxChain: raw['fx'] is String && parseFxChain(raw['fx'] as String).ok
-        ? raw['fx'] as String
-        : '',
+    fxChain: _readableChain(raw['fx']),
+    sends: {
+      if (raw['sends'] case final Map<Object?, Object?> sends)
+        for (final e in sends.entries)
+          if (e.key is String && e.value is num && (e.value as num) > 0)
+            e.key as String: (e.value as num).toDouble().clamp(0.0, 1.0),
+    },
   );
 }

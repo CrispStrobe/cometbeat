@@ -156,6 +156,34 @@ ProjectMixdown renderProject(
     }
   }
 
+  // WS-W5 — effects buses. Each live bus sums its sends (post-fader: a send
+  // follows its track's level), runs its own chain over the sum, and returns
+  // to the mix at the centre with the same constant-power law as a centred
+  // track. No bus, or no sends: nothing is added, so the mixdown is exactly
+  // what it was.
+  for (final bus in project.buses) {
+    if (bus.muted || bus.level <= 0) continue;
+    Float64List? input;
+    for (final (pcm, mix) in rendered) {
+      final amount = mix.sendTo(bus.id) * mix.level;
+      if (amount <= 0) continue;
+      input ??= Float64List(length);
+      for (var i = 0; i < pcm.length; i++) {
+        input[i] += pcm[i] * amount;
+      }
+    }
+    if (input == null) continue;
+    final out = bus.fxChain.isEmpty
+        ? input
+        : applyFxChain(input, parseFxChain(bus.fxChain).chain, sampleRate);
+    final g = math.cos(0.25 * math.pi) * bus.level;
+    final n = out.length < length ? out.length : length;
+    for (var i = 0; i < n; i++) {
+      left[i] += out[i] * g;
+      right[i] += out[i] * g;
+    }
+  }
+
   return ProjectMixdown(
     left: left,
     right: right,

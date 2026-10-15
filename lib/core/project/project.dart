@@ -49,6 +49,7 @@ class ProjectTrackMix {
     this.muted = false,
     this.soloed = false,
     this.fxChain = '',
+    this.sends = const {},
   });
 
   /// 0 = silent … 1 = unity. Not decibels: every mixer in the app is already
@@ -74,10 +75,33 @@ class ProjectTrackMix {
   /// not part of a track's insert.
   final String fxChain;
 
+  /// WS-W5: how much of this track feeds each effects bus, by bus id, 0–1.
+  /// Post-fader: the send follows the track's level. Absent = no send.
+  final Map<String, double> sends;
+
+  /// The send to [busId], 0 when there is none.
+  double sendTo(String busId) => sends[busId] ?? 0;
+
+  /// This mix with the send to [busId] set; 0 removes it.
+  ProjectTrackMix withSend(String busId, double amount) {
+    final next = {...sends};
+    if (amount <= 0) {
+      next.remove(busId);
+    } else {
+      next[busId] = amount.clamp(0.0, 1.0);
+    }
+    return copyWith(sends: next);
+  }
+
   /// True when this is exactly a default mix — the common case, and the one the
   /// codec omits so an untouched project stays small.
   bool get isDefault =>
-      level == 1.0 && pan == 0.0 && !muted && !soloed && fxChain.isEmpty;
+      level == 1.0 &&
+      pan == 0.0 &&
+      !muted &&
+      !soloed &&
+      fxChain.isEmpty &&
+      sends.isEmpty;
 
   ProjectTrackMix copyWith({
     double? level,
@@ -85,6 +109,7 @@ class ProjectTrackMix {
     bool? muted,
     bool? soloed,
     String? fxChain,
+    Map<String, double>? sends,
   }) =>
       ProjectTrackMix(
         level: level ?? this.level,
@@ -92,6 +117,7 @@ class ProjectTrackMix {
         muted: muted ?? this.muted,
         soloed: soloed ?? this.soloed,
         fxChain: fxChain ?? this.fxChain,
+        sends: sends == null ? this.sends : Map.unmodifiable(sends),
       );
 
   @override
@@ -101,15 +127,28 @@ class ProjectTrackMix {
       other.pan == pan &&
       other.muted == muted &&
       other.soloed == soloed &&
-      other.fxChain == fxChain;
+      other.fxChain == fxChain &&
+      _sameSends(other.sends, sends);
+
+  static bool _sameSends(Map<String, double> a, Map<String, double> b) =>
+      a.length == b.length && a.entries.every((e) => b[e.key] == e.value);
 
   @override
-  int get hashCode => Object.hash(level, pan, muted, soloed, fxChain);
+  int get hashCode => Object.hash(
+        level,
+        pan,
+        muted,
+        soloed,
+        fxChain,
+        Object.hashAllUnordered(
+          sends.entries.map((e) => Object.hash(e.key, e.value)),
+        ),
+      );
 
   @override
   String toString() =>
       'ProjectTrackMix(level: $level, pan: $pan, muted: $muted, '
-      'soloed: $soloed, fx: "$fxChain")';
+      'soloed: $soloed, fx: "$fxChain", sends: $sends)';
 }
 
 /// One track: a mode's document, plus where it sits in the project.
@@ -198,13 +237,83 @@ class ProjectTrack {
 /// Deliberately thin. It owns no playback, no undo and no rendering — those are
 /// WS-W2 and WS-W4, and a container that grew them would be the fourth clock
 /// rather than the one clock.
+/// WS-W5: an effects bus — a shared chain (a reverb, say) that tracks feed
+/// through their sends, returned to the mix at the centre.
+class ProjectBus {
+  const ProjectBus({
+    required this.id,
+    this.name = '',
+    this.level = 1.0,
+    this.muted = false,
+    this.fxChain = '',
+  });
+
+  final String id;
+  final String name;
+
+  /// The return level, 0–1.
+  final double level;
+  final bool muted;
+
+  /// The bus's effects, as a chain string (see [ProjectTrackMix.fxChain]).
+  final String fxChain;
+
+  ProjectBus copyWith({
+    String? name,
+    double? level,
+    bool? muted,
+    String? fxChain,
+  }) =>
+      ProjectBus(
+        id: id,
+        name: name ?? this.name,
+        level: level ?? this.level,
+        muted: muted ?? this.muted,
+        fxChain: fxChain ?? this.fxChain,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProjectBus &&
+      other.id == id &&
+      other.name == name &&
+      other.level == level &&
+      other.muted == muted &&
+      other.fxChain == fxChain;
+
+  @override
+  int get hashCode => Object.hash(id, name, level, muted, fxChain);
+}
+
 class Project {
   Project({
     this.name = '',
     List<ProjectTrack>? tracks,
     TempoMap? tempo,
+    List<ProjectBus>? buses,
   })  : tracks = List<ProjectTrack>.unmodifiable(tracks ?? const []),
+        buses = List<ProjectBus>.unmodifiable(buses ?? const []),
         tempo = tempo ?? TempoMap.constant(120);
+
+  /// WS-W5: effects buses, in display order.
+  final List<ProjectBus> buses;
+
+  /// The bus with [id], or null.
+  ProjectBus? bus(String id) {
+    for (final b in buses) {
+      if (b.id == id) return b;
+    }
+    return null;
+  }
+
+  /// A bus id nothing in this project is using.
+  String freeBusId() {
+    final taken = {for (final b in buses) b.id};
+    for (var n = 1;; n++) {
+      final id = 'bus-$n';
+      if (!taken.contains(id)) return id;
+    }
+  }
 
   final String name;
 
@@ -248,11 +357,13 @@ class Project {
     String? name,
     List<ProjectTrack>? tracks,
     TempoMap? tempo,
+    List<ProjectBus>? buses,
   }) =>
       Project(
         name: name ?? this.name,
         tracks: tracks ?? this.tracks,
         tempo: tempo ?? this.tempo,
+        buses: buses ?? this.buses,
       );
 
   /// This project with [track] appended.

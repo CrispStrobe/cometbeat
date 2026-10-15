@@ -9739,6 +9739,28 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get mixerAddBus => 'Effekt-Bus hinzufügen';
+
+  @override
+  String get mixerBus => 'Effekt-Bus';
+
+  @override
+  String get mixerRemoveBus => 'Bus entfernen';
+
+  @override
+  String get mixerSend => 'Send';
+
+  @override
+  String mixerBusName(int n) {
+    return 'Bus $n';
+  }
+
+  @override
+  String mixerSendTo(String bus) {
+    return 'An $bus';
+  }
+
+  @override
   String get mixerMute => 'Stumm';
 
   @override

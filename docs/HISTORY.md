@@ -17,7 +17,14 @@ the repo root (detailed roadmap planning and the agent board are in
   is byte-identical (asserted), and a −6 dB gain insert halves the RMS.
 - Each console strip has an *Effects* button (showing the count) opening the
   shared `FxRack`; a change is an undo step like a fader move.
-- Sends need a bus in the project model and are not done.
+- **Sends, the same day.** `ProjectBus` (name, return level, mute, its own
+  chain) lives on the project and in the codec; a track's mix sends to buses by
+  id, post-fader. `renderProject` sums each live bus's sends, runs its chain
+  and returns it at the centre — no bus or no sends leaves the mixdown
+  unchanged; a full send through an empty bus doubles a centred track (both
+  asserted). The console adds buses, draws them with the shared strip (no pan,
+  no solo), gives each track a send slider per bus, and removing a bus removes
+  its sends too — one undo restores both.
 
 ## One text prompt, and a latent crash gone (2026-10-15)
 

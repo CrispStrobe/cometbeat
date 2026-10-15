@@ -127,6 +127,42 @@ void main() {
       expect(projects.track(id)!.mix.fxChain, isEmpty);
     });
 
+    testWidgets('an effects bus: add, send to it, remove — all undoable', (
+      tester,
+    ) async {
+      final undo = UndoService();
+      final projects = ProjectService();
+      final id = projects.addTrack(kind: AppMode.loop, document: null);
+      await _pump(tester, projects, undo: undo);
+
+      final add = find.byKey(const ValueKey('mixer-add-bus'));
+      await tester.ensureVisible(add);
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+      expect(projects.project.buses, hasLength(1));
+      final bus = projects.project.buses.single.id;
+      expect(find.byKey(ValueKey('mixer-bus-$bus')), findsOneWidget);
+
+      // The track's send to it.
+      final send = find.byKey(ValueKey('mixer-send-$id-$bus'));
+      expect(send, findsOneWidget);
+      tester.widget<Slider>(send).onChanged!(0.5);
+      await tester.pump();
+      expect(projects.track(id)!.mix.sendTo(bus), 0.5);
+
+      // Removing the bus takes the send with it, and one undo brings both back.
+      final remove = find.byKey(ValueKey('mixer-bus-remove-$bus'));
+      await tester.ensureVisible(remove);
+      await tester.tap(remove);
+      await tester.pumpAndSettle();
+      expect(projects.project.buses, isEmpty);
+      expect(projects.track(id)!.mix.sends, isEmpty);
+      undo.undo();
+      await tester.pump();
+      expect(projects.project.buses, hasLength(1));
+      expect(projects.track(id)!.mix.sendTo(bus), 0.5);
+    });
+
     testWidgets('a fader DRAG is one undo, not one per frame', (tester) async {
       // The first real exercise of UndoEntry.coalesceKey. Without it a drag
       // fills the history and Cmd-Z nudges instead of undoing.

@@ -18,8 +18,8 @@ class MixerStripView extends StatelessWidget {
     required this.soloed,
     required this.level,
     required this.onMute,
-    required this.onSolo,
     required this.onLevel,
+    this.onSolo,
     this.subtitle,
     this.pan,
     this.onPan,
@@ -42,7 +42,9 @@ class MixerStripView extends StatelessWidget {
   final double? pan;
 
   final VoidCallback onMute;
-  final VoidCallback onSolo;
+
+  /// Null hides the solo button (an effects bus has nothing to solo).
+  final VoidCallback? onSolo;
   final ValueChanged<double> onLevel;
   final ValueChanged<double>? onPan;
 
@@ -91,13 +93,14 @@ class MixerStripView extends StatelessWidget {
                   color: muted ? scheme.error : null,
                   onPressed: onMute,
                 ),
-                IconButton(
-                  key: ValueKey('mixer-solo-$id'),
-                  tooltip: l10n.mixerSolo,
-                  icon: const Icon(Icons.headphones),
-                  color: soloed ? scheme.primary : null,
-                  onPressed: onSolo,
-                ),
+                if (onSolo != null)
+                  IconButton(
+                    key: ValueKey('mixer-solo-$id'),
+                    tooltip: l10n.mixerSolo,
+                    icon: const Icon(Icons.headphones),
+                    color: soloed ? scheme.primary : null,
+                    onPressed: onSolo,
+                  ),
               ],
             ),
             if (trailing != null) trailing!,
