@@ -8,6 +8,25 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## BB-U3 — change the band while it plays (2026-10-15)
+
+- **Style mid-song.** The style menu stays live while a streamed band plays;
+  `StreamedBand.restyle` re-plans the piece and takes over from the next window
+  not yet queued — always a bar line. The switch window is the old plan's
+  *carry-in* (what started earlier and still rings) plus the new plan's *own
+  starts*, so nothing is cut off and nothing that never started rings in;
+  switching a plan to itself is asserted to sound exactly like not switching.
+  Rendering is paced to stay ~6 s ahead of the playhead so a change lands soon.
+- **Per-role mix, instant.** The band now plays as three float voices (comp,
+  bass, drums) in one SoLoud voice group, released on the same frame; each is
+  already scaled to its place in the mix, so the engine's float sum is the mix
+  (asserted to one LSB). Level, mute, solo and pan are voice settings — nothing
+  re-renders — and hold for the next Play.
+- **One strip.** The console's strip became `MixerStripView`
+  (`shared/widgets/mixer_strip.dart`); the project mixer and the new *Band mix*
+  sheet both draw it.
+- Still open on the card: intensity dial, swing, per-role instrument.
+
 ## BB-T1 — the backing band starts in about a second (2026-10-15)
 
 - **Windowed render + cache** (`lib/core/harmony/chart_render_cache.dart`).

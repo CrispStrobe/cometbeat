@@ -176,19 +176,74 @@ String segmentKey(Segment s) => '${s.ms}:${s.freqs.join(',')}';
 // A note cache may outlive one sample rate; its keys must not.
 String _cacheKey(Segment s, int sampleRate) => '$sampleRate@${segmentKey(s)}';
 
+/// Which events a window render includes.
+///
+/// [all] is the plain crop. The other two exist for a change of plan mid-
+/// performance (BB-U3, a new style from the next window): the window at the
+/// switch is the OLD plan's [carryIn] — whatever started earlier and is still
+/// sounding, so nothing is cut off — plus the NEW plan's [ownStarts] — only
+/// what begins inside the window, so nothing that never started rings in.
+enum WindowPart { all, carryIn, ownStarts }
+
 /// Synthesises window [index] of [band] as stems.
 BandStems renderWindowStems(
   PreparedBand band,
   int index, {
   Map<String, Float64List>? segmentCache,
+  WindowPart part = WindowPart.all,
 }) {
   final cache = segmentCache ?? <String, Float64List>{};
   final w = band.windows[index];
   return BandStems(
-    _segmentWindow(band.plan.comp, band._compOffsets, w, band, cache),
-    _segmentWindow(band.plan.bass, band._bassOffsets, w, band, cache),
-    _drumWindow(band, w, <Drum, Float64List>{}),
+    _segmentWindow(band.plan.comp, band._compOffsets, w, band, cache, part),
+    _segmentWindow(band.plan.bass, band._bassOffsets, w, band, cache, part),
+    _drumWindow(band, w, <Drum, Float64List>{}, part),
   );
+}
+
+/// [a] + [b], sample by sample (for the switch window: carry-in + own starts).
+BandStems addStems(BandStems a, BandStems b) {
+  Float64List sum(Float64List x, Float64List y) {
+    final out = Float64List(x.length);
+    for (var i = 0; i < x.length; i++) {
+      out[i] = x[i] + y[i];
+    }
+    return out;
+  }
+
+  return BandStems(
+    sum(a.comp, b.comp),
+    sum(a.bass, b.bass),
+    sum(a.drums, b.drums),
+  );
+}
+
+/// Each role's samples at its place in the mix: stem ÷ whole-piece peak × the
+/// role's gain — exactly the terms [mixWindow] sums before clamping. Played as
+/// three voices, the audio engine's own float sum is that mix, and a role's
+/// voice volume is a mute or level change that touches nothing rendered.
+///
+/// Order: comp, bass, drums.
+List<Float32List> scaleStems(
+  PreparedBand band,
+  BandStems stems, {
+  BandMix mix = const BandMix(),
+}) {
+  Float32List scale(Float64List s, double peak, double gain) {
+    final out = Float32List(s.length);
+    if (peak == 0 || gain == 0) return out;
+    final k = gain / peak;
+    for (var i = 0; i < s.length; i++) {
+      out[i] = s[i] * k;
+    }
+    return out;
+  }
+
+  return [
+    scale(stems.comp, band.compPeak, mix.comp),
+    scale(stems.bass, band.bassPeak, mix.bass),
+    scale(stems.drums, band.drumPeak, mix.drums),
+  ];
 }
 
 /// What sounds in window [index], relative to its start — equal keys mean
@@ -372,6 +427,7 @@ Float64List _segmentWindow(
   BandWindow w,
   PreparedBand band,
   Map<String, Float64List> cache,
+  WindowPart part,
 ) {
   final out = Float64List(w.endSample - w.startSample);
   for (var k = 0; k < segments.length; k++) {
@@ -380,6 +436,7 @@ Float64List _segmentWindow(
     if (end <= w.startSample) continue;
     if (start >= w.endSample) break;
     if (segments[k].freqs.isEmpty) continue;
+    if (!_included(start, w, part)) continue;
     final audio = _renderSegment(segments[k], band.sampleRate, cache);
     final from = max(start, w.startSample);
     final to = min(end, w.endSample);
@@ -389,6 +446,13 @@ Float64List _segmentWindow(
   }
   return out;
 }
+
+/// Whether an event starting at [start] belongs to [part] of window [w].
+bool _included(int start, BandWindow w, WindowPart part) => switch (part) {
+      WindowPart.all => true,
+      WindowPart.carryIn => start < w.startSample,
+      WindowPart.ownStarts => start >= w.startSample,
+    };
 
 /// The longest one-shot, in samples — how far back a hit can still ring into
 /// a window.
@@ -401,8 +465,9 @@ final _shotLength = <int, int>{};
 Float64List _drumWindow(
   PreparedBand band,
   BandWindow w,
-  Map<Drum, Float64List> shots,
-) {
+  Map<Drum, Float64List> shots, [
+  WindowPart part = WindowPart.all,
+]) {
   final out = Float64List(w.endSample - w.startSample);
   final hits = band.plan.drumHits;
   final gains = band.plan.drumGains;
@@ -412,6 +477,7 @@ Float64List _drumWindow(
     final start = band._drumStarts[h];
     if (start >= w.endSample) continue;
     if (start + reach <= w.startSample) continue;
+    if (!_included(start, w, part)) continue;
     final shot = shots[hits[h].$2] ??=
         renderDrum(hits[h].$2, sampleRate: band.sampleRate);
     final g = gains[h];

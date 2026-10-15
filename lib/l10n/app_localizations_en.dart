@@ -10101,6 +10101,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'This chart was saved by a newer version and cannot be opened.';
 
   @override
+  String get chartBandMix => 'Band mix';
+
+  @override
   String get chartStyle => 'Style';
 
   @override

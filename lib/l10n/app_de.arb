@@ -3627,6 +3627,7 @@
     }
   },
   "chartUnreadableSaved": "Dieses Chart wurde mit einer neueren Version gesichert und lässt sich nicht öffnen.",
+  "chartBandMix": "Band-Mix",
   "chartStyle": "Stil",
   "chartChoruses": "Durchgänge",
   "chartTranspose": "Transponieren",

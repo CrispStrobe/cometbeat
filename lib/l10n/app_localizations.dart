@@ -18272,6 +18272,12 @@ abstract class AppLocalizations {
   /// **'This chart was saved by a newer version and cannot be opened.'**
   String get chartUnreadableSaved;
 
+  /// No description provided for @chartBandMix.
+  ///
+  /// In en, this message translates to:
+  /// **'Band mix'**
+  String get chartBandMix;
+
   /// No description provided for @chartStyle.
   ///
   /// In en, this message translates to:

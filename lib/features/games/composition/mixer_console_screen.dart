@@ -43,6 +43,7 @@ import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/mixer_strip.dart';
 import 'package:comet_beat/shared/widgets/transport_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -331,101 +332,35 @@ class _Strip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final mix = track.mix;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        track.name.isEmpty ? track.id : track.name,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      // The kind, because a mixer holding four different sorts
-                      // of track has to say which is which.
-                      Text(
-                        appModeLabel(track.kind),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  key: ValueKey('mixer-mute-${track.id}'),
-                  tooltip: l10n.mixerMute,
-                  icon: Icon(mix.muted ? Icons.volume_off : Icons.volume_up),
-                  color: mix.muted ? scheme.error : null,
-                  onPressed: () => _setMix(
-                    context,
-                    mix.copyWith(muted: !mix.muted),
-                    l10n.mixerMute,
-                  ),
-                ),
-                IconButton(
-                  key: ValueKey('mixer-solo-${track.id}'),
-                  tooltip: l10n.mixerSolo,
-                  icon: const Icon(Icons.headphones),
-                  color: mix.soloed ? scheme.primary : null,
-                  onPressed: () => _setMix(
-                    context,
-                    mix.copyWith(soloed: !mix.soloed),
-                    l10n.mixerSolo,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                SizedBox(width: 44, child: Text(l10n.mixerLevel)),
-                Expanded(
-                  child: Slider(
-                    key: ValueKey('mixer-level-${track.id}'),
-                    value: mix.level.clamp(0, 1),
-                    onChanged: (v) => _setMix(
-                      context,
-                      mix.copyWith(level: v),
-                      l10n.mixerLevel,
-                      // One undo for the whole drag, not one per frame.
-                      coalesceKey: 'level:${track.id}',
-                    ),
-                    onChangeEnd: (_) => _endDrag(context),
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                SizedBox(width: 44, child: Text(l10n.mixerPan)),
-                Expanded(
-                  child: Slider(
-                    key: ValueKey('mixer-pan-${track.id}'),
-                    value: mix.pan.clamp(-1, 1),
-                    min: -1,
-                    onChanged: (v) => _setMix(
-                      context,
-                      mix.copyWith(pan: v),
-                      l10n.mixerPan,
-                      coalesceKey: 'pan:${track.id}',
-                    ),
-                    onChangeEnd: (_) => _endDrag(context),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return MixerStripView(
+      id: track.id,
+      title: track.name.isEmpty ? track.id : track.name,
+      // The kind, because a mixer holding four different sorts of track has
+      // to say which is which.
+      subtitle: appModeLabel(track.kind),
+      muted: mix.muted,
+      soloed: mix.soloed,
+      level: mix.level,
+      pan: mix.pan,
+      onMute: () =>
+          _setMix(context, mix.copyWith(muted: !mix.muted), l10n.mixerMute),
+      onSolo: () =>
+          _setMix(context, mix.copyWith(soloed: !mix.soloed), l10n.mixerSolo),
+      onLevel: (v) => _setMix(
+        context,
+        mix.copyWith(level: v),
+        l10n.mixerLevel,
+        // One undo for the whole drag, not one per frame.
+        coalesceKey: 'level:${track.id}',
       ),
+      onPan: (v) => _setMix(
+        context,
+        mix.copyWith(pan: v),
+        l10n.mixerPan,
+        coalesceKey: 'pan:${track.id}',
+      ),
+      onDragEnd: () => _endDrag(context),
     );
   }
 }

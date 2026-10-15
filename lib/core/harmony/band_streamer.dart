@@ -9,7 +9,6 @@
 library;
 
 import 'dart:isolate';
-import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/harmony/band_playback.dart';
@@ -51,19 +50,40 @@ class BandStreamer {
   final WindowRenderer _render;
   int _generation = 0;
 
-  /// Sends every window of [band] to [sink], in order, mixed with [mix].
-  /// Completes true when all were sent, false when [cancel]led first.
+  /// Sends windows of [band] to [sink], in order, from window [from].
+  ///
+  /// [gate] is awaited before each window — the pacing (how far ahead of the
+  /// playhead to render); without one the loop runs as fast as rendering.
+  /// [previous] is the plan that was playing before [band] replaced it
+  /// mid-performance: window [from] is then its carry-in plus [band]'s own
+  /// starts (see [WindowPart]), so the switch cuts nothing off and rings in
+  /// nothing that never started.
+  ///
+  /// Completes true when every window was sent, false when [cancel]led.
   Future<bool> feed(
     PreparedBand band,
-    void Function(Int16List pcm, int index) sink, {
-    BandMix mix = const BandMix(),
+    void Function(BandStems stems, int index) sink, {
+    int from = 0,
+    Future<void> Function(int index)? gate,
+    PreparedBand? previous,
   }) async {
     final generation = ++_generation;
-    for (var i = 0; i < band.windows.length; i++) {
-      final stems =
-          cache.lookup(band, i) ?? cache.store(band, i, await _render(band, i));
+    for (var i = from; i < band.windows.length; i++) {
+      if (gate != null) await gate(i);
       if (generation != _generation) return false;
-      sink(mixWindow(band, stems, mix: mix), i);
+      final BandStems stems;
+      if (previous != null && i == from) {
+        // A one-off; not worth a cache slot.
+        stems = addStems(
+          renderWindowStems(previous, i, part: WindowPart.carryIn),
+          renderWindowStems(band, i, part: WindowPart.ownStarts),
+        );
+      } else {
+        stems = cache.lookup(band, i) ??
+            cache.store(band, i, await _render(band, i));
+      }
+      if (generation != _generation) return false;
+      sink(stems, i);
     }
     return true;
   }

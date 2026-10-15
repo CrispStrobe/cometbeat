@@ -10163,6 +10163,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dieses Chart wurde mit einer neueren Version gesichert und lässt sich nicht öffnen.';
 
   @override
+  String get chartBandMix => 'Band-Mix';
+
+  @override
   String get chartStyle => 'Stil';
 
   @override

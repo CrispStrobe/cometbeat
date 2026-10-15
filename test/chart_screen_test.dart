@@ -10,6 +10,7 @@ import 'package:comet_beat/features/harmony/chart_library_sheet.dart';
 import 'package:comet_beat/features/harmony/chart_screen.dart';
 import 'package:comet_beat/features/harmony/chord_keypad.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/mixer_strip.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart' show Pitch, Step;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
@@ -348,6 +349,30 @@ void _screenTests() {
     await tester.pumpAndSettle();
     expect(find.text('C7'), findsWidgets);
     expect(find.byKey(const Key('chartPlayButton')), findsOneWidget);
+  });
+
+  testWidgets('the band mix shows one shared strip per role', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('chartBandMixButton')));
+    await tester.pumpAndSettle();
+    expect(find.byType(MixerStripView), findsNWidgets(3));
+    for (final label in ['Chords', 'Bass', 'Drums']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    // Mute is a toggle the strip reflects at once.
+    final mute = find.byKey(const ValueKey('mixer-mute-band-drums'));
+    expect(
+      find.descendant(of: mute, matching: find.byIcon(Icons.volume_up)),
+      findsOneWidget,
+    );
+    await tester.tap(mute);
+    await tester.pump();
+    expect(
+      find.descendant(of: mute, matching: find.byIcon(Icons.volume_off)),
+      findsOneWidget,
+    );
   });
 
   testWidgets('restores the working chart from a previous visit',

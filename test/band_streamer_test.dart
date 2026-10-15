@@ -41,9 +41,9 @@ void main() {
     );
     final order = <int>[];
     final pcm = <int>[];
-    final complete = await streamer.feed(band, (chunk, index) {
+    final complete = await streamer.feed(band, (stems, index) {
       order.add(index);
-      pcm.addAll(chunk);
+      pcm.addAll(mixWindow(band, stems));
     });
     expect(complete, isTrue);
     expect(order, List.generate(band.windows.length, (i) => i));
@@ -95,5 +95,65 @@ void main() {
     final local = renderWindowStems(_band(), 0);
     expect(stems.comp, local.comp);
     expect(stems.drums, local.drums);
+  });
+
+  test('pieces from a window index, after its gate', () async {
+    final band = _band();
+    final streamer = BandStreamer(
+      cache: ChartRenderCache(sampleRate: _rate),
+      render: _sync,
+    );
+    final gated = <int>[];
+    final sent = <int>[];
+    await streamer.feed(
+      band,
+      (_, i) => sent.add(i),
+      from: 1,
+      gate: (i) async => gated.add(i),
+    );
+    expect(sent, List.generate(band.windows.length - 1, (i) => i + 1));
+    expect(gated, sent);
+  });
+
+  test('a switch window is the old carry-in plus the new own starts', () {
+    // Switching a plan to ITSELF must sound exactly like not switching.
+    final band = _band();
+    final plain = renderWindowStems(band, 1);
+    final spliced = addStems(
+      renderWindowStems(band, 1, part: WindowPart.carryIn),
+      renderWindowStems(band, 1, part: WindowPart.ownStarts),
+    );
+    for (final (a, b) in [
+      (plain.comp, spliced.comp),
+      (plain.bass, spliced.bass),
+      (plain.drums, spliced.drums),
+    ]) {
+      for (var i = 0; i < a.length; i++) {
+        expect(b[i], closeTo(a[i], 1e-9));
+      }
+    }
+    // And the carry-in is real: somewhere, something rings over a bar line.
+    final rings = [
+      for (var w = 1; w < band.windows.length; w++)
+        renderWindowStems(band, w, part: WindowPart.carryIn),
+    ].any(
+      (c) => [...c.comp, ...c.bass, ...c.drums].any((v) => v != 0),
+    );
+    expect(rings, isTrue);
+  });
+
+  test('scaled stems sum to the mix (the voices ARE the mix)', () {
+    final band = _band();
+    final stems = renderWindowStems(band, 0);
+    final voices = scaleStems(band, stems);
+    final mixed = mixWindow(band, stems);
+    for (var i = 0; i < mixed.length; i++) {
+      final sum = voices[0][i] + voices[1][i] + voices[2][i];
+      expect(
+        (sum.clamp(-1.0, 1.0) * 32767).round(),
+        closeTo(mixed[i], 1),
+        reason: 'float32 voices, one LSB of rounding',
+      );
+    }
   });
 }

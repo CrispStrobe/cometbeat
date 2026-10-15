@@ -38,6 +38,7 @@ import 'package:comet_beat/features/harmony/chord_keypad.dart';
 import 'package:comet_beat/features/harmony/setlist_screen.dart';
 import 'package:comet_beat/features/harmony/transpose_sheet.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/mixer_strip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -542,6 +543,67 @@ class _ChartScreenState extends State<ChartScreen> {
   void _setStyle(String id) {
     setState(() => _chart = _ChartHeader.withStyle(_chart, id));
     _persist();
+    // BB-U3: a streamed band takes the new style from its next window, which
+    // is always a bar line.
+    if (_streamed.playing) unawaited(_streamed.restyle(styleFor(id)));
+  }
+
+  /// BB-U3: the band's live mix — one strip per role, the same strip the
+  /// project mixer draws. Voice volumes: instant, nothing re-renders, and it
+  /// holds for the next Play too.
+  Future<void> _openBandMix() async {
+    final l10n = AppLocalizations.of(context)!;
+    final roles = _streamed.roles;
+    String name(BandRole role) => switch (role) {
+          BandRole.comp => l10n.loopMixerTrackChords,
+          BandRole.bass => l10n.loopMixerTrackBass,
+          BandRole.drums => l10n.loopMixerTrackDrums,
+        };
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      // Three strips are taller than the default half-height sheet on a phone.
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheet) {
+          void change(VoidCallback edit) {
+            setSheet(edit);
+            _streamed.applyRoles();
+          }
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final role in BandRole.values)
+                    MixerStripView(
+                      id: 'band-${role.name}',
+                      title: name(role),
+                      muted: roles.muted.contains(role),
+                      soloed: roles.soloed.contains(role),
+                      level: roles.levelOf(role),
+                      pan: roles.panOf(role),
+                      onMute: () => change(
+                        () => roles.muted.contains(role)
+                            ? roles.muted.remove(role)
+                            : roles.muted.add(role),
+                      ),
+                      onSolo: () => change(
+                        () => roles.soloed.contains(role)
+                            ? roles.soloed.remove(role)
+                            : roles.soloed.add(role),
+                      ),
+                      onLevel: (v) => change(() => roles.setLevel(role, v)),
+                      onPan: (v) => change(() => roles.setPan(role, v)),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _setTempo(int bpm) {
@@ -568,7 +630,9 @@ class _ChartScreenState extends State<ChartScreen> {
           PopupMenuButton<String>(
             key: const Key('chartStyleMenu'),
             tooltip: l10n.chartStyle,
-            enabled: !_playing,
+            // A streamed band can change style mid-song (BB-U3); the
+            // whole-render fallback cannot.
+            enabled: !_playing || _streamed.playing,
             initialValue: styleFor(_chart.styleId).id,
             onSelected: _setStyle,
             itemBuilder: (context) => [
@@ -710,6 +774,12 @@ class _ChartScreenState extends State<ChartScreen> {
                   onPressed: _playing ? _stop : _play,
                   icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
                   label: Text(_playing ? l10n.chartStop : l10n.chartPlay),
+                ),
+                IconButton(
+                  key: const Key('chartBandMixButton'),
+                  tooltip: l10n.chartBandMix,
+                  icon: const Icon(Icons.tune),
+                  onPressed: _openBandMix,
                 ),
                 const SizedBox(width: 16),
                 Text('${_chart.tempoBpm}', style: theme.textTheme.titleMedium),
