@@ -86,6 +86,17 @@ class BandMix {
   final double drums;
 }
 
+/// A metronome click over the band (BB-T2).
+enum BandClick {
+  off,
+
+  /// Every beat, the downbeat accented.
+  everyBeat,
+
+  /// The downbeat only — a reference that leaves the rest of the bar to you.
+  downbeat,
+}
+
 /// A band performance placed on the clock but not yet synthesised: every
 /// role's events in absolute time. Cheap to build — the synthesis is the cost —
 /// which is what lets `chart_render_cache.dart` render it a window at a time.
@@ -212,6 +223,8 @@ BandPlan? planBand(
   FormOptions form = const FormOptions(),
   bool humanize = true,
   int seed = 0,
+  BandClick click = BandClick.off,
+  bool clickCountIn = false,
 }) {
   final bars = realizeForm(chart, options: form);
   if (bars.isEmpty) return null;
@@ -276,7 +289,7 @@ BandPlan? planBand(
     // ---- drums -----------------------------------------------------------
     final drumPattern = level[StyleRole.drums];
     final kit = bar.role == BarRole.countIn
-        ? countInBar(beats)
+        ? countInBar(beats, voice: clickCountIn ? kDrumRim : kDrumHat)
         : generateDrumBar(
             pattern: drumPattern,
             context: DrumContext(
@@ -307,6 +320,18 @@ BandPlan? planBand(
         ),
       );
       drumGains.add(placed.velocity);
+    }
+
+    // The click rides in the kit's stem, unhumanised: a metronome that swings
+    // or drifts is not one. Never over the count-in, which is already a pulse.
+    if (click != BandClick.off && bar.role != BarRole.countIn) {
+      for (var b = 0; b < beats.floor(); b++) {
+        if (click == BandClick.downbeat && b > 0) break;
+        drumHits.add(
+          (span.startMs + (b * beatMs).round(), Drum.rim),
+        );
+        drumGains.add(b == 0 ? 0.9 : 0.5);
+      }
     }
 
     // The count-in is kit only: playing the harmony over it would defeat it.

@@ -83,6 +83,7 @@ class FormOptions {
     this.liftLastChorus = true,
     this.phraseLength = 4,
     this.seed = 0,
+    this.countInBars = 1,
   });
 
   /// How many times through the whole form.
@@ -106,6 +107,10 @@ class FormOptions {
   final int phraseLength;
 
   final int seed;
+
+  /// How many count-in bars [countIn] puts before the music (BB-T2: one or
+  /// two). Clamped to 1–4.
+  final int countInBars;
 }
 
 /// Expands [chart] into the timeline the band plays.
@@ -121,17 +126,19 @@ List<RealizedBar> realizeForm(
   var index = 0;
 
   if (options.countIn) {
-    out.add(
-      RealizedBar(
-        index: index++,
-        chords: const [],
-        meter: chart.meter,
-        intensity: 0,
-        sectionLabel: '',
-        chorusIndex: 0,
-        role: BarRole.countIn,
-      ),
-    );
+    for (var c = 0; c < options.countInBars.clamp(1, 4); c++) {
+      out.add(
+        RealizedBar(
+          index: index++,
+          chords: const [],
+          meter: chart.meter,
+          intensity: 0,
+          sectionLabel: '',
+          chorusIndex: 0,
+          role: BarRole.countIn,
+        ),
+      );
+    }
   }
 
   for (var chorus = 0; chorus < choruses; chorus++) {

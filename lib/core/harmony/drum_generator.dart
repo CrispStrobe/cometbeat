@@ -34,6 +34,7 @@ const int kDrumSnare = 1;
 const int kDrumHat = 2;
 const int kDrumOpenHat = 3;
 const int kDrumTom = 5;
+const int kDrumRim = 6;
 const int kDrumCrash = 8;
 const int kDrumLowTom = 10;
 const int kDrumHighTom = 11;
