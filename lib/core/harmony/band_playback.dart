@@ -86,6 +86,37 @@ class BandMix {
   final double drums;
 }
 
+/// A band performance placed on the clock but not yet synthesised: every
+/// role's events in absolute time. Cheap to build — the synthesis is the cost —
+/// which is what lets `chart_render_cache.dart` render it a window at a time.
+class BandPlan {
+  const BandPlan({
+    required this.bars,
+    required this.totalMs,
+    required this.beatMs,
+    required this.comp,
+    required this.bass,
+    required this.drumHits,
+    required this.drumGains,
+  });
+
+  final List<BandBarSpan> bars;
+  final int totalMs;
+
+  /// The exact beat length; [BandPerformance.beatMs] is this rounded.
+  final double beatMs;
+
+  /// Back-to-back segments (rests and notes) from time zero.
+  final List<Segment> comp;
+  final List<Segment> bass;
+
+  /// `(atMs, drum)` one-shots, with [drumGains] parallel to them.
+  final List<(int, Drum)> drumHits;
+  final List<double> drumGains;
+
+  int totalSamples(int sampleRate) => (totalMs * sampleRate) ~/ 1000;
+}
+
 /// Renders [chart] as a band.
 ///
 /// Returns null when there is nothing to play, rather than an empty WAV — a
@@ -105,6 +136,72 @@ BandPerformance? renderBand(
   int seed = 0,
   int sampleRate = kSampleRate,
   List<MixStem> extraStems = const [],
+}) {
+  final plan = planBand(
+    chart,
+    style: style,
+    form: form,
+    humanize: humanize,
+    seed: seed,
+  );
+  if (plan == null) return null;
+  final totalMs = plan.totalMs;
+  final compEvents = plan.comp;
+  final bassEvents = plan.bass;
+  final drumHits = plan.drumHits;
+  final drumGains = plan.drumGains;
+
+  // Render and mix.
+  final totalSamples = (totalMs * sampleRate) ~/ 1000;
+  if (totalSamples <= 0) return null;
+
+  final stems = <MixStem>[
+    if (compEvents.isNotEmpty)
+      (
+        samples: renderSegmentsRaw(compEvents, sampleRate: sampleRate),
+        gain: mix.comp
+      ),
+    if (bassEvents.isNotEmpty)
+      (
+        samples: renderSegmentsRaw(bassEvents, sampleRate: sampleRate),
+        gain: mix.bass
+      ),
+    if (drumHits.isNotEmpty)
+      (
+        samples: renderDrumPattern(
+          drumHits,
+          totalMs: totalMs,
+          sampleRate: sampleRate,
+          gains: drumGains,
+        ),
+        gain: mix.drums
+      ),
+    ...extraStems,
+  ];
+  if (stems.isEmpty) return null;
+
+  final mixed = mixStemsFloat(stems, totalSamples: totalSamples);
+  final pcm = Int16List(totalSamples);
+  for (var i = 0; i < totalSamples; i++) {
+    pcm[i] = (mixed[i].clamp(-1.0, 1.0) * 32767).round();
+  }
+
+  return BandPerformance(
+    wav: wavBytes(pcm, sampleRate: sampleRate),
+    bars: plan.bars,
+    totalMs: totalMs,
+    beatMs: plan.beatMs.round(),
+  );
+}
+
+/// Places [chart]'s band on the clock: passes 1–3 of [renderBand], no audio.
+/// Null when there is nothing to play.
+BandPlan? planBand(
+  Chart chart, {
+  required StyleSpec style,
+  FormOptions form = const FormOptions(),
+  bool humanize = true,
+  int seed = 0,
 }) {
   final bars = realizeForm(chart, options: form);
   if (bars.isEmpty) return null;
@@ -285,46 +382,14 @@ BandPerformance? renderBand(
     }
   }
 
-  // Pass 4 — render and mix.
-  final totalSamples = (totalMs * sampleRate) ~/ 1000;
-  if (totalSamples <= 0) return null;
-
-  final stems = <MixStem>[
-    if (compEvents.isNotEmpty)
-      (
-        samples: renderSegmentsRaw(compEvents, sampleRate: sampleRate),
-        gain: mix.comp
-      ),
-    if (bassEvents.isNotEmpty)
-      (
-        samples: renderSegmentsRaw(bassEvents, sampleRate: sampleRate),
-        gain: mix.bass
-      ),
-    if (drumHits.isNotEmpty)
-      (
-        samples: renderDrumPattern(
-          drumHits,
-          totalMs: totalMs,
-          sampleRate: sampleRate,
-          gains: drumGains,
-        ),
-        gain: mix.drums
-      ),
-    ...extraStems,
-  ];
-  if (stems.isEmpty) return null;
-
-  final mixed = mixStemsFloat(stems, totalSamples: totalSamples);
-  final pcm = Int16List(totalSamples);
-  for (var i = 0; i < totalSamples; i++) {
-    pcm[i] = (mixed[i].clamp(-1.0, 1.0) * 32767).round();
-  }
-
-  return BandPerformance(
-    wav: wavBytes(pcm, sampleRate: sampleRate),
+  return BandPlan(
     bars: spans,
     totalMs: totalMs,
-    beatMs: beatMs.round(),
+    beatMs: beatMs,
+    comp: compEvents,
+    bass: bassEvents,
+    drumHits: drumHits,
+    drumGains: drumGains,
   );
 }
 

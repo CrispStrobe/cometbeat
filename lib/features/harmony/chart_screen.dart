@@ -15,17 +15,22 @@ library;
 
 import 'dart:async';
 
+import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/harmony/band_playback.dart';
+import 'package:comet_beat/core/harmony/band_streamer.dart';
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_analysis.dart';
 import 'package:comet_beat/core/harmony/chart_import.dart';
 import 'package:comet_beat/core/harmony/chart_playback.dart';
+import 'package:comet_beat/core/harmony/chart_render_cache.dart';
 import 'package:comet_beat/core/harmony/chart_share.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
 import 'package:comet_beat/core/harmony/chart_transpose.dart';
 import 'package:comet_beat/core/harmony/form_realizer.dart';
 import 'package:comet_beat/core/harmony/style_library.dart';
+import 'package:comet_beat/core/harmony/style_spec.dart' show StyleSpec;
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/band_stream_player.dart';
 import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
     show AnalysisDepth;
@@ -93,9 +98,16 @@ class _ChartScreenState extends State<ChartScreen> {
   Stopwatch? _clock;
   ChartPlayback? _playback;
 
-  /// The rendered band, when the band path is in use. Exactly one of this and
-  /// [_playback] is non-null while playing.
-  BandPerformance? _band;
+  /// The band's timeline, when the band path is in use. Exactly one of this
+  /// and [_playback] is non-null while playing.
+  ({List<BandBarSpan> bars, int totalMs})? _band;
+
+  /// BB-T1: the band streamed a window at a time where the platform can, so a
+  /// long chart starts in about a second instead of after a whole render, and
+  /// playing it again (or after a small edit) reuses what was rendered.
+  final _bandCache = ChartRenderCache(maxWindows: 96);
+  late final _streamer = BandStreamer(cache: _bandCache);
+  final _stream = BandStreamPlayer();
 
   /// Null until SharedPreferences resolves. Every write goes through
   /// [_persist], which is a no-op until then rather than a queue — losing the
@@ -151,6 +163,8 @@ class _ChartScreenState extends State<ChartScreen> {
   @override
   void dispose() {
     _ticker?.cancel();
+    _streamer.cancel();
+    unawaited(_stream.stop());
     super.dispose();
   }
 
@@ -158,17 +172,19 @@ class _ChartScreenState extends State<ChartScreen> {
 
   Future<void> _play() async {
     final audio = context.read<AudioService>();
+    final sounding = soundingChart(_chart, _transpose);
+    final style = styleFor(_chart.styleId);
+    final form = FormOptions(choruses: _choruses);
+
+    if (await _playStreamed(sounding, style, form)) return;
+    if (!mounted) return;
 
     // The band is the real path; the plain one is the fallback. A band that
     // fails to assemble must degrade to something that plays, not to silence.
-    final band = renderBand(
-      soundingChart(_chart, _transpose),
-      style: styleFor(_chart.styleId),
-      form: FormOptions(choruses: _choruses),
-    );
+    final band = renderBand(sounding, style: style, form: form);
 
     if (band != null) {
-      _band = band;
+      _band = (bars: band.bars, totalMs: band.totalMs);
       _clock = Stopwatch()..start();
       _ticker =
           Timer.periodic(const Duration(milliseconds: 50), (_) => _tick());
@@ -192,6 +208,45 @@ class _ChartScreenState extends State<ChartScreen> {
     );
   }
 
+  /// Plays the band through the window stream. False when streaming is not
+  /// available here (or there is no band), so the caller falls back.
+  Future<bool> _playStreamed(
+    Chart sounding,
+    StyleSpec style,
+    FormOptions form,
+  ) async {
+    if (!await _stream.start(kSampleRate)) return false;
+    final band = await prepareBandInIsolate(
+      sounding,
+      style: style,
+      form: form,
+    );
+    if (band == null || !mounted) {
+      await _stream.stop();
+      return band != null; // unmounted: handled; no band: fall back
+    }
+
+    // The clock starts when the first window lands, and pauses whenever the
+    // stream stalls waiting for the next — so the highlight follows the sound,
+    // not the wall.
+    final clock = Stopwatch();
+    _stream.onBuffering = (buffering) =>
+        buffering ? clock.stop() : (_clock == clock ? clock.start() : null);
+    _band = (bars: band.plan.bars, totalMs: band.plan.totalMs);
+    _clock = clock;
+    _ticker = Timer.periodic(const Duration(milliseconds: 50), (_) => _tick());
+    setState(() {});
+    unawaited(
+      _streamer.feed(band, (pcm, index) {
+        _stream.add(pcm);
+        if (index == 0) clock.start();
+      }).then((complete) {
+        if (complete) _stream.end();
+      }),
+    );
+    return true;
+  }
+
   void _tick() {
     final clock = _clock;
     if (clock == null) return;
@@ -206,7 +261,11 @@ class _ChartScreenState extends State<ChartScreen> {
       // A realised bar carries the DOCUMENT bar it came from, so the highlight
       // lands on the bar the user is looking at even across repeats — and a
       // generated bar (count-in, ending) highlights nothing, which is correct.
-      final source = band.barAt(ms)?.bar.sourceBar;
+      BandBarSpan? span;
+      for (final b in band.bars) {
+        if (ms >= b.startMs && ms < b.endMs) span = b;
+      }
+      final source = span?.bar.sourceBar;
       final ref =
           source == null ? null : ChartBarRef(source.section, source.bar);
       if (ref != _playingBar) setState(() => _playingBar = ref);
@@ -244,6 +303,8 @@ class _ChartScreenState extends State<ChartScreen> {
   }
 
   Future<void> _stop() async {
+    _streamer.cancel();
+    unawaited(_stream.stop());
     _ticker?.cancel();
     _ticker = null;
     _clock = null;

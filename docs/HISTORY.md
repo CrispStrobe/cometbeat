@@ -8,6 +8,34 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## BB-T1 — the backing band starts in about a second (2026-10-15)
+
+- **Windowed render + cache** (`lib/core/harmony/chart_render_cache.dart`).
+  `renderBand` split into `planBand` (events on the clock, cheap) and the
+  synthesis; synthesis now runs per window of 4 bars, as stems. A window is an
+  exact crop of the whole render — the windows end to end are `renderBand`'s
+  samples, asserted for three styles and window sizes 1–100 bars — so seams
+  are click-free by construction. Per-stem peaks (which the whole-piece mix
+  normalises by) are recovered without a full render: comp/bass segments never
+  overlap, so the peak is the largest of the distinct notes; the kit is swept
+  by cheap additions.
+- **Keyed by content.** A window's key is what sounds in it, relative to the
+  window, so a one-chord edit in bar 40 of 96 re-renders at most two windows
+  (asserted). Stems are cached unmixed: a mute or level change is a re-mix.
+  Repeated choruses do *not* share windows — bar lines fall on fractional
+  milliseconds, so events sit a sample or two differently per bar — and that
+  is the price of exactness.
+- **Streamed playback** (`band_streamer.dart`, `band_stream_player.dart`):
+  plan + prepare on an isolate, windows rendered on isolates and appended in
+  order to a SoLoud buffer stream; the playhead clock starts at the first
+  window and pauses if the stream stalls. Where SoLoud is unavailable the chart
+  screen keeps the old whole-render path.
+- **Measured** on the shared dev box (loaded): a 96-bar chart took 5.6–7.9 s to
+  render whole; first sound now needs 1.2–1.4 s (plan ~0.3 s, peaks ~1 s, first
+  window ~0.15 s), independent of chart length. A mid device should beat that.
+- Not yet: Gig mode still renders whole; changing style or levels *while*
+  playing is BB-U3, which this card unblocks.
+
 ## Logic out of the big screens, first pieces (2026-10-14)
 
 - `TrackerFieldEntry` — the Advanced Tracker's hex volume / effect / decimal
