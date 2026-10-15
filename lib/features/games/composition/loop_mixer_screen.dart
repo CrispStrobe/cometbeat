@@ -30,6 +30,7 @@ import 'package:comet_beat/core/audio/aec_engine.dart';
 import 'package:comet_beat/core/audio/beat_capture.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart' show resampleHq;
 import 'package:comet_beat/core/audio/daw_sources.dart' show GrooveSource;
+import 'package:comet_beat/core/audio/daw_timeline.dart' show ClipSource;
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/groove_capture.dart';
 import 'package:comet_beat/core/audio/groove_change_label.dart';
@@ -67,6 +68,7 @@ import 'package:comet_beat/core/music/melodic_search.dart'
 import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
+import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/project_service.dart';
@@ -74,6 +76,7 @@ import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/core/tray/tray.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
+import 'package:comet_beat/features/games/composition/arrangement_recorder.dart';
 import 'package:comet_beat/features/games/composition/custom_progressions.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart';
 import 'package:comet_beat/features/games/composition/groove_play_along.dart';
@@ -564,6 +567,11 @@ abstract interface class LoopMixerTester {
   /// Send the whole current groove to the Multitrack (DAW) as a clip.
   void sendToDaw();
 
+  /// WS-W7: records the session; sends it as an arrangement.
+  void startArrangementRecording();
+  void sendArrangementToDaw();
+  int get recordedPasses;
+
   /// Saves the current groove to a local slot (bypasses the name dialog).
   Future<void> debugSaveGroove(String name);
 
@@ -630,6 +638,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   int _iteration = 0;
   int _lastPhaseMs = 0;
+
+  /// WS-W7: the live session, written down pass by pass for the Audio Editor.
+  final _arrangement = ArrangementRecorder();
   bool _paused = false;
 
   /// What the loop player is currently looping (identity-compared against
@@ -1678,6 +1689,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   bool get hasScenes => _scenes.any((s) => s != null);
   @override
+  void startArrangementRecording() => setState(_arrangement.start);
+  @override
+  int get recordedPasses => _arrangement.runs.fold(0, (n, r) => n + r.passes);
+  @override
   Float64List debugRenderArrangement() =>
       _engine.renderArrangement(_capturedScenes(), repeats: _capturedRepeats());
   @override
@@ -2425,6 +2440,35 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
               enabled: _engine.enabled.isNotEmpty,
               onTap: () => Navigator.pop(sheet, 'wav'),
             ),
+            // WS-W7: record the session as an arrangement.
+            ListTile(
+              key: const ValueKey('loop-record-arrangement'),
+              leading: Icon(
+                _arrangement.isRecording
+                    ? Icons.stop_circle_outlined
+                    : Icons.fiber_manual_record_outlined,
+              ),
+              title: Text(
+                _arrangement.isRecording
+                    ? l10n.loopArrangementStop
+                    : l10n.loopArrangementRecord,
+              ),
+              onTap: () => Navigator.pop(sheet, 'arrRecord'),
+            ),
+            ListTile(
+              key: const ValueKey('loop-send-arrangement'),
+              leading: const Icon(Icons.view_timeline_outlined),
+              title: Text(l10n.loopArrangementSend),
+              subtitle: _arrangement.isEmpty
+                  ? null
+                  : Text(
+                      l10n.loopArrangementLength(
+                        _arrangement.runs.fold(0, (n, r) => n + r.passes),
+                      ),
+                    ),
+              enabled: !_arrangement.isEmpty,
+              onTap: () => Navigator.pop(sheet, 'arrSend'),
+            ),
             ListTile(
               leading: const Icon(Icons.library_add),
               title: Text(l10n.dawSend),
@@ -2497,6 +2541,14 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         await _saveWav();
       case 'daw':
         sendToDaw();
+      case 'arrRecord':
+        setState(
+          () => _arrangement.isRecording
+              ? _arrangement.stop()
+              : _arrangement.start(),
+        );
+      case 'arrSend':
+        sendArrangementToDaw();
       default:
         break;
     }
@@ -2513,6 +2565,32 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     if (xml == null) return null;
     _writeGrooveToSongBook(songs, AppLocalizations.of(context)!.gameLoopMixer);
     return xml;
+  }
+
+  /// WS-W7: the recorded session onto a new Audio Editor track, each pass a
+  /// clip, end to end. Recording stops; the recording is kept, so it can be
+  /// sent again.
+  @override
+  void sendArrangementToDaw() {
+    if (_arrangement.isEmpty) return;
+    _arrangement.stop();
+    final parts = <({ClipSource source, double durationMs})>[];
+    for (final run in _arrangement.runs) {
+      // One source per run: its loop renders once, however many passes.
+      final source = GrooveSource(run.spec);
+      for (var p = 0; p < run.passes; p++) {
+        parts.add((source: source, durationMs: run.passMs.toDouble()));
+      }
+    }
+    final l10n = AppLocalizations.of(context)!;
+    context.read<DawService>().addArrangement(
+          parts,
+          name: l10n.loopArrangementTrack,
+        );
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.dawSent)),
+    );
   }
 
   @override
@@ -3259,6 +3337,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// iteration differs (fill in / fill out), swap it in near position 0 —
   /// the downbeat kick masks the restart.
   void _onLoopWrap() {
+    // WS-W7: the pass that just ended, with the mix that PLAYED — logged
+    // before anything armed for this seam lands.
+    _arrangement.passEnded(_engine.spec, _engine.timing.totalMs);
     _iteration++;
     // A running scene chain advances to its next section on the beat.
     _advanceChain();

@@ -162,7 +162,7 @@ ladders in §4–§6 get materially cheaper afterwards.
   instruments (the shared Sound Library) · samples · FX presets (chain strings)
   · the licensed asset catalog. Drag from it onto any surface. This is where
   the 157-tile registry and the asset catalog finally meet the authoring modes.
-- ⬜ **WS-W7 — session ⇄ arrangement.** Loop Studio's scenes are already a real
+- 🔶 **WS-W7 — session ⇄ arrangement.** *(Recording shipped 2026-10-15 — see HISTORY; a live, two-way view is the remainder.)* Loop Studio's scenes are already a real
   session grid (`GrooveScene(enabled, variants)`), and the Audio Editor is
   already a linear arrangement. Make them two views of the *same* project:
   launch scenes live, record the launches into the arrangement.

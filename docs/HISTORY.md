@@ -8,6 +8,17 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## WS-W7 — a Loop Studio session, recorded as an arrangement (2026-10-15)
+
+- Loop Studio's menu: *Record arrangement* starts logging every finished loop
+  pass with the mix that actually played — launched sections, toggled tracks,
+  tweaks — before anything armed for that seam lands; consecutive identical
+  passes merge (`arrangement_recorder.dart`, pure). *Send arrangement to the
+  Audio Editor* lays the passes end to end on a new track from the top of the
+  timeline (`DawService.addArrangement`), each run's loop rendered once, as
+  one undo step. The session view and the arrangement view are now connected
+  one way; editing the arrangement back into the session is the open half.
+
 ## WS-W5 — FX inserts on the mixer console (2026-10-15)
 
 - A project track's mix carries an insert chain (`ProjectTrackMix.fxChain`,

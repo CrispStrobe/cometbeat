@@ -1425,6 +1425,29 @@ class AppLocalizationsDe extends AppLocalizations {
       'Staple Grooves übereinander — du bist die Band';
 
   @override
+  String get loopArrangementRecord => 'Arrangement aufnehmen';
+
+  @override
+  String get loopArrangementStop => 'Arrangement-Aufnahme beenden';
+
+  @override
+  String get loopArrangementSend => 'Arrangement an den Audio-Editor senden';
+
+  @override
+  String get loopArrangementTrack => 'Loop-Studio-Arrangement';
+
+  @override
+  String loopArrangementLength(int passes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      passes,
+      locale: localeName,
+      other: '$passes Loops aufgenommen',
+      one: '1 Loop aufgenommen',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get loopStudioTitle => 'Loop Studio';
 
   @override

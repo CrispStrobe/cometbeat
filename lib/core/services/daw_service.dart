@@ -226,6 +226,25 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// WS-W7: lays [parts] end to end on a NEW track from the top of the
+  /// timeline — a recorded Loop Studio session arriving as an arrangement.
+  /// Each part is a clip that long; one undo step. Returns the track index.
+  int addArrangement(
+    List<({ClipSource source, double durationMs})> parts, {
+    String? name,
+  }) {
+    _record();
+    final lane = DawTrack(name: name ?? '${timeline.tracks.length + 1}');
+    var at = 0.0;
+    for (final part in parts) {
+      lane.clips.add(Clip(source: part.source, startMs: at));
+      at += part.durationMs;
+    }
+    timeline.tracks.add(lane);
+    notifyListeners();
+    return timeline.tracks.length - 1;
+  }
+
   /// Append a new empty track (auto-named by position).
   void addTrack() {
     _record();

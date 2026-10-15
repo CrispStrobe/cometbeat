@@ -1496,7 +1496,8 @@ prefix.
     **The gap was real: five surfaces host a rack and none could keep a chain.**
     ⚠️ A chain string cannot carry per-param automation, so the sheet says so
     before saving an automated chain — and stays quiet for a plain one. 18 tests.
-  - ⬜ **Slices 2+ — the remaining four tabs.** Templates · instruments · samples ·
+  - ⬜ **Slices 2+ — the remaining tabs.** (Templates are SHIPPED — the browser's
+    *Templates* toggle, `project_templates.dart`.) Instruments · samples ·
     FX presets · the asset catalog. Deliberately not started: the
     instrument/sample/catalog tabs are the Sound Library owner's domain, and the
     card's "drag onto any surface" needs **WS-X2**, which does not exist. The
@@ -1575,6 +1576,11 @@ prefix.
     any song view four blocks long.
   * ⛔ **(c) matrix-becomes-timeline and (d) per-track linear arrangement are
     DEFERRED to WS-W7**, where "two views of one project" is the actual card.
+    🔶 **WS-W7 first slice SHIPPED 2026-10-15:** *Record arrangement* in Loop
+    Studio's menu logs every finished pass with the mix that played (merging
+    repeats); *Send arrangement to the Audio Editor* lays it out end to end on
+    a new track (`DawService.addArrangement`, one undo). Still open: a LIVE
+    view — the arrangement editable and reflected back into the session.
     Doing either here would pre-empt that design.
   *(original card kept below for its reasoning)*
 

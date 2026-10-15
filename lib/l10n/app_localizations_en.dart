@@ -1421,6 +1421,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'Layer looping grooves — you are the band';
 
   @override
+  String get loopArrangementRecord => 'Record arrangement';
+
+  @override
+  String get loopArrangementStop => 'Stop recording arrangement';
+
+  @override
+  String get loopArrangementSend => 'Send arrangement to the Audio Editor';
+
+  @override
+  String get loopArrangementTrack => 'Loop Studio arrangement';
+
+  @override
+  String loopArrangementLength(int passes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      passes,
+      locale: localeName,
+      other: '$passes loops recorded',
+      one: '1 loop recorded',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get loopStudioTitle => 'Loop Studio';
 
   @override

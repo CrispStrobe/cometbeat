@@ -2630,6 +2630,36 @@ abstract class AppLocalizations {
   /// **'Layer looping grooves — you are the band'**
   String get gameLoopMixerSubtitle;
 
+  /// No description provided for @loopArrangementRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record arrangement'**
+  String get loopArrangementRecord;
+
+  /// No description provided for @loopArrangementStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop recording arrangement'**
+  String get loopArrangementStop;
+
+  /// No description provided for @loopArrangementSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send arrangement to the Audio Editor'**
+  String get loopArrangementSend;
+
+  /// No description provided for @loopArrangementTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop Studio arrangement'**
+  String get loopArrangementTrack;
+
+  /// No description provided for @loopArrangementLength.
+  ///
+  /// In en, this message translates to:
+  /// **'{passes,plural, =1{1 loop recorded} other{{passes} loops recorded}}'**
+  String loopArrangementLength(int passes);
+
   /// No description provided for @loopStudioTitle.
   ///
   /// In en, this message translates to:
