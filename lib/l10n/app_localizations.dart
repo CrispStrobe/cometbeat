@@ -95,7 +95,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en')
+    Locale('en'),
   ];
 
   /// Inspector heading: pizzicato or arco
@@ -715,6 +715,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shared'**
   String get musicExportShared;
+
+  /// No description provided for @musicExportPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Part'**
+  String get musicExportPart;
+
+  /// No description provided for @musicExportAllParts.
+  ///
+  /// In en, this message translates to:
+  /// **'All parts'**
+  String get musicExportAllParts;
 
   /// No description provided for @audioExportTitle.
   ///
@@ -18984,8 +18996,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

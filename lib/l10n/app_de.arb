@@ -140,6 +140,8 @@
   "musicExportEmpty": "Noch nichts zu exportieren",
   "musicExportFailed": "Export fehlgeschlagen",
   "musicExportShared": "Geteilt",
+  "musicExportPart": "Stimme",
+  "musicExportAllParts": "Alle Stimmen",
   "audioExportTitle": "Klang exportieren",
   "audioExportWav": "WAV (unkomprimiert)",
   "audioExportMp3": "MP3 (kleiner)",

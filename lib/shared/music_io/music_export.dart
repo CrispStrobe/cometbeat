@@ -115,47 +115,96 @@ Future<void> showMusicExportSheet(
     messenger.showSnackBar(SnackBar(content: Text(l10n.musicExportEmpty)));
     return;
   }
+  // Null exports the whole score; an index exports that instrument's part
+  // alone, its silent stretches drawn as multi-bar rests as a player's part
+  // prints them.
+  int? part;
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     builder: (ctx) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.musicExportTitle,
-              style: Theme.of(ctx).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final f in _kFormats)
-                  ActionChip(
-                    label: Text(f.label),
-                    onPressed: () async {
-                      Navigator.of(ctx).pop();
-                      await _exportAs(
-                        context,
-                        f,
-                        multiPart,
-                        partNames,
-                        baseName,
-                      );
-                    },
-                  ),
+        child: StatefulBuilder(
+          builder: (ctx, setSheetState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.musicExportTitle,
+                style: Theme.of(ctx).textTheme.titleLarge,
+              ),
+              if (multiPart.parts.length > 1) ...[
+                const SizedBox(height: 12),
+                Text(
+                  l10n.musicExportPart,
+                  style: Theme.of(ctx).textTheme.labelLarge,
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: Text(l10n.musicExportAllParts),
+                      selected: part == null,
+                      onSelected: (_) => setSheetState(() => part = null),
+                    ),
+                    for (var i = 0; i < multiPart.parts.length; i++)
+                      ChoiceChip(
+                        label: Text(_partName(partNames, i)),
+                        selected: part == i,
+                        onSelected: (_) => setSheetState(() => part = i),
+                      ),
+                  ],
+                ),
               ],
-            ),
-          ],
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final f in _kFormats)
+                    ActionChip(
+                      label: Text(f.label),
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        final chosen = part;
+                        await _exportAs(
+                          context,
+                          f,
+                          chosen == null
+                              ? multiPart
+                              : partForExport(multiPart, chosen),
+                          chosen == null
+                              ? partNames
+                              : [_partName(partNames, chosen)],
+                          chosen == null
+                              ? baseName
+                              : '$baseName - ${_partName(partNames, chosen)}',
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     ),
   );
 }
+
+String _partName(List<String> names, int i) =>
+    i < names.length && names[i].trim().isNotEmpty
+        ? names[i].trim()
+        : 'Part ${i + 1}';
+
+/// Part [index] of [multiPart] on its own, as an instrumental part prints:
+/// runs of silent bars become multi-bar rests.
+@visibleForTesting
+MultiPartScore partForExport(MultiPartScore multiPart, int index) =>
+    MultiPartScore([multiPart.parts[index].withMultiRests()]);
 
 Future<void> _exportAs(
   BuildContext context,
