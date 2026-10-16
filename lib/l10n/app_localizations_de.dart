@@ -607,11 +607,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopTranscribing => 'Aufnahme wird angehört…';
 
   @override
-  String get workshopPasteTokens => 'Noten-Tokens einfügen…';
+  String get workshopPasteTokens => 'Noten tippen oder einfügen…';
 
   @override
   String get workshopPasteTokensHint =>
-      'bekern-/kern-Tokens einfügen (z. B. **kern <b> 4 c <b> *-)';
+      'ABC (X:1 K:G GABc|d2B2|), Notennamen (c4:q d4 e4:h), LilyPond oder Scanner-Tokens';
 
   @override
   String get workshopPasteTokensLoad => 'Laden';

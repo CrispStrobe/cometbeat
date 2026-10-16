@@ -139,8 +139,9 @@ would be missed:
   export to wire in once the views expose them.
 - ⬜ **Teacher and classroom.** No assignments, class view or sharing of a
   pupil's piece beyond files.
-- ⬜ **Typed entry for older pupils** — ABC or note names in the editor
-  (crisp_notation reads both).
+- ✅ **Typed entry for older pupils** (2026-10-16). The Workshop's "Type
+  or paste music" dialog reads ABC (with or without a header), note names
+  (`c4:q d4 e4:h`), LilyPond and scanner tokens (`importTypedMusic`).
 - ⬜ **A full keyboard step-entry mode** in the Score Workshop (shortcuts
   exist; step entry as MuseScore Studio does it does not).
 - **Engraving quality is crisp_notation's** — spacing density, line
