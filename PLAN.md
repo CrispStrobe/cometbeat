@@ -119,6 +119,37 @@ identification, and the tracker gap analysis.
 - Shipped: Synth & FX Editor (embeds Sound Lab directly into Tracker via `instrument_editor.dart`).
 - Shipped: Multi-Sample Groundwork (`MultiSampleInstrument` added to `tracker_engine.dart` with correct monophonic choking semantics).
 
+## Beside established notation tools — what CometBeat still lacks (2026-10-16)
+
+A capability comparison of crisp_notation and CometBeat with LilyPond,
+MuseScore Studio, Frescobaldi, Denemo and ABC/abcm2ps lives in the library:
+[`../crisp_notation/docs/COMPARISON.md`](../crisp_notation/docs/COMPARISON.md)
+(engraving findings measured by rendering the same real scores with LilyPond
+and Verovio). CometBeat's own gaps, against what a pupil, parent or teacher
+would otherwise use — usually MuseScore Studio — in order of how often they
+would be missed:
+
+- ⬜ **Vector PDF.** `workshop/export/score_pdf.dart` assembles raster page
+  PNGs; compose the PDF from crisp_notation's SVG instead (sharp print, small
+  files).
+- ⬜ **Parts.** No way to view or export one instrument's part of an ensemble
+  score; crisp_notation's linked parts (`withLinkedPart`) are not used.
+- ⬜ **Screen-reader access to scores** (see Now/next: the staff views are
+  unlabelled). crisp_notation has accessibility descriptions and braille
+  export to wire in once the views expose them.
+- ⬜ **Teacher and classroom.** No assignments, class view or sharing of a
+  pupil's piece beyond files.
+- ⬜ **Typed entry for older pupils** — ABC or note names in the editor
+  (crisp_notation reads both).
+- ⬜ **A full keyboard step-entry mode** in the Score Workshop (shortcuts
+  exist; step entry as MuseScore Studio does it does not).
+- **Engraving quality is crisp_notation's** — spacing density, line
+  breaking, slur shaping and source text styles are tracked in that
+  document, not here. The 2026-10-16 round there fixed timing of 60% of
+  imported MusicXML (`<forward>` was ignored), staff alignment, cross-staff
+  piano chords, printed playback tempi, voice collisions and SVG braces;
+  they reach CometBeat through the path dependency.
+
 ## Cello fingering (string · position · finger) — arranger VALIDATED against printed method literature
 
 > **2026-07-28 update — the numbers below this block are superseded.** A reading arc over
