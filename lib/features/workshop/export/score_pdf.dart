@@ -1,119 +1,86 @@
 // lib/features/workshop/export/score_pdf.dart
 //
-// Score → print-ready PDF (WORKSHOP_PARITY.md bucket G's last open item).
+// Score → print-ready PDF (WORKSHOP_PARITY.md bucket G).
 //
-// crisp_notation has no PDF writer, but it doesn't need one: pagination and
-// rendering already exist, and they compose.
-//
-//   layoutPages(score, settings, metrics:)  → PagedLayout        (core)
-//     .pages[i].systems[j] is a PositionedSystem                 (core)
-//       .system.layout IS a ScoreLayout, .top is its y offset    (core)
-//   renderLayoutToPng(ScoreLayout)          → PNG bytes          (flutter pkg)
-//
-// so we line-break + paginate with the engine, raster each *system* on its own,
-// and place the images on real page boxes with the `pdf` package. Every
-// coordinate crisp_notation hands back is in **staff spaces**; one [spatium]
-// (points per staff space) converts the whole thing to PDF points.
-//
-// Why raster and not vector: the SVG exporter emits `<text>` against an
-// `@font-face` data-URI, which the pdf package's SVG parser doesn't resolve, and
-// Bravura is CFF/OTF — the pdf package's font embedder is TrueType-only. Both
-// vector routes lose the glyphs, so we rasterize each system through the same
-// painter the app draws with (correct glyphs, guaranteed) at [rasterScale]× for
-// print resolution.
+// crisp_notation writes vector PDF itself: `layoutPages` / `layoutMultiPartPages`
+// line-break and paginate, `pagedLayoutToPdf` / `multiPartPagesToPdf` draw the
+// pages — staff lines, stems, beams and slurs as paths, every music glyph from
+// the embedded engraving font, the title block and copyright as text. So the
+// print is sharp at any zoom and a fraction of the size of the old per-system
+// PNGs. All this file adds is the app's page box, the font bytes from the
+// asset bundle, and the title fields merged into the score's own metadata.
 
 import 'dart:typed_data';
-import 'dart:ui' show Color;
 
 import 'package:crisp_notation/crisp_notation.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter/services.dart' show rootBundle;
 
-/// A4 at 72 dpi, in points — the default page box.
-const _a4 = PdfPageFormat.a4;
+/// A4 portrait, in points.
+const _a4Width = 595.28;
+const _a4Height = 841.89;
 
 /// Points per staff space. 6pt ≈ 2.1mm — a normal engraving size, and it puts
 /// ~99 staff spaces across an A4 width.
 const _defaultSpatium = 6.0;
 
-/// Builds the first-page title block (title / subtitle / composer / lyricist)
-/// and returns the vertical space it needs **in staff spaces** so the engine can
-/// reserve it above the first system. Title + subtitle are centred; on one row
-/// below them the lyricist sits left and the composer right (engraving
-/// convention). Any absent field is simply skipped. Shared by both exporters.
-(double gap, List<pw.Widget> widgets) _pdfHeader({
-  required String? title,
-  required String? subtitle,
-  required String? composer,
-  required String? lyricist,
-  required double spatium,
-  required double marginSp,
-  required double contentWidthPts,
-}) {
-  final t = title?.trim() ?? '';
-  final s = subtitle?.trim() ?? '';
-  final c = composer?.trim() ?? '';
-  final l = lyricist?.trim() ?? '';
-  final widgets = <pw.Widget>[];
-  final leftPts = marginSp * spatium;
-  final topStartPts = marginSp * spatium;
-  var yPts = topStartPts;
-
-  pw.Widget line(
-    String text,
-    double size,
-    pw.TextAlign align, {
-    bool bold = false,
-    bool italic = false,
-  }) =>
-      pw.Positioned(
-        left: leftPts,
-        top: yPts,
-        child: pw.SizedBox(
-          width: contentWidthPts,
-          child: pw.Text(
-            text,
-            textAlign: align,
-            style: pw.TextStyle(
-              fontSize: size,
-              fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
-              fontStyle: italic ? pw.FontStyle.italic : pw.FontStyle.normal,
-            ),
-          ),
-        ),
-      );
-
-  if (t.isNotEmpty) {
-    widgets.add(line(t, 15, pw.TextAlign.center, bold: true));
-    yPts += 15 * 1.6;
-  }
-  if (s.isNotEmpty) {
-    widgets.add(line(s, 11, pw.TextAlign.center, italic: true));
-    yPts += 11 * 1.6;
-  }
-  if (c.isNotEmpty || l.isNotEmpty) {
-    if (l.isNotEmpty) widgets.add(line(l, 10, pw.TextAlign.left));
-    if (c.isNotEmpty) widgets.add(line(c, 10, pw.TextAlign.right));
-    yPts += 10 * 1.6;
-  }
-  final gapPts = yPts - topStartPts;
-  return (gapPts / spatium, widgets);
+/// The engraving font's `.otf` bytes, which the PDF embeds. A theme font that
+/// is not bundled as a loadable asset prints in Bravura.
+Future<List<int>> _fontBytes(MusicFont font) async {
+  final asset = font.fontAsset ?? MusicFont.bravura.fontAsset!;
+  final data = await rootBundle.load(asset);
+  return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
 }
 
-/// Renders [score] to a paginated, print-ready PDF.
+/// [metadata] with the export dialog's fields laid over it (a blank field
+/// keeps the score's own value).
+ScoreMetadata _withHeading(
+  ScoreMetadata metadata, {
+  String? title,
+  String? subtitle,
+  String? composer,
+  String? lyricist,
+}) {
+  String? pick(String? given, String? own) =>
+      (given?.trim().isNotEmpty ?? false) ? given!.trim() : own;
+  return ScoreMetadata(
+    title: pick(title, metadata.title),
+    subtitle: pick(subtitle, metadata.subtitle),
+    composer: pick(composer, metadata.composer),
+    lyricist: pick(lyricist, metadata.lyricist),
+    arranger: metadata.arranger,
+    copyright: metadata.copyright,
+  );
+}
+
+PageMetrics _metrics(
+  double pageWidth,
+  double pageHeight,
+  double spatium,
+  double margin, {
+  double marginLeft = 0,
+}) =>
+    PageMetrics(
+      width: pageWidth / spatium,
+      height: pageHeight / spatium,
+      marginTop: margin,
+      marginBottom: margin,
+      marginLeft: margin + marginLeft,
+      marginRight: margin,
+    );
+
+/// Renders [score] to a paginated, print-ready vector PDF.
 ///
-/// Systems are line-broken to the page's content width and packed into pages by
-/// crisp_notation's [layoutPages]; each system is rasterized at [rasterScale]×
-/// [spatium] (so ~216 dpi by default) and placed at its exact staff-space
-/// position. [spatium] sets the engraving size: larger = fewer bars per line.
+/// Systems are line-broken to the page's content width and packed into pages
+/// by crisp_notation's [layoutPages], the first page keeping room for the
+/// title block. [spatium] (points per staff space) sets the engraving size:
+/// larger = fewer bars per line. The page is A4 unless [pageWidth] /
+/// [pageHeight] (points) say otherwise; [margin] is in staff spaces.
 ///
 /// [extraFingerings] engraves fingering marks the score does not itself carry,
 /// keyed by note-element id — what a printed part needs when the fingering was
 /// computed (by the bowed arranger, say) rather than authored into the score.
 ///
-/// Must run inside a Flutter binding with the engraving font registered (the app
-/// always is; a test needs `MusicFonts.load` first) — [renderLayoutToPng]
-/// rasterizes through `dart:ui`.
+/// Needs the asset bundle (the app always has it; a widget test does).
 Future<Uint8List> exportScoreToPdf(
   Score score, {
   String? title,
@@ -121,95 +88,42 @@ Future<Uint8List> exportScoreToPdf(
   String? composer,
   String? lyricist,
   CrispNotationTheme theme = CrispNotationTheme.standard,
-  PdfPageFormat pageFormat = _a4,
+  double pageWidth = _a4Width,
+  double pageHeight = _a4Height,
   double spatium = _defaultSpatium,
-  double rasterScale = 3,
   double margin = 8,
   Map<String, List<int>> extraFingerings = const {},
 }) async {
   final metadata = MusicFonts.metadataOrNull(theme.musicFont) ??
       await MusicFonts.load(theme.musicFont);
   final settings = LayoutSettings(metadata: metadata);
-
-  // The page box, expressed in staff spaces for the engine. The first-page
-  // title block is reserved above the top margin.
-  final (titleGap, headerWidgets) = _pdfHeader(
+  final heading = _withHeading(
+    score.metadata,
     title: title,
     subtitle: subtitle,
     composer: composer,
     lyricist: lyricist,
-    spatium: spatium,
-    marginSp: margin,
-    contentWidthPts: pageFormat.width - 2 * margin * spatium,
-  );
-  final metrics = PageMetrics(
-    width: pageFormat.width / spatium,
-    height: pageFormat.height / spatium,
-    marginTop: margin + titleGap,
-    marginBottom: margin,
-    marginLeft: margin,
-    marginRight: margin,
   );
   final paged = layoutPages(
     score,
     settings,
-    metrics: metrics,
+    metrics: _metrics(pageWidth, pageHeight, spatium, margin),
     extraFingerings: extraFingerings,
+    firstPageTop: titleBlockHeight(heading),
   );
-
-  // Rasterize every system up front: the pdf builder callback is sync.
-  final pages = <List<(PositionedSystem, Uint8List)>>[];
-  for (final page in paged.pages) {
-    final rendered = <(PositionedSystem, Uint8List)>[];
-    for (final positioned in page.systems) {
-      final png = await renderLayoutToPng(
-        positioned.system.layout,
-        staffSpace: spatium * rasterScale,
-        theme: theme,
-        // Transparent: the PDF page is already white, and an opaque box would
-        // clip the neighbouring system's overhang.
-        background: const Color(0x00000000),
-      );
-      rendered.add((positioned, png));
-    }
-    pages.add(rendered);
-  }
-
-  final doc = pw.Document();
-  for (var pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-    final rendered = pages[pageIndex];
-    doc.addPage(
-      pw.Page(
-        pageFormat: pageFormat,
-        // We position everything ourselves in page coordinates.
-        margin: pw.EdgeInsets.zero,
-        build: (context) => pw.Stack(
-          children: [
-            if (pageIndex == 0) ...headerWidgets,
-            for (final (positioned, png) in rendered)
-              pw.Positioned(
-                left: metrics.marginLeft * spatium,
-                top: (metrics.marginTop + positioned.top) * spatium,
-                child: pw.Image(
-                  pw.MemoryImage(png),
-                  width: positioned.system.layout.width * spatium,
-                  height: positioned.system.layout.height * spatium,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-  return doc.save();
+  return pagedLayoutToPdf(
+    paged,
+    musicFont: await _fontBytes(theme.musicFont),
+    pointsPerSpace: spatium,
+    metadata: heading,
+  );
 }
 
-/// A multi-part score → a print-ready PDF that engraves EVERY part (one system
-/// per line holds all staves, connected by systemic barlines), so a full/
-/// orchestral score prints every instrument — unlike [exportScoreToPdf], which
-/// renders a single staff. Mirrors it exactly, swapping the single-staff
-/// pagination + rasterizer for their multi-part twins (`layoutMultiPartPages` +
-/// `renderStaffSystemLayoutToPng`, both already in crisp_notation).
+/// A multi-part score → a print-ready vector PDF that engraves EVERY part (one
+/// system per line holds all staves, joined by systemic barlines, with their
+/// brackets and braces and the instrument names before the first system), so
+/// a full or orchestral score prints every instrument. A single part takes
+/// [exportScoreToPdf].
 Future<Uint8List> exportMultiPartToPdf(
   MultiPartScore multiPart, {
   String? title,
@@ -217,9 +131,9 @@ Future<Uint8List> exportMultiPartToPdf(
   String? composer,
   String? lyricist,
   CrispNotationTheme theme = CrispNotationTheme.standard,
-  PdfPageFormat pageFormat = _a4,
+  double pageWidth = _a4Width,
+  double pageHeight = _a4Height,
   double spatium = _defaultSpatium,
-  double rasterScale = 3,
   double margin = 8,
 }) async {
   if (multiPart.parts.length <= 1) {
@@ -232,9 +146,9 @@ Future<Uint8List> exportMultiPartToPdf(
       subtitle: subtitle,
       composer: composer,
       lyricist: lyricist,
-      pageFormat: pageFormat,
+      pageWidth: pageWidth,
+      pageHeight: pageHeight,
       spatium: spatium,
-      rasterScale: rasterScale,
       margin: margin,
     );
   }
@@ -242,65 +156,38 @@ Future<Uint8List> exportMultiPartToPdf(
   final metadata = MusicFonts.metadataOrNull(theme.musicFont) ??
       await MusicFonts.load(theme.musicFont);
   final settings = LayoutSettings(metadata: metadata);
-
-  final (titleGap, headerWidgets) = _pdfHeader(
+  final heading = _withHeading(
+    multiPart.parts.first.metadata,
     title: title,
     subtitle: subtitle,
     composer: composer,
     lyricist: lyricist,
-    spatium: spatium,
-    marginSp: margin,
-    contentWidthPts: pageFormat.width - 2 * margin * spatium,
   );
-  final metrics = PageMetrics(
-    width: pageFormat.width / spatium,
-    height: pageFormat.height / spatium,
-    marginTop: margin + titleGap,
-    marginBottom: margin,
-    marginLeft: margin,
-    marginRight: margin,
+  // Room left of the staves for the instrument names and the brackets.
+  var names = 0.0;
+  for (final part in multiPart.parts) {
+    final name = part.metadata.instrument?.trim() ?? '';
+    if (name.isEmpty) continue;
+    final width = 2 * estimateTextHalfWidth(name, 1.1) + 1.0;
+    if (width > names) names = width;
+  }
+  final brackets = multiPart.brackets.isEmpty ? 0.0 : 1.8;
+  final paged = layoutMultiPartPages(
+    multiPart,
+    settings,
+    metrics: _metrics(
+      pageWidth,
+      pageHeight,
+      spatium,
+      margin,
+      marginLeft: names + brackets,
+    ),
+    firstPageTop: titleBlockHeight(heading),
   );
-  final paged = layoutMultiPartPages(multiPart, settings, metrics: metrics);
-
-  final pages = <List<(PositionedMultiPartSystem, Uint8List)>>[];
-  for (final page in paged.pages) {
-    final rendered = <(PositionedMultiPartSystem, Uint8List)>[];
-    for (final positioned in page.systems) {
-      final png = await renderStaffSystemLayoutToPng(
-        positioned.system.layout,
-        staffSpace: spatium * rasterScale,
-        theme: theme,
-        background: const Color(0x00000000),
-      );
-      rendered.add((positioned, png));
-    }
-    pages.add(rendered);
-  }
-
-  final doc = pw.Document();
-  for (var pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-    final rendered = pages[pageIndex];
-    doc.addPage(
-      pw.Page(
-        pageFormat: pageFormat,
-        margin: pw.EdgeInsets.zero,
-        build: (context) => pw.Stack(
-          children: [
-            if (pageIndex == 0) ...headerWidgets,
-            for (final (positioned, png) in rendered)
-              pw.Positioned(
-                left: metrics.marginLeft * spatium,
-                top: (metrics.marginTop + positioned.top) * spatium,
-                child: pw.Image(
-                  pw.MemoryImage(png),
-                  width: positioned.system.layout.width * spatium,
-                  height: positioned.system.layout.height * spatium,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-  return doc.save();
+  return multiPartPagesToPdf(
+    paged,
+    musicFont: await _fontBytes(theme.musicFont),
+    pointsPerSpace: spatium,
+    metadata: heading,
+  );
 }

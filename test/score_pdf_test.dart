@@ -1,12 +1,10 @@
 // PDF export — the Workshop's print-ready output (WORKSHOP_PARITY.md bucket G).
 //
-// crisp_notation has no PDF writer; we compose one from pieces it already has:
-// `layoutPages` line-breaks + paginates, each `PositionedSystem.system.layout`
-// is a `ScoreLayout` that `renderLayoutToPng` can rasterize, and the `pdf`
-// package places those images on real A4 page boxes.
+// crisp_notation paginates (`layoutPages` / `layoutMultiPartPages`) and writes
+// the vector PDF itself, embedding the engraving font from the asset bundle.
 //
-// These run under `tester.runAsync` because `renderLayoutToPng` goes through
-// `dart:ui`'s real (non-faked) async rasterizer.
+// These run under `tester.runAsync` because the font bytes come through the
+// real (non-faked) asset bundle.
 
 import 'package:comet_beat/features/workshop/export/score_pdf.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -201,6 +199,16 @@ void main() {
         },
       );
       expect(b.length, a.length);
+    });
+  });
+
+  testWidgets('the PDF is vector: the music font is embedded, no images',
+      (tester) async {
+    await tester.runAsync(() async {
+      final bytes = await exportScoreToPdf(_score(4), title: 'Etude');
+      final text = String.fromCharCodes(bytes);
+      expect(text, contains('/FontFile3'));
+      expect(text, isNot(contains('/Subtype /Image')));
     });
   });
 }

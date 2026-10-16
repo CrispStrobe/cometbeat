@@ -56,10 +56,6 @@ dependencies:
   # build never imports it; version follows the Flutter SDK's pin.
   web: any
 
-  # PDF export (Workshop): pure-Dart PDF writer. We compose pages ourselves from
-  # per-system PNGs — see lib/features/workshop/export/score_pdf.dart.
-  pdf: ^3.11.0
-
   # Utils
   intl: any
   equatable: ^2.0.5

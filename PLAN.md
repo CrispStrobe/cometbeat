@@ -129,9 +129,10 @@ and Verovio). CometBeat's own gaps, against what a pupil, parent or teacher
 would otherwise use — usually MuseScore Studio — in order of how often they
 would be missed:
 
-- ⬜ **Vector PDF.** `workshop/export/score_pdf.dart` assembles raster page
-  PNGs; compose the PDF from crisp_notation's SVG instead (sharp print, small
-  files).
+- ✅ **Vector PDF** (2026-10-16). `workshop/export/score_pdf.dart` calls
+  crisp_notation's PDF writer: paths and the embedded music font instead of
+  per-system PNGs, the title on page one only (the old export reserved its
+  room on every page), and the `pdf` package is gone.
 - ⬜ **Parts.** No way to view or export one instrument's part of an ensemble
   score; crisp_notation's linked parts (`withLinkedPart`) are not used.
 - ⬜ **Screen-reader access to scores** (see Now/next: the staff views are
