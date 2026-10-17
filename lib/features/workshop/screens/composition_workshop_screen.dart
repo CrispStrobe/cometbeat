@@ -324,6 +324,45 @@ MultiPartScore importMultiPart(String fileName, Uint8List bytes) {
 MultiPartScore importBekern(String text) =>
     MultiPartScore.fromStaffSystem(bekernToStaffSystem(text.trim()));
 
+/// Music typed or pasted as text, in whichever notation it is written —
+/// what an older pupil types instead of clicking notes in:
+///
+/// - **ABC** — a tune with its `X:`/`K:` header, or just the notes
+///   (`GABc|d2B2|`), read in C major 4/4;
+/// - **note names** — crisp_notation's note string (`c4:q d4 e4:h | g4:w`);
+/// - **LilyPond** — `{ c'4 d' e' }` or `\relative c' { … }`;
+/// - **OMR tokens** — bekern, as the scanner emits them.
+///
+/// Pure, so it is unit-testable; throws a [FormatException] when the text is
+/// none of these.
+@visibleForTesting
+MultiPartScore importTypedMusic(String text) {
+  final source = text.trim();
+  if (source.isEmpty) throw const FormatException('Nothing typed');
+  if (source.contains('**kern') || source.contains('<b>')) {
+    return importBekern(source);
+  }
+  if (RegExp(r'^[XK]:', multiLine: true).hasMatch(source)) {
+    return multiPartScoreFromAbc(source);
+  }
+  if (source.contains(r'\relative') ||
+      source.contains(r'\new') ||
+      source.startsWith('{')) {
+    return multiPartFromLilyPond(source);
+  }
+  // The note string (its full grammar: ties, slurs, voices, directives) —
+  // ABC notes like `GABc` are not valid there, so a failure falls through.
+  try {
+    return MultiPartScore([Score.simple(notes: source)]);
+  } on FormatException {
+    // Not the note string.
+  } on ArgumentError {
+    // Not the note string.
+  }
+  // Otherwise ABC notes without a header.
+  return multiPartScoreFromAbc('X:1\nM:4/4\nL:1/8\nK:C\n$source\n');
+}
+
 /// One export target: display [label], file [ext], and MIME type. [binary]
 /// formats are raw bytes; the rest are UTF-8 text (and so can fall back to the
 /// copyable dialog where the platform has no save picker).
@@ -2899,10 +2938,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     );
   }
 
-  /// Paste **bekern** tokens (the OMR model's text output) and load them as a
-  /// playable score — a no-file, web-safe "text → notation" path. Multi-spine
-  /// bekern seeds one instrument part per spine (reusing the G6 multi-part
-  /// document); a single spine loads into the active part.
+  /// Type or paste music as text — ABC, note names, LilyPond or the OMR
+  /// model's bekern tokens ([importTypedMusic]) — and load it as a playable
+  /// score: a no-file, web-safe "text → notation" path. Several parts seed
+  /// one instrument part each (the G6 multi-part document); a single part
+  /// loads into the active part.
   Future<void> _pasteTokens() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
@@ -2914,7 +2954,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         content: TextField(
           autofocus: true,
           minLines: 3,
-          maxLines: 6,
+          maxLines: 8,
+          style: const TextStyle(fontFamily: 'monospace'),
           onChanged: (v) => value = v,
           decoration: InputDecoration(
             hintText: l10n.workshopPasteTokensHint,
@@ -2935,7 +2976,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     );
     if (text == null || text.trim().isEmpty || !mounted) return;
     try {
-      final score = importBekern(text);
+      final score = importTypedMusic(text);
       setState(() {
         if (score.parts.length > 1) {
           _mpd.loadMultiPart(score, autoClef: true);

@@ -606,11 +606,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopTranscribing => 'Listening to the recording…';
 
   @override
-  String get workshopPasteTokens => 'Paste notation tokens…';
+  String get workshopPasteTokens => 'Type or paste music…';
 
   @override
   String get workshopPasteTokensHint =>
-      'Paste bekern / kern tokens (e.g. **kern <b> 4 c <b> *-)';
+      'ABC (X:1 K:G GABc|d2B2|), note names (c4:q d4 e4:h), LilyPond or scanner tokens';
 
   @override
   String get workshopPasteTokensLoad => 'Load';

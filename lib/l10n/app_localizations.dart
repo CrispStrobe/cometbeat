@@ -1139,13 +1139,13 @@ abstract class AppLocalizations {
   /// No description provided for @workshopPasteTokens.
   ///
   /// In en, this message translates to:
-  /// **'Paste notation tokens…'**
+  /// **'Type or paste music…'**
   String get workshopPasteTokens;
 
   /// No description provided for @workshopPasteTokensHint.
   ///
   /// In en, this message translates to:
-  /// **'Paste bekern / kern tokens (e.g. **kern <b> 4 c <b> *-)'**
+  /// **'ABC (X:1 K:G GABc|d2B2|), note names (c4:q d4 e4:h), LilyPond or scanner tokens'**
   String get workshopPasteTokensHint;
 
   /// No description provided for @workshopPasteTokensLoad.
