@@ -243,6 +243,8 @@
   "workshopHelpAnalysis": "Analyse färbt jede Note nach ihrer harmonischen Funktion (Ruhe / Weg / Spannung) und benennt die erkannte Tonart.",
   "workshopHelpDetails": "Titelangaben setzen Titel, Komponist:in und Textdichter:in — sie wandern in PDF- und MusicXML-Export.",
   "workshopShortcutPlaceNote": "Note setzen (ihre Tonhöhe)",
+  "workshopShortcutAddToChord": "Note zum Akkord hinzufügen",
+  "workshopShortcutOctave": "Tonhöhe um eine Oktave hoch / runter",
   "workshopShortcutNoteValue": "Notenwert (ganze … Sechzehntel)",
   "workshopShortcutSelect": "Vorherige / nächste auswählen",
   "workshopShortcutTranspose": "Tonhöhe hoch / runter",

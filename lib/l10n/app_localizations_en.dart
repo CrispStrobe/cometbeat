@@ -712,6 +712,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopShortcutPlaceNote => 'Place a note (its pitch)';
 
   @override
+  String get workshopShortcutAddToChord => 'Add a note to the chord';
+
+  @override
+  String get workshopShortcutOctave => 'Move pitch an octave up / down';
+
+  @override
   String get workshopShortcutNoteValue => 'Note value (whole … sixteenth)';
 
   @override

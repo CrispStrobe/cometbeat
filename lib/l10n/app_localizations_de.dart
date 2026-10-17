@@ -713,6 +713,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopShortcutPlaceNote => 'Note setzen (ihre Tonhöhe)';
 
   @override
+  String get workshopShortcutAddToChord => 'Note zum Akkord hinzufügen';
+
+  @override
+  String get workshopShortcutOctave => 'Tonhöhe um eine Oktave hoch / runter';
+
+  @override
   String get workshopShortcutNoteValue => 'Notenwert (ganze … Sechzehntel)';
 
   @override

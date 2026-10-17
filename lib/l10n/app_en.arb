@@ -388,6 +388,8 @@
   "workshopHelpAnalysis": "Analysis colours each note by its harmonic function (home / away / tension) and names the detected key.",
   "workshopHelpDetails": "Score details set the title, composer and lyricist — they travel into PDF and MusicXML exports.",
   "workshopShortcutPlaceNote": "Place a note (its pitch)",
+  "workshopShortcutAddToChord": "Add a note to the chord",
+  "workshopShortcutOctave": "Move pitch an octave up / down",
   "workshopShortcutNoteValue": "Note value (whole … sixteenth)",
   "workshopShortcutSelect": "Select previous / next",
   "workshopShortcutTranspose": "Move pitch up / down",

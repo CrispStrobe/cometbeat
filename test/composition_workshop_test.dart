@@ -29,10 +29,13 @@ import 'package:crisp_notation/crisp_notation.dart'
         MultiSystemView,
         NoteElement,
         NoteNameStyle,
+        Pitch,
+        Step,
         TimeSignature,
         bekernToScore,
         multiPartScoreFromGpif,
-        readGpifFromGp;
+        readGpifFromGp,
+        scoreFromMusicXml;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -1413,6 +1416,58 @@ void main() {
     expect(editor.noteCount, 1);
   });
 
+  testWidgets(
+      'step entry: nearest octave, Shift adds to the chord, '
+      'Ctrl+arrow moves an octave, 0 rests', (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    List<int> midi() => [
+          for (final m
+              in scoreFromMusicXml(editor.debugMusicXmlExport()).measures)
+            for (final e in m.elements)
+              if (e is NoteElement) ...e.pitches.map((p) => p.midiNumber),
+        ];
+    // B4 then C: the C nearest B4 is C5, not C4.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyB);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.pump();
+    expect(midi(), [71, 72]);
+    // Shift+E stacks E5 on the C5.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    expect(midi(), [71, 72, 76]);
+    // Ctrl+↓ moves the chord down an octave.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+    expect(midi(), [71, 60, 64]);
+    // 0 is a rest.
+    final before = editor.noteCount;
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+    await tester.pump();
+    expect(editor.noteCount, before + 1);
+  });
+
+  test('stepEntryPitch takes the octave nearest the previous note', () {
+    expect(stepEntryPitch(Step.c, 0, null).midiNumber, 60);
+    expect(
+      stepEntryPitch(Step.c, 0, const Pitch(Step.b, octave: 4)).midiNumber,
+      72,
+    );
+    expect(
+      stepEntryPitch(Step.g, 0, const Pitch(Step.c, octave: 5)).midiNumber,
+      67,
+    );
+    expect(
+      chordTonePitch(Step.e, 0, const Pitch(Step.g, octave: 4)).midiNumber,
+      76,
+    );
+  });
+
   testWidgets('Select mode stops the keyboard from placing notes',
       (tester) async {
     await pump(tester);
@@ -1528,7 +1583,7 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     expect(find.text(l10n.workshopShortcuts), findsOneWidget);
-    expect(find.textContaining('A – G'), findsOneWidget);
+    expect(find.text('A – G'), findsOneWidget);
   });
 
   testWidgets('selecting a note reveals the inline lyric field',

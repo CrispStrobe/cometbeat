@@ -250,6 +250,33 @@ final _digitBases = <LogicalKeyboardKey, DurationBase>{
   LogicalKeyboardKey.digit5: DurationBase.sixteenth,
 };
 
+/// The pitch a typed letter means, as MuseScore Studio places it: [step]
+/// (with [alter]) in the octave nearest [reference] — a C after a B4 is C5,
+/// not C4 — or around middle C with no reference.
+@visibleForTesting
+Pitch stepEntryPitch(Step step, int alter, Pitch? reference) {
+  final target = reference?.midiNumber ?? 60;
+  var best = Pitch(step, alter: alter, octave: 4);
+  for (var octave = 0; octave <= 8; octave++) {
+    final p = Pitch(step, alter: alter, octave: octave);
+    if ((p.midiNumber - target).abs() < (best.midiNumber - target).abs()) {
+      best = p;
+    }
+  }
+  return best;
+}
+
+/// A chord tone added by Shift+letter: [step] in the first octave above
+/// [top], the chord's highest note.
+@visibleForTesting
+Pitch chordTonePitch(Step step, int alter, Pitch top) {
+  for (var octave = top.octave; octave <= 9; octave++) {
+    final p = Pitch(step, alter: alter, octave: octave);
+    if (p.midiNumber > top.midiNumber) return p;
+  }
+  return Pitch(step, alter: alter, octave: top.octave + 1);
+}
+
 // ---- File I/O (unified, multi-format) ------------------------------------
 
 /// Every score file type the Workshop can open (one picker, auto-detected by
@@ -2318,8 +2345,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     setState(() => _doc.insertRest(_pendingDuration));
   }
 
-  /// Computer-keyboard entry: A–G place notes, 1–5 pick a value, arrows move the
-  /// caret / pitch, R a rest, `.` a dot, Del/⌫ deletes, Ctrl/⌘ Z·Y·C·X·V for
+  /// Computer-keyboard entry, MuseScore Studio's way: A–G place notes in the
+  /// octave nearest the previous one (Shift adds to the chord), 1–5 pick a
+  /// value, arrows move the caret / pitch (Ctrl/⌘ by an octave), R or 0 a
+  /// rest, T or + a tie, `.` a dot, Del/⌫ deletes, Ctrl/⌘ Z·Y·C·X·V for
   /// undo/redo/copy/cut/paste.
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
@@ -2341,6 +2370,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         _run(_doc.cutSelection);
       } else if (key == LogicalKeyboardKey.keyV) {
         _run(_doc.paste);
+      } else if (key == LogicalKeyboardKey.arrowUp) {
+        _transpose(12);
+      } else if (key == LogicalKeyboardKey.arrowDown) {
+        _transpose(-12);
       } else {
         return KeyEventResult.ignored;
       }
@@ -2358,8 +2391,23 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         });
         return KeyEventResult.handled;
       }
-      final octave = _doc.selected?.pitch?.octave ?? 4;
-      _placePitch(Pitch(step, alter: _alterOf(_accidental), octave: octave));
+      final alter = _alterOf(_accidental);
+      final selected = _doc.selected;
+      // Shift+letter stacks the note on the selected chord, above its top.
+      if (kb.isShiftPressed && selected != null && !selected.isRest) {
+        final top = selected.pitches.reduce(
+          (a, b) => a.midiNumber >= b.midiNumber ? a : b,
+        );
+        final pitch = chordTonePitch(step, alter, top);
+        _audio.playMidiNote(pitch.midiNumber, ms: 400);
+        _run(() => _doc.addPitchToSelected(pitch));
+        return KeyEventResult.handled;
+      }
+      // Nearest the previous note; the first note, nearest the staff's
+      // middle line (B4 in the treble clef, D3 in the bass).
+      _placePitch(
+        stepEntryPitch(step, alter, selected?.pitch ?? _doc.clef.pitchAt(4)),
+      );
       return KeyEventResult.handled;
     }
     final base = _digitBases[key];
@@ -2380,7 +2428,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       case LogicalKeyboardKey.backspace:
         _run(_doc.deleteSelected);
       case LogicalKeyboardKey.keyR:
+      case LogicalKeyboardKey.digit0:
         _addRest();
+      case LogicalKeyboardKey.keyT:
+      case LogicalKeyboardKey.add:
+      case LogicalKeyboardKey.numpadAdd:
+        _run(_doc.toggleTieOfSelected);
       case LogicalKeyboardKey.keyS:
         _run(_doc.slurSelected);
       case LogicalKeyboardKey.period:
@@ -3528,12 +3581,15 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   Future<void> _showShortcuts(AppLocalizations l10n) async {
     final rows = <(String, String)>[
       ('A – G', l10n.workshopShortcutPlaceNote),
+      ('⇧  A – G', l10n.workshopShortcutAddToChord),
       ('1 – 5', l10n.workshopShortcutNoteValue),
-      ('R', l10n.workshopRest),
+      ('R  0', l10n.workshopRest),
+      ('T  +', l10n.workshopTie),
       ('.', l10n.workshopDot),
       ('S', l10n.workshopSlur),
       ('← →', l10n.workshopShortcutSelect),
       ('↑ ↓', l10n.workshopShortcutTranspose),
+      ('⌘/Ctrl  ↑ ↓', l10n.workshopShortcutOctave),
       ('⌫  Del', l10n.workshopDelete),
       ('⌘/Ctrl  Z', l10n.workshopShortcutUndoRedo),
       ('⌘/Ctrl  C · X · V', l10n.workshopShortcutCopyPaste),
