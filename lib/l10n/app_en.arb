@@ -329,6 +329,7 @@
   "workshopStop": "Stop",
   "workshopPlayWithInstrument": "Play with an instrument…",
   "workshopMutePart": "Mute",
+  "workshopPartView": "Show this part alone",
   "workshopPlaybackSpeed": "Playback speed",
   "workshopCountIn": "Count-in",
   "workshopLoopSelection": "Loop selection",

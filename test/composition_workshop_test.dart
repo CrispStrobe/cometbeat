@@ -1468,6 +1468,34 @@ void main() {
     );
   });
 
+  testWidgets('part view shows one part alone, and back to the full score',
+      (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    editor.addDroppedParts(
+      MultiPartScore([
+        bekernToScore('**kern <b> 4c <b> 4d <b> *-'),
+        bekernToScore('**kern <b> 4e <b> 4f <b> *-'),
+      ]),
+    );
+    await tester.pumpAndSettle();
+    expect(editor.partCount, greaterThan(1));
+    expect(
+      find.byType(MultiSystemView),
+      findsNothing,
+      reason: 'the full score is the multi-part canvas',
+    );
+
+    editor.debugTogglePartView(1);
+    await tester.pumpAndSettle();
+    expect(editor.activePartIndex, 1);
+    expect(find.byType(MultiSystemView), findsOneWidget);
+
+    editor.debugTogglePartView(1);
+    await tester.pumpAndSettle();
+    expect(find.byType(MultiSystemView), findsNothing);
+  });
+
   testWidgets('Select mode stops the keyboard from placing notes',
       (tester) async {
     await pump(tester);

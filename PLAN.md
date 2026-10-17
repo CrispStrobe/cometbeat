@@ -133,10 +133,11 @@ would be missed:
   crisp_notation's PDF writer: paths and the embedded music font instead of
   per-system PNGs, the title on page one only (the old export reserved its
   room on every page), and the `pdf` package is gone.
-- ◐ **Parts** (export done 2026-10-16). The export sheet offers each
-  instrument's part on its own, silent stretches as multi-bar rests
-  (crisp_notation `withMultiRests`). Viewing and editing a part in the app
-  (crisp_notation's linked parts, `withLinkedPart`) is still open.
+- ✅ **Parts** (2026-10-16/17). The export sheet offers each instrument's
+  part on its own, silent stretches as multi-bar rests (crisp_notation
+  `withMultiRests`), and the Workshop shows a part alone ("Show this part
+  alone" in the part menu), edited with the single-part tools while every
+  part keeps playing.
 - ⬜ **Screen-reader access to scores** (see Now/next: the staff views are
   unlabelled). crisp_notation has accessibility descriptions and braille
   export to wire in once the views expose them.

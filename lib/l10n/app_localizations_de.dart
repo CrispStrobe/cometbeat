@@ -524,6 +524,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopMutePart => 'Stumm';
 
   @override
+  String get workshopPartView => 'Nur diese Stimme zeigen';
+
+  @override
   String get workshopPlaybackSpeed => 'Wiedergabetempo';
 
   @override

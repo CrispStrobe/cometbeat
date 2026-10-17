@@ -599,6 +599,9 @@ abstract interface class CompositionWorkshopTester {
   int get partCount;
   int get activePartIndex;
 
+  /// The part menu's "Show this part alone" for part [i].
+  void debugTogglePartView(int i);
+
   /// WS-X2 test seam: land [score]'s parts as new parts, as a drop does.
   void addDroppedParts(MultiPartScore score);
 
@@ -691,6 +694,23 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   /// The part the toolbar edits — every existing command reads/writes this.
   ScoreDocument get _doc => _mpd.activePart;
+
+  /// With several parts, show only the active one — the part a player reads,
+  /// edited with the single-part tools — instead of the full score.
+  bool _partView = false;
+
+  /// Whether the canvas shows the full score (several parts, not part view).
+  bool get _fullScore => _mpd.partCount > 1 && !_partView;
+
+  /// Shows part [i] alone, or the full score again when it already is.
+  void _togglePartView(int i) => setState(() {
+        final showing = _partView && _mpd.active == i;
+        _mpd.setActive(i);
+        _partView = !showing;
+      });
+
+  @override
+  void debugTogglePartView(int i) => _togglePartView(i);
 
   DurationBase _pendingBase = DurationBase.quarter;
   bool _dotted = false;
@@ -2119,6 +2139,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           ),
           if (_mpd.partCount > 1) ...[
             const PopupMenuDivider(),
+            CheckedPopupMenuItem<void Function()>(
+              key: const ValueKey('workshop-part-view'),
+              value: () => _togglePartView(i),
+              checked: _partView && _mpd.active == i,
+              child: Text(l10n.workshopPartView),
+            ),
             CheckedPopupMenuItem<void Function()>(
               value: () => setState(() {
                 if (!_mutedParts.remove(i)) _mutedParts.add(i);
@@ -3788,6 +3814,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       // The playback cursor paints the sounding notes green, overriding any
       // selection tint underneath so the moving highlight always reads.
       for (final id in _soundingIds) id: Colors.green,
+      // In part view the cursor's ids carry the part's prefix (every part
+      // plays); the active part's notes light up under their own ids.
+      if (_partView)
+        for (final id in _soundingIds)
+          if (id.startsWith(MultiPartDocument.prefixFor(_mpd.active)))
+            id.substring(MultiPartDocument.prefixFor(_mpd.active).length):
+                Colors.green,
     };
     // The multi-part canvas keys colours by GLOBAL id (`p<part>:<rawId>`); remap
     // the analysis layer onto the active part so the Analysis toggle actually
@@ -4266,7 +4299,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                 // canvas (tap selects across parts; the bottom dock edits the
                                 // active part). One part keeps the single-part interactive
                                 // pipeline (ghost/drag/staff-tap placement).
-                                child: _mpd.partCount > 1
+                                child: _fullScore
                                     ? Stack(
                                         children: [
                                           MultiPartCanvas(
