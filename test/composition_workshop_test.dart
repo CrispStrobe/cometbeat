@@ -1455,7 +1455,7 @@ void main() {
   test('stepEntryPitch takes the octave nearest the previous note', () {
     expect(stepEntryPitch(Step.c, 0, null).midiNumber, 60);
     expect(
-      stepEntryPitch(Step.c, 0, const Pitch(Step.b, octave: 4)).midiNumber,
+      stepEntryPitch(Step.c, 0, const Pitch(Step.b)).midiNumber,
       72,
     );
     expect(
@@ -1463,7 +1463,7 @@ void main() {
       67,
     );
     expect(
-      chordTonePitch(Step.e, 0, const Pitch(Step.g, octave: 4)).midiNumber,
+      chordTonePitch(Step.e, 0, const Pitch(Step.g)).midiNumber,
       76,
     );
   });

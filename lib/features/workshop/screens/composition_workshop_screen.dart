@@ -256,7 +256,7 @@ final _digitBases = <LogicalKeyboardKey, DurationBase>{
 @visibleForTesting
 Pitch stepEntryPitch(Step step, int alter, Pitch? reference) {
   final target = reference?.midiNumber ?? 60;
-  var best = Pitch(step, alter: alter, octave: 4);
+  var best = Pitch(step, alter: alter);
   for (var octave = 0; octave <= 8; octave++) {
     final p = Pitch(step, alter: alter, octave: octave);
     if ((p.midiNumber - target).abs() < (best.midiNumber - target).abs()) {
