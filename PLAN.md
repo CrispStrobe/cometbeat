@@ -145,8 +145,11 @@ would be missed:
 - ✅ **Typed entry for older pupils** (2026-10-16). The Workshop's "Type
   or paste music" dialog reads ABC (with or without a header), note names
   (`c4:q d4 e4:h`), LilyPond and scanner tokens (`importTypedMusic`).
-- ⬜ **A full keyboard step-entry mode** in the Score Workshop (shortcuts
-  exist; step entry as MuseScore Studio does it does not).
+- ✅ **Keyboard step entry** (2026-10-17), MuseScore Studio's way: a typed
+  letter lands in the octave nearest the previous note (the first one near
+  the staff's middle line), Shift+letter stacks a chord tone above, Ctrl/⌘
+  +↑/↓ moves an octave, 0 is a rest and T or + a tie, beside the existing
+  1–5 values, `.` dot and arrows.
 - **Engraving quality is crisp_notation's** — spacing density, line
   breaking, slur shaping and source text styles are tracked in that
   document, not here. The 2026-10-16 round there fixed timing of 60% of

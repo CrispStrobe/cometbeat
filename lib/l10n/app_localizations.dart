@@ -1346,6 +1346,18 @@ abstract class AppLocalizations {
   /// **'Place a note (its pitch)'**
   String get workshopShortcutPlaceNote;
 
+  /// No description provided for @workshopShortcutAddToChord.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note to the chord'**
+  String get workshopShortcutAddToChord;
+
+  /// No description provided for @workshopShortcutOctave.
+  ///
+  /// In en, this message translates to:
+  /// **'Move pitch an octave up / down'**
+  String get workshopShortcutOctave;
+
   /// No description provided for @workshopShortcutNoteValue.
   ///
   /// In en, this message translates to:
