@@ -980,6 +980,12 @@ abstract class AppLocalizations {
   /// **'Mute'**
   String get workshopMutePart;
 
+  /// No description provided for @workshopPartView.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this part alone'**
+  String get workshopPartView;
+
   /// No description provided for @workshopPlaybackSpeed.
   ///
   /// In en, this message translates to:

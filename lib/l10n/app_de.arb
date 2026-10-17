@@ -184,6 +184,7 @@
   "workshopStop": "Stopp",
   "workshopPlayWithInstrument": "Mit einem Instrument spielen…",
   "workshopMutePart": "Stumm",
+  "workshopPartView": "Nur diese Stimme zeigen",
   "workshopPlaybackSpeed": "Wiedergabetempo",
   "workshopCountIn": "Einzähler",
   "workshopLoopSelection": "Auswahl wiederholen",
