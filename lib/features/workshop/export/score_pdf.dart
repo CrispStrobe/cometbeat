@@ -96,7 +96,11 @@ Future<Uint8List> exportScoreToPdf(
 }) async {
   final metadata = MusicFonts.metadataOrNull(theme.musicFont) ??
       await MusicFonts.load(theme.musicFont);
-  final settings = LayoutSettings(metadata: metadata);
+  // The PDF prints its text in Times: lyrics are spaced for that face.
+  final settings = LayoutSettings(
+    metadata: metadata,
+    textWidth: timesTextWidth,
+  );
   final heading = _withHeading(
     score.metadata,
     title: title,
@@ -155,7 +159,11 @@ Future<Uint8List> exportMultiPartToPdf(
 
   final metadata = MusicFonts.metadataOrNull(theme.musicFont) ??
       await MusicFonts.load(theme.musicFont);
-  final settings = LayoutSettings(metadata: metadata);
+  // The PDF prints its text in Times: lyrics are spaced for that face.
+  final settings = LayoutSettings(
+    metadata: metadata,
+    textWidth: timesTextWidth,
+  );
   final heading = _withHeading(
     multiPart.parts.first.metadata,
     title: title,
