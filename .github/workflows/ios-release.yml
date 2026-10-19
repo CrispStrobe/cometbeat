@@ -248,9 +248,12 @@ jobs:
           NOTES: ${{ inputs.testflight_notes }}
         run: |
           set -euo pipefail
-          python3 -m pip install --quiet pyjwt cryptography requests
+          # A venv: the runner's Homebrew Python refuses a system-wide pip
+          # install (PEP 668, "externally-managed-environment").
+          python3 -m venv .venv-asc
+          .venv-asc/bin/pip install --quiet pyjwt cryptography requests
           VER=$(grep '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/+.*//')
           BUILD=$(grep '^version:' pubspec.yaml | sed 's/.*+//')
           ASC_KEY_PATH=".appstoreconnect/AuthKey_${ASC_KEY_ID}.p8" \
-            python3 tool/testflight_distribute.py \
+            .venv-asc/bin/python tool/testflight_distribute.py \
               --version "$VER" --build "$BUILD" --notes "${NOTES:-}"

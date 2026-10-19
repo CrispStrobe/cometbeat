@@ -1,0 +1,46 @@
+name: TestFlight distribute (an uploaded build)
+
+# Distributes a build that ios-release.yml already uploaded — every beta
+# group, the "What to Test" note, Beta App Review — without building or
+# uploading again (a re-upload of the same build number is rejected). For when
+# the upload succeeded and the distribute step did not.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Marketing version, e.g. 1.0.3'
+        type: string
+        required: true
+      build:
+        description: 'Build number, e.g. 8'
+        type: string
+        required: true
+      testflight_notes:
+        description: 'TestFlight "What to Test" (empty = none)'
+        type: string
+        default: ''
+
+jobs:
+  distribute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Distribute on TestFlight (internal + external)
+        env:
+          P8_B64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          NOTES: ${{ inputs.testflight_notes }}
+          VER: ${{ inputs.version }}
+          BUILD: ${{ inputs.build }}
+        run: |
+          set -euo pipefail
+          mkdir -p .appstoreconnect
+          echo "$P8_B64" | base64 --decode > ".appstoreconnect/AuthKey_${ASC_KEY_ID}.p8"
+          python3 -m venv .venv-asc
+          .venv-asc/bin/pip install --quiet pyjwt cryptography requests
+          ASC_KEY_PATH=".appstoreconnect/AuthKey_${ASC_KEY_ID}.p8" \
+            .venv-asc/bin/python tool/testflight_distribute.py \
+              --version "$VER" --build "$BUILD" --notes "${NOTES:-}"
