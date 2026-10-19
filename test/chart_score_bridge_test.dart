@@ -1,15 +1,17 @@
 import 'package:comet_beat/core/harmony/chart.dart';
 import 'package:comet_beat/core/harmony/chart_score_bridge.dart';
 import 'package:comet_beat/core/harmony/chart_text.dart';
+import 'package:comet_beat/core/harmony/chord_spec.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The chart ↔ score bridge.
 ///
-/// The two vocabularies are not the same size — `ChordSpec` is compositional,
-/// `ChordSymbolKind` is a closed list of 15 — so the assertions that matter are
-/// about the LOSS REPORT. Picking the nearest kind quietly is the failure this
-/// whole file exists to prevent.
+/// `ChordSpec` is compositional; crisp_notation's `ChordSymbol` is MusicXML's
+/// kind plus degree alterations, which holds nearly every chart chord exactly.
+/// The assertions that matter are that those chords cross EXACTLY and that the
+/// few that cannot (two ninths) are in the LOSS REPORT. Picking the nearest kind
+/// quietly is the failure this whole file exists to prevent.
 Chart chart(String text) => parseChartText(text).chart;
 
 List<String> chartSymbols(Chart c) => [
@@ -107,22 +109,30 @@ void main() {
       }
     });
 
-    test('an unrepresentable extension is reported, with what was kept', () {
+    test('a 13th with a ♯11 is written exactly, as a kind and a degree', () {
       final result = chartToScore(chart('| C13#11 |'));
+      expect(result.isExact, isTrue);
+      final symbol = result.value.chordSymbols.single;
+      expect(symbol.quality, ChordSymbolKind.dominantThirteenth);
+      expect(symbol.degrees, [const ChordDegree.add(11, alter: 1)]);
+    });
+
+    test('two ninths are reported, with what was kept', () {
+      // A symbol holds one tone per degree, so C7♭9♯9 keeps its ♭9.
+      final result = chartToScore(chart('| C7b9#9 |'));
       expect(result.isExact, isFalse);
       final loss = result.losses.single;
       expect(loss.barNumber, 1);
-      expect(loss.symbol, 'C13#11');
-      expect(loss.detail, contains('13th'));
-      expect(loss.detail, contains('♯11'));
+      expect(loss.symbol, 'C7b9#9');
+      expect(loss.detail, contains('♯9'));
       // The report says what a musician will actually see on the page.
-      expect(loss.keptAs, 'C7');
+      expect(loss.keptAs, 'C7(b9)');
     });
 
     test('the chord is still WRITTEN, not dropped', () {
       // A simplified chord is better than a missing one; the report is what
       // makes that honest rather than silent.
-      final result = chartToScore(chart('| C13#11 | Am |'));
+      final result = chartToScore(chart('| C7b9#9 | Am |'));
       expect(result.value.chordSymbols, hasLength(2));
       expect(
         result.value.chordSymbols.first.quality,
@@ -130,15 +140,22 @@ void main() {
       );
     });
 
-    test('a power chord reports its missing third', () {
+    test('a power chord is written as one', () {
       final result = chartToScore(chart('| C5 |'));
-      expect(result.losses.single.detail, contains('third'));
-      expect(result.value.chordSymbols.single.quality, ChordSymbolKind.major);
+      expect(result.isExact, isTrue);
+      expect(result.value.chordSymbols.single.quality, ChordSymbolKind.power);
     });
 
-    test('an added or omitted tone is reported', () {
-      expect(chartToScore(chart('| Cadd9 |')).isExact, isFalse);
-      expect(chartToScore(chart('| Cno3 |')).isExact, isFalse);
+    test('an added or omitted tone is written as a degree', () {
+      expect(
+        chartToScore(chart('| Cadd9 |')).value.chordSymbols.single.degrees,
+        [const ChordDegree.add(9)],
+      );
+      expect(
+        chartToScore(chart('| Cno3 |')).value.chordSymbols.single.degrees,
+        [const ChordDegree.subtract(3)],
+      );
+      expect(chartToScore(chart('| Cadd9 | Cno3 |')).isExact, isTrue);
     });
 
     test('the report carries the right bar number', () {
@@ -148,10 +165,10 @@ void main() {
 
     test('the summary counts rather than lists', () {
       // Forty altered chords must not produce a forty-line dialog.
-      final result = chartToScore(chart('| C7b9 | F7#9 | G13 |'));
+      final result = chartToScore(chart('| C7alt | F7alt | G7b9#9 |'));
       expect(result.summary, '3 chords simplified.');
       expect(chartToScore(chart('| C |')).summary, contains('Every chord'));
-      expect(chartToScore(chart('| C7b9 |')).summary, '1 chord simplified.');
+      expect(chartToScore(chart('| C7alt |')).summary, '1 chord simplified.');
     });
 
     test('half-diminished maps exactly — the closed list IS richer here', () {
@@ -223,16 +240,31 @@ void main() {
       expect(round.totalBars, before.totalBars);
     });
 
-    test('an unrepresentable chord comes back SIMPLIFIED, and was reported',
-        () {
-      // The round trip is not lossless and must not pretend to be — but it
-      // told us exactly which chord and what it became.
-      final before = chart('| C13#11 |');
+    test('a chord with two ninths comes back SIMPLIFIED, and was reported', () {
+      // The round trip is not lossless there and must not pretend to be — but
+      // it told us exactly which chord and what it became.
+      final before = chart('| C7b9#9 |');
       final out = chartToScore(before);
       final round = chartFromScore(out.value).value;
 
-      expect(chartSymbols(round), ['C7']);
-      expect(out.losses.single.keptAs, 'C7');
+      expect(chartSymbols(round), ['C7b9']);
+      expect(out.losses.single.keptAs, 'C7(b9)');
+    });
+
+    test('extended and altered chords round-trip exactly', () {
+      for (final symbol in [
+        'C13#11', 'Cmaj9', 'Cm9', 'Cm11', 'Cm13', 'C11', 'C13', 'C7b9', //
+        'C7#9', 'C7#11', 'C7b13', 'Cadd9', 'C5', 'Cno3', 'C6/9', 'C9sus4',
+        'C7sus4', 'Caug7', 'C7#5', 'Cmaj7#11',
+      ]) {
+        final out = chartToScore(chart('| $symbol |'));
+        expect(out.isExact, isTrue, reason: symbol);
+        expect(
+          chartSymbols(chartFromScore(out.value).value),
+          [symbol],
+          reason: symbol,
+        );
+      }
     });
 
     test('every exactly-representable quality round-trips', () {
@@ -274,6 +306,114 @@ void main() {
     test('a chord parser fallback still bridges rather than throwing', () {
       final result = chartToScore(parseChartText('| wat |').chart);
       expect(result.value.chordSymbols, hasLength(1));
+    });
+  });
+
+  group('crisp_notation\'s full chord vocabulary', () {
+    const c = Pitch(Step.c);
+
+    test('every kind maps to a chord spec', () {
+      for (final kind in ChordSymbolKind.values) {
+        expect(
+          () => chordSpecFor(ChordSymbol('n0', c, kind)),
+          returnsNormally,
+          reason: kind.name,
+        );
+      }
+    });
+
+    test('the extended kinds keep their stack', () {
+      final maj9 =
+          chordSpecFor(const ChordSymbol('n0', c, ChordSymbolKind.majorNinth));
+      expect(
+        (maj9.triad, maj9.seventh, maj9.extension),
+        (ChordTriad.major, ChordSeventh.major, 9),
+      );
+      final m11 = chordSpecFor(
+        const ChordSymbol('n0', c, ChordSymbolKind.minorEleventh),
+      );
+      expect(
+        (m11.triad, m11.seventh, m11.extension),
+        (ChordTriad.minor, ChordSeventh.minor, 11),
+      );
+      final c13 = chordSpecFor(
+        const ChordSymbol('n0', c, ChordSymbolKind.dominantThirteenth),
+      );
+      expect(
+        (c13.triad, c13.seventh, c13.extension),
+        (ChordTriad.major, ChordSeventh.minor, 13),
+      );
+      final power =
+          chordSpecFor(const ChordSymbol('n0', c, ChordSymbolKind.power));
+      expect(power.triad, ChordTriad.fifthOnly);
+    });
+
+    test('degrees become alterations, adds and omits', () {
+      final spec = chordSpecFor(
+        const ChordSymbol(
+          'n0',
+          c,
+          ChordSymbolKind.dominantSeventh,
+          degrees: [
+            ChordDegree.alter(9, -1),
+            ChordDegree.add(11, alter: 1),
+            ChordDegree.subtract(5),
+          ],
+        ),
+      );
+      expect(
+        spec.alterations,
+        {ChordAlteration.flatNine, ChordAlteration.sharpEleven},
+      );
+      expect(spec.omitted, {5});
+      final sixNine = chordSpecFor(
+        const ChordSymbol(
+          'n0',
+          c,
+          ChordSymbolKind.sixth,
+          degrees: [ChordDegree.add(9)],
+        ),
+      );
+      expect(sixNine.seventh, ChordSeventh.sixth);
+      expect(sixNine.added, {9});
+    });
+
+    Score oneBar(List<ChordSymbol> symbols) => Score(
+          clef: Clef.treble,
+          measures: [
+            const Measure([
+              NoteElement(
+                pitches: [Pitch(Step.c)],
+                duration: NoteDuration(DurationBase.whole),
+                id: 'n0',
+              ),
+            ]),
+          ],
+          chordSymbols: symbols,
+        );
+
+    test('chords over one note land at their offsets', () {
+      final imported = chartFromScore(
+        oneBar([
+          const ChordSymbol('n0', c, ChordSymbolKind.major),
+          ChordSymbol(
+            'n0',
+            const Pitch(Step.g),
+            ChordSymbolKind.dominantSeventh,
+            offset: Fraction(1, 2),
+          ),
+        ]),
+      );
+      final beats = imported.value.barsInPlayOrder.single.chordsInOrder
+          .map((chord) => chord.beat);
+      expect(beats, [0, 2]);
+    });
+
+    test('N.C. leaves the bar without a chord', () {
+      final imported = chartFromScore(
+        oneBar([const ChordSymbol('n0', c, ChordSymbolKind.none)]),
+      );
+      expect(imported.value.barsInPlayOrder.single.chords, isEmpty);
     });
   });
 }

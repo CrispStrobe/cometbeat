@@ -252,13 +252,14 @@ void main() {
 
   group('the derivation reports what it lost', () {
     test('a chord the score could not spell is carried through', () {
-      // chartToScore already simplified C13#11 to C7 on the way in, so the
-      // band plays what the SCORE says — and the score is what the user sees.
-      final score = chartToScore(parseChartText('| C13#11 |').chart).value;
+      // chartToScore already simplified C7♭9♯9 to C7♭9 on the way in (a
+      // symbol holds one ninth), so the band plays what the SCORE says — and
+      // the score is what the user sees.
+      final score = chartToScore(parseChartText('| C7b9#9 |').chart).value;
       final result = renderSongWithBand(score, sampleRate: _rate)!;
       expect(
         result.chart.barsInPlayOrder.single.chordsInOrder.single.chord.text,
-        'C7',
+        'C7b9',
       );
     });
   });
