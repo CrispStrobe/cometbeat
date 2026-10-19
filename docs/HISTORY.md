@@ -8,6 +8,18 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## Release 1.0.3 (build 8) — TestFlight, internal and external (2026-10-19)
+
+- Workshop: vector PDF export (crisp_notation's PDF writer), lyrics spaced
+  for the printed font; export one instrument's part, or show one part alone
+  while the whole score plays; type music as ABC, note names or LilyPond;
+  keyboard step entry the MuseScore Studio way.
+- Chord charts ↔ scores carry crisp_notation 0.14's full chord vocabulary
+  exactly (`C13#11`, `Cmaj9`, `C6/9`, `C9sus4`, `Cadd9` …); only chords with
+  two ninths are simplified, and reported.
+- Built on crisp_notation main: smaller PDFs (embedded fonts subset), nested
+  tuplets and grace ties across formats, LilyPond chord tracks.
+
 ## Release 1.0.2 (build 7) — TestFlight, internal and external (2026-10-15)
 
 - Everything below since 1.0.1: the streamed, live-controllable backing band
