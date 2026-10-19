@@ -44,6 +44,22 @@ Widget _app(Widget home) => MaterialApp(
       home: home,
     );
 
+/// Pump until [done] shows, letting real time pass between frames.
+///
+/// ⚠️ Not `pumpAndSettle` alone: the pipeline awaits real asynchronous work
+/// (engine and model probing), which the test's fake clock never advances —
+/// the spinner then animates until pumpAndSettle times out, on some machines
+/// and CI runner images and not others. `runAsync` lets that work finish.
+Future<void> _untilShown(WidgetTester t, Finder done) async {
+  for (var i = 0; i < 200 && done.evaluate().isEmpty; i++) {
+    await t.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await t.pump(const Duration(milliseconds: 100));
+  }
+  await t.pumpAndSettle();
+}
+
 void main() {
   testWidgets('transcribes an injected WAV and offers to open it', (t) async {
     final wav = _scaleWav();
@@ -64,7 +80,7 @@ void main() {
 
     // Kick off the transcription (the pick button doubles as "go").
     await t.tap(find.text(l10n.transcribePickFile));
-    await t.pumpAndSettle();
+    await _untilShown(t, find.text(l10n.transcribeOpenSongBook));
 
     // A result card with the note count + an "Open in Song Book" action.
     expect(find.text(l10n.transcribeOpenSongBook), findsOneWidget);
@@ -100,7 +116,7 @@ void main() {
     await t.tap(find.text(l10n.transcribeNeuralPitch));
     await t.pumpAndSettle();
     await t.tap(find.text(l10n.transcribePickFile));
-    await t.pumpAndSettle();
+    await _untilShown(t, find.text(l10n.transcribeOpenSongBook));
 
     expect(crepeUsed, isTrue, reason: 'CREPE estimator should have been used');
     expect(find.text(l10n.transcribeOpenSongBook), findsOneWidget);
@@ -137,7 +153,7 @@ void main() {
     await t.tap(find.text(l10n.transcribeWholeSong));
     await t.pumpAndSettle();
     await t.tap(find.text(l10n.transcribePickFile));
-    await t.pumpAndSettle();
+    await _untilShown(t, find.text(l10n.transcribeSaveSongBook));
 
     // A multi-part result with a "Save to Song Book" action.
     expect(find.text(l10n.transcribeSaveSongBook), findsOneWidget);
