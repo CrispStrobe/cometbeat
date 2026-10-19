@@ -7,9 +7,11 @@
 // WHY THIS EXISTS WHEN THE APP ALREADY HAS THREE CHORD VOCABULARIES.
 // `songs/import/chord_quality.dart` has 18 flat quality suffixes,
 // `composition/chord_db.dart` maps 18 of them onto guitar grips, and
-// crisp_notation's `ChordSymbolKind` has 15 MusicXML `<kind>` values. Every one
-// of them is a FLAT LIST of whole qualities, so `C7#11`, `Bb7alt` and `C6/9`
-// cannot be said at all — you get `C7` and a shrug. A chart needs to say them,
+// crisp_notation's `ChordSymbolKind` had 15 MusicXML `<kind>` values. Every one
+// of them was a FLAT LIST of whole qualities, so `C7#11`, `Bb7alt` and `C6/9`
+// could not be said at all — you got `C7` and a shrug. (crisp_notation 0.14
+// added MusicXML's `<degree>`s, which the score bridge now uses; the chart
+// still needs this type for what it does with chords.) A chart needs to say them,
 // so this models a chord COMPOSITIONALLY: a triad core, a seventh, a stack
 // height, a set of alterations, added and omitted tones, and a slash bass.
 //
