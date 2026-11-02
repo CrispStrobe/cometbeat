@@ -234,7 +234,8 @@ Future<void> _exportAs(
     if (message != null) {
       messenger.showSnackBar(SnackBar(content: Text(message)));
     }
-  } catch (_) {
+  } catch (e, st) {
+    debugPrint('[music-export] ${fmt.ext} failed: $e\n$st');
     messenger.showSnackBar(SnackBar(content: Text(l10n.musicExportFailed)));
   }
 }

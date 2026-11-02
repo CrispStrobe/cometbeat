@@ -110,6 +110,7 @@ import 'package:comet_beat/shared/music/music_picker.dart'
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:comet_beat/shared/music_io/export_sheet.dart';
+import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/tutorial/primers.dart' show loopMixerPrimer;
@@ -2829,35 +2830,36 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     return true;
   }
 
-  /// Desktop: a save dialog for the groove's MusicXML. Same reach as the WAV
-  /// export — platforms without a save dialog report it isn't available here;
-  /// the groove code and Song Book save still travel everywhere.
+  /// The groove's MusicXML as a file: a Save dialog on desktop, the share
+  /// sheet on mobile, a download on the web (deliverBytes picks). It used to
+  /// call getSaveLocation directly, which THROWS on iOS/Android/web, so this
+  /// entry failed everywhere but desktop.
   Future<void> _exportMusicXml() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final xml = _grooveMusicXml();
     if (xml == null) return;
     try {
-      final location = await getSaveLocation(
+      final result = await deliverBytes(
+        bytes: Uint8List.fromList(utf8.encode(xml)),
         suggestedName: 'groove.musicxml',
-        acceptedTypeGroups: [
-          const XTypeGroup(label: 'MusicXML', extensions: ['musicxml', 'xml']),
-        ],
-      );
-      if (location == null || !mounted) return; // cancelled
-      await XFile.fromData(
-        Uint8List.fromList(utf8.encode(xml)),
+        label: 'MusicXML',
+        extension: 'musicxml',
         mimeType: 'application/vnd.recordare.musicxml+xml',
-        name: 'groove.musicxml',
-      ).saveTo(location.path);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
       );
-    } catch (e) {
-      if (kDebugMode) debugPrint('[LOOP] musicxml save unavailable: $e');
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.loopMixerSaveFailed)),
-      );
+      final message = switch (result.kind) {
+        DeliveryKind.saved => l10n.workshopSavedTo(result.path ?? ''),
+        DeliveryKind.shared ||
+        DeliveryKind.downloaded =>
+          l10n.musicExportShared,
+        DeliveryKind.cancelled => null, // a cancel is not an error
+      };
+      if (message != null) {
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (e, st) {
+      debugPrint('[LOOP] musicxml save failed: $e\n$st');
+      messenger.showSnackBar(SnackBar(content: Text(l10n.musicExportFailed)));
     }
   }
 

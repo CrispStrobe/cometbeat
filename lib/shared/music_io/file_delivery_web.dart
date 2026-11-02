@@ -9,6 +9,18 @@ import 'dart:typed_data';
 import 'package:comet_beat/shared/music_io/file_delivery_types.dart';
 import 'package:web/web.dart' as web;
 
+/// The browser has no filesystem path to hand back — every export is a
+/// download through [deliverBytes].
+bool deliveryHasSavePath() => false;
+
+/// Unreachable on web: check [deliveryHasSavePath] first.
+Future<String?> chooseSavePath({
+  required String suggestedName,
+  required String label,
+  required String extension,
+}) =>
+    throw UnsupportedError('no save dialog in a browser');
+
 /// Trigger a browser download of [bytes] named [suggestedName]. Always reports
 /// [DeliveryKind.downloaded] — the browser owns the rest of the flow.
 Future<DeliveryResult> deliverBytes({

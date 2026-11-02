@@ -39,6 +39,7 @@ import 'package:comet_beat/core/audio/sf2/encode_capability.dart'
         loadGlintEncoder;
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:comet_beat/shared/music_io/stream_save.dart'
     show streamBytesToFile;
 import 'package:file_selector/file_selector.dart';
@@ -329,6 +330,14 @@ extension AudioExportFormatX on AudioExportFormat {
         AudioExportFormat.mp3 => 'mp3',
         AudioExportFormat.opus => 'opus',
         AudioExportFormat.aac => 'm4a',
+      };
+
+  /// MIME type handed to a share sheet / browser download.
+  String get mimeType => switch (this) {
+        AudioExportFormat.wav => 'audio/wav',
+        AudioExportFormat.mp3 => 'audio/mpeg',
+        AudioExportFormat.opus => 'audio/ogg',
+        AudioExportFormat.aac => 'audio/mp4',
       };
 
   /// Short name for buttons ("Export Opus").
@@ -818,17 +827,14 @@ Future<void> showAudioStemsExportSheet(
         mp3Encoder: mp3Encoder,
       );
       if (perFilePrompt) {
-        final location = await getSaveLocation(
+        final result = await deliverBytes(
+          bytes: bytes,
           suggestedName: name,
-          acceptedTypeGroups: [
-            XTypeGroup(
-              label: format.ext.toUpperCase(),
-              extensions: [format.ext],
-            ),
-          ],
+          label: format.ext.toUpperCase(),
+          extension: format.ext,
+          mimeType: format.mimeType,
         );
-        if (location == null) continue; // skipped this one
-        await XFile.fromData(bytes, name: name).saveTo(location.path);
+        if (result.kind == DeliveryKind.cancelled) continue; // skipped
       } else {
         await XFile.fromData(bytes, name: name).saveTo(_join(directory!, name));
       }
@@ -894,40 +900,54 @@ Future<void> _exportAs(
       (wavBitDepth ?? 16) == 16 &&
       exportSampleRate == sampleRate &&
       !dither;
+  Uint8List build() => fmt.build(
+        pcm,
+        sampleRate,
+        right: right,
+        exportSampleRate: exportSampleRate,
+        wavBitDepth: wavBitDepth ?? 16,
+        bitrate: bitrate ?? 128,
+        shortBlocks: shortBlocks,
+        dither: dither,
+        mp3Encoder: mp3Encoder,
+        resampleQuality: resampleQuality,
+      );
   try {
-    final location = await getSaveLocation(
-      suggestedName: suggested,
-      acceptedTypeGroups: [
-        XTypeGroup(label: fmt.ext.toUpperCase(), extensions: [fmt.ext]),
-      ],
-    );
-    if (location == null) return;
-    // On web (or if the sink fails) streamBytesToFile returns false → fall
-    // through to the in-memory bake below, so behaviour is unchanged there.
-    if (canStream &&
-        await streamBytesToFile(location.path, wavStreamProducer)) {
+    // Desktop: ask WHERE first (a cancel then costs no encode), and write the
+    // file ourselves so a long WAV can stream straight to disk.
+    if (deliveryHasSavePath()) {
+      final path = await chooseSavePath(
+        suggestedName: suggested,
+        label: fmt.ext.toUpperCase(),
+        extension: fmt.ext,
+      );
+      if (path == null) return; // cancelled — not an error
+      final streamed =
+          canStream && await streamBytesToFile(path, wavStreamProducer);
+      if (!streamed) {
+        await XFile.fromData(build(), mimeType: fmt.mimeType, name: suggested)
+            .saveTo(path);
+      }
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.audioExportSavedTo(location.path))),
+        SnackBar(content: Text(l10n.audioExportSavedTo(path))),
       );
       return;
     }
-    final bytes = fmt.build(
-      pcm,
-      sampleRate,
-      right: right,
-      exportSampleRate: exportSampleRate,
-      wavBitDepth: wavBitDepth ?? 16,
-      bitrate: bitrate ?? 128,
-      shortBlocks: shortBlocks,
-      dither: dither,
-      mp3Encoder: mp3Encoder,
-      resampleQuality: resampleQuality,
+    // Mobile (share sheet) and web (browser download) have no save dialog —
+    // getSaveLocation THROWS there, which is why every audio export used to
+    // fail on them. deliverBytes picks the channel that exists.
+    final result = await deliverBytes(
+      bytes: build(),
+      suggestedName: suggested,
+      label: fmt.ext.toUpperCase(),
+      extension: fmt.ext,
+      mimeType: fmt.mimeType,
     );
-    await XFile.fromData(bytes, name: suggested).saveTo(location.path);
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.audioExportSavedTo(location.path))),
-    );
-  } catch (_) {
+    if (result.kind != DeliveryKind.cancelled) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.musicExportShared)));
+    }
+  } catch (e, st) {
+    debugPrint('[audio-export] ${fmt.ext} failed: $e\n$st');
     messenger.showSnackBar(SnackBar(content: Text(l10n.audioExportFailed)));
   }
 }
