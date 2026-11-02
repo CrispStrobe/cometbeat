@@ -70,7 +70,7 @@ void main() {
     expect(prefs.getString('tts_voice_de'), petra.encode());
   });
 
-  test('loadNarrationPrefs restores the persisted voice + engine choice',
+  test('loadNarrationPrefs restores the OS voice + migrates the old engine',
       () async {
     SharedPreferences.setMockInitialValues({
       'tts_voice_de': petra.encode(),
@@ -79,7 +79,10 @@ void main() {
     final tts = TtsService(backend: _FakePlatformBackend([anna, petra]));
     await tts.loadNarrationPrefs();
     expect(tts.chosenNarrationVoice('de-DE'), petra);
-    expect(tts.preferredEngine, TtsEngine.platform);
+    // The retired "device voice" engine switch becomes the per-language
+    // device-voice choice.
+    expect(tts.globalVoiceChoice('de-DE'), kNarrationVoiceDevice);
+    expect(tts.globalVoiceChoice('en-US'), kNarrationVoiceDevice);
   });
 
   test('clearing the choice (null) removes it + falls back to OS default',
@@ -95,14 +98,5 @@ void main() {
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('tts_voice_de'), isNull);
-  });
-
-  test('preferredEngine setter persists', () async {
-    final tts = TtsService(backend: _FakePlatformBackend(const []));
-    tts.preferredEngine = TtsEngine.platform;
-    // The setter fires a fire-and-forget write; give it a microtask turn.
-    await Future<void>.delayed(Duration.zero);
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('tts_engine'), TtsEngine.platform.name);
   });
 }

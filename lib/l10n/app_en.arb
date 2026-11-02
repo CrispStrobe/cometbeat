@@ -4142,19 +4142,9 @@
   "textbookGradesG910": "Level 5",
   "tutorialReadAloud": "Read aloud",
   "tutorialAutoRead": "Read each step aloud",
-  "ttsHdVoiceTitle": "Natural voice (HD)",
-  "ttsHdVoiceSubtitle": "A warmer, more natural reading voice for the lessons",
-  "ttsEngineTitle": "Voice engine",
-  "ttsEngineAuto": "Automatic",
-  "ttsEngineNatural": "Natural (HD)",
-  "ttsEnginePlatform": "Device voice",
   "ttsVoicePickerTitle": "Narration voice",
   "ttsVoicePickerSubtitle": "Pick an installed device voice",
   "ttsVoicePickerDefault": "Device default",
-  "ttsHdVoiceReady": "On — narration uses the natural voice",
-  "ttsHdVoiceDownload": "Download (~135 MB)",
-  "ttsHdVoiceDownloading": "Downloading…",
-  "ttsHdVoiceFailed": "Download failed — tap to retry",
   "voiceModelsTitle": "Voice models",
   "voiceModelsSubtitle": "Download & manage the HD neural voices",
   "voiceModelsCachedLabel": "Cached",
@@ -4162,6 +4152,70 @@
   "voiceModelsNotDownloaded": "Not downloaded",
   "voiceModelsDownload": "Download",
   "voiceModelsRemove": "Remove",
+  "ttsVoiceTitle": "Narration voice",
+  "ttsVoiceLessonTitle": "Voice for lessons",
+  "ttsVoiceAuto": "Automatic",
+  "ttsVoiceAutoSubtitle": "The best downloaded natural voice, otherwise the device voice",
+  "ttsVoiceDevice": "Device voice",
+  "ttsVoiceDeviceSubtitle": "Built into this device · no download",
+  "ttsVoiceFollowSettings": "Same as in Settings",
+  "ttsVoiceFollowSettingsSubtitle": "Currently: {voice}",
+  "@ttsVoiceFollowSettingsSubtitle": {
+    "placeholders": {
+      "voice": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsVoiceNaturalHeader": "Natural voices — download once, then they work offline",
+  "ttsVoiceSyntheticNote": "Natural voices are computer-generated (AI) voices.",
+  "ttsVoiceLangDe": "German",
+  "ttsVoiceLangEn": "English",
+  "ttsVoiceLarge": "large",
+  "ttsVoiceDownloadFailed": "Download failed: {reason}",
+  "@ttsVoiceDownloadFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsVoiceUnavailable": "Natural voices can't run on this device: {reason}",
+  "@ttsVoiceUnavailable": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsVoicePreview": "Listen",
+  "ttsVoicePreviewText": "Hello! I will read the lessons to you.",
+  "ttsVoiceChange": "Change voice",
+  "ttsFallbackNotDownloaded": "Device voice used: {voice} isn't downloaded yet.",
+  "@ttsFallbackNotDownloaded": {
+    "placeholders": {
+      "voice": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsFallbackUnavailable": "Device voice used: {voice} can't run on this device.",
+  "@ttsFallbackUnavailable": {
+    "placeholders": {
+      "voice": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsFallbackFailed": "Device voice used: {voice} couldn't speak.",
+  "@ttsFallbackFailed": {
+    "placeholders": {
+      "voice": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryCreditsVoices": "Narration voices",
   "transcriptionEngineTitle": "Transcription engine",
   "transcriptionEngineIntro": "How a recording is turned into notes. Neural engines are more accurate but download a model and run in the app (not the web version). Rhythm, drums and the written notes always run on-device.",
   "transcriptionQualityLabel": "Model quality",

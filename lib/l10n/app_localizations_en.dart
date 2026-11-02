@@ -9603,25 +9603,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialAutoRead => 'Read each step aloud';
 
   @override
-  String get ttsHdVoiceTitle => 'Natural voice (HD)';
-
-  @override
-  String get ttsHdVoiceSubtitle =>
-      'A warmer, more natural reading voice for the lessons';
-
-  @override
-  String get ttsEngineTitle => 'Voice engine';
-
-  @override
-  String get ttsEngineAuto => 'Automatic';
-
-  @override
-  String get ttsEngineNatural => 'Natural (HD)';
-
-  @override
-  String get ttsEnginePlatform => 'Device voice';
-
-  @override
   String get ttsVoicePickerTitle => 'Narration voice';
 
   @override
@@ -9629,18 +9610,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ttsVoicePickerDefault => 'Device default';
-
-  @override
-  String get ttsHdVoiceReady => 'On — narration uses the natural voice';
-
-  @override
-  String get ttsHdVoiceDownload => 'Download (~135 MB)';
-
-  @override
-  String get ttsHdVoiceDownloading => 'Downloading…';
-
-  @override
-  String get ttsHdVoiceFailed => 'Download failed — tap to retry';
 
   @override
   String get voiceModelsTitle => 'Voice models';
@@ -9662,6 +9631,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceModelsRemove => 'Remove';
+
+  @override
+  String get ttsVoiceTitle => 'Narration voice';
+
+  @override
+  String get ttsVoiceLessonTitle => 'Voice for lessons';
+
+  @override
+  String get ttsVoiceAuto => 'Automatic';
+
+  @override
+  String get ttsVoiceAutoSubtitle =>
+      'The best downloaded natural voice, otherwise the device voice';
+
+  @override
+  String get ttsVoiceDevice => 'Device voice';
+
+  @override
+  String get ttsVoiceDeviceSubtitle => 'Built into this device · no download';
+
+  @override
+  String get ttsVoiceFollowSettings => 'Same as in Settings';
+
+  @override
+  String ttsVoiceFollowSettingsSubtitle(String voice) {
+    return 'Currently: $voice';
+  }
+
+  @override
+  String get ttsVoiceNaturalHeader =>
+      'Natural voices — download once, then they work offline';
+
+  @override
+  String get ttsVoiceSyntheticNote =>
+      'Natural voices are computer-generated (AI) voices.';
+
+  @override
+  String get ttsVoiceLangDe => 'German';
+
+  @override
+  String get ttsVoiceLangEn => 'English';
+
+  @override
+  String get ttsVoiceLarge => 'large';
+
+  @override
+  String ttsVoiceDownloadFailed(String reason) {
+    return 'Download failed: $reason';
+  }
+
+  @override
+  String ttsVoiceUnavailable(String reason) {
+    return 'Natural voices can\'t run on this device: $reason';
+  }
+
+  @override
+  String get ttsVoicePreview => 'Listen';
+
+  @override
+  String get ttsVoicePreviewText => 'Hello! I will read the lessons to you.';
+
+  @override
+  String get ttsVoiceChange => 'Change voice';
+
+  @override
+  String ttsFallbackNotDownloaded(String voice) {
+    return 'Device voice used: $voice isn\'t downloaded yet.';
+  }
+
+  @override
+  String ttsFallbackUnavailable(String voice) {
+    return 'Device voice used: $voice can\'t run on this device.';
+  }
+
+  @override
+  String ttsFallbackFailed(String voice) {
+    return 'Device voice used: $voice couldn\'t speak.';
+  }
+
+  @override
+  String get libraryCreditsVoices => 'Narration voices';
 
   @override
   String get transcriptionEngineTitle => 'Transcription engine';

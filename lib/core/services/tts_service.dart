@@ -18,9 +18,10 @@
 
 import 'dart:convert';
 
+import 'package:comet_beat/core/audio/tts/neural_voice_catalog.dart';
+import 'package:comet_beat/core/audio/tts/neural_voice_runtime.dart';
 import 'package:comet_beat/core/audio/tts/prebaked_narration.dart'
     show PrebakedNarrationBackend;
-import 'package:comet_beat/core/audio/tts/tts_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -190,95 +191,277 @@ class NeuralTts {
   final Future<bool> Function(String lang) download;
 }
 
+/// Where narration is requested from. Lessons/primers ([lesson]) may carry
+/// their own persisted voice override on top of the Settings choice.
+enum NarrationScope { global, lesson }
+
+/// The persisted voice choice values besides a catalog voice id.
+const String kNarrationVoiceAuto = 'auto';
+const String kNarrationVoiceDevice = 'device';
+
+/// Why narration did not use the voice the user chose — surfaced in the UI so
+/// a silent downgrade to the device voice is never a mystery.
+@immutable
+class NarrationFallback {
+  const NarrationFallback(this.kind, this.voice, this.detail);
+
+  /// What went wrong.
+  final TtsFailure kind;
+
+  /// The neural voice that was wanted.
+  final NeuralVoice voice;
+
+  /// Technical detail (English), e.g. the HTTP status or dlopen error.
+  final String detail;
+}
+
+/// What [resolveNarrationVoice] decided: speak with [voice] (null ⇒ the device
+/// voice) and, when that is a downgrade from the user's choice, [fallback].
+@immutable
+class NarrationPlan {
+  const NarrationPlan({this.voice, this.fallback});
+  final NeuralVoice? voice;
+  final NarrationFallback? fallback;
+}
+
+/// Pure voice resolution (no I/O) — unit-tested.
+///
+/// - `device` → the device voice, no complaint.
+/// - a catalog id → that voice when the engine runs here and it is
+///   downloaded; otherwise the device voice WITH the reason.
+/// - `auto` (or an unknown/foreign-language id) → the first DOWNLOADED voice
+///   for [lang] in catalog order; the device voice when none is (not a
+///   complaint — nothing was asked for).
+NarrationPlan resolveNarrationVoice({
+  required String choice,
+  required String lang,
+  required String? runtimeUnavailable,
+  required bool Function(NeuralVoice) installed,
+}) {
+  if (choice == kNarrationVoiceDevice) return const NarrationPlan();
+  final wanted = neuralVoiceById(choice);
+  if (wanted != null && wanted.lang == lang) {
+    if (runtimeUnavailable != null) {
+      return NarrationPlan(
+        fallback: NarrationFallback(
+          TtsFailure.runtimeUnavailable,
+          wanted,
+          runtimeUnavailable,
+        ),
+      );
+    }
+    if (!installed(wanted)) {
+      return NarrationPlan(
+        fallback: NarrationFallback(
+          TtsFailure.notDownloaded,
+          wanted,
+          '${wanted.name} is not downloaded',
+        ),
+      );
+    }
+    return NarrationPlan(voice: wanted);
+  }
+  if (runtimeUnavailable != null) return const NarrationPlan();
+  for (final v in neuralVoicesFor(lang)) {
+    if (installed(v)) return NarrationPlan(voice: v);
+  }
+  return const NarrationPlan();
+}
+
 class TtsService with ChangeNotifier {
   TtsService({
     TtsBackend? backend,
-    NeuralTts? neural,
-    NeuralTts? onnx,
+    NeuralVoiceRuntime? neural,
     PrebakedNarrationBackend? prebaked,
   })  : _injectedBackend = backend,
         _prebaked = prebaked,
-        _neural = neural?.backend,
-        _neuralReady = neural?.ready,
-        _neuralSupported = neural?.supported,
-        _neuralDownload = neural?.download,
-        _onnx = onnx?.backend,
-        _onnxReady = onnx?.ready;
+        _neural = neural;
 
   final TtsBackend? _injectedBackend;
 
   /// Optional pre-baked neural narration (bundled WAV assets). When the exact
-  /// text/lang is baked, it plays instantly — the only practical neural voice
-  /// on the web (runtime synthesis there would freeze the main isolate). Falls
-  /// through to the platform/neural voice when nothing is baked. Null = off.
+  /// text/lang is baked AND no other voice was chosen (auto, nothing
+  /// downloaded) it plays instantly — the only practical neural voice on the
+  /// web. Null = off.
   final PrebakedNarrationBackend? _prebaked;
 
   /// The platform fallback (flutter_tts), created LAZILY on first narration.
   /// Building `FlutterTtsBackend()` eagerly instantiated the `flutter_tts`
-  /// plugin (FlutterTts() + setSpeechRate/Volume/Pitch) at app startup — that
-  /// hung the iOS-simulator screenshot capture (the app never narrates during
-  /// capture, so the plugin was set up for nothing and blocked). Deferring it to
-  /// the first `speak`/`stop` keeps narration working while leaving startup and
-  /// the capture path free of any flutter_tts platform-channel calls.
+  /// plugin at app startup — that hung the iOS-simulator screenshot capture.
+  /// Deferring it to the first `speak`/`stop` keeps startup and the capture
+  /// path free of any flutter_tts platform-channel calls.
   late final TtsBackend _backend = _injectedBackend ?? FlutterTtsBackend();
 
-  /// Optional higher-quality neural backend (CrispASR/Kokoro). Used in
-  /// preference to [_backend] when [_neuralReady] reports it can run on this
-  /// device right now (native lib loadable + model cached); otherwise the
-  /// platform voice covers it, so the app always speaks.
-  final TtsBackend? _neural;
-  final Future<bool> Function()? _neuralReady;
-  final Future<bool> Function()? _neuralSupported;
-  final Future<bool> Function(String lang)? _neuralDownload;
+  /// The neural voice runtime (CrispASR: Piper + Kokoro). Null on web.
+  final NeuralVoiceRuntime? _neural;
 
-  /// Optional native-ONNX-Runtime neural backend (Piper VITS over the
-  /// `onnxruntime` FFI plugin — the [TtsEngine.onnxFfi] path). Native-only (null
-  /// on web / io-less builds). Selected by the engine resolver AFTER crispasr-FFI
-  /// when its `ready` probe passes (native ORT loadable + a voice cached).
-  final TtsBackend? _onnx;
-  final Future<bool> Function()? _onnxReady;
-
-  /// Whether a neural backend exists on this build (before any probe).
+  /// Whether this build has a neural runtime at all (before any probe).
   bool get hasNeural => _neural != null;
 
-  /// Could the neural (HD) voice work on this platform? (native lib present)
-  Future<bool> neuralSupported() async {
+  /// Null when neural voices can run here; otherwise why not. Web/no runtime
+  /// reports a fixed reason.
+  Future<String?> neuralUnavailableReason() async {
+    final n = _neural;
+    if (n == null) return 'no neural voice engine in this build';
     try {
-      return await _neuralSupported?.call() ?? false;
-    } catch (_) {
-      return false;
+      return await n.unavailableReason();
+    } catch (e) {
+      return '$e';
     }
   }
 
-  /// Is the neural voice ready to speak now? (lib + model cached)
-  Future<bool> neuralReady() async {
-    try {
-      return await _neuralReady?.call() ?? false;
-    } catch (_) {
-      return false;
+  // ── Voice choice (persisted) ─────────────────────────────────────────────
+  static const _globalPrefix = 'tts_voice_choice_';
+  static const _lessonPrefix = 'tts_lesson_voice_';
+  static const _legacyEngineKey = 'tts_engine';
+  static const _voicePrefix = 'tts_voice_';
+
+  final Map<String, String> _global = {};
+  final Map<String, String> _lesson = {};
+
+  static String _baseLang(String langCode) =>
+      langCode.toLowerCase().split(RegExp('[-_]')).first;
+
+  /// The Settings voice choice for [lang] (`auto` when never set).
+  String globalVoiceChoice(String lang) =>
+      _global[_baseLang(lang)] ?? kNarrationVoiceAuto;
+
+  /// The lessons' own override for [lang], or null (= follow Settings).
+  String? lessonVoiceOverride(String lang) => _lesson[_baseLang(lang)];
+
+  /// The choice that applies to narration requested from [scope].
+  String voiceChoice(
+    String lang, {
+    NarrationScope scope = NarrationScope.global,
+  }) {
+    if (scope == NarrationScope.lesson) {
+      final o = lessonVoiceOverride(lang);
+      if (o != null) return o;
+    }
+    return globalVoiceChoice(lang);
+  }
+
+  /// Set the voice for [lang] in [scope] and persist it. For the lesson scope
+  /// a null [choice] clears the override (lessons follow Settings again).
+  Future<void> setVoiceChoice(
+    String lang,
+    String? choice, {
+    NarrationScope scope = NarrationScope.global,
+  }) async {
+    final l = _baseLang(lang);
+    final map = scope == NarrationScope.lesson ? _lesson : _global;
+    if (choice == null) {
+      map.remove(l);
+    } else {
+      map[l] = choice;
+    }
+    _lastFallback = null;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    final key =
+        '${scope == NarrationScope.lesson ? _lessonPrefix : _globalPrefix}$l';
+    if (choice == null) {
+      await prefs.remove(key);
+    } else {
+      await prefs.setString(key, choice);
     }
   }
 
-  /// Download the HD voice for [locale] (settings opt-in). Notifies listeners so
-  /// a tile can refresh its state.
-  Future<bool> downloadNeuralVoice(Locale locale) async {
-    final dl = _neuralDownload;
-    if (dl == null) return false;
+  // ── Downloads ────────────────────────────────────────────────────────────
+  final Map<String, double> _progress = {};
+  final Map<String, String> _downloadErrors = {};
+  final Set<String> _installed = {};
+
+  /// Download progress 0..1 for a voice being fetched, else null.
+  double? downloadProgress(String voiceId) => _progress[voiceId];
+
+  /// The last download error for a voice (cleared on retry/success).
+  String? downloadError(String voiceId) => _downloadErrors[voiceId];
+
+  /// Cached installed-state (call [refreshInstalled] to update).
+  bool isInstalledCached(String voiceId) => _installed.contains(voiceId);
+
+  /// Re-scan which catalog voices are on disk; notifies.
+  Future<void> refreshInstalled() async {
+    final n = _neural;
+    final next = <String>{};
+    if (n != null) {
+      for (final v in kNeuralVoices) {
+        try {
+          if (await n.isInstalled(v)) next.add(v.id);
+        } catch (_) {}
+      }
+    }
+    _installed
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+  }
+
+  /// Download [voice] (user action). Progress + errors are kept here so they
+  /// survive the picker closing. Returns true when installed afterwards.
+  Future<bool> downloadVoice(NeuralVoice voice) async {
+    final n = _neural;
+    if (n == null || _progress.containsKey(voice.id)) return false;
+    _downloadErrors.remove(voice.id);
+    _progress[voice.id] = 0;
+    notifyListeners();
+    var lastNotify = DateTime.now();
     try {
-      final ok = await dl(voiceTag(locale));
+      await n.download(
+        voice,
+        onProgress: (r, t) {
+          _progress[voice.id] = t > 0 ? (r / t).clamp(0.0, 1.0) : 0;
+          final now = DateTime.now();
+          if (now.difference(lastNotify).inMilliseconds > 150) {
+            lastNotify = now;
+            notifyListeners();
+          }
+        },
+      );
+      _installed.add(voice.id);
+      return true;
+    } on TtsVoiceException catch (e) {
+      _downloadErrors[voice.id] = e.detail;
+      _logError('download ${voice.id}', e);
+      return false;
+    } catch (e) {
+      _downloadErrors[voice.id] = '$e';
+      _logError('download ${voice.id}', e);
+      return false;
+    } finally {
+      _progress.remove(voice.id);
+      if (_lastFallback?.voice.id == voice.id) _lastFallback = null;
       notifyListeners();
-      return ok;
-    } catch (_) {
-      return false;
     }
   }
+
+  /// Delete a downloaded voice; a choice pointing at it falls back to auto.
+  Future<void> removeVoice(NeuralVoice voice) async {
+    await _neural?.remove(voice);
+    _installed.remove(voice.id);
+    notifyListeners();
+  }
+
+  // ── Narration ─────────────────────────────────────────────────────────────
+  NarrationFallback? _lastFallback;
+
+  /// Set when the last narration had to fall back from the chosen neural
+  /// voice to the device voice (cleared by a successful neural utterance or a
+  /// new choice). The lesson sheet shows it.
+  NarrationFallback? get lastFallback => _lastFallback;
+
+  /// The neural voice the last utterance actually used (null = device /
+  /// pre-baked). For tests + a "now speaking" hint.
+  NeuralVoice? get lastNeuralVoice => _lastNeuralVoice;
+  NeuralVoice? _lastNeuralVoice;
+
+  /// Download the voices a lesson will need? No — narration NEVER downloads;
+  /// the picker does, on an explicit tap.
 
   /// Warm the pre-baked narration cache for [items] (each a `(text, langCode)`).
-  /// In pack mode (the backend has a cache + remote pack) this fetches any
-  /// not-yet-cached clips into the asset cache (IndexedDB on web) so a later
-  /// [speak] plays them instantly, offline. A no-op in bundled mode or when no
-  /// pre-baked backend is wired. Best-effort; never throws. Returns the count
-  /// newly cached.
+  /// A no-op in bundled mode or when no pre-baked backend is wired.
+  /// Best-effort; never throws. Returns the count newly cached.
   Future<int> prefetchNarration(Iterable<(String, String)> items) async {
     try {
       return await _prebaked?.prefetch(items) ?? 0;
@@ -287,17 +470,14 @@ class TtsService with ChangeNotifier {
     }
   }
 
-  /// Master sound switch, mirrored from SettingsService (see main.dart). When
-  /// off, narration is silent along with the rest of the app.
+  /// Master sound switch, mirrored from SettingsService (see main.dart).
   bool soundOn = true;
 
-  /// Read-aloud switch, mirrored from SettingsService — independent of [soundOn]
-  /// so a user can silence narration while keeping game sounds (or vice versa).
-  /// When off, [speak] no-ops. On by default.
+  /// Read-aloud switch, mirrored from SettingsService — independent of
+  /// [soundOn]. When off, [speak] no-ops. On by default.
   bool narrationOn = true;
 
-  /// True while an utterance has been requested and not yet stopped. Purely for
-  /// UI affordance (e.g. a speaking indicator); best-effort, not frame-accurate.
+  /// True while an utterance has been requested and not yet stopped.
   bool get isSpeaking => _speaking;
   bool _speaking = false;
 
@@ -306,62 +486,106 @@ class TtsService with ChangeNotifier {
   static String voiceTag(Locale locale) =>
       locale.languageCode == 'de' ? 'de-DE' : 'en-US';
 
-  /// Narrate [text] in [locale]. No-op when the master sound switch is off or
-  /// the text is blank. Interrupts any current utterance. Prefers the neural
-  /// backend when it's ready, else the platform voice.
-  Future<void> speak(String text, {required Locale locale}) async {
+  /// Narrate [text] in [locale] with the voice chosen for [scope]. No-op when
+  /// sound or narration is off or the text is blank. A chosen neural voice
+  /// that cannot run falls back to the device voice and records why in
+  /// [lastFallback].
+  Future<void> speak(
+    String text, {
+    required Locale locale,
+    NarrationScope scope = NarrationScope.global,
+  }) async {
     if (!soundOn || !narrationOn || text.trim().isEmpty) return;
-    _speaking = true;
-    notifyListeners();
     final langCode = voiceTag(locale);
-    // Prefer a pre-baked neural narration asset when one exists for this exact
-    // text/lang (instant, works on web); otherwise the platform/neural voice.
-    final prebaked = _prebaked;
-    if (prebaked != null && await prebaked.has(text, langCode)) {
-      await prebaked.speak(text, langCode: langCode);
-    } else {
-      final backend = await _pick();
-      // For the platform voice, apply the user's chosen OS voice (if any) for
-      // this language before speaking. Neural backends have a fixed voice.
-      if (backend is PlatformVoiceControl) {
-        await (backend as PlatformVoiceControl)
-            .applyVoice(_chosenVoices[_baseLang(langCode)]);
-      }
-      await backend.speak(text, langCode: langCode);
-    }
+    await _speakWith(voiceChoice(langCode, scope: scope), text, langCode);
   }
 
-  /// The user's engine preference (settings). [TtsEngine.auto] → the resolver
-  /// picks the best usable path for the platform.
-  TtsEngine _preferred = TtsEngine.auto;
-  TtsEngine get preferredEngine => _preferred;
-  set preferredEngine(TtsEngine e) {
-    if (_preferred == e) return;
-    _preferred = e;
+  /// Speak [text] with an explicit [choice] (the picker's preview).
+  Future<void> preview(String choice, String text, {required Locale locale}) {
+    if (!soundOn || text.trim().isEmpty) return Future.value();
+    return _speakWith(choice, text, voiceTag(locale));
+  }
+
+  Future<void> _speakWith(String choice, String text, String langCode) async {
+    await stop();
+    _speaking = true;
     notifyListeners();
-    SharedPreferences.getInstance()
-        .then((p) => p.setString(_enginePrefKey, e.name))
-        .ignore();
+    final lang = _baseLang(langCode);
+    final n = _neural;
+    final reason = choice == kNarrationVoiceDevice
+        ? null
+        : await neuralUnavailableReason();
+    final installed = <String>{};
+    if (n != null && reason == null) {
+      for (final v in neuralVoicesFor(lang)) {
+        try {
+          if (await n.isInstalled(v)) installed.add(v.id);
+        } catch (_) {}
+      }
+    }
+    final plan = resolveNarrationVoice(
+      choice: choice,
+      lang: lang,
+      // `auto` with no runtime is not a complaint — only an explicit choice is.
+      runtimeUnavailable: reason,
+      installed: (v) => installed.contains(v.id),
+    );
+
+    final voice = plan.voice;
+    if (voice != null && n != null) {
+      try {
+        await n.speak(voice, text);
+        _lastNeuralVoice = voice;
+        _lastFallback = null;
+        notifyListeners();
+        return;
+      } on TtsVoiceException catch (e) {
+        _logError('speak ${voice.id}', e);
+        _lastFallback = NarrationFallback(e.kind, voice, e.detail);
+      } catch (e) {
+        _logError('speak ${voice.id}', e);
+        _lastFallback = NarrationFallback(TtsFailure.synthFailed, voice, '$e');
+      }
+    } else {
+      _lastFallback = plan.fallback;
+      // Nothing neural chosen/available: a pre-baked clip of this exact text
+      // is the next best thing (instant, works on the web).
+      final prebaked = _prebaked;
+      if (choice != kNarrationVoiceDevice &&
+          plan.fallback == null &&
+          prebaked != null &&
+          await prebaked.has(text, langCode)) {
+        _lastNeuralVoice = null;
+        notifyListeners();
+        await prebaked.speak(text, langCode: langCode);
+        return;
+      }
+    }
+    _lastNeuralVoice = null;
+    notifyListeners();
+    final backend = _backend;
+    if (backend is PlatformVoiceControl) {
+      await (backend as PlatformVoiceControl).applyVoice(_chosenVoices[lang]);
+    }
+    await backend.speak(text, langCode: langCode);
+  }
+
+  void _logError(String what, Object e) {
+    debugPrint('[tts] $what failed: $e');
   }
 
   // ── On-device platform voice selection (Apple/Android/web) ────────────────
-  static const _enginePrefKey = 'tts_engine';
-  static const _voicePrefix = 'tts_voice_';
 
   /// The user's chosen platform voice per base language (`de`/`en`). Empty ⇒
-  /// the OS default. Read by [speak] and applied to the platform backend.
+  /// the OS default. Applied when the device voice speaks.
   final Map<String, TtsVoiceOption> _chosenVoices = {};
-
-  static String _baseLang(String langCode) =>
-      langCode.toLowerCase().split(RegExp('[-_]')).first;
 
   /// The chosen platform voice for [langCode], or null (OS default).
   TtsVoiceOption? chosenNarrationVoice(String langCode) =>
       _chosenVoices[_baseLang(langCode)];
 
-  /// The on-device voices available for [langCode] — only meaningful for the
-  /// platform voice (empty for a build/backend without OS voice control). This
-  /// touches the platform plugin, so call it from a user action, not startup.
+  /// The on-device voices available for [langCode]. Touches the platform
+  /// plugin, so call it from a user action, not startup.
   Future<List<TtsVoiceOption>> narrationVoices(String langCode) async {
     final b = _backend;
     if (b is PlatformVoiceControl) {
@@ -390,76 +614,28 @@ class TtsService with ChangeNotifier {
     }
   }
 
-  /// Load persisted TTS prefs (engine preference + per-language voice choices).
-  /// Deliberately does NOT touch the lazy platform backend, so app startup and
-  /// the screenshot-capture path stay free of any flutter_tts plugin calls.
+  /// Load persisted TTS prefs (voice choices + OS voices) and the installed
+  /// state. Deliberately does NOT touch the lazy platform backend, so app
+  /// startup and the screenshot-capture path stay free of flutter_tts calls.
   Future<void> loadNarrationPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    final eng = prefs.getString(_enginePrefKey);
-    if (eng != null) {
-      for (final e in TtsEngine.values) {
-        if (e.name == eng) {
-          _preferred = e;
-          break;
-        }
-      }
-    }
+    // Migrate the old engine switch: "device voice" forced is the one value
+    // that maps cleanly onto the new per-language choice.
+    final legacy = prefs.getString(_legacyEngineKey);
     for (final lang in const ['de', 'en']) {
+      final g = prefs.getString('$_globalPrefix$lang');
+      if (g != null) {
+        _global[lang] = g;
+      } else if (legacy == 'platform') {
+        _global[lang] = kNarrationVoiceDevice;
+      }
+      final o = prefs.getString('$_lessonPrefix$lang');
+      if (o != null) _lesson[lang] = o;
       final v = TtsVoiceOption.decode(prefs.getString('$_voicePrefix$lang'));
       if (v != null) _chosenVoices[lang] = v;
     }
     notifyListeners();
-  }
-
-  /// Which engines can synthesize RIGHT NOW (runtime + model ready). Grows as
-  /// the onnx-FFI / pure-Dart-onnx / crispasr-wasm backends land; for now only
-  /// crispasr-FFI (when its lib+model are ready) beyond the always-on platform.
-  Future<Set<TtsEngine>> _availableEngines() async {
-    final set = <TtsEngine>{TtsEngine.platform};
-    final neural = _neural;
-    final ready = _neuralReady;
-    if (neural != null && ready != null) {
-      try {
-        if (await ready()) set.add(TtsEngine.crispasrFfi);
-      } catch (_) {
-        // treat a probe failure as "not available"
-      }
-    }
-    final onnx = _onnx;
-    final onnxReady = _onnxReady;
-    if (onnx != null && onnxReady != null) {
-      try {
-        if (await onnxReady()) set.add(TtsEngine.onnxFfi);
-      } catch (_) {
-        // treat a probe failure as "not available"
-      }
-    }
-    return set;
-  }
-
-  /// The live backend for a resolved engine, or null if not wired yet.
-  TtsBackend? _backendFor(TtsEngine e) => switch (e) {
-        TtsEngine.crispasrFfi => _neural,
-        TtsEngine.onnxFfi => _onnx,
-        TtsEngine.platform => _backend,
-        // pureDartOnnx / crispasrWasm attach here as they land.
-        _ => null,
-      };
-
-  /// Resolves the interactive-synthesis backend through the shared engine
-  /// framework (platform + availability + the user's preference), with the
-  /// platform voice as the guaranteed floor.
-  Future<TtsBackend> _pick() async {
-    final chain = resolveTtsEngines(
-      isWeb: kIsWeb,
-      available: await _availableEngines(),
-      preferred: _preferred,
-    );
-    for (final e in chain) {
-      final b = _backendFor(e);
-      if (b != null) return b;
-    }
-    return _backend;
+    await refreshInstalled();
   }
 
   /// Stop narrating (e.g. the sheet was dismissed or the page changed).
@@ -469,14 +645,13 @@ class TtsService with ChangeNotifier {
       notifyListeners();
     }
     await _neural?.stop();
-    await _onnx?.stop();
+    await _prebaked?.stop();
     await _backend.stop();
   }
 
   @override
   void dispose() {
     _neural?.stop();
-    _onnx?.stop();
     _backend.stop();
     super.dispose();
   }

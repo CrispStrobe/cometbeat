@@ -17396,42 +17396,6 @@ abstract class AppLocalizations {
   /// **'Read each step aloud'**
   String get tutorialAutoRead;
 
-  /// No description provided for @ttsHdVoiceTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Natural voice (HD)'**
-  String get ttsHdVoiceTitle;
-
-  /// No description provided for @ttsHdVoiceSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'A warmer, more natural reading voice for the lessons'**
-  String get ttsHdVoiceSubtitle;
-
-  /// No description provided for @ttsEngineTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Voice engine'**
-  String get ttsEngineTitle;
-
-  /// No description provided for @ttsEngineAuto.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatic'**
-  String get ttsEngineAuto;
-
-  /// No description provided for @ttsEngineNatural.
-  ///
-  /// In en, this message translates to:
-  /// **'Natural (HD)'**
-  String get ttsEngineNatural;
-
-  /// No description provided for @ttsEnginePlatform.
-  ///
-  /// In en, this message translates to:
-  /// **'Device voice'**
-  String get ttsEnginePlatform;
-
   /// No description provided for @ttsVoicePickerTitle.
   ///
   /// In en, this message translates to:
@@ -17449,30 +17413,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Device default'**
   String get ttsVoicePickerDefault;
-
-  /// No description provided for @ttsHdVoiceReady.
-  ///
-  /// In en, this message translates to:
-  /// **'On — narration uses the natural voice'**
-  String get ttsHdVoiceReady;
-
-  /// No description provided for @ttsHdVoiceDownload.
-  ///
-  /// In en, this message translates to:
-  /// **'Download (~135 MB)'**
-  String get ttsHdVoiceDownload;
-
-  /// No description provided for @ttsHdVoiceDownloading.
-  ///
-  /// In en, this message translates to:
-  /// **'Downloading…'**
-  String get ttsHdVoiceDownloading;
-
-  /// No description provided for @ttsHdVoiceFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Download failed — tap to retry'**
-  String get ttsHdVoiceFailed;
 
   /// No description provided for @voiceModelsTitle.
   ///
@@ -17515,6 +17455,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove'**
   String get voiceModelsRemove;
+
+  /// No description provided for @ttsVoiceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Narration voice'**
+  String get ttsVoiceTitle;
+
+  /// No description provided for @ttsVoiceLessonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice for lessons'**
+  String get ttsVoiceLessonTitle;
+
+  /// No description provided for @ttsVoiceAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get ttsVoiceAuto;
+
+  /// No description provided for @ttsVoiceAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The best downloaded natural voice, otherwise the device voice'**
+  String get ttsVoiceAutoSubtitle;
+
+  /// No description provided for @ttsVoiceDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Device voice'**
+  String get ttsVoiceDevice;
+
+  /// No description provided for @ttsVoiceDeviceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Built into this device · no download'**
+  String get ttsVoiceDeviceSubtitle;
+
+  /// No description provided for @ttsVoiceFollowSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as in Settings'**
+  String get ttsVoiceFollowSettings;
+
+  /// No description provided for @ttsVoiceFollowSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently: {voice}'**
+  String ttsVoiceFollowSettingsSubtitle(String voice);
+
+  /// No description provided for @ttsVoiceNaturalHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural voices — download once, then they work offline'**
+  String get ttsVoiceNaturalHeader;
+
+  /// No description provided for @ttsVoiceSyntheticNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural voices are computer-generated (AI) voices.'**
+  String get ttsVoiceSyntheticNote;
+
+  /// No description provided for @ttsVoiceLangDe.
+  ///
+  /// In en, this message translates to:
+  /// **'German'**
+  String get ttsVoiceLangDe;
+
+  /// No description provided for @ttsVoiceLangEn.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get ttsVoiceLangEn;
+
+  /// No description provided for @ttsVoiceLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'large'**
+  String get ttsVoiceLarge;
+
+  /// No description provided for @ttsVoiceDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed: {reason}'**
+  String ttsVoiceDownloadFailed(String reason);
+
+  /// No description provided for @ttsVoiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural voices can\'t run on this device: {reason}'**
+  String ttsVoiceUnavailable(String reason);
+
+  /// No description provided for @ttsVoicePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen'**
+  String get ttsVoicePreview;
+
+  /// No description provided for @ttsVoicePreviewText.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello! I will read the lessons to you.'**
+  String get ttsVoicePreviewText;
+
+  /// No description provided for @ttsVoiceChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change voice'**
+  String get ttsVoiceChange;
+
+  /// No description provided for @ttsFallbackNotDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Device voice used: {voice} isn\'t downloaded yet.'**
+  String ttsFallbackNotDownloaded(String voice);
+
+  /// No description provided for @ttsFallbackUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Device voice used: {voice} can\'t run on this device.'**
+  String ttsFallbackUnavailable(String voice);
+
+  /// No description provided for @ttsFallbackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Device voice used: {voice} couldn\'t speak.'**
+  String ttsFallbackFailed(String voice);
+
+  /// No description provided for @libraryCreditsVoices.
+  ///
+  /// In en, this message translates to:
+  /// **'Narration voices'**
+  String get libraryCreditsVoices;
 
   /// No description provided for @transcriptionEngineTitle.
   ///

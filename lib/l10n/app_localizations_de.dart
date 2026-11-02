@@ -9661,25 +9661,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tutorialAutoRead => 'Jeden Schritt vorlesen';
 
   @override
-  String get ttsHdVoiceTitle => 'Natürliche Stimme (HD)';
-
-  @override
-  String get ttsHdVoiceSubtitle =>
-      'Eine wärmere, natürlichere Vorlesestimme für die Lektionen';
-
-  @override
-  String get ttsEngineTitle => 'Sprachmodul';
-
-  @override
-  String get ttsEngineAuto => 'Automatisch';
-
-  @override
-  String get ttsEngineNatural => 'Natürlich (HD)';
-
-  @override
-  String get ttsEnginePlatform => 'Gerätestimme';
-
-  @override
   String get ttsVoicePickerTitle => 'Vorlesestimme';
 
   @override
@@ -9687,19 +9668,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get ttsVoicePickerDefault => 'Standard';
-
-  @override
-  String get ttsHdVoiceReady => 'An — Vorlesen nutzt die natürliche Stimme';
-
-  @override
-  String get ttsHdVoiceDownload => 'Herunterladen (~135 MB)';
-
-  @override
-  String get ttsHdVoiceDownloading => 'Wird heruntergeladen …';
-
-  @override
-  String get ttsHdVoiceFailed =>
-      'Download fehlgeschlagen – zum Wiederholen tippen';
 
   @override
   String get voiceModelsTitle => 'Sprachmodelle';
@@ -9721,6 +9689,87 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get voiceModelsRemove => 'Entfernen';
+
+  @override
+  String get ttsVoiceTitle => 'Vorlesestimme';
+
+  @override
+  String get ttsVoiceLessonTitle => 'Stimme für Lektionen';
+
+  @override
+  String get ttsVoiceAuto => 'Automatisch';
+
+  @override
+  String get ttsVoiceAutoSubtitle =>
+      'Die beste geladene natürliche Stimme, sonst die Gerätestimme';
+
+  @override
+  String get ttsVoiceDevice => 'Gerätestimme';
+
+  @override
+  String get ttsVoiceDeviceSubtitle => 'Im Gerät eingebaut · kein Download';
+
+  @override
+  String get ttsVoiceFollowSettings => 'Wie in den Einstellungen';
+
+  @override
+  String ttsVoiceFollowSettingsSubtitle(String voice) {
+    return 'Zurzeit: $voice';
+  }
+
+  @override
+  String get ttsVoiceNaturalHeader =>
+      'Natürliche Stimmen – einmal laden, dann auch offline';
+
+  @override
+  String get ttsVoiceSyntheticNote =>
+      'Natürliche Stimmen sind computererzeugte (KI-)Stimmen.';
+
+  @override
+  String get ttsVoiceLangDe => 'Deutsch';
+
+  @override
+  String get ttsVoiceLangEn => 'Englisch';
+
+  @override
+  String get ttsVoiceLarge => 'groß';
+
+  @override
+  String ttsVoiceDownloadFailed(String reason) {
+    return 'Download fehlgeschlagen: $reason';
+  }
+
+  @override
+  String ttsVoiceUnavailable(String reason) {
+    return 'Natürliche Stimmen laufen auf diesem Gerät nicht: $reason';
+  }
+
+  @override
+  String get ttsVoicePreview => 'Anhören';
+
+  @override
+  String get ttsVoicePreviewText => 'Hallo! Ich lese dir die Lektionen vor.';
+
+  @override
+  String get ttsVoiceChange => 'Stimme ändern';
+
+  @override
+  String ttsFallbackNotDownloaded(String voice) {
+    return 'Gerätestimme verwendet: $voice ist noch nicht geladen.';
+  }
+
+  @override
+  String ttsFallbackUnavailable(String voice) {
+    return 'Gerätestimme verwendet: $voice läuft auf diesem Gerät nicht.';
+  }
+
+  @override
+  String ttsFallbackFailed(String voice) {
+    return 'Gerätestimme verwendet: $voice konnte nicht sprechen.';
+  }
+
+  @override
+  String get libraryCreditsVoices => 'Vorlesestimmen';
 
   @override
   String get transcriptionEngineTitle => 'Notierungs-Engine';

@@ -1,8 +1,12 @@
-// TtsService: narration gating + locale→voice mapping, tested against a fake
-// backend (no `flutter_tts` method channel involved).
+// TtsService: narration gating, locale→voice mapping and NEURAL voice
+// resolution / fallback / persistence, tested against a fake platform backend
+// and a fake neural runtime (no `flutter_tts` channel, no libcrispasr).
+import 'package:comet_beat/core/audio/tts/neural_voice_catalog.dart';
+import 'package:comet_beat/core/audio/tts/neural_voice_runtime.dart';
 import 'package:comet_beat/core/services/tts_service.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeBackend implements TtsBackend {
   final List<(String, String)> spoken = []; // (text, langCode)
@@ -19,7 +23,69 @@ class _FakeBackend implements TtsBackend {
   }
 }
 
+/// Fake runtime: [installed] voice ids are "on disk"; [failSpeak] makes
+/// synthesis throw; [unavailable] makes the engine report a load error.
+class _FakeRuntime implements NeuralVoiceRuntime {
+  _FakeRuntime({
+    Set<String>? installed,
+    this.unavailable,
+    this.failSpeak = false,
+    this.failDownload,
+  }) : installed = installed ?? {};
+
+  final Set<String> installed;
+  String? unavailable;
+  bool failSpeak;
+  String? failDownload;
+  final List<(String, String)> spoken = []; // (voice id, text)
+  final List<String> downloaded = [];
+  int stops = 0;
+
+  @override
+  Future<String?> unavailableReason() async => unavailable;
+
+  @override
+  Future<bool> isInstalled(NeuralVoice voice) async =>
+      installed.contains(voice.id);
+
+  @override
+  Future<void> download(
+    NeuralVoice voice, {
+    TtsDownloadProgress? onProgress,
+  }) async {
+    onProgress?.call(1, 2);
+    if (failDownload != null) {
+      throw TtsVoiceException(TtsFailure.downloadFailed, failDownload!);
+    }
+    downloaded.add(voice.id);
+    installed.add(voice.id);
+    onProgress?.call(2, 2);
+  }
+
+  @override
+  Future<void> remove(NeuralVoice voice) async => installed.remove(voice.id);
+
+  @override
+  Future<void> speak(NeuralVoice voice, String text) async {
+    if (failSpeak) {
+      throw const TtsVoiceException(TtsFailure.synthFailed, 'boom');
+    }
+    spoken.add((voice.id, text));
+  }
+
+  @override
+  Future<void> stop() async => stops++;
+}
+
+const _de = Locale('de');
+const _en = Locale('en');
+const _thorsten = 'piper-de-thorsten-medium';
+const _kerstin = 'piper-de-kerstin-low';
+const _cori = 'piper-en-cori-medium';
+
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   test('voiceTag maps de→de-DE and everything else→en-US', () {
     expect(TtsService.voiceTag(const Locale('de')), 'de-DE');
     expect(TtsService.voiceTag(const Locale('en')), 'en-US');
@@ -75,164 +141,225 @@ void main() {
     expect(fake.stops, greaterThanOrEqualTo(1));
   });
 
-  test('prefers the neural backend when it reports ready', () async {
-    final platform = _FakeBackend();
-    final neural = _FakeBackend();
-    final tts = TtsService(
-      backend: platform,
-      neural: _holder(neural, ready: true),
-    );
-    await tts.speak('Ein Test', locale: const Locale('de'));
-    expect(neural.spoken, [('Ein Test', 'de-DE')]);
-    expect(platform.spoken, isEmpty);
+  group('resolveNarrationVoice (pure)', () {
+    final thorsten = neuralVoiceById(_thorsten)!;
+    NarrationPlan plan(
+      String choice, {
+      String lang = 'de',
+      String? unavailable,
+      Set<String> installed = const {},
+    }) =>
+        resolveNarrationVoice(
+          choice: choice,
+          lang: lang,
+          runtimeUnavailable: unavailable,
+          installed: (v) => installed.contains(v.id),
+        );
+
+    test('device choice → device voice, no complaint', () {
+      final p = plan(kNarrationVoiceDevice, installed: {_thorsten});
+      expect(p.voice, isNull);
+      expect(p.fallback, isNull);
+    });
+
+    test('an installed explicit choice is used', () {
+      expect(plan(_thorsten, installed: {_thorsten}).voice, thorsten);
+    });
+
+    test('explicit choice not downloaded → device + notDownloaded', () {
+      final p = plan(_thorsten);
+      expect(p.voice, isNull);
+      expect(p.fallback!.kind, TtsFailure.notDownloaded);
+      expect(p.fallback!.voice, thorsten);
+    });
+
+    test('explicit choice with no engine → device + runtimeUnavailable', () {
+      final p = plan(
+        _thorsten,
+        unavailable: 'dlopen failed',
+        installed: {_thorsten},
+      );
+      expect(p.voice, isNull);
+      expect(p.fallback!.kind, TtsFailure.runtimeUnavailable);
+      expect(p.fallback!.detail, 'dlopen failed');
+    });
+
+    test('auto picks the first DOWNLOADED voice of the language', () {
+      expect(
+        plan(kNarrationVoiceAuto, installed: {_kerstin}).voice!.id,
+        _kerstin,
+      );
+      // English voices never serve German text.
+      expect(plan(kNarrationVoiceAuto, installed: {_cori}).voice, isNull);
+    });
+
+    test('auto with nothing downloaded → device voice, no complaint', () {
+      final p = plan(kNarrationVoiceAuto);
+      expect(p.voice, isNull);
+      expect(p.fallback, isNull);
+    });
+
+    test('auto without an engine → device voice, no complaint', () {
+      final p =
+          plan(kNarrationVoiceAuto, unavailable: 'x', installed: {_kerstin});
+      expect(p.voice, isNull);
+      expect(p.fallback, isNull);
+    });
+
+    test('an unknown id behaves like auto', () {
+      expect(plan('gone-voice', installed: {_thorsten}).voice, thorsten);
+    });
   });
 
-  test('falls back to the platform backend when neural is not ready', () async {
-    final platform = _FakeBackend();
-    final neural = _FakeBackend();
-    final tts = TtsService(
-      backend: platform,
-      neural: _holder(neural, ready: false),
-    );
-    await tts.speak('A test', locale: const Locale('en'));
-    expect(platform.spoken, [('A test', 'en-US')]);
-    expect(neural.spoken, isEmpty);
+  group('neural narration', () {
+    test('a chosen, downloaded voice is actually used (Thorsten)', () async {
+      final platform = _FakeBackend();
+      final rt = _FakeRuntime(installed: {_thorsten});
+      final tts = TtsService(backend: platform, neural: rt);
+      await tts.setVoiceChoice('de-DE', _thorsten);
+      await tts.speak('Die Viertelnote', locale: _de);
+      expect(rt.spoken, [(_thorsten, 'Die Viertelnote')]);
+      expect(platform.spoken, isEmpty);
+      expect(tts.lastNeuralVoice?.id, _thorsten);
+      expect(tts.lastFallback, isNull);
+    });
+
+    test('auto uses a downloaded voice without any choice being made',
+        () async {
+      final platform = _FakeBackend();
+      final rt = _FakeRuntime(installed: {_cori});
+      final tts = TtsService(backend: platform, neural: rt);
+      await tts.speak('A quarter note', locale: _en);
+      expect(rt.spoken.single.$1, _cori);
+      expect(platform.spoken, isEmpty);
+    });
+
+    test('chosen but not downloaded → device voice + visible reason', () async {
+      final platform = _FakeBackend();
+      final rt = _FakeRuntime();
+      final tts = TtsService(backend: platform, neural: rt);
+      await tts.setVoiceChoice('de', _thorsten);
+      await tts.speak('Hallo', locale: _de);
+      expect(platform.spoken, [('Hallo', 'de-DE')]);
+      expect(tts.lastFallback!.kind, TtsFailure.notDownloaded);
+      expect(tts.lastFallback!.voice.id, _thorsten);
+    });
+
+    test('engine missing → device voice + the load error as the reason',
+        () async {
+      final platform = _FakeBackend();
+      final rt =
+          _FakeRuntime(installed: {_thorsten}, unavailable: 'image not found');
+      final tts = TtsService(backend: platform, neural: rt);
+      await tts.setVoiceChoice('de', _thorsten);
+      await tts.speak('Hallo', locale: _de);
+      expect(platform.spoken, [('Hallo', 'de-DE')]);
+      expect(tts.lastFallback!.kind, TtsFailure.runtimeUnavailable);
+      expect(tts.lastFallback!.detail, 'image not found');
+    });
+
+    test('a synthesis failure still speaks (device) and says why', () async {
+      final platform = _FakeBackend();
+      final rt = _FakeRuntime(installed: {_thorsten}, failSpeak: true);
+      final tts = TtsService(backend: platform, neural: rt);
+      await tts.setVoiceChoice('de', _thorsten);
+      await tts.speak('Hallo', locale: _de);
+      expect(platform.spoken, [('Hallo', 'de-DE')]);
+      expect(tts.lastFallback!.kind, TtsFailure.synthFailed);
+      expect(tts.lastFallback!.detail, 'boom');
+      // Next success clears the note.
+      rt.failSpeak = false;
+      await tts.speak('Hallo', locale: _de);
+      expect(tts.lastFallback, isNull);
+    });
+
+    test('device choice never touches the neural runtime', () async {
+      final platform = _FakeBackend();
+      final rt = _FakeRuntime(installed: {_thorsten});
+      final tts = TtsService(backend: platform, neural: rt);
+      await tts.setVoiceChoice('de', kNarrationVoiceDevice);
+      await tts.speak('Hallo', locale: _de);
+      expect(rt.spoken, isEmpty);
+      expect(platform.spoken.single.$1, 'Hallo');
+      expect(tts.lastFallback, isNull);
+    });
+
+    test('no runtime (web) → device voice, hasNeural false', () async {
+      final platform = _FakeBackend();
+      final tts = TtsService(backend: platform);
+      expect(tts.hasNeural, isFalse);
+      expect(await tts.neuralUnavailableReason(), isNotNull);
+      await tts.speak('Hi', locale: _en);
+      expect(platform.spoken.single.$1, 'Hi');
+    });
   });
 
-  test('falls back when the neural readiness check throws', () async {
-    final platform = _FakeBackend();
-    final neural = _FakeBackend();
-    final tts = TtsService(
-      backend: platform,
-      neural: NeuralTts(
-        backend: neural,
-        ready: () async => throw StateError('lib missing'),
-        supported: () async => true,
-        download: (_) async => false,
-      ),
-    );
-    await tts.speak('A test', locale: const Locale('en'));
-    expect(platform.spoken, [('A test', 'en-US')]);
-    expect(neural.spoken, isEmpty);
+  group('lesson override', () {
+    test('lessons follow Settings until overridden, then use the override',
+        () async {
+      final rt = _FakeRuntime(installed: {_thorsten, _kerstin});
+      final tts = TtsService(backend: _FakeBackend(), neural: rt);
+      await tts.setVoiceChoice('de', _thorsten);
+      await tts.speak('a', locale: _de, scope: NarrationScope.lesson);
+      expect(rt.spoken.last.$1, _thorsten);
+
+      await tts.setVoiceChoice('de', _kerstin, scope: NarrationScope.lesson);
+      await tts.speak('b', locale: _de, scope: NarrationScope.lesson);
+      expect(rt.spoken.last.$1, _kerstin);
+      // Global narration is unaffected by the lesson override.
+      await tts.speak('c', locale: _de);
+      expect(rt.spoken.last.$1, _thorsten);
+
+      // Clearing the override → lessons follow Settings again.
+      await tts.setVoiceChoice('de', null, scope: NarrationScope.lesson);
+      expect(tts.lessonVoiceOverride('de'), isNull);
+      await tts.speak('d', locale: _de, scope: NarrationScope.lesson);
+      expect(rt.spoken.last.$1, _thorsten);
+    });
+
+    test('global + lesson choices persist and reload', () async {
+      final tts = TtsService(backend: _FakeBackend(), neural: _FakeRuntime());
+      await tts.setVoiceChoice('de-DE', _thorsten);
+      await tts.setVoiceChoice('de-DE', _kerstin, scope: NarrationScope.lesson);
+      await tts.setVoiceChoice('en-US', kNarrationVoiceDevice);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('tts_voice_choice_de'), _thorsten);
+      expect(prefs.getString('tts_lesson_voice_de'), _kerstin);
+
+      final again = TtsService(backend: _FakeBackend(), neural: _FakeRuntime());
+      await again.loadNarrationPrefs();
+      expect(again.globalVoiceChoice('de'), _thorsten);
+      expect(again.lessonVoiceOverride('de'), _kerstin);
+      expect(
+        again.voiceChoice('de', scope: NarrationScope.lesson),
+        _kerstin,
+      );
+      expect(again.globalVoiceChoice('en'), kNarrationVoiceDevice);
+      expect(again.lessonVoiceOverride('en'), isNull);
+    });
   });
 
-  test('hasNeural + supported reflect the holder', () async {
-    final withNeural = TtsService(
-      backend: _FakeBackend(),
-      neural: _holder(_FakeBackend(), ready: false),
-    );
-    expect(withNeural.hasNeural, isTrue);
-    expect(await withNeural.neuralSupported(), isTrue);
+  group('downloads', () {
+    test('success marks the voice installed and clears progress', () async {
+      final rt = _FakeRuntime();
+      final tts = TtsService(backend: _FakeBackend(), neural: rt);
+      final v = neuralVoiceById(_thorsten)!;
+      final ok = await tts.downloadVoice(v);
+      expect(ok, isTrue);
+      expect(rt.downloaded, [_thorsten]);
+      expect(tts.isInstalledCached(_thorsten), isTrue);
+      expect(tts.downloadProgress(_thorsten), isNull);
+      expect(tts.downloadError(_thorsten), isNull);
+    });
 
-    final without = TtsService(backend: _FakeBackend());
-    expect(without.hasNeural, isFalse);
-    expect(await without.neuralSupported(), isFalse);
-    expect(await without.downloadNeuralVoice(const Locale('en')), isFalse);
-  });
-
-  test('routes to the onnxFfi backend when it reports ready (no crispasr)',
-      () async {
-    final platform = _FakeBackend();
-    final onnx = _FakeBackend();
-    final tts = TtsService(
-      backend: platform,
-      onnx: _holder(onnx, ready: true),
-    );
-    await tts.speak('Ein Test', locale: const Locale('de'));
-    expect(onnx.spoken, [('Ein Test', 'de-DE')]);
-    expect(platform.spoken, isEmpty);
-  });
-
-  test('falls back to platform when the onnxFfi backend is not ready',
-      () async {
-    final platform = _FakeBackend();
-    final onnx = _FakeBackend();
-    final tts = TtsService(
-      backend: platform,
-      onnx: _holder(onnx, ready: false),
-    );
-    await tts.speak('A test', locale: const Locale('en'));
-    expect(platform.spoken, [('A test', 'en-US')]);
-    expect(onnx.spoken, isEmpty);
-  });
-
-  test('crispasr-FFI outranks onnxFfi when both are ready', () async {
-    final platform = _FakeBackend();
-    final crispasr = _FakeBackend();
-    final onnx = _FakeBackend();
-    final tts = TtsService(
-      backend: platform,
-      neural: _holder(crispasr, ready: true),
-      onnx: _holder(onnx, ready: true),
-    );
-    await tts.speak('A test', locale: const Locale('en'));
-    expect(crispasr.spoken, [('A test', 'en-US')]);
-    expect(onnx.spoken, isEmpty);
-    expect(platform.spoken, isEmpty);
-  });
-
-  test('onnxFfi is used over crispasr-FFI when only onnx is ready', () async {
-    final platform = _FakeBackend();
-    final crispasr = _FakeBackend();
-    final onnx = _FakeBackend();
-    final tts = TtsService(
-      backend: platform,
-      neural: _holder(crispasr, ready: false),
-      onnx: _holder(onnx, ready: true),
-    );
-    await tts.speak('A test', locale: const Locale('en'));
-    expect(onnx.spoken, [('A test', 'en-US')]);
-    expect(crispasr.spoken, isEmpty);
-  });
-
-  test('an onnxFfi readiness throw is treated as not available', () async {
-    final platform = _FakeBackend();
-    final onnx = _FakeBackend();
-    final tts = TtsService(
-      backend: platform,
-      onnx: NeuralTts(
-        backend: onnx,
-        ready: () async => throw StateError('no ORT'),
-        supported: () async => true,
-        download: (_) async => false,
-      ),
-    );
-    await tts.speak('A test', locale: const Locale('en'));
-    expect(platform.spoken, [('A test', 'en-US')]);
-    expect(onnx.spoken, isEmpty);
-  });
-
-  test('downloadNeuralVoice forwards the locale tag + notifies', () async {
-    String? gotLang;
-    var notified = 0;
-    final tts = TtsService(
-      backend: _FakeBackend(),
-      neural: NeuralTts(
-        backend: _FakeBackend(),
-        ready: () async => false,
-        supported: () async => true,
-        download: (lang) async {
-          gotLang = lang;
-          return true;
-        },
-      ),
-    )..addListener(() => notified++);
-
-    final ok = await tts.downloadNeuralVoice(const Locale('de'));
-    expect(ok, isTrue);
-    expect(gotLang, 'de-DE');
-    expect(notified, greaterThanOrEqualTo(1));
+    test('a failure is surfaced with its cause, not swallowed', () async {
+      final rt = _FakeRuntime(failDownload: 'HTTP 404 for https://x');
+      final tts = TtsService(backend: _FakeBackend(), neural: rt);
+      final ok = await tts.downloadVoice(neuralVoiceById(_thorsten)!);
+      expect(ok, isFalse);
+      expect(tts.downloadError(_thorsten), 'HTTP 404 for https://x');
+      expect(tts.isInstalledCached(_thorsten), isFalse);
+      expect(tts.downloadProgress(_thorsten), isNull);
+    });
   });
 }
-
-NeuralTts _holder(
-  TtsBackend backend, {
-  required bool ready,
-  bool supported = true,
-}) =>
-    NeuralTts(
-      backend: backend,
-      ready: () async => ready,
-      supported: () async => supported,
-      download: (_) async => true,
-    );

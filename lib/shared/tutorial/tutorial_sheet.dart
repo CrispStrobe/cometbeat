@@ -8,6 +8,7 @@
 
 import 'dart:async';
 
+import 'package:comet_beat/core/audio/tts/neural_voice_runtime.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/learner_scope.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
@@ -15,6 +16,7 @@ import 'package:comet_beat/core/services/tts_service.dart';
 import 'package:comet_beat/features/games/widgets/playing_staff.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/tts/narration_voice_picker.dart';
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -121,6 +123,8 @@ class _TutorialSheetState extends State<_TutorialSheet> {
     _tts?.speak(
       widget.tutorial.steps[_index].text,
       locale: Localizations.localeOf(context),
+      // Lessons may carry their own voice override (set from this sheet).
+      scope: NarrationScope.lesson,
     );
   }
 
@@ -168,7 +172,7 @@ class _TutorialSheetState extends State<_TutorialSheet> {
               Row(
                 children: [
                   // Balances the two trailing buttons so the title stays centred.
-                  if (_tts != null) const SizedBox(width: 96),
+                  if (_tts != null) const SizedBox(width: 144),
                   Expanded(
                     child: Text(
                       widget.tutorial.title,
@@ -193,9 +197,25 @@ class _TutorialSheetState extends State<_TutorialSheet> {
                       tooltip: l10n.tutorialReadAloud,
                       onPressed: _readAloud,
                     ),
+                    // Voice override right where the explanation is read.
+                    IconButton(
+                      key: const ValueKey('tutorial-voice-picker'),
+                      icon: const Icon(Icons.tune_rounded),
+                      tooltip: l10n.ttsVoiceChange,
+                      onPressed: () => showNarrationVoicePicker(
+                        context,
+                        scope: NarrationScope.lesson,
+                      ),
+                    ),
                   ],
                 ],
               ),
+              if (_tts != null)
+                ListenableBuilder(
+                  listenable: _tts!,
+                  builder: (context, _) =>
+                      _FallbackNote(fallback: _tts!.lastFallback),
+                ),
               const SizedBox(height: 8),
               Flexible(
                 child: PageView.builder(
@@ -222,6 +242,51 @@ class _TutorialSheetState extends State<_TutorialSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// One line under the title when narration had to use the device voice
+/// instead of the chosen natural voice — says why and offers the picker.
+class _FallbackNote extends StatelessWidget {
+  const _FallbackNote({required this.fallback});
+
+  final NarrationFallback? fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final f = fallback;
+    if (f == null) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final text = switch (f.kind) {
+      TtsFailure.notDownloaded => l10n.ttsFallbackNotDownloaded(f.voice.name),
+      TtsFailure.runtimeUnavailable =>
+        l10n.ttsFallbackUnavailable(f.voice.name),
+      _ => l10n.ttsFallbackFailed(f.voice.name),
+    };
+    return Padding(
+      key: const ValueKey('tutorial-voice-fallback'),
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 16, color: theme.colorScheme.error),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Tooltip(
+              message: f.detail,
+              child: Text(text, style: theme.textTheme.bodySmall),
+            ),
+          ),
+          TextButton(
+            onPressed: () => showNarrationVoicePicker(
+              context,
+              scope: NarrationScope.lesson,
+            ),
+            child: Text(l10n.ttsVoiceChange),
+          ),
+        ],
       ),
     );
   }

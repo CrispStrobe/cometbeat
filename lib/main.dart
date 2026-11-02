@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:comet_beat/core/audio/daw_project_codec.dart';
-import 'package:comet_beat/core/audio/tts/onnx_ort_tts_factory.dart';
 import 'package:comet_beat/core/audio/tts/prebaked_narration.dart';
 import 'package:comet_beat/core/audio/tts/tts_asset_cache.dart';
 import 'package:comet_beat/core/audio/tts/tts_neural.dart';
@@ -157,17 +156,12 @@ class CometBeatApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (context) {
-            // Prefer the neural (CrispASR/Kokoro) voice where it can run; the
-            // platform voice (flutter_tts) covers everywhere else. Playback goes
-            // through AudioService so the master sound switch still governs it.
+            // Neural narration voices (CrispASR: small Piper voices + Kokoro)
+            // where libcrispasr runs; the platform voice (flutter_tts) covers
+            // everywhere else and is the fallback. Playback goes through
+            // AudioService so the master sound switch still governs it.
             final audio = context.read<AudioService>();
             final neural = createNeuralTts(
-              play: audio.playWavBytes,
-              stopPlayback: audio.stop,
-            );
-            // Native ONNX-Runtime (Piper VITS) neural voice — the onnxFfi
-            // engine; null off-native. Ranks after crispasr-FFI in the resolver.
-            final onnx = createOnnxOrtTts(
               play: audio.playWavBytes,
               stopPlayback: audio.stop,
             );
@@ -184,7 +178,7 @@ class CometBeatApp extends StatelessWidget {
               cache: packBase.isEmpty ? null : createTtsAssetCache(),
               remoteBase: packBase.isEmpty ? null : packBase,
             );
-            return TtsService(neural: neural, onnx: onnx, prebaked: prebaked)
+            return TtsService(neural: neural, prebaked: prebaked)
               ..loadNarrationPrefs();
           },
         ),

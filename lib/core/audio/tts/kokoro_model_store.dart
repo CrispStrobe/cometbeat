@@ -11,10 +11,11 @@
 //   • cacheDir()                          → CrispASR's cache dir (~/.cache/crispasr
 //                                          on POSIX), or an app-sandbox override.
 //
-// This holder just answers "is the model already downloaded?" ([isReady]) and
-// carries the config the synthesis isolate needs; the actual registry/cache/FFI
-// calls happen in the worker isolate (crispasr_tts_backend.dart), off the UI
-// thread. Downloading is consent-gated there — never triggered by playback.
+// Today its main job is shared plumbing for the neural NARRATION voices
+// (crispasr_voice_runtime.dart): where libcrispasr is ([libPath] cascade, plus
+// [loadError] — the dlopen message shown when natural voices can't run) and
+// where CrispASR's cache dir is ([cacheDirPath], no FFI needed). The narration
+// voices themselves (Piper + Kokoro) are listed in neural_voice_catalog.dart.
 
 import 'dart:ffi';
 import 'dart:io';
@@ -74,16 +75,36 @@ class KokoroModelStore {
 
   /// A dylib dropped alongside the cached models (desktop/dev convenience).
   String? _cacheLibPath() {
-    final dir = _cacheDirOnMain();
+    final dir = cacheDirPath();
     return dir == null ? null : '$dir/libcrispasr.dylib';
   }
 
-  String? _cacheDirOnMain() {
+  /// CrispASR's model cache dir, resolved WITHOUT the native lib, mirroring
+  /// `crispasr_cache::dir()`: override → `$CRISPASR_CACHE_DIR` →
+  /// `$CRISPASR_MODELS_DIR` → `$HOME/.cache/crispasr`. In the macOS sandbox
+  /// HOME is the app container, so this lands inside it.
+  String? cacheDirPath() {
     if (cacheDirOverride != null && cacheDirOverride!.isNotEmpty) {
       return cacheDirOverride;
     }
-    final home = Platform.environment['HOME'];
+    final env = Platform.environment;
+    for (final k in const ['CRISPASR_CACHE_DIR', 'CRISPASR_MODELS_DIR']) {
+      final v = env[k];
+      if (v != null && v.isNotEmpty) return v;
+    }
+    final home = env['HOME'] ?? env['USERPROFILE'];
     return home == null ? null : '$home/.cache/crispasr';
+  }
+
+  /// Why the native lib cannot be opened (the dlopen message), or null when it
+  /// loads. Lets the UI say WHY natural voices are unavailable.
+  String? loadError() {
+    try {
+      DynamicLibrary.open(libPath());
+      return null;
+    } catch (e) {
+      return '$e';
+    }
   }
 
   DynamicLibrary? _tryOpenLib() {

@@ -1,119 +1,123 @@
-// voice_models_screen.dart — the user-facing manager for downloadable HD neural
-// voices, driven by TtsModelManager (the unified download+cache layer). Lists
-// the vetted CC0 Piper voices, shows which are cached + total size, and lets the
-// user pre-download or remove each. Works on native (files under the models dir
-// that synthesis reads) and web (IndexedDB) alike — the manager hides the split.
+// voice_models_screen.dart — manager for the downloadable natural (neural)
+// narration voices of BOTH languages: size, licence, download (with progress
+// and the concrete error on failure) and remove. State lives in TtsService
+// (shared with the narration voice picker); files live in CrispASR's cache
+// dir, inside the app container on sandboxed macOS.
 
-import 'package:comet_beat/core/audio/tts/tts_asset_catalog.dart';
-import 'package:comet_beat/core/audio/tts/tts_model_manager.dart';
+import 'package:comet_beat/core/audio/tts/neural_voice_catalog.dart';
+import 'package:comet_beat/core/services/tts_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tts/narration_voice_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class VoiceModelsScreen extends StatefulWidget {
-  const VoiceModelsScreen({super.key, TtsModelManager? manager})
-      : _manager = manager;
-
-  final TtsModelManager? _manager;
+  const VoiceModelsScreen({super.key});
 
   @override
   State<VoiceModelsScreen> createState() => _VoiceModelsScreenState();
 }
 
 class _VoiceModelsScreenState extends State<VoiceModelsScreen> {
-  late final TtsModelManager _mgr = widget._manager ?? TtsModelManager();
-  final _busy = <String>{}; // group ids currently downloading
-  Map<String, bool> _cached = {}; // group id → all-assets-cached
-  int _totalBytes = 0;
+  String? _unavailable;
 
   @override
   void initState() {
     super.initState();
-    _refresh();
+    _probe();
   }
 
-  Future<void> _refresh() async {
-    final report = await _mgr.report();
-    final total = await _mgr.cachedBytes();
-    final byGroup = <String, bool>{};
-    for (final g in ttsVoiceGroups()) {
-      byGroup[g.id] =
-          report.where((s) => s.asset.group == g.id).every((s) => s.cached);
-    }
-    if (mounted) {
-      setState(() {
-        _cached = byGroup;
-        _totalBytes = total;
-      });
-    }
-  }
-
-  Future<void> _download(TtsVoiceGroup g) async {
-    setState(() => _busy.add(g.id));
-    await _mgr.ensureGroup(g.id);
-    if (mounted) setState(() => _busy.remove(g.id));
-    await _refresh();
-  }
-
-  Future<void> _remove(TtsVoiceGroup g) async {
-    await _mgr.removeGroup(g.id);
-    await _refresh();
+  Future<void> _probe() async {
+    final tts = context.read<TtsService>();
+    final reason = await tts.neuralUnavailableReason();
+    await tts.refreshInstalled();
+    if (mounted) setState(() => _unavailable = reason);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final groups = ttsVoiceGroups();
+    final theme = Theme.of(context);
+    final tts = context.watch<TtsService>();
+    // Unique files (the Kokoro backbone is shared) of the installed voices.
+    final installedFiles = <String, int>{
+      for (final v in kNeuralVoices)
+        if (tts.isInstalledCached(v.id))
+          for (final f in v.files) f.filename: f.bytes,
+    };
+    final installedBytes = installedFiles.values.fold<int>(0, (s, b) => s + b);
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.voiceModelsTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            l10n.voiceModelsSubtitle,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          Text(l10n.voiceModelsSubtitle, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 4),
           Text(
-            '${l10n.voiceModelsCachedLabel}: ${_fmtBytes(_totalBytes)}',
-            style: Theme.of(context).textTheme.bodySmall,
+            '${l10n.voiceModelsCachedLabel}: '
+            '${installedBytes == 0 ? '0 MB' : formatVoiceBytes(installedBytes)}',
+            style: theme.textTheme.bodySmall,
           ),
+          Text(l10n.ttsVoiceSyntheticNote, style: theme.textTheme.bodySmall),
+          if (_unavailable != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                l10n.ttsVoiceUnavailable(_unavailable!),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.error),
+              ),
+            ),
           const SizedBox(height: 12),
-          for (final g in groups) _voiceCard(context, l10n, g),
+          for (final lang in const ['de', 'en']) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+              child: Text(
+                lang == 'de' ? l10n.ttsVoiceLangDe : l10n.ttsVoiceLangEn,
+                style: theme.textTheme.titleSmall,
+              ),
+            ),
+            for (final v in neuralVoicesFor(lang)) _card(context, l10n, tts, v),
+          ],
         ],
       ),
     );
   }
 
-  Widget _voiceCard(
+  Widget _card(
     BuildContext context,
     AppLocalizations l10n,
-    TtsVoiceGroup g,
+    TtsService tts,
+    NeuralVoice v,
   ) {
     final theme = Theme.of(context);
-    final downloading = _busy.contains(g.id);
-    final cached = _cached[g.id] ?? false;
-    final size = g.approxBytes;
+    final cached = tts.isInstalledCached(v.id);
+    final progress = tts.downloadProgress(v.id);
+    final error = tts.downloadError(v.id);
+    final usable = _unavailable == null && tts.hasNeural;
 
     final Widget trailing;
-    if (downloading) {
-      trailing = const SizedBox(
-        width: 22,
-        height: 22,
-        child: CircularProgressIndicator(strokeWidth: 2.4),
+    if (progress != null) {
+      trailing = SizedBox(
+        width: 26,
+        height: 26,
+        child: CircularProgressIndicator(
+          value: progress > 0 ? progress : null,
+          strokeWidth: 2.4,
+        ),
       );
     } else if (cached) {
       trailing = TextButton.icon(
-        onPressed: () => _remove(g),
+        onPressed: () => tts.removeVoice(v),
         icon: const Icon(Icons.delete_outline),
         label: Text(l10n.voiceModelsRemove),
       );
     } else {
       trailing = FilledButton.tonal(
-        onPressed: () => _download(g),
+        onPressed: usable ? () => tts.downloadVoice(v) : null,
         child: Text(
-          size == null
-              ? l10n.voiceModelsDownload
-              : '${l10n.voiceModelsDownload} (~${_fmtBytes(size)})',
+          '${l10n.voiceModelsDownload} (${formatVoiceBytes(v.totalBytes)})',
         ),
       );
     }
@@ -124,19 +128,19 @@ class _VoiceModelsScreenState extends State<VoiceModelsScreen> {
           cached ? Icons.check_circle : Icons.graphic_eq_rounded,
           color: cached ? theme.colorScheme.primary : null,
         ),
-        title: Text(g.label),
+        title: Text(v.name + (v.region == null ? '' : ' (${v.region})')),
         subtitle: Text(
-          '${cached ? l10n.voiceModelsDownloaded : l10n.voiceModelsNotDownloaded}'
-          ' · ${g.license}',
+          [
+            cached ? l10n.voiceModelsDownloaded : l10n.voiceModelsNotDownloaded,
+            v.license,
+            if (v.isLarge) l10n.ttsVoiceLarge,
+            if (error != null) l10n.ttsVoiceDownloadFailed(error),
+          ].join(' · '),
+          style:
+              error == null ? null : TextStyle(color: theme.colorScheme.error),
         ),
         trailing: trailing,
       ),
     );
   }
-}
-
-String _fmtBytes(int bytes) {
-  if (bytes <= 0) return '0 MB';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
-  return '${(bytes / (1024 * 1024)).round()} MB';
 }

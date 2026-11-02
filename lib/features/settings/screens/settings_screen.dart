@@ -5,7 +5,6 @@
 import 'dart:async';
 
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
-import 'package:comet_beat/core/audio/tts/tts_engine.dart';
 import 'package:comet_beat/core/build_info.dart';
 import 'package:comet_beat/core/harmony/chart_level.dart';
 import 'package:comet_beat/core/note_naming.dart';
@@ -29,6 +28,7 @@ import 'package:comet_beat/features/settings/screens/voice_models_screen.dart';
 import 'package:comet_beat/features/settings/screens/voice_picker_sheet.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/score_theme.dart' show ScoreFont;
+import 'package:comet_beat/shared/tts/narration_voice_picker.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
@@ -180,8 +180,7 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ),
-          const _HdVoiceTile(),
-          const _VoiceEngineTile(),
+          const _NarrationVoiceChoiceTile(),
           const _NarrationVoiceTile(),
           const _VoiceModelsTile(),
           const _TranscriptionEngineSection(),
@@ -459,21 +458,11 @@ String _scoreFontName(AppLocalizations l10n, ScoreFont font) => switch (font) {
       ScoreFont.leipzig => l10n.scoreFontLeipzig,
     };
 
-/// Which engine synthesizes narration — the user-facing slice of the TtsEngine
-/// framework. Auto (default) lets TtsService pick the best usable path per
-/// platform; the override lets a user force the Natural (HD) or the device
-/// voice. Shown only where a neural voice EXISTS on this build — with only the
-/// device voice there's no choice to make, so we don't add a noise tile.
-class _VoiceEngineTile extends StatelessWidget {
-  const _VoiceEngineTile();
-
-  // Only the user-meaningful engines; the internal ones (onnx-FFI, pure-Dart,
-  // wasm, pre-baked) stay behind Auto.
-  static const _choices = [
-    TtsEngine.auto,
-    TtsEngine.crispasrFfi,
-    TtsEngine.platform,
-  ];
+/// The narration voice (Automatic / device / a downloadable natural voice) for
+/// the current language — opens the shared picker (the lesson sheet opens the
+/// same picker for its own override).
+class _NarrationVoiceChoiceTile extends StatelessWidget {
+  const _NarrationVoiceChoiceTile();
 
   @override
   Widget build(BuildContext context) {
@@ -481,31 +470,21 @@ class _VoiceEngineTile extends StatelessWidget {
     try {
       tts = context.watch<TtsService>();
     } on ProviderNotFoundException {
-      return const SizedBox.shrink();
+      return const SizedBox.shrink(); // no TtsService in this tree (tests)
     }
-    if (!tts.hasNeural) return const SizedBox.shrink(); // no real choice
     final l10n = AppLocalizations.of(context)!;
-    String label(TtsEngine e) => switch (e) {
-          TtsEngine.crispasrFfi => l10n.ttsEngineNatural,
-          TtsEngine.platform => l10n.ttsEnginePlatform,
-          _ => l10n.ttsEngineAuto,
-        };
-    final current = _choices.contains(tts.preferredEngine)
-        ? tts.preferredEngine
-        : TtsEngine.auto;
-    return ListTile(
-      leading: const Icon(Icons.record_voice_over_outlined),
-      title: Text(l10n.ttsEngineTitle),
-      trailing: DropdownButton<TtsEngine>(
-        value: current,
-        underline: const SizedBox.shrink(),
-        onChanged: (e) {
-          if (e != null) tts.preferredEngine = e;
-        },
-        items: [
-          for (final e in _choices)
-            DropdownMenuItem(value: e, child: Text(label(e))),
-        ],
+    final lang = TtsService.voiceTag(Localizations.localeOf(context));
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Card(
+        child: ListTile(
+          key: const ValueKey('settings-narration-voice'),
+          leading: const Icon(Icons.record_voice_over_outlined),
+          title: Text(l10n.ttsVoiceTitle),
+          subtitle: Text(narrationVoiceLabel(l10n, tts.voiceChoice(lang))),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => showNarrationVoicePicker(context),
+        ),
       ),
     );
   }
@@ -583,14 +562,8 @@ class _NarrationVoiceTileState extends State<_NarrationVoiceTile> {
   }
 }
 
-/// The optional HD (neural, CrispASR/Kokoro) narration voice. Shown only where
-/// the native lib is present (so it's invisible until libcrispasr is bundled for
-/// the platform). Offers a one-tap opt-in download of the ~135 MB model; once
-/// cached, narration automatically upgrades to the natural voice.
-enum _HdState { checking, hidden, notDownloaded, downloading, ready, failed }
-
-/// Opens the [VoiceModelsScreen] — the download/remove manager for the vetted
-/// CC0 HD voices (the unified TtsModelManager cache; native files + web IDB).
+/// Opens the [VoiceModelsScreen] — the download/remove manager for the
+/// natural (neural) narration voices of BOTH languages.
 class _VoiceModelsTile extends StatelessWidget {
   const _VoiceModelsTile();
 
@@ -608,93 +581,6 @@ class _VoiceModelsTile extends StatelessWidget {
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const VoiceModelsScreen()),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HdVoiceTile extends StatefulWidget {
-  const _HdVoiceTile();
-
-  @override
-  State<_HdVoiceTile> createState() => _HdVoiceTileState();
-}
-
-class _HdVoiceTileState extends State<_HdVoiceTile> {
-  _HdState _state = _HdState.checking;
-
-  @override
-  void initState() {
-    super.initState();
-    _refresh();
-  }
-
-  Future<void> _refresh() async {
-    // Optional: no-op (hidden) if TtsService isn't in the tree (e.g. some tests).
-    TtsService? tts;
-    try {
-      tts = context.read<TtsService>();
-    } on ProviderNotFoundException {
-      tts = null;
-    }
-    if (tts == null || !tts.hasNeural || !await tts.neuralSupported()) {
-      if (mounted) setState(() => _state = _HdState.hidden);
-      return;
-    }
-    final ready = await tts.neuralReady();
-    if (mounted) {
-      setState(() => _state = ready ? _HdState.ready : _HdState.notDownloaded);
-    }
-  }
-
-  Future<void> _download() async {
-    final tts = context.read<TtsService>();
-    final locale = Localizations.localeOf(context);
-    setState(() => _state = _HdState.downloading);
-    final ok = await tts.downloadNeuralVoice(locale);
-    if (mounted) {
-      setState(() => _state = ok ? _HdState.ready : _HdState.failed);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_state == _HdState.checking || _state == _HdState.hidden) {
-      return const SizedBox.shrink();
-    }
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    final Widget trailing = switch (_state) {
-      _HdState.ready =>
-        Icon(Icons.check_circle, color: theme.colorScheme.primary),
-      _HdState.downloading => const SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2.4),
-        ),
-      _ => FilledButton.tonal(
-          onPressed: _download,
-          child: Text(l10n.ttsHdVoiceDownload),
-        ),
-    };
-
-    final String subtitle = switch (_state) {
-      _HdState.ready => l10n.ttsHdVoiceReady,
-      _HdState.downloading => l10n.ttsHdVoiceDownloading,
-      _HdState.failed => l10n.ttsHdVoiceFailed,
-      _ => l10n.ttsHdVoiceSubtitle,
-    };
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Card(
-        child: ListTile(
-          leading: const Icon(Icons.graphic_eq_rounded),
-          title: Text(l10n.ttsHdVoiceTitle),
-          subtitle: Text(subtitle),
-          trailing: trailing,
         ),
       ),
     );

@@ -5,6 +5,7 @@
 // opens its source URL. Fulfils the compliance-checklist requirement in
 // docs/LIBRARIES_AND_TAB_SCOPING.md §1.7.
 
+import 'package:comet_beat/core/audio/tts/neural_voice_catalog.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/library/donation.dart';
 import 'package:comet_beat/features/library/music_source_credits.dart';
@@ -113,6 +114,18 @@ class _AttributionScreenState extends State<AttributionScreen> {
                     ),
                   ),
               ],
+              // Narration voices whose licence asks for a credit (CC BY /
+              // M-AILABS). Standing, like the source credits above: the
+              // obligation exists whether or not a voice is downloaded.
+              _sectionHeader(context, l10n.libraryCreditsVoices),
+              for (final v in kNeuralVoices.where((v) => v.attribution != null))
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.record_voice_over_outlined),
+                    title: Text(v.name),
+                    subtitle: Text('${v.attribution!} · ${v.license}'),
+                  ),
+                ),
               if (songCredits.isEmpty && sampleCredits.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(12),
