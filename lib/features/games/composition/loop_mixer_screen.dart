@@ -21,7 +21,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -38,6 +37,7 @@ import 'package:comet_beat/core/audio/loop_audio_fit.dart'
     show audioFitIsSubtle;
 import 'package:comet_beat/core/audio/loop_automation.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/loop_export_render.dart';
 import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/loop_stack_render.dart'
     show crossfadePcm16Seam;
@@ -2880,33 +2880,44 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     }
   }
 
-  /// Desktop: a save dialog for the current loop's WAV. Platforms without
-  /// one (web/mobile) just report that audio saving isn't available there —
-  /// audio is juice, the groove code still travels everywhere.
-  // Static ON PURPOSE: an Isolate.run closure written inside an instance
-  // method shares its context with that method's other closures, so the first
-  // setState lambda added there would drag the State into the isolate message
-  // and every export would throw "object is unsendable".
-  static Future<Uint8List> _renderInIsolate(GrooveSpec spec) =>
-      Isolate.run(() => (LoopEngine()..applySpec(spec)).renderLoop());
+  // Static ON PURPOSE: an isolate entry written as a closure inside an
+  // instance method shares its context with that method's other closures, so
+  // the first setState lambda added there would drag the State into the
+  // isolate message and every export would throw "object is unsendable".
+  // `compute`, not `Isolate.run`: the web has no isolates and `Isolate.run`
+  // throws there, while `compute` runs the same function inline.
+  static Future<Uint8List> _renderInIsolate(GrooveRenderJob job) =>
+      compute(renderGrooveJob, job);
 
+  /// The loop exactly as it plays, as WAV bytes. Off the UI isolate when the
+  /// groove can be rebuilt from a value; an audio track's PCM cannot travel,
+  /// so such a groove renders here (usually a cache hit — playback rendered
+  /// the same loop).
+  Future<Uint8List> _renderForExport() async =>
+      canRenderGrooveOffThread(_engine)
+          ? _renderInIsolate(grooveRenderJob(_engine))
+          : _engine.renderLoop();
+
+  /// Render the loop and open the shared audio-export sheet (WAV / MP3, plus
+  /// Opus / AAC where the native encoder exists).
   Future<void> _saveWav() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      // Render off the UI isolate so exporting a long/complex groove never
-      // freezes the frame. We send only the small serializable GrooveSpec (not
-      // the whole engine + its stem cache), rebuild + render in the worker.
-      final wav = await _renderInIsolate(_engine.spec);
+      final wav = await _renderForExport();
       if (!mounted) return;
-      // Offer WAV or MP3 (both pure-Dart, web-safe) from the shared sheet.
-      final pcm = wavToMonoFloat(readWavPcm16(wav));
-      await showAudioExportSheet(context, pcm: pcm, baseName: 'groove');
-    } catch (e) {
-      if (kDebugMode) debugPrint('[LOOP] wav save unavailable: $e');
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.loopMixerSaveFailed)),
+      // Keep both channels: a panned groove renders stereo, and folding it to
+      // mono here threw the panning away in every exported file.
+      final channels = wavToChannels(readWavPcm16(wav));
+      await showAudioExportSheet(
+        context,
+        pcm: channels.left,
+        rightPcm: channels.right,
+        baseName: 'groove',
       );
+    } catch (e, st) {
+      debugPrint('[LOOP] audio export failed: $e\n$st');
+      messenger.showSnackBar(SnackBar(content: Text(l10n.audioExportFailed)));
     }
   }
 
@@ -3737,11 +3748,20 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       ];
 
   // Bake the section chain into one arranged track and offer WAV/MP3 export.
-  void _exportArrangement() {
+  Future<void> _exportArrangement() async {
     final scenes = _capturedScenes();
     if (scenes.isEmpty) return;
-    final pcm = _engine.renderArrangement(scenes);
-    showAudioExportSheet(context, pcm: pcm, baseName: 'my-arrangement');
+    final messenger = ScaffoldMessenger.of(context);
+    final failed = AppLocalizations.of(context)!.audioExportFailed;
+    try {
+      final pcm = _engine.renderArrangement(scenes);
+      await showAudioExportSheet(context, pcm: pcm, baseName: 'my-arrangement');
+    } catch (e, st) {
+      // Was unguarded: a render error escaped as an uncaught async error and
+      // the button simply did nothing.
+      debugPrint('[LOOP] arrangement export failed: $e\n$st');
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+    }
   }
 
   // At a seam, advance the chain to the next non-empty scene and launch it.
