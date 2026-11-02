@@ -3827,5 +3827,8 @@
   "practiceStemsSingAlong": "Melodie singen",
   "practiceStemsFindingMelody": "Suche die Melodie …",
   "practiceStemsNoMelody": "Im Gesang wurde keine deutliche Melodie gefunden.",
-  "practiceStemsAnother": "Anderer Song"
+  "practiceStemsAnother": "Anderer Song",
+  "practiceStemsLoop": "Einen Teil wiederholen",
+  "practiceStemsSpeed": "Tempo",
+  "practiceStemsPreparing": "Langsamere Fassung wird vorbereitet …"
 }

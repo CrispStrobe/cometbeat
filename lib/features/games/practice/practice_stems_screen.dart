@@ -13,6 +13,7 @@
 
 import 'dart:async';
 import 'dart:isolate';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
@@ -58,6 +59,19 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
 
   StemPlayer? _player;
   List<StemControl> _strips = const [];
+
+  /// The separated song as loaded — the source every playing buffer (a loop,
+  /// a slowed version) is derived from, and what sing-along transcribes.
+  List<SeparatedStem> _whole = const [];
+
+  /// A practice loop over song time, in seconds (null = the whole song).
+  RangeValues? _loop;
+  bool _looping = false;
+
+  /// Playback speed (1 = as recorded). Below 1 the stems are time-stretched
+  /// — pitch kept — with one shared plan so the parts stay together.
+  double _speed = 1;
+  bool _preparing = false;
   BeatGrid? _grid;
   Timer? _uiTick;
   bool _findingMelody = false;
@@ -136,9 +150,13 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
       final ordered = _ordered(whole);
       await _player?.stop();
       setState(() {
+        _whole = ordered;
         _player = StemPlayer(ordered);
         _strips = [for (final s in ordered) StemControl(name: s.name)];
         _grid = grid;
+        _loop = null;
+        _looping = false;
+        _speed = 1;
         _phase = _Phase.ready;
       });
     } catch (_) {
@@ -162,6 +180,67 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
     const rank = {'vocals': 0, 'drums': 1, 'bass': 2};
     return [...stems]
       ..sort((a, b) => (rank[a.name] ?? 3).compareTo(rank[b.name] ?? 3));
+  }
+
+  /// Where the playing buffer starts in the song, in seconds.
+  double get _regionStart => _looping ? (_loop?.start ?? 0) : 0;
+
+  /// The song time of the playhead (the buffer may be a slowed loop).
+  Duration get _songPosition {
+    final p = _player;
+    if (p == null) return Duration.zero;
+    final s = _regionStart + p.position.inMicroseconds / 1e6 * _speed;
+    return Duration(microseconds: (s * 1e6).round());
+  }
+
+  Duration get _songLength {
+    final w = _whole;
+    if (w.isEmpty) return Duration.zero;
+    final frames = w.map((s) => s.frames).reduce(math.min);
+    return Duration(microseconds: frames * 1000000 ~/ w.first.sampleRate);
+  }
+
+  /// Rebuilds the playing buffer from [_whole] for the current loop and
+  /// speed, keeping the mixer and (if it was playing) playing on.
+  Future<void> _rebuild() async {
+    final whole = _whole;
+    if (whole.isEmpty) return;
+    final wasPlaying = _player?.playing ?? false;
+    _uiTick?.cancel();
+    await _player?.stop();
+    setState(() => _preparing = _speed < 1);
+    var buf = whole;
+    final loop = _loop;
+    if (_looping && loop != null) {
+      final sr = whole.first.sampleRate;
+      buf = loopRegion(
+        whole,
+        (loop.start * sr).round(),
+        (loop.end * sr).round(),
+      );
+    }
+    if (_speed < 1) {
+      final region = buf;
+      final speed = _speed;
+      buf = await Isolate.run(() => slowStems(region, speed));
+    }
+    if (!mounted) return;
+    setState(() {
+      _player = StemPlayer(buf, loop: _looping && loop != null);
+      _preparing = false;
+    });
+    if (wasPlaying) await _togglePlay();
+  }
+
+  Future<void> _setLoop(RangeValues v) async {
+    final grid = _grid;
+    // Snap both ends onto the beat, then keep at least a second between them.
+    final a = snapToBeat(v.start * 1000, grid) / 1000;
+    var b = snapToBeat(v.end * 1000, grid) / 1000;
+    final len = _songLength.inMicroseconds / 1e6;
+    if (b - a < 1) b = math.min(len, a + 1);
+    _loop = RangeValues(a, b);
+    if (_looping) await _rebuild();
   }
 
   void _setStrips(List<StemControl> strips) {
@@ -199,7 +278,10 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
   Future<void> _seekBy(int seconds) async {
     final p = _player;
     if (p == null) return;
-    final to = p.position + Duration(seconds: seconds);
+    // Skip in SONG seconds, converted to the buffer's own time (a slowed
+    // buffer runs longer; a loop's buffer starts at the loop).
+    final to =
+        p.position + Duration(microseconds: (seconds * 1e6 / _speed).round());
     final clamped =
         to.isNegative ? Duration.zero : (to > p.length ? p.length : to);
     if (p.playing) {
@@ -214,7 +296,8 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
   Future<void> _singAlong() async {
     final p = _player;
     if (p == null) return;
-    final vocals = p.stems.where((s) => s.name == 'vocals').firstOrNull;
+    // Always the original song, never a slowed loop of it.
+    final vocals = _whole.where((s) => s.name == 'vocals').firstOrNull;
     if (vocals == null) return;
     final l = AppLocalizations.of(context)!;
     final cfg = context.read<TranscriptionConfigService?>()?.config ??
@@ -247,7 +330,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
             sriPrefix: 'voice.own_song',
             scaleStarsToLength: true,
             audioBacking: StemBacking([
-              for (final s in p.stems)
+              for (final s in _whole)
                 if (s.name != 'vocals') s,
             ]),
           ),
@@ -268,6 +351,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
     await _player?.stop();
     setState(() {
       _player = null;
+      _whole = const [];
       _strips = const [];
       _grid = null;
       _phase = _Phase.idle;
@@ -400,7 +484,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
     final p = _player!;
     final theme = Theme.of(context);
     final grid = _grid;
-    final hasVocals = p.stems.any((s) => s.name == 'vocals');
+    final hasVocals = _whole.any((s) => s.name == 'vocals');
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -441,7 +525,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
         for (var i = 0; i < _strips.length; i++) _strip(l, i),
         const SizedBox(height: 16),
         Text(
-          '${_clock(p.position)} / ${_clock(p.length)}',
+          '${_clock(_songPosition)} / ${_clock(_songLength)}',
           textAlign: TextAlign.center,
           style: theme.textTheme.titleSmall,
         ),
@@ -466,6 +550,8 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        _loopAndSpeed(l),
         const SizedBox(height: 16),
         if (hasVocals)
           FilledButton.tonalIcon(
@@ -488,6 +574,79 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
           icon: const Icon(Icons.library_music),
           label: Text(l.practiceStemsAnother),
         ),
+      ],
+    );
+  }
+
+  Widget _loopAndSpeed(AppLocalizations l) {
+    final len = _songLength.inMicroseconds / 1e6;
+    final loop = _loop ?? RangeValues(0, math.min(len, 8));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SwitchListTile(
+          key: const Key('practice-stems-loop'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(l.practiceStemsLoop),
+          subtitle: _looping
+              ? Text(
+                  '${_clock(Duration(milliseconds: (loop.start * 1000).round()))}'
+                  ' – ${_clock(Duration(milliseconds: (loop.end * 1000).round()))}',
+                )
+              : null,
+          value: _looping,
+          onChanged: _preparing || len < 2
+              ? null
+              : (on) {
+                  setState(() {
+                    _looping = on;
+                    _loop ??= loop;
+                  });
+                  _rebuild();
+                },
+        ),
+        if (_looping)
+          RangeSlider(
+            values: RangeValues(
+              loop.start.clamp(0, len).toDouble(),
+              loop.end.clamp(0, len).toDouble(),
+            ),
+            max: len,
+            onChanged: _preparing ? null : (v) => setState(() => _loop = v),
+            onChangeEnd: _setLoop,
+          ),
+        Row(
+          children: [
+            Text(l.practiceStemsSpeed),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SegmentedButton<double>(
+                key: const Key('practice-stems-speed'),
+                showSelectedIcon: false,
+                segments: [
+                  for (final v in const [1.0, 0.85, 0.75, 0.5])
+                    ButtonSegment(
+                      value: v,
+                      label: Text('${(v * 100).round()}%'),
+                    ),
+                ],
+                selected: {_speed},
+                onSelectionChanged: _preparing
+                    ? null
+                    : (sel) {
+                        setState(() => _speed = sel.first);
+                        _rebuild();
+                      },
+              ),
+            ),
+          ],
+        ),
+        if (_preparing) ...[
+          const SizedBox(height: 8),
+          const LinearProgressIndicator(),
+          const SizedBox(height: 4),
+          Text(l.practiceStemsPreparing, textAlign: TextAlign.center),
+        ],
       ],
     );
   }

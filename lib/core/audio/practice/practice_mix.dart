@@ -8,6 +8,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
 import 'package:comet_beat/core/audio/transcription/beat_grid.dart';
 import 'package:comet_beat/core/audio/transcription/contracts.dart'
@@ -150,4 +151,76 @@ PlayAlongChart melodyChart(
         ),
     ],
   );
+}
+
+/// The stems cut to `[startFrame, endFrame)` for a practice loop, with short
+/// fades at both ends ([fadeFrames], ~5 ms at 44.1 kHz) so the seam where the
+/// loop jumps back does not click.
+List<SeparatedStem> loopRegion(
+  List<SeparatedStem> stems,
+  int startFrame,
+  int endFrame, {
+  int fadeFrames = 220,
+}) {
+  return [
+    for (final s in stems)
+      () {
+        final a = math.min(math.max(startFrame, 0), s.frames);
+        final b = math.min(math.max(endFrame, a), s.frames);
+        final n = b - a;
+        final l = Float32List.fromList(Float32List.sublistView(s.left, a, b));
+        final r = Float32List.fromList(Float32List.sublistView(s.right, a, b));
+        final f = math.min(fadeFrames, n ~/ 2);
+        for (var i = 0; i < f; i++) {
+          final g = i / f;
+          l[i] *= g;
+          r[i] *= g;
+          l[n - 1 - i] *= g;
+          r[n - 1 - i] *= g;
+        }
+        return SeparatedStem(s.name, l, r, s.sampleRate);
+      }(),
+  ];
+}
+
+/// [ms] moved to the nearest beat of [grid] (unchanged without one) — so a
+/// practice loop starts and ends on the beat, not a few ms off it.
+double snapToBeat(double ms, BeatGrid? grid) {
+  final beats = grid?.beatMs;
+  if (beats == null || beats.isEmpty) return ms;
+  var best = beats.first;
+  for (final b in beats) {
+    if ((b - ms).abs() < (best - ms).abs()) best = b;
+  }
+  return best;
+}
+
+/// Slows the stems to [speed] (0.5 = half speed) without changing pitch, with
+/// ONE shared WSOLA plan for every channel of every stem
+/// ([timeStretchLinked]), so the parts stay locked together and the stereo
+/// image holds. `deep` quality: the bass stem goes below what the default
+/// frame can hold in tune. Heavy (~10 s of CPU per 30 s of 4 stereo stems) —
+/// run it off the UI isolate.
+List<SeparatedStem> slowStems(List<SeparatedStem> stems, double speed) {
+  if (stems.isEmpty || speed >= 0.999) return stems;
+  final channels = <Float64List>[
+    for (final s in stems) ...[
+      Float64List.fromList(s.left),
+      Float64List.fromList(s.right),
+    ],
+  ];
+  final out = timeStretchLinked(
+    channels,
+    1 / speed,
+    quality: StretchQuality.deep,
+  );
+  return [
+    for (var i = 0; i < stems.length; i++)
+      SeparatedStem(
+        stems[i].name,
+        Float32List.fromList(out[2 * i]),
+        Float32List.fromList(out[2 * i + 1]),
+        stems[i].sampleRate,
+      ),
+  ];
 }

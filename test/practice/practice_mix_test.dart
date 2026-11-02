@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/practice/practice_mix.dart';
@@ -161,5 +162,57 @@ void main() {
     }
     // Equal shares of the residual: the difference between stems survives.
     expect(out[0].left[0] - out[1].left[0], closeTo(0.4, 1e-6));
+  });
+
+  group('practice loop', () {
+    SeparatedStem ramp(String name, int n) => SeparatedStem(
+          name,
+          Float32List.fromList([for (var i = 0; i < n; i++) 1.0]),
+          Float32List.fromList([for (var i = 0; i < n; i++) -1.0]),
+          44100,
+        );
+
+    test('loopRegion cuts the span and fades both ends to silence', () {
+      final out = loopRegion([ramp('a', 10000)], 1000, 3000, fadeFrames: 100);
+      final s = out.single;
+      expect(s.frames, 2000);
+      expect(s.left.first, 0); // faded in from silence…
+      expect(s.left.last, 0); // …and out, so the seam cannot click
+      expect(s.left[1000], 1); // untouched in the middle
+      expect(s.right[1000], -1);
+    });
+
+    test('loopRegion clamps to the stem and never inverts', () {
+      expect(loopRegion([ramp('a', 100)], 50, 500).single.frames, 50);
+      expect(loopRegion([ramp('a', 100)], 80, 20).single.frames, 0);
+    });
+
+    test('snapToBeat moves to the nearest beat, or leaves ms alone', () {
+      const grid = BeatGrid(beatMs: [0, 500, 1000], downbeatMs: [0], bpm: 120);
+      expect(snapToBeat(740, grid), 500);
+      expect(snapToBeat(760, grid), 1000);
+      expect(snapToBeat(760, null), 760);
+    });
+
+    test('slowStems keeps every stem the same, stretched length', () {
+      SeparatedStem tone(String name, double hz) => SeparatedStem(
+            name,
+            Float32List.fromList([
+              for (var i = 0; i < 22050; i++)
+                math.sin(2 * math.pi * hz * i / 44100),
+            ]),
+            Float32List.fromList([
+              for (var i = 0; i < 22050; i++)
+                math.sin(2 * math.pi * hz * i / 44100),
+            ]),
+            44100,
+          );
+      final out = slowStems([tone('bass', 110), tone('other', 440)], 0.5);
+      expect(out.map((s) => s.frames).toSet(), {44100}); // twice as long
+      expect(out.map((s) => s.name), ['bass', 'other']);
+      // Full speed is a no-op, not a needless copy-and-stretch.
+      final same = [tone('x', 220)];
+      expect(identical(slowStems(same, 1), same), isTrue);
+    });
   });
 }

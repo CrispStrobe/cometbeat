@@ -10702,4 +10702,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get practiceStemsAnother => 'Anderer Song';
+
+  @override
+  String get practiceStemsLoop => 'Einen Teil wiederholen';
+
+  @override
+  String get practiceStemsSpeed => 'Tempo';
+
+  @override
+  String get practiceStemsPreparing => 'Langsamere Fassung wird vorbereitet …';
 }

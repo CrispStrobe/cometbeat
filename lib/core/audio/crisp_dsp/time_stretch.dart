@@ -110,19 +110,73 @@ Float64List timeStretch(
   StretchQuality quality = StretchQuality.balanced,
 }) {
   if (factor <= 0 || input.isEmpty) return Float64List(0);
+  final plan = _planOffsets(input, factor, quality);
+  if (plan == null) return Float64List(0);
+  return _render(input, plan, quality);
+}
 
+/// Time-stretches several channels that must stay LOCKED together — the
+/// channels of a stereo recording, or the stems of one song.
+///
+/// [timeStretch] picks each frame's input offset by searching for the best
+/// waveform match, so two signals stretched separately choose different
+/// offsets: they drift apart by up to the search tolerance (~6 ms at
+/// `balanced`) frame by frame, which is a flam between stems and a wobbling
+/// stereo image. Here the offsets are chosen ONCE, on [guide] (default: the
+/// sum of all [channels], i.e. what is heard), and every channel is rendered
+/// with that same plan, so at every instant all of them read the same input
+/// position. Each output is exactly as long as [timeStretch] would make it.
+List<Float64List> timeStretchLinked(
+  List<Float64List> channels,
+  double factor, {
+  Float64List? guide,
+  StretchQuality quality = StretchQuality.balanced,
+}) {
+  if (factor <= 0 || channels.isEmpty) {
+    return [for (final _ in channels) Float64List(0)];
+  }
+  final n = channels.map((c) => c.length).reduce(math.min);
+  if (n == 0) return [for (final _ in channels) Float64List(0)];
+  final g = guide ?? Float64List(n);
+  if (guide == null) {
+    for (final c in channels) {
+      for (var i = 0; i < n; i++) {
+        g[i] += c[i];
+      }
+    }
+  }
+  final plan = _planOffsets(
+    g.length == n ? g : Float64List.sublistView(g, 0, math.min(n, g.length)),
+    factor,
+    quality,
+  );
+  if (plan == null) return [for (final _ in channels) Float64List(0)];
+  return [
+    for (final c in channels)
+      _render(
+        c.length == n ? c : Float64List.sublistView(c, 0, n),
+        plan,
+        quality,
+      ),
+  ];
+}
+
+/// The WSOLA frame plan for [input]: the target length and, per synthesis
+/// frame, the input offset it reads. Null when nothing would be produced.
+({int targetLen, List<int> offsets})? _planOffsets(
+  Float64List input,
+  double factor,
+  StretchQuality quality,
+) {
   final n = input.length;
   final targetLen = (n * factor).round();
-  if (targetLen <= 0) return Float64List(0);
+  if (targetLen <= 0) return null;
 
   final frameSize = quality.frameSize;
   final hs = quality.hop;
   final ha = hs / factor; // nominal analysis hop
 
-  final window = _hann(frameSize);
-  final out = Float64List(targetLen + frameSize);
-  final winSum = Float64List(targetLen + frameSize);
-
+  final offsets = <int>[];
   var prevOffset = 0; // chosen input offset of the previous frame
 
   for (var k = 0;; k++) {
@@ -141,7 +195,30 @@ Float64List timeStretch(
       final targetStart = prevOffset + hs;
       offset = _bestOffset(input, nominal, targetStart, n, quality);
     }
+    offsets.add(offset);
+    prevOffset = offset;
+  }
+  return (targetLen: targetLen, offsets: offsets);
+}
 
+/// Overlap-adds [input]'s Hann-windowed frames at [plan]'s offsets.
+Float64List _render(
+  Float64List input,
+  ({int targetLen, List<int> offsets}) plan,
+  StretchQuality quality,
+) {
+  final n = input.length;
+  final frameSize = quality.frameSize;
+  final hs = quality.hop;
+  final targetLen = plan.targetLen;
+
+  final window = _hann(frameSize);
+  final out = Float64List(targetLen + frameSize);
+  final winSum = Float64List(targetLen + frameSize);
+
+  for (var k = 0; k < plan.offsets.length; k++) {
+    final synPos = k * hs;
+    final offset = plan.offsets[k];
     // Window the chosen input frame and overlap-add into the output.
     for (var i = 0; i < frameSize; i++) {
       final src = offset + i;
@@ -150,8 +227,6 @@ Float64List timeStretch(
       out[synPos + i] += input[src] * w;
       winSum[synPos + i] += w;
     }
-
-    prevOffset = offset;
   }
 
   // Normalize by summed window energy.

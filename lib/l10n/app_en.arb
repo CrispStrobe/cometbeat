@@ -4601,5 +4601,8 @@
   "practiceStemsSingAlong": "Sing the melody",
   "practiceStemsFindingMelody": "Finding the melody…",
   "practiceStemsNoMelody": "No clear melody was found in the voice.",
-  "practiceStemsAnother": "Another song"
+  "practiceStemsAnother": "Another song",
+  "practiceStemsLoop": "Loop a part",
+  "practiceStemsSpeed": "Speed",
+  "practiceStemsPreparing": "Preparing the slower version…"
 }

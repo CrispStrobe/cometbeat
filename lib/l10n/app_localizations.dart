@@ -19189,6 +19189,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Another song'**
   String get practiceStemsAnother;
+
+  /// No description provided for @practiceStemsLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop a part'**
+  String get practiceStemsLoop;
+
+  /// No description provided for @practiceStemsSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get practiceStemsSpeed;
+
+  /// No description provided for @practiceStemsPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing the slower version…'**
+  String get practiceStemsPreparing;
 }
 
 class _AppLocalizationsDelegate

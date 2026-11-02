@@ -19,11 +19,14 @@ import 'package:comet_beat/features/games/playalong/play_along_screen.dart'
     show PlayAlongAudioBacking;
 
 class StemPlayer {
-  StemPlayer(this.stems)
+  StemPlayer(this.stems, {this.loop = false})
       : assert(stems.isNotEmpty),
         _volumes = List.filled(stems.length, 1);
 
   final List<SeparatedStem> stems;
+
+  /// Repeat the whole buffer seamlessly (a practice loop) instead of ending.
+  final bool loop;
   final BandStreamPlayer _band = BandStreamPlayer();
   List<double> _volumes;
 
@@ -41,12 +44,11 @@ class StemPlayer {
   Duration get length => Duration(microseconds: frames * 1000000 ~/ sampleRate);
   bool get playing => _playing;
 
-  /// Where playback is (stopped: where it would resume).
+  /// Where playback is (stopped: where it would resume). Looping, it wraps.
   Duration get position {
     final f = _startFrame + _clock.elapsedMicroseconds * sampleRate ~/ 1000000;
-    return Duration(
-      microseconds: math.min(f, frames) * 1000000 ~/ sampleRate,
-    );
+    final at = loop ? f % frames : math.min(f, frames);
+    return Duration(microseconds: at * 1000000 ~/ sampleRate);
   }
 
   /// Applies [volumes] (one per stem, 0 = silent). Instant.
@@ -84,20 +86,26 @@ class StemPlayer {
   void _feed() {
     final playhead =
         _startFrame + _clock.elapsedMicroseconds * sampleRate ~/ 1000000;
-    final want =
-        math.min(frames, playhead + (_aheadSeconds * sampleRate).round());
+    // [_fedTo] and the playhead count frames WITHOUT wrapping; a loop wraps
+    // only where the windows are cut.
+    final ahead = playhead + (_aheadSeconds * sampleRate).round();
+    final want = loop ? ahead : math.min(frames, ahead);
     if (want <= _fedTo) {
-      if (_fedTo >= frames) {
+      if (!loop && _fedTo >= frames) {
         _band.end();
         _feeder?.cancel();
         if (playhead >= frames) _playing = false;
       }
       return;
     }
-    _band.add([
-      for (final s in stems) interleavedWindow(s, _fedTo, want - _fedTo),
-    ]);
-    _fedTo = want;
+    while (_fedTo < want) {
+      final from = _fedTo % frames;
+      final chunk = math.min(want - _fedTo, frames - from);
+      _band.add([
+        for (final s in stems) interleavedWindow(s, from, chunk),
+      ]);
+      _fedTo += chunk;
+    }
   }
 
   /// Stops and remembers the position for the next [play].
