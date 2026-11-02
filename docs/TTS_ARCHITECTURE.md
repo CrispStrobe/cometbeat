@@ -19,6 +19,34 @@ Two layers:
   across platforms. Needs a model download and a native runtime; falls back to
   (A) whenever it can't run.
 
+## Narration voices (2026-11 rework) — read this first
+
+The section below on the engine enum describes the earlier design; narration
+now works like this:
+
+- **Catalog** — `core/audio/tts/neural_voice_catalog.dart`: small CrispASR
+  Piper GGUFs (Thorsten 30 MB, Kerstin 30 MB, Eva 10 MB, Ramona/Karlsson 30 MB,
+  Cori 30 MB) plus Kokoro Heart (en, 135 MB — the one *large* voice). All run
+  through **libcrispasr** (`--backend piper` / `kokoro`). CC-BY / M-AILABS
+  credits travel via `NeuralVoice.attribution` → the attribution screen.
+  Voices that crash the shipped lib (thorsten-high, thorsten_emotional, mls on
+  0.8.49) and the lessac-derived `libritts_r` are deliberately absent.
+- **Runtime** — `crispasr_voice_runtime.dart`: Dart downloader (status,
+  redirects, stall timeout, atomic `.part` → rename, CrispASR `.src` sidecar)
+  into CrispASR's cache dir; one long-lived synthesis isolate keeps the session
+  loaded; every failure is a `TtsVoiceException` with a reason.
+- **Choice** — `TtsService`: per language `auto` / `device` / a voice id, set
+  in Settings, plus a persisted **lesson override** set from the tutorial sheet
+  (`NarrationScope.lesson`). `resolveNarrationVoice` is the pure decision; a
+  downgrade to the device voice records `lastFallback`, which the lesson sheet
+  shows. Narration never downloads; the picker
+  (`shared/tts/narration_voice_picker.dart`) does, on a tap.
+- The ORT/onnxFfi Piper narration path is no longer wired (CrispASR's Piper
+  GGUFs are half the size of the 63 MB ONNX voices and share the one lib).
+- Verify a voice before adding it:
+  `flutter test test/crispasr_tts_smoke_test.dart --dart-define=MODEL_E2E=1`
+  and, sandboxed, `flutter test integration_test/tts_neural_voice_test.dart -d macos`.
+
 ## The engine enum + resolver
 
 `lib/core/audio/tts/tts_engine.dart`:
