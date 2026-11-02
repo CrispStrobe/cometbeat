@@ -395,7 +395,9 @@ class _LoopPatternEditorScreenState extends State<LoopPatternEditorScreen> {
   }
 
   void _writeNotes(List<StepNote> notes) {
-    final cells = notes.isEmpty ? <PatternCell>[] : _toCells(notes);
+    // An emptied built-in part is a bar-pair of rests, NOT an empty list:
+    // the engine reads an empty list as "drop the override" = back to preset.
+    final cells = _toCells(notes);
     _commit(() {
       if (_trackId == LoopEngine.userTrackId) {
         if (notes.isEmpty) {
@@ -502,6 +504,32 @@ class _LoopPatternEditorScreenState extends State<LoopPatternEditorScreen> {
       }
     });
   }
+
+  /// Built-in stems have a preset to go back to; the user's own tune / beat
+  /// track has none (clearing IS its reset).
+  bool get _hasPreset =>
+      _trackId != LoopEngine.userTrackId && _trackId != LoopEngine.beatTrackId;
+
+  /// Empties the drum part: every lane off, lanes kept.
+  void _clearDrums() {
+    final g = _drumGrids();
+    _writeDrums(
+      {
+        for (final e in g.rows.entries)
+          e.key: List<bool>.filled(kPatternSteps, false),
+      },
+      {
+        for (final e in g.vels.entries)
+          e.key: List<double>.filled(kPatternSteps, 1.0),
+      },
+    );
+  }
+
+  /// Drops the kid's edit so the part plays its preset pattern again.
+  void _resetToPreset() => _commit(() {
+        _engine.clearTrackCells(_trackId);
+        _engine.setTrackDrums(_trackId, null);
+      });
 
   void _tapDrum(Drum drum, int step) {
     final g = _drumGrids();
@@ -751,6 +779,14 @@ class _LoopPatternEditorScreenState extends State<LoopPatternEditorScreen> {
               icon: const Icon(Icons.clear, size: 18),
               label: Text(l10n.loopEditorClear),
             ),
+            if (_hasPreset)
+              TextButton.icon(
+                onPressed: _engine.trackCellsOverride(_trackId) == null
+                    ? null
+                    : _resetToPreset,
+                icon: const Icon(Icons.restart_alt, size: 18),
+                label: Text(l10n.loopEditorReset),
+              ),
           ],
         ),
       ],
@@ -819,6 +855,21 @@ class _LoopPatternEditorScreenState extends State<LoopPatternEditorScreen> {
               icon: const Icon(Icons.add, size: 18),
               label: Text(l10n.loopEditorAddLane),
             ),
+            TextButton.icon(
+              onPressed: g.rows.values.any((r) => r.any((h) => h))
+                  ? _clearDrums
+                  : null,
+              icon: const Icon(Icons.clear, size: 18),
+              label: Text(l10n.loopEditorClear),
+            ),
+            if (_hasPreset)
+              TextButton.icon(
+                onPressed: _engine.trackDrumsOverride(_trackId) == null
+                    ? null
+                    : _resetToPreset,
+                icon: const Icon(Icons.restart_alt, size: 18),
+                label: Text(l10n.loopEditorReset),
+              ),
           ],
         ),
       ],

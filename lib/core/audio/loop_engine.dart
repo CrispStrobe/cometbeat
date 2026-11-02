@@ -1671,9 +1671,13 @@ class LoopEngine {
   /// The current override for [id], or null. Seeds the tune editor.
   List<PatternCell>? trackCellsOverride(String id) => _cellOverrides[id];
 
-  /// Replace a built-in track's pattern with [cells] (authored-C). Empty clears.
+  /// Replace a built-in track's pattern with [cells] (authored-C).
+  ///
+  /// A run of pure rests is a real, EMPTY pattern and is kept as the override
+  /// (that is how "clear voice" silences a part). Only a null/empty list drops
+  /// the override and restores the preset — see [clearTrackCells].
   void setTrackCells(String id, List<PatternCell> cells) {
-    if (cells.isEmpty || cells.every((c) => c.midis == null)) {
+    if (cells.isEmpty) {
       _cellOverrides.remove(id);
     } else {
       _cellOverrides[id] = List.of(cells);
@@ -1708,10 +1712,11 @@ class LoopEngine {
     return null;
   }
 
-  /// Replace a built-in drum track's pattern with [rows]. An all-empty grid
-  /// clears the override (back to the variant pattern).
+  /// Replace a built-in drum track's pattern with [rows]. An all-empty grid is
+  /// kept as an EMPTY pattern (silences the part); only null restores the
+  /// preset variant pattern.
   void setTrackDrums(String id, DrumRowsPattern? rows) {
-    if (rows == null || rows.rows.values.every((r) => r.every((h) => !h))) {
+    if (rows == null) {
       _drumOverrides.remove(id);
     } else {
       _drumOverrides[id] = rows;

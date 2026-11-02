@@ -1790,6 +1790,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopEditorClear => 'Stimme leeren';
 
   @override
+  String get loopEditorReset => 'Auf Vorlage zurücksetzen';
+
+  @override
   String get loopEditorAddLane => 'Trommel hinzufügen';
 
   @override

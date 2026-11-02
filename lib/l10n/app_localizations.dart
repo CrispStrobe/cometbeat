@@ -3290,6 +3290,12 @@ abstract class AppLocalizations {
   /// **'Clear part'**
   String get loopEditorClear;
 
+  /// Pattern editor: drop the edit and restore the track's preset pattern (Clear part empties it instead).
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to preset'**
+  String get loopEditorReset;
+
   /// No description provided for @loopEditorAddLane.
   ///
   /// In en, this message translates to:

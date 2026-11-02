@@ -1786,6 +1786,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopEditorClear => 'Clear part';
 
   @override
+  String get loopEditorReset => 'Reset to preset';
+
+  @override
   String get loopEditorAddLane => 'Add a drum';
 
   @override

@@ -590,6 +590,7 @@
   "loopEditorSimple": "Einfach",
   "loopEditorPrecise": "Genau",
   "loopEditorClear": "Stimme leeren",
+  "loopEditorReset": "Auf Vorlage zurücksetzen",
   "loopEditorAddLane": "Trommel hinzufügen",
   "loopEditorPreciseIdle": "Tippe auf ein Feld, um Note, Länge und Position zu sehen.",
   "loopEditorFollowsChords": "Diese Stimme folgt den Akkorden. Wenn du sie bearbeitest, wird sie auf deine eigenen Noten festgelegt.",

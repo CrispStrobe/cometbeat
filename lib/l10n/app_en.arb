@@ -772,6 +772,10 @@
     "description": "Pattern editor lens: every semitone, with note names, lengths and dynamics shown."
   },
   "loopEditorClear": "Clear part",
+  "loopEditorReset": "Reset to preset",
+  "@loopEditorReset": {
+    "description": "Pattern editor: drop the edit and restore the track's preset pattern (Clear part empties it instead)."
+  },
   "loopEditorAddLane": "Add a drum",
   "loopEditorPreciseIdle": "Tap a cell to see its note, length and position.",
   "loopEditorFollowsChords": "This part follows the chords. Editing it pins it to your own notes instead.",
