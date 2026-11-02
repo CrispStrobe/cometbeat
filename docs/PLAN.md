@@ -28,6 +28,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> 💾 **opus/loopexport — ACTIVE 2026-11-02** (branch `fix/loop-export`, worktree `../mus-loopexport`): Loop Studio save/export paths (audio WAV/MP3/Opus/AAC, notation, share sheet, Simple-view export button). Touching: `loop_mixer_screen.dart` (export/save methods + share sheet only), `loop_mixer_screen_panels.dart` (one action-bar button), `shared/music_io/{audio_export,music_export,file_delivery*}.dart`, new `core/audio/loop_export_render.dart`, new integration test. NOT the ARBs (unless noted here).
+
 > 🗣️ **opus/tts-voices — ACTIVE 2026-11-02** (branch `fix/tts-voices`, worktree `../mus-tts`): fix neural narration (voices never heard / 135 MB download fails), small CrispASR Piper voices (Thorsten etc.), voice picker in the lesson/tutorial sheet + Settings. Touching: **both ARBs**, `tts_service.dart`, `core/audio/tts/*`, `tutorial_sheet.dart`, `settings_screen.dart` (TTS tiles only), `voice_models_screen.dart`, `attribution_screen.dart`, `main.dart` (TTS provider only).
 
 > 🎲 **opus/loopstyles — ACTIVE 2026-11-02** (branch `feat/loop-style-recipes`, worktree `../mus-loopstyles`): Loop Studio generative style catalog (recipes + seeded dice, per-track dice/locks, previews, presets). Touching: **both ARBs**, `loop_engine.dart` (GrooveSpec additive recipe fields + band selection only), new `loop_style_recipes.dart`, new gallery widget, small hooks in `loop_mixer_screen*.dart` action bar (NOT export/save code).
