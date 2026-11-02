@@ -9,6 +9,7 @@
 
 import 'package:comet_beat/core/audio/transcription/contracts.dart'
     show hasInstrument;
+import 'package:comet_beat/core/audio/transcription/crispasr_ffi_beats.dart';
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
 import 'package:comet_beat/core/audio/transcription/gm_programs.dart'
     show gmProgramName;
@@ -169,12 +170,17 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
         final mono = wavToMonoFloat(wav);
         final sep = await _resolveSeparator();
         final engines = await _resolve();
+        // beat-this, when its model is already here (probe only — the
+        // whole-song path does not download on its own): real beats and
+        // the bar length from its downbeats. Null → the estimated grid.
+        final beats = await crispasrBeatGrid(mono, wav.sampleRate);
         final song = await transcribeSong(
           mono,
           separator: sep,
           neural: engines.neural,
           f0: engines.f0,
           sampleRate: wav.sampleRate,
+          beats: beats,
         );
         if (!mounted) return;
         setState(() {

@@ -18,6 +18,7 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/transcription/beat_grid.dart';
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
 import 'package:comet_beat/core/audio/transcription/drums.dart';
 import 'package:comet_beat/core/audio/transcription/metre.dart';
@@ -54,12 +55,24 @@ Future<StemTranscription> transcribeStems(
   int sampleRate = 44100,
   NeuralTranscriber? neural,
   F0Estimator? f0,
+  BeatGrid? beats,
 }) async {
   // One shared grid so every part aligns; the drums carry the clearest beat.
   final beatSource = stems.drums ?? stems.bass ?? stems.other ?? stems.vocals;
-  final grid = beatSource == null
+  final detected = beatSource == null
       ? (bpm: 0.0, beatMs: const <double>[], onsetMs: const <double>[])
       : detectRhythm(beatSource, sampleRate: sampleRate);
+  // A beat tracker's grid (beat-this), when there is one, replaces the
+  // estimated beats and tempo; the note onsets still come from the audio.
+  final tracked = beats != null && beats.beatMs.length >= 2;
+  final RhythmGrid grid = tracked
+      ? (bpm: beats.bpm, beatMs: beats.beatMs, onsetMs: detected.onsetMs)
+      : detected;
+  // Its downbeats also say how long a bar is, which onset timing alone can
+  // only guess (estimateMeter cannot tell 2/4 from 4/4).
+  final barBeats = tracked ? beats.beatsPerBar : null;
+  final beatsPerBar =
+      barBeats != null && barBeats >= 2 && barBeats <= 7 ? barBeats : null;
 
   final parts = <Score>[];
   final names = <String>[];
@@ -78,6 +91,7 @@ Future<StemTranscription> transcribeStems(
         neural: neural,
         f0: f0,
         force: force,
+        beatsPerBar: beatsPerBar,
       ),
     );
     names.add(name);
@@ -108,6 +122,7 @@ Future<StemTranscription> transcribeSong(
   int sampleRate = 44100,
   NeuralTranscriber? neural,
   F0Estimator? f0,
+  BeatGrid? beats,
 }) async {
   if (separator == null) {
     return transcribeStems(
@@ -115,10 +130,17 @@ Future<StemTranscription> transcribeSong(
       sampleRate: sampleRate,
       neural: neural,
       f0: f0,
+      beats: beats,
     );
   }
   final stems = await separator(mono, sampleRate);
-  return transcribeStems(stems, sampleRate: sampleRate, neural: neural, f0: f0);
+  return transcribeStems(
+    stems,
+    sampleRate: sampleRate,
+    neural: neural,
+    f0: f0,
+    beats: beats,
+  );
 }
 
 Future<Score> _stemToScore(
@@ -128,6 +150,7 @@ Future<Score> _stemToScore(
   NeuralTranscriber? neural,
   F0Estimator? f0,
   TranscriptionEngine? force,
+  int? beatsPerBar,
 }) async {
   final routed = await transcribeAuto(
     mono,
@@ -136,11 +159,10 @@ Future<Score> _stemToScore(
     f0: f0,
     forceEngine: force,
   );
-  final meter = estimateMeter(grid);
   final raw = transcribeToScore(
     routed.notes,
     grid,
-    beatsPerBar: meter.beatsPerBar,
+    beatsPerBar: beatsPerBar ?? estimateMeter(grid).beatsPerBar,
     clef: chooseClef(routed.notes),
   );
   return respell(raw, fifths: estimateKey(routed.notes).fifths);

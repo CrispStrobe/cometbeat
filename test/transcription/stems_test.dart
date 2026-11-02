@@ -7,6 +7,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show Drum, renderDrum;
+import 'package:comet_beat/core/audio/transcription/beat_grid.dart';
 import 'package:comet_beat/core/audio/transcription/stems.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -107,5 +108,54 @@ void main() {
     final r = await transcribeSong(_line(const [60, 62, 64, 65]));
     expect(r.score!.parts, hasLength(1));
     expect(r.partNames, ['Accompaniment']);
+  });
+
+  test('a tracked beat grid sets the bar length the onsets cannot', () async {
+    final Stems stems = (
+      vocals: _line(const [72, 74, 76, 77, 79, 77, 76, 74, 72]),
+      bass: null,
+      drums: null,
+      other: null,
+    );
+    // Without a tracker the meter is estimated (4 when undecided).
+    final estimated = await transcribeStems(stems);
+    final est = estimated.score!.parts.single.timeSignature;
+    // beat-this says: a beat every 500 ms, a downbeat every third beat.
+    final beats = [for (var i = 0; i < 12; i++) i * 500.0];
+    final tracked = await transcribeStems(
+      stems,
+      beats: BeatGrid(
+        beatMs: beats,
+        downbeatMs: [for (var i = 0; i < 12; i += 3) beats[i]],
+        bpm: 120,
+      ),
+    );
+    final ts = tracked.score!.parts.single.timeSignature;
+    expect(ts?.beats, 3);
+    expect(est?.beats, isNot(3));
+    // The notes are the same either way; only the barring follows the grid.
+    expect(
+      _partMidis(tracked.score!.parts.single),
+      _partMidis(estimated.score!.parts.single),
+    );
+  });
+
+  test('a beat grid too short to use falls back to the estimated one',
+      () async {
+    final Stems stems = (
+      vocals: _line(const [72, 74, 76, 77]),
+      bass: null,
+      drums: null,
+      other: null,
+    );
+    final plain = await transcribeStems(stems);
+    final sparse = await transcribeStems(
+      stems,
+      beats: const BeatGrid(beatMs: [0], downbeatMs: [0], bpm: 120),
+    );
+    expect(
+      sparse.score!.parts.single.timeSignature?.beats,
+      plain.score!.parts.single.timeSignature?.beats,
+    );
   });
 }
