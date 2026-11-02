@@ -28,6 +28,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> 🎲 **opus/loopstyles — ACTIVE 2026-11-02** (branch `feat/loop-style-recipes`, worktree `../mus-loopstyles`): Loop Studio generative style catalog (recipes + seeded dice, per-track dice/locks, previews, presets). Touching: **both ARBs**, `loop_engine.dart` (GrooveSpec additive recipe fields + band selection only), new `loop_style_recipes.dart`, new gallery widget, small hooks in `loop_mixer_screen*.dart` action bar (NOT export/save code).
+
 > 🥁 **sonnet/beatclear — ACTIVE 2026-11-02** (branch `fix/beatbox-clear`, worktree `../mus-beatclear`): editor "Clear part" really empties + new "Reset to preset". Touching: **both ARBs** (1 key), `loop_engine.dart` (setTrackCells/setTrackDrums), `loop_pattern_editor.dart`.
 
 > 🏷️ **sonnet/stufe — ACTIVE 2026-11-02** (branch `fix/stufe-and-lesson-end`): rename Klasse/Grades labels → Stufe/Level (`app_de.arb`, `app_en.arb`, `concept_map.dart`) + lesson-end audio cut-off (shared game flow).
