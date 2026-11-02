@@ -19,7 +19,11 @@ the repo root (detailed roadmap planning and the agent board are in
   Style gallery grouped by genre (tempo + feel on each card) and a 🎲 that
   rolls a whole new groove, undoable. Guardrails make any seed consonant:
   bass on chord roots, melody chord tones on every beat, drums bounded by
-  their template.
+  their template. Per-track 🎲 + lock pins (a locked part survives every
+  dice, even a style change), audition per style in the gallery (rendered off
+  the UI isolate), and "Save as my preset" on the existing save slots — the
+  token already carries style, seed, pins and edits. 3/4 + 6/8 deferred (see
+  PLAN.md: the 4/4 grid is a constant in 36 files).
 - **Practise with your song** (2026-11-02): pick a WAV/MP3/FLAC; CrispASR
   splits it on the device into voice, drums, bass and the rest (or voice /
   accompaniment); mute, solo and level each stem instantly, or one tap for

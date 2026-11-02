@@ -3856,17 +3856,27 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   // --- Style catalog (loop_style_recipes.dart) -------------------------------
 
-  void _openStyleGallery() => showLoopStyleGallery(
-        context,
-        currentRecipeId: _engine.recipeId,
-        onPick: _pickRecipe,
-        onRoll: _rollStyleGroove,
-        // An audition pauses the groove so two loops never overlap; picking a
-        // style restarts it.
-        onPreviewStart: () {
-          if (mounted && _clock.isRunning) _pauseOrResume();
-        },
-      );
+  /// Opens the gallery with the player's saved grooves as "my presets": the
+  /// existing save-slot store and save/load paths, called — not copied — so
+  /// a preset is exactly a saved groove (style + seed + pins + edits).
+  Future<void> _openStyleGallery() async {
+    final presets = (await _slotsService()).list();
+    if (!mounted) return;
+    await showLoopStyleGallery(
+      context,
+      currentRecipeId: _engine.recipeId,
+      presets: presets,
+      onLoadPreset: loadGrooveToken,
+      onSavePreset: _engine.enabled.isEmpty ? null : _saveGrooveSlot,
+      onPick: _pickRecipe,
+      onRoll: _rollStyleGroove,
+      // An audition pauses the groove so two loops never overlap; picking a
+      // style restarts it.
+      onPreviewStart: () {
+        if (mounted && _clock.isRunning) _pauseOrResume();
+      },
+    );
+  }
 
   /// Switches to generated style [id] with a fresh (or given) seed. Locked
   /// tracks carry over; the recipe's tempo/kit/progression bias may change the

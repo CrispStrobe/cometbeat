@@ -32,7 +32,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 > 🗣️ **opus/tts-voices — idle (shipped 2026-11-02)**: neural narration fixed (Kokoro voice pack never fetched → silent; C curl downloader swallowed errors), small CrispASR Piper voices (Thorsten/Kerstin/Eva/Ramona/Karlsson/Cori), voice picker in Settings + lesson sheet (persisted lesson override). See docs/TTS_ARCHITECTURE.md "Narration voices". Follow-ups: CrispASR piper synth is ~RTF 1–3 on a loaded M1; thorsten-high/_emotional/mls GGUFs crash libcrispasr 0.8.49.
 
-> 🎲 **opus/loopstyles — ACTIVE 2026-11-02** (branch `feat/loop-style-recipes`, worktree `../mus-loopstyles`): Loop Studio generative style catalog (recipes + seeded dice, per-track dice/locks, previews, presets). Touching: **both ARBs**, `loop_engine.dart` (GrooveSpec additive recipe fields + band selection only), new `loop_style_recipes.dart`, new gallery widget, small hooks in `loop_mixer_screen*.dart` action bar (NOT export/save code).
+> 🎲 **opus/loopstyles — idle 2026-11-02** (last shipped: Loop Studio style catalog phases 1–3 — recipes + dice, per-track dice/locks/auditions, presets on the save slots; 3/4 + 6/8 STOPPED, see "Loop Studio style catalog — 3/4 + 6/8 recipes" below).
 
 
 > 🏷️ **sonnet/stufe — IDLE, shipped 2026-11-02**: Stufe/Level relabel (`ba7d9f23`) + lesson-end playback wait in `QuizRoundMixin` (`99ba5dc3`).
@@ -7468,6 +7468,42 @@ is recorded in [HISTORY.md](HISTORY.md).
 - Higher sample rates + output dithering (cosmetic).
 
 Order: T1a → T1b → T1c → T1d → T1e → T1f → Tier 2 → SFZ.
+
+## Loop Studio style catalog — 3/4 + 6/8 recipes: ⛔ STOPPED (2026-11-02, opus/loopstyles)
+
+The style catalog (`core/audio/loop_style_recipes.dart`, 12 styles, seeded
+dice, locks, auditions, presets) shipped in 4/4 only. Waltz/6-8 recipes were
+part of the plan **if they could be supported cleanly**; they cannot without a
+grid generalisation that is too invasive for the Loop Mixer and the Tracker
+right now. Why, concretely:
+
+- **The bar is a compile-time constant.** `LoopTiming.stepsPerBar = 8`,
+  `beatsPerBar = 4`, `kPatternSteps = 16` are `static const` and used **223
+  times in 36 files** — not just the engine but the Tracker interop
+  (`loop_tracker.dart`, `tracker_meter.dart`), engraving
+  (`groove_notation.dart`), captures (`groove_capture.dart`,
+  `beat_capture.dart`), the pattern editor, the highway, the DAW clip codec.
+- **The share token hard-codes it.** `_cellsFromJson` rejects cells that do
+  not sum to 16, `_beatRowsFromJson` rejects rows that are not 16 long; a
+  meter field would have to become part of every one of those validations
+  without changing what old tokens decode to.
+- **Engine behaviour assumes 4/4 bars**: `ChordBar` sums to 8, `chordAtBar`
+  alternates the vamp every 8 steps, `kDrumFillPattern` is a 2×8 fill,
+  `renderVariedLoop` ghosts snares on `step % stepsPerBar >= 5`, and progression
+  mode ignores per-track lengths.
+- **The tempting shortcut is a lie in the UI.** Polymeter already allows a
+  12-step track, so "all tracks at 12 steps" would SOUND like 3/4 (the loop
+  spans lcm(16,12)=48 steps, all integral, seam-safe) — but only in vamp mode,
+  and the bar lines, engraving, jam grading, fill and infinite-mode variation
+  would all still count 4/4. Not shipped for that reason.
+
+**What a clean version needs** (est. its own workstream): a `meter` on
+`LoopTiming`/`GrooveSpec` (`stepsPerBar` 6 for 3/4 and 6/8, 8 for 4/4;
+eighth steps keep the integral-ms/sample invariant unchanged), `kPatternSteps`
+derived per groove (2 bars), token validators keyed on it with 4/4 as the
+default (old tokens unchanged), `ChordBar` lengths per meter, a per-meter fill,
+`chordAtBar`/notation/Tracker export reading the meter. Recipes then need only
+data: e.g. waltz `kick x.....` / `hat ..x.x.`, 6/8 `kick x..x..`.
 
 ## Audio Editor — swiss-army knife — ✅ COMPLETE, see HISTORY
 

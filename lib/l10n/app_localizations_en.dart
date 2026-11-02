@@ -1776,25 +1776,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopStyleStopPreview => 'Stop listening';
 
   @override
-  String get loopStyleUse => 'Use this style';
-
-  @override
   String get loopStyleSavePreset => 'Save as my preset';
 
   @override
   String get loopStyleMyPresets => 'My presets';
-
-  @override
-  String get loopStylePresetName => 'Preset name';
-
-  @override
-  String get loopStyleSave => 'Save';
-
-  @override
-  String get loopStyleCancel => 'Cancel';
-
-  @override
-  String get loopStylePresetSaved => 'Saved to my presets';
 
   @override
   String get loopMixerHarmonyOff => 'Free';

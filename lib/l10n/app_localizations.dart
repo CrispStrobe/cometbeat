@@ -3272,12 +3272,6 @@ abstract class AppLocalizations {
   /// **'Stop listening'**
   String get loopStyleStopPreview;
 
-  /// No description provided for @loopStyleUse.
-  ///
-  /// In en, this message translates to:
-  /// **'Use this style'**
-  String get loopStyleUse;
-
   /// No description provided for @loopStyleSavePreset.
   ///
   /// In en, this message translates to:
@@ -3289,30 +3283,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My presets'**
   String get loopStyleMyPresets;
-
-  /// No description provided for @loopStylePresetName.
-  ///
-  /// In en, this message translates to:
-  /// **'Preset name'**
-  String get loopStylePresetName;
-
-  /// No description provided for @loopStyleSave.
-  ///
-  /// In en, this message translates to:
-  /// **'Save'**
-  String get loopStyleSave;
-
-  /// No description provided for @loopStyleCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get loopStyleCancel;
-
-  /// No description provided for @loopStylePresetSaved.
-  ///
-  /// In en, this message translates to:
-  /// **'Saved to my presets'**
-  String get loopStylePresetSaved;
 
   /// No description provided for @loopMixerHarmonyOff.
   ///

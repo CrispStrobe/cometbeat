@@ -13,6 +13,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/loop_style_recipes.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
+import 'package:comet_beat/features/games/composition/groove_slots.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -97,6 +98,9 @@ Future<void> showLoopStyleGallery(
   required VoidCallback onRoll,
   VoidCallback? onPreviewStart,
   Future<Uint8List> Function(String recipeId)? previewRender,
+  List<GrooveSlot> presets = const [],
+  ValueChanged<String>? onLoadPreset,
+  VoidCallback? onSavePreset,
 }) =>
     showModalBottomSheet<void>(
       context: context,
@@ -108,6 +112,19 @@ Future<void> showLoopStyleGallery(
           currentRecipeId: currentRecipeId,
           onPreviewStart: onPreviewStart,
           previewRender: previewRender ?? renderStylePreview,
+          presets: presets,
+          onLoadPreset: onLoadPreset == null
+              ? null
+              : (token) {
+                  Navigator.of(sheet).pop();
+                  onLoadPreset(token);
+                },
+          onSavePreset: onSavePreset == null
+              ? null
+              : () {
+                  Navigator.of(sheet).pop();
+                  onSavePreset();
+                },
           onPick: (id) {
             Navigator.of(sheet).pop();
             onPick(id);
@@ -128,7 +145,21 @@ class LoopStyleGallery extends StatefulWidget {
     required this.onRoll,
     this.onPreviewStart,
     this.previewRender = renderStylePreview,
+    this.presets = const [],
+    this.onLoadPreset,
+    this.onSavePreset,
   });
+
+  /// The player's saved grooves ("my presets") — the SAME store as the
+  /// mixer's save slots: a slot is a `KU1.` token, which already carries the
+  /// style, seed, pins and every edit, so a preset needs no format of its own.
+  final List<GrooveSlot> presets;
+
+  /// Loads a preset's token (null hides the section's taps).
+  final ValueChanged<String>? onLoadPreset;
+
+  /// Saves the current groove as a preset (null hides the button).
+  final VoidCallback? onSavePreset;
 
   final String? currentRecipeId;
   final ValueChanged<String> onPick;
@@ -225,6 +256,8 @@ class _LoopStyleGalleryState extends State<LoopStyleGallery> {
             ),
           ),
         ),
+        if (widget.onSavePreset != null || widget.presets.isNotEmpty)
+          SliverToBoxAdapter(child: _presetSection(context, l10n)),
         for (final genre in StyleGenre.values) ...[
           SliverToBoxAdapter(
             child: Padding(
@@ -258,6 +291,62 @@ class _LoopStyleGalleryState extends State<LoopStyleGallery> {
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
     );
+  }
+
+  Widget _presetSection(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.bookmarks, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.loopStyleMyPresets,
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              if (widget.onSavePreset != null)
+                TextButton.icon(
+                  key: const Key('loop-style-save-preset'),
+                  onPressed: widget.onSavePreset,
+                  icon: const Icon(Icons.bookmark_add, size: 18),
+                  label: Text(l10n.loopStyleSavePreset),
+                ),
+            ],
+          ),
+          if (widget.presets.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final slot in widget.presets)
+                  ActionChip(
+                    key: Key('loop-style-preset-${slot.name}'),
+                    avatar: const Icon(Icons.queue_music, size: 18),
+                    label: Text(_presetLabel(l10n, slot)),
+                    onPressed: widget.onLoadPreset == null
+                        ? null
+                        : () => widget.onLoadPreset!(slot.token),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// "My band · Funk" — the style a preset was made in, when it was one of
+  /// the generated ones.
+  String _presetLabel(AppLocalizations l10n, GrooveSlot slot) {
+    final recipe = decodeGrooveToken(slot.token)?.recipeId;
+    return recipe == null
+        ? slot.name
+        : '${slot.name} · ${styleRecipeName(l10n, recipe)}';
   }
 
   Widget _card(BuildContext context, AppLocalizations l10n, StyleRecipe r) {

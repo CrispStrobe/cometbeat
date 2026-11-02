@@ -1780,25 +1780,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopStyleStopPreview => 'Anhören stoppen';
 
   @override
-  String get loopStyleUse => 'Diesen Stil nehmen';
-
-  @override
   String get loopStyleSavePreset => 'Als meine Vorlage speichern';
 
   @override
   String get loopStyleMyPresets => 'Meine Vorlagen';
-
-  @override
-  String get loopStylePresetName => 'Name der Vorlage';
-
-  @override
-  String get loopStyleSave => 'Speichern';
-
-  @override
-  String get loopStyleCancel => 'Abbrechen';
-
-  @override
-  String get loopStylePresetSaved => 'In meinen Vorlagen gespeichert';
 
   @override
   String get loopMixerHarmonyOff => 'Frei';
