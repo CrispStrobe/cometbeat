@@ -28,6 +28,15 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> 🎚️ **opus/stems — branch `feature/stems-practice` (worktree `../mus-stems`),
+> 2026-11-02.** CrispASR separation beyond Transcribe: crispasr 0.8.35→0.8.49,
+> selectable separator model (htdemucs / mini-bs-roformer / mel-band-roformer),
+> stereo stems, a synth-ground-truth stem-quality harness (SDR per stem),
+> a minus-one practice screen (mute/solo stems of your own song), sing-along
+> from your own song (vocal stem → CREPE → melody) and a beat-this beat grid.
+> **Touching:** `pubspec.yaml`/`.lock`, `lib/core/audio/transcription/`
+> (separate*, engine_config), `game_registry.dart`, the ARBs.
+
 > 🎹 **opus/note-models — branch `feat/crispasr-note-models` (worktree
 > `../cometbeat-notemodels`), 2026-09-21.** The ggml polyphonic path loaded ONE
 > model, hard-coded. `crispasr_session_piano` is the SAME C entry point for
