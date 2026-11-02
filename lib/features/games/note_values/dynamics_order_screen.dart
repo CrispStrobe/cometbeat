@@ -126,7 +126,9 @@ class _DynamicsOrderScreenState extends State<DynamicsOrderScreen>
         ]..sort((a, b) => a.rank.compareTo(b.rank));
         setState(() => _explain = ladder);
         resolveAnswer(correct: true);
-        if (!finished) {
+        // Not on the last item: the mixin then goes straight to the fanfare +
+        // result screen, and a delayed demo would sound over the fanfare.
+        if (round + 1 < totalRounds) {
           _demo.play(context.read<AudioService>(), ladder, notesPerLevel: 1);
         }
       }

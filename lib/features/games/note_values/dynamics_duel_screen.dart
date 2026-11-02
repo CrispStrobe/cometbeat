@@ -118,7 +118,9 @@ class _DynamicsDuelScreenState extends State<DynamicsDuelScreen>
           : [_term(choice)];
     });
     resolveAnswer(correct: correct);
-    if (correct && !finished) {
+    // Not on the last item: the mixin then goes straight to the fanfare +
+    // result screen, and a delayed demo would sound over the fanfare.
+    if (correct && round + 1 < totalRounds) {
       // Hear the two cards, left then right, as the ladder lights up.
       _demo.play(context.read<AudioService>(), [_term(_left), _term(_right)]);
     }
