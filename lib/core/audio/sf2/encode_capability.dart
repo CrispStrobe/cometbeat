@@ -5,11 +5,10 @@
 // compiled to wasm. Anything else degrades to null and the export UI simply
 // doesn't offer those formats rather than failing at save time.
 //
-// Note the two sides are not identical: the wasm carries glint's whole-file
-// decoder (MP3/AAC/Opus/Vorbis/FLAC), while the native plugin vendors only the
-// encode closure plus the Vorbis/FLAC/Opus decoders. So loadAudioDecoder()
-// returns non-null on web and null on native today. Callers must treat null as
-// "not supported here" either way.
+// Both sides carry glint's whole-file decoder (MP3/AAC/Opus/Vorbis/FLAC) —
+// the native plugin vendors it too since the glint 0.8.1 re-vendor. Callers
+// must still treat null as "not supported here". For MP3 use
+// loadMp3Decoder(), which only accepts a gapless glint (>= 0.8.1).
 //
 // On web the wasm loads lazily: await ensureGlintCodecReady() once before the
 // sync entry points return anything.

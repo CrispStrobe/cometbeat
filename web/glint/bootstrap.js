@@ -7,7 +7,7 @@
 // exposing the codec surface costs no extra download over the Vorbis shim alone.
 import { glintVorbisInit, glintVorbisReady, glintVorbisDecodeSync }
   from './glint_vorbis_web.js';
-import { glintCodecInit, glintCodecReady, glintEncodeSync, glintDecodeSync }
+import { glintCodecInit, glintCodecReady, glintCodecVersion, glintEncodeSync, glintDecodeSync }
   from './glint_codec_web.js';
 
 globalThis.glintVorbis = {
@@ -21,6 +21,7 @@ globalThis.glintVorbis = {
 globalThis.glintCodec = {
   init: glintCodecInit,           // async → resolves when the wasm is ready
   ready: glintCodecReady,         // bool
+  version: glintCodecVersion,     // int (major<<16|minor<<8|patch), 0 = unknown
   // (Float32Array, channels, sampleRate, format, kbps, vbrQ, quality)
   //   → Uint8Array | null       format: 0=MP3 1=AAC 2=Opus
   encodeSync: glintEncodeSync,

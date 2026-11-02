@@ -15,6 +15,8 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mp3/mp3_decoder.dart';
+import 'package:comet_beat/core/audio/sf2/encode_capability.dart'
+    show AudioFileDecode, loadMp3Decoder;
 import 'package:comet_beat/core/audio/sf2/sf2.dart';
 import 'package:comet_beat/core/audio/sf2/soundfont_loader.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
@@ -49,6 +51,11 @@ LoadedSoundFont loadSfz(
   final byKey = <String, int>{}; // "path|loopStart|loopEnd" → shdr index
   final pcmCache = <String, (Float64List, int)>{}; // path → (mono pcm, rate)
   final zones = <Sf2Zone>[];
+  // MP3 samples decode natively through glint where it is available (and
+  // gapless); the pure-Dart decoder is the fallback — same samples, ~20-30x
+  // slower, which on a 44-sample bell set was ~39 s against ~1 s.
+  AudioFileDecode? nativeMp3;
+  var nativeMp3Probed = false;
 
   for (final r in regions) {
     final rawSample = r['sample'];
@@ -64,7 +71,16 @@ LoadedSoundFont loadSfz(
         continue;
       }
       try {
-        final decodedSample = _decodeSampleAudio(bytes);
+        final decodedSample = _decodeSampleAudio(
+          bytes,
+          () {
+            if (!nativeMp3Probed) {
+              nativeMp3Probed = true;
+              nativeMp3 = loadMp3Decoder();
+            }
+            return nativeMp3;
+          },
+        );
         if (decodedSample == null) {
           onWarn?.call('skipped region: unsupported audio sample: $path');
           continue;
@@ -121,12 +137,22 @@ LoadedSoundFont loadSfz(
   return LoadedSoundFont(font, compressed: false);
 }
 
-(Float64List, int)? _decodeSampleAudio(Uint8List bytes) {
+(Float64List, int)? _decodeSampleAudio(
+  Uint8List bytes,
+  AudioFileDecode? Function() nativeMp3,
+) {
   if (_isWav(bytes)) {
     final wav = readWavPcm16(bytes);
     return (wavToMonoFloat(wav), wav.sampleRate > 0 ? wav.sampleRate : 44100);
   }
   if (_isMp3(bytes)) {
+    final native = nativeMp3()?.call(bytes);
+    if (native != null && native.frames > 0) {
+      return (
+        _deinterleaveMono(native.pcm, native.channels),
+        native.sampleRate > 0 ? native.sampleRate : 44100,
+      );
+    }
     final decoded = mp3Decode(bytes);
     return (
       _deinterleaveMono(decoded.samples, decoded.channels),

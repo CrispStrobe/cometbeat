@@ -29,6 +29,17 @@ export function glintCodecReady() {
 }
 
 /**
+ * glint_version of the loaded wasm as (major << 16 | minor << 8 | patch), or
+ * 0 when not loaded / a build too old to export it. MP3 decode is gapless
+ * from 0.8.1 on; an older build returns every MP3 ~25 ms late.
+ */
+export function glintCodecVersion() {
+  const m = _m;
+  if (!m || typeof m._glint_version !== 'function') return 0;
+  return m._glint_version();
+}
+
+/**
  * Encode interleaved Float32 PCM (±1.0).
  * format: 0=MP3 1=AAC 2=Opus. Returns Uint8Array, or null on failure.
  */

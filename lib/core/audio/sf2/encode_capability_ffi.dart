@@ -104,6 +104,43 @@ AudioFileDecode? loadAudioDecoder({String? libraryPath}) {
   return null;
 }
 
+/// The oldest glint whose MP3 decode is gapless (glint_version 0.8.1). An
+/// older one plays every MP3 ~25 ms late (decoder delay not trimmed).
+const int kGlintGaplessMp3Version = (0 << 16) | (8 << 8) | 1;
+
+/// A native whole-file decoder that is safe for MP3: like [loadAudioDecoder]
+/// but every candidate must be glint >= [kGlintGaplessMp3Version]. The
+/// version gate matters most for the bare-name candidates — on macOS
+/// `libglint.dylib` resolves through the system search path and has found a
+/// stale /usr/local/lib build. Null → callers keep the pure-Dart decoder,
+/// which is gapless too, just several times slower.
+AudioFileDecode? loadMp3Decoder({String? libraryPath}) {
+  AudioFileDecode? gapless(GlintAudioDecoder Function() open) {
+    try {
+      final d = open();
+      return d.version >= kGlintGaplessMp3Version ? d.decodeAudioFile : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  if (libraryPath != null) {
+    return gapless(() => GlintAudioDecoder.open(libraryPath));
+  }
+  final env = Platform.environment['COMET_GLINT_LIB'];
+  if (env != null && env.isNotEmpty) {
+    final d = gapless(() => GlintAudioDecoder.open(env));
+    if (d != null) return d;
+  }
+  final inProcess = gapless(GlintAudioDecoder.process);
+  if (inProcess != null) return inProcess;
+  for (final name in _candidates()) {
+    final d = gapless(() => GlintAudioDecoder.open(name));
+    if (d != null) return d;
+  }
+  return null;
+}
+
 /// Native needs no async load — the symbols are either linked in or they are
 /// not — so readiness is just "did the encoder resolve".
 Future<bool> ensureGlintCodecReady() async => loadGlintEncoder() != null;

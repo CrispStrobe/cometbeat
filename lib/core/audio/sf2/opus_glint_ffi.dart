@@ -164,6 +164,14 @@ class GlintAudioDecoder {
 
   AudioFileDecode get decodeAudioFile => decode;
 
+  /// `glint_version` as (major << 16 | minor << 8 | patch), or 0 when this
+  /// build does not export it (older than 0.8).
+  int get version {
+    if (!_lib.providesSymbol('glint_version')) return 0;
+    return _lib
+        .lookupFunction<Int32 Function(), int Function()>('glint_version')();
+  }
+
   DecodedAudio? decode(Uint8List bytes) =>
       _decodeInto(_decode, _free, bytes, fallbackRate: 44100);
 }

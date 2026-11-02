@@ -30,6 +30,7 @@ external _GlintCodec? get _glintCodec;
 extension type _GlintCodec._(JSObject _) implements JSObject {
   external JSPromise<JSBoolean> init();
   external bool ready();
+  external int version();
   external JSUint8Array? encodeSync(
     JSFloat32Array pcm,
     int channels,
@@ -142,4 +143,24 @@ AudioFileDecode? loadAudioDecoder({String? libraryPath}) {
     if (!g.ready() || bytes.isEmpty) return null;
     return _toDecoded(g.decodeSync(bytes.toJS));
   };
+}
+
+/// The oldest glint whose MP3 decode is gapless (glint_version 0.8.1).
+const int _kGlintGaplessMp3Version = (0 << 16) | (8 << 8) | 1;
+
+/// The wasm glint as an MP3 decoder — only once it is loaded AND at least
+/// 0.8.1 (gapless); otherwise null and callers keep the pure-Dart decoder,
+/// which is gapless too, just several times slower. `version` is absent from
+/// shims older than this, hence the guard.
+AudioFileDecode? loadMp3Decoder({String? libraryPath}) {
+  final g = _glintCodec;
+  if (g == null || !g.ready()) return null;
+  final int v;
+  try {
+    v = g.version();
+  } catch (_) {
+    return null;
+  }
+  if (v < _kGlintGaplessMp3Version) return null;
+  return loadAudioDecoder();
 }

@@ -29,6 +29,7 @@ import 'package:comet_beat/core/audio/sf2/encode_capability.dart'
         ensureGlintCodecReady,
         isOggOpus,
         loadAudioDecoder,
+        loadMp3Decoder,
         loadOpusFileDecoder;
 import 'package:comet_beat/core/audio/sf2/flac_capability.dart';
 import 'package:comet_beat/core/audio/sf2/vorbis_capability.dart';
@@ -157,6 +158,19 @@ ImportedAudio? importAudio(
       );
     }
     if (_isMp3(bytes)) {
+      // Native glint first (gapless builds only), else the pure-Dart decoder.
+      final native = loadMp3Decoder()?.call(bytes);
+      if (native != null && native.frames > 0) {
+        final ch = native.channels < 1 ? 1 : native.channels;
+        final left = _channel(native.pcm, ch, 0);
+        if (left.isNotEmpty) {
+          return ImportedAudio(
+            left,
+            native.sampleRate > 0 ? native.sampleRate : 44100,
+            right: ch > 1 ? _channel(native.pcm, ch, 1) : null,
+          );
+        }
+      }
       final decoded = mp3Decode(bytes);
       final channels = decoded.channels < 1 ? 1 : decoded.channels;
       final left = _channel(decoded.samples, channels, 0);

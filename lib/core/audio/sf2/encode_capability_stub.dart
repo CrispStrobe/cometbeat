@@ -16,3 +16,6 @@ AudioFileDecode? loadAudioDecoder({String? libraryPath}) => null;
 
 /// Nothing to load, so readiness is immediate and false.
 Future<bool> ensureGlintCodecReady() async => false;
+
+/// No native MP3 decoder here.
+AudioFileDecode? loadMp3Decoder({String? libraryPath}) => null;
