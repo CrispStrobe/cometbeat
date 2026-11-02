@@ -15,7 +15,8 @@ extension EncodedAudioFormatX on EncodedAudioFormat {
   /// The file extension a stream of this format is normally saved as.
   String get extension => switch (this) {
         EncodedAudioFormat.mp3 => 'mp3',
-        EncodedAudioFormat.aac => 'm4a',
+        // glint emits raw ADTS frames, not an MP4 (.m4a) container.
+        EncodedAudioFormat.aac => 'aac',
         EncodedAudioFormat.opus => 'opus',
       };
 

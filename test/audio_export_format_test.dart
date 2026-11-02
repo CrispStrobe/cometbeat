@@ -66,8 +66,11 @@ void main() {
       expect(AudioExportFormat.wav.ext, 'wav');
       expect(AudioExportFormat.mp3.ext, 'mp3');
       expect(AudioExportFormat.opus.ext, 'opus');
-      // AAC is written into an .m4a container by convention.
-      expect(AudioExportFormat.aac.ext, 'm4a');
+      // glint writes RAW ADTS, not an MP4 box. Naming that ".m4a" (as this
+      // used to) promises a container the bytes do not have, and players that
+      // trust the extension refuse the file. ".aac" is what ADTS is called.
+      expect(AudioExportFormat.aac.ext, 'aac');
+      expect(AudioExportFormat.aac.mimeType, 'audio/aac');
 
       expect(AudioExportFormat.wav.nativeFormat, isNull);
       expect(AudioExportFormat.mp3.nativeFormat, isNull);

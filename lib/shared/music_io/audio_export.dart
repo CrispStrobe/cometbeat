@@ -329,7 +329,11 @@ extension AudioExportFormatX on AudioExportFormat {
         AudioExportFormat.wav => 'wav',
         AudioExportFormat.mp3 => 'mp3',
         AudioExportFormat.opus => 'opus',
-        AudioExportFormat.aac => 'm4a',
+        // RAW ADTS — glint writes no MP4 box, so this is NOT an .m4a: a
+        // player that trusts the extension would expect a container the
+        // bytes do not have. (Verified on the macOS build: `file` says
+        // "MPEG ADTS, AAC".)
+        AudioExportFormat.aac => 'aac',
       };
 
   /// MIME type handed to a share sheet / browser download.
@@ -337,7 +341,7 @@ extension AudioExportFormatX on AudioExportFormat {
         AudioExportFormat.wav => 'audio/wav',
         AudioExportFormat.mp3 => 'audio/mpeg',
         AudioExportFormat.opus => 'audio/ogg',
-        AudioExportFormat.aac => 'audio/mp4',
+        AudioExportFormat.aac => 'audio/aac',
       };
 
   /// Short name for buttons ("Export Opus").
