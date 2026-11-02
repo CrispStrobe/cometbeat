@@ -6,6 +6,8 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
+import 'package:comet_beat/core/audio/transcription/crispasr_ffi_session_io.dart'
+    show crispasrModelPath;
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
 import 'package:comet_beat/core/audio/transcription/harmony.dart'
     show ChordEvent;
@@ -59,6 +61,10 @@ void main() {
       loadNeural: ({bool download = false}) async => null,
       loadRmvpe: ({bool download = false}) async => rmvpe,
       loadCrepeOnnx: ({bool download = false}) async => _fakeF0,
+      // Hermetic: a dev box with libcrispasr + a cached CREPE GGUF would
+      // otherwise win the auto order (ggml first) and this test would measure
+      // the machine, not the ONNX preference.
+      loadCrepeGgml: ({bool download = false}) async => null,
     );
     expect(e.f0, isNotNull);
     await e.f0!(Float64List(0), 44100); // the chosen estimator is RMVPE
@@ -173,6 +179,7 @@ void main() {
       loadCrepeOnnx: ({bool download = false}) async =>
           _fakeF0, // pure-Dart onnx
       loadF0OnnxFfi: ({bool download = false}) async => ffiF0, // native-ORT FFI
+      loadCrepeGgml: ({bool download = false}) async => null, // hermetic
     );
     expect(e.f0, isNotNull);
     await e.f0!(Float64List(0), 44100);
@@ -202,10 +209,13 @@ void main() {
   });
 
   test('runtimes null unless configured/present', () async {
-    // CrispASR CREPE is wired via the CLI but env-gated: null without a
-    // CRISPASR_BIN + GGUF, so it's null on CI/dev by default.
-    expect(await loadCrispasrCrepeF0(), isNull);
-    expect(await loadCrispasrPiano(), isNull);
+    // The CrispASR runtimes are null unless libcrispasr loads AND the model is
+    // cached — true on CI, but a dev box that has run CrispASR may have both,
+    // and then a non-null loader is the correct answer, not a failure.
+    final crepeHere = crispasrModelPath('crepe') != null;
+    final pianoHere = crispasrModelPath('piano-transcription') != null;
+    expect(await loadCrispasrCrepeF0(), crepeHere ? isNotNull : isNull);
+    expect(await loadCrispasrPiano(), pianoHere ? isNotNull : isNull);
     expect(await loadOnnxFfiF0(), isNull);
     expect(await loadOnnxFfiNeural(), isNull);
     expect(await loadOnnxFfiChords(), isNull);

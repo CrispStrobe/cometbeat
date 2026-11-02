@@ -631,6 +631,9 @@ const List<Concept> kConcepts = [
       'sing_along',
       'sing_mary',
       'midi_play_along',
+      // Your own song, split into stems: play along minus one part, or sing
+      // its melody over the rest.
+      'practice_stems',
       'sight_reading',
       'tune_quiz',
     ],
