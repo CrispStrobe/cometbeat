@@ -50,11 +50,11 @@ Future<List<SeparatedStem>?> separateStereoCrispasr(
   final modelPath = crispasrModelPath(backend, download: download);
   if (modelPath == null) return null;
   final libPath = crispasrLibPath();
+  final cpuOnly = model.cpuOnly;
   return Isolate.run(() {
     CrispasrSession? session;
     try {
-      session =
-          CrispasrSession.open(modelPath, libPath: libPath, backend: backend);
+      session = _open(modelPath, libPath, backend, cpuOnly: cpuOnly);
       final sr = session.separateSampleRate;
       if (sr <= 0) return null;
       final l = _toRate(left, sampleRate, sr);
@@ -75,6 +75,29 @@ Future<List<SeparatedStem>?> separateStereoCrispasr(
       session?.close();
     }
   });
+}
+
+/// Opens the session, on the CPU when [cpuOnly] — falling back to a plain
+/// open on a lib too old for `openWithParams`.
+CrispasrSession _open(
+  String modelPath,
+  String libPath,
+  String backend, {
+  required bool cpuOnly,
+}) {
+  if (cpuOnly) {
+    try {
+      return CrispasrSession.openWithParams(
+        modelPath,
+        useGpu: false,
+        libPath: libPath,
+        backend: backend,
+      );
+    } on UnsupportedError {
+      // fall through
+    }
+  }
+  return CrispasrSession.open(modelPath, libPath: libPath, backend: backend);
 }
 
 Float32List _toRate(Float32List x, int from, int to) {

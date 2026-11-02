@@ -137,6 +137,14 @@ extension CrispasrSeparatorModelInfo on CrispasrSeparatorModel {
         CrispasrSeparatorModel.melBandRoformer => 'mel-band-roformer',
       };
 
+  /// Run on the CPU even where a GPU is available. Mini-BS-RoFormer's Metal
+  /// path is broken in CrispASR 0.8.49 / main as of 2026-11-02: on pure speech
+  /// it returns a SILENT vocals stem and loses most of the signal, while the
+  /// CPU path separates it correctly (vocals RMS 0.1544 of an input 0.1552).
+  /// CrispASR's own qualification ran on the CPU only. Drop this once the
+  /// GPU path is fixed and re-measured with bin/stem_quality.dart --voice.
+  bool get cpuOnly => this == CrispasrSeparatorModel.miniBsRoformer;
+
   /// Approximate download, in bytes. Advisory; the registry is the authority.
   int get approxDownloadBytes => switch (this) {
         CrispasrSeparatorModel.auto ||

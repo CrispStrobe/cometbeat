@@ -73,4 +73,14 @@ void main() {
       );
     });
   });
+
+  test('only mini-bs-roformer is pinned to the CPU (CrispASR #568)', () {
+    expect(
+      [
+        for (final m in CrispasrSeparatorModel.values)
+          if (m.cpuOnly) m,
+      ],
+      [CrispasrSeparatorModel.miniBsRoformer],
+    );
+  });
 }

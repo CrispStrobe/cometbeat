@@ -56,8 +56,8 @@ List<double> effectiveVolumes(List<StemControl> strips) {
 ///
 /// Why it is needed: a masking separator estimates each stem independently and
 /// nothing forces them to add up. htdemucs's stems reconstruct a test mix to
-/// ~15 dB, Mini-BS-RoFormer's to only ~4 dB — so with every stem on, the
-/// learner would hear a duller song than the one they loaded.
+/// only ~15 dB (Mini-BS-RoFormer's to ~40 dB on the CPU) — so with every stem
+/// on, the learner would hear a duller song than the one they loaded.
 ///
 /// [left]/[right] are the mix at the stems' rate; lengths may differ by a few
 /// frames, and only the common span is touched.

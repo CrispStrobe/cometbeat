@@ -33,12 +33,13 @@ Float32List _clickAndTone(int seconds) {
 
 void main() {
   // How closely each model's raw stems add back up to the mix, measured on
-  // this click+tone signal (htdemucs ~15 dB, Mini-BS-RoFormer ~4 dB), with
-  // headroom. Mini-BS-RoFormer's low figure is why the practice player runs
-  // mixtureConsistent before playback.
+  // this click+tone signal, with headroom: htdemucs 15.2 dB, Mini-BS-RoFormer
+  // 40.2 dB on the CPU. (On Metal it was ~4 dB — CrispASR #568, which is why
+  // that model runs on the CPU.) htdemucs's 15 dB is still audible as a duller
+  // song with every stem on, which is why the player runs mixtureConsistent.
   for (final (model, minDb) in [
     (CrispasrSeparatorModel.htdemucs, 10.0),
-    (CrispasrSeparatorModel.miniBsRoformer, 3.0),
+    (CrispasrSeparatorModel.miniBsRoformer, 30.0),
   ]) {
     test(
       '${model.registryBackend}: four stereo stems, input length, 44.1 kHz',
