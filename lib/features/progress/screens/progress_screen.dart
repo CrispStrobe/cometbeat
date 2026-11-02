@@ -158,12 +158,30 @@ class _ProgressTab extends StatelessWidget {
         for (final module in kLearningModules)
           _ModuleProgressCard(
             module: module,
-            skills: breakdown[module.id] ?? const {},
+            skills: moduleSkills(breakdown, module.id),
             l10n: l10n,
           ),
       ],
     );
   }
+}
+
+/// All skill stats that belong to [moduleId], merging SRI namespaces that
+/// alias onto it (see [kSriNamespaceModule]).
+@visibleForTesting
+Map<String, SkillStat> moduleSkills(
+  Map<String, Map<String, SkillStat>> breakdown,
+  String moduleId,
+) {
+  final out = <String, SkillStat>{};
+  breakdown.forEach((ns, skills) {
+    if (moduleIdForSriNamespace(ns) != moduleId) return;
+    skills.forEach((skill, stat) {
+      final key = ns == moduleId ? skill : '$ns.$skill';
+      out[key] = stat;
+    });
+  });
+  return out;
 }
 
 class _BoxColumn extends StatelessWidget {
@@ -248,7 +266,11 @@ class _ModuleProgressCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    l10n.masteredOfTracked(mastered, tracked),
+                    // Nothing tracked yet: "0 von 0" says nothing, so show
+                    // what the module is about instead.
+                    tracked > 0
+                        ? l10n.masteredOfTracked(mastered, tracked)
+                        : module.subtitle(l10n),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -265,12 +287,7 @@ class _ModuleProgressCard extends StatelessWidget {
 /// coloured icon in the tricky-spots list. Key signatures live in the scales
 /// corner. Null when nothing matches.
 LearningModule? _moduleForSriId(String id) {
-  final seg = id.split('.').first;
-  final mapped = switch (seg) {
-    'key_sig' => 'scales',
-    'expression' => 'measures',
-    _ => seg,
-  };
+  final mapped = moduleIdForSriNamespace(id.split('.').first);
   for (final module in kLearningModules) {
     if (module.id == mapped) return module;
   }

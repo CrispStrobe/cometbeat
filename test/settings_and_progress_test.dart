@@ -72,10 +72,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Flashcard boxes'), findsOneWidget);
-    // note_values counts its 2 tracked items; other visible modules show 0
-    // (the lazy ListView may not mount all six cards in the test viewport).
+    // note_values counts its 2 tracked items; modules with nothing tracked
+    // must not show a meaningless "0 of 0" (regression).
     expect(find.text('0 of 2 mastered'), findsOneWidget);
-    expect(find.text('0 of 0 mastered'), findsWidgets);
+    expect(find.text('0 of 0 mastered'), findsNothing);
   });
 
   testWidgets('settings screen: language options + stats, switch to German',

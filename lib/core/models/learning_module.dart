@@ -145,3 +145,22 @@ final List<LearningModule> kLearningModules = [
     subtitle: (l) => l.moduleDrumsSubtitle,
   ),
 ];
+
+/// SRI namespaces whose first segment is not a [LearningModule] id, mapped to
+/// the module that owns them. Games record under these (e.g.
+/// `reading.clef.*`, `voice.sing_along.*`), so without this mapping their
+/// items are counted in the totals but never reach any module card.
+const Map<String, String> kSriNamespaceModule = {
+  'reading': 'note_reading',
+  'intervals': 'note_reading',
+  'pitch': 'scales',
+  'key_sig': 'scales',
+  'meter': 'measures',
+  'expression': 'measures',
+  'voice': 'songs',
+};
+
+/// The [LearningModule.id] an SRI first segment belongs to; the segment itself
+/// when it already is a module id (or unknown).
+String moduleIdForSriNamespace(String firstSegment) =>
+    kSriNamespaceModule[firstSegment] ?? firstSegment;
