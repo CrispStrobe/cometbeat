@@ -3,6 +3,7 @@
 // order.
 
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
 import 'package:comet_beat/features/games/note_values/dynamics_order_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,7 +20,9 @@ Future<void> _solveRound(WidgetTester tester) async {
     await tester.tap(find.byKey(ValueKey('dynamic_card_$i')));
     await tester.pump();
   }
-  await tester.pump(const Duration(milliseconds: 800)); // auto-advance
+  await tester.pump(
+    kExplanationHold + const Duration(milliseconds: 100),
+  ); // auto-advance
 }
 
 void main() {
@@ -60,5 +63,26 @@ void main() {
     }
     expect(_game(tester).isFinished, isTrue);
     expect(find.byIcon(Icons.star).evaluate().length, greaterThanOrEqualTo(1));
+  });
+
+  testWidgets('a finished ladder is explained soft→loud and still advances',
+      (tester) async {
+    await pumpGame(tester, const DynamicsOrderScreen());
+    for (final i in _game(tester).tapOrder) {
+      expect(find.byKey(AnswerExplanation.panelKey), findsNothing);
+      await tester.tap(find.byKey(ValueKey('dynamic_card_$i')));
+      await tester.pump();
+    }
+    expect(find.byKey(AnswerExplanation.panelKey), findsOneWidget);
+    final card =
+        tester.widget<AnswerExplanation>(find.byType(AnswerExplanation));
+    expect(card.terms, hasLength(DynamicsOrderScreen.cardCount));
+    for (var i = 1; i < card.terms.length; i++) {
+      expect(card.terms[i].rank, greaterThan(card.terms[i - 1].rank));
+    }
+    expect(find.textContaining('Round 1'), findsOneWidget);
+    await tester.pump(kExplanationHold + const Duration(milliseconds: 100));
+    expect(find.textContaining('Round 2'), findsOneWidget);
+    expect(find.byKey(AnswerExplanation.panelKey), findsNothing);
   });
 }

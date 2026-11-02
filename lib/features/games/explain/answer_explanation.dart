@@ -41,6 +41,7 @@ class AnswerExplanation extends StatefulWidget {
     this.highlight,
     this.sounding,
     this.onNext,
+    this.flexible = true,
   });
 
   /// Key of the card itself, for tests.
@@ -50,6 +51,13 @@ class AnswerExplanation extends StatefulWidget {
   final Set<MusicTerm>? highlight;
   final ValueListenable<MusicTerm?>? sounding;
   final VoidCallback? onNext;
+
+  /// Whether the card is a [Flexible] child of the screen's Column (the
+  /// default — every game places it directly in its main Column): it then
+  /// shares the leftover height with the game and scrolls inside if a small
+  /// phone has less room than it would like. Pass false when it is NOT a
+  /// direct child of a Flex.
+  final bool flexible;
 
   @override
   State<AnswerExplanation> createState() => _AnswerExplanationState();
@@ -74,13 +82,18 @@ class _AnswerExplanationState extends State<AnswerExplanation> {
     final kind = widget.terms.first.kind;
     final highlight = widget.highlight ?? widget.terms.toSet();
 
-    return Card(
+    final card = Card(
       key: AnswerExplanation.panelKey,
       margin: EdgeInsets.zero,
       color: scheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 260),
+        // Never more than ~a quarter of the screen, so it fits under the
+        // game on a small phone (the content scrolls if it needs more).
+        constraints: BoxConstraints(
+          maxWidth: 520,
+          maxHeight: math.min(260, MediaQuery.sizeOf(context).height * 0.28),
+        ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(14, 6, 6, 10),
           child: Column(
@@ -151,6 +164,7 @@ class _AnswerExplanationState extends State<AnswerExplanation> {
         ),
       ),
     );
+    return widget.flexible ? Flexible(child: card) : card;
   }
 }
 

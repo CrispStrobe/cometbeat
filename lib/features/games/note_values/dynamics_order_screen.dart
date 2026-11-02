@@ -7,12 +7,20 @@
 // matching a mark to its meaning (Connect the Dynamics) or comparing two
 // (Louder or Softer?): here it's the whole pp…ff ladder in order.
 //
+// When the ladder is complete a "Good to know" card names the four marks
+// ("mf  mezzoforte = halblaut") on the pp…ff loudness ladder and plays them
+// softest → loudest, lighting each rung as it sounds; the solved round holds
+// for kExplanationHold (or until "Next").
+//
 // SRI: 'reading.dynamics.order'.
 
 import 'dart:math';
 
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
+import 'package:comet_beat/features/games/explain/dynamics_demo.dart';
+import 'package:comet_beat/features/games/explain/music_terms.dart';
 import 'package:comet_beat/features/games/note_values/dynamics_duel_screen.dart'
     show DynamicMark, kDynamicMarks;
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
@@ -60,6 +68,10 @@ class _DynamicsOrderScreenState extends State<DynamicsOrderScreen>
   late List<int> _rank; // _rank[i] = target position of _cards[i] (0 = softest)
   int _placed = 0;
 
+  /// Terms the explanation card shows (empty until the ladder is complete).
+  List<MusicTerm> _explain = const [];
+  final _demo = DynamicsDemo();
+
   @override
   int get totalRounds => 8;
   @override
@@ -68,9 +80,18 @@ class _DynamicsOrderScreenState extends State<DynamicsOrderScreen>
   bool get playFeedbackSounds => false; // a wrong tap buzzes; correct is silent
 
   @override
+  Duration get advanceDelay => kExplanationHold;
+
+  @override
   void initState() {
     super.initState();
     prepareRound();
+  }
+
+  @override
+  void dispose() {
+    _demo.dispose();
+    super.dispose();
   }
 
   @override
@@ -85,6 +106,8 @@ class _DynamicsOrderScreenState extends State<DynamicsOrderScreen>
       _rank[order[r]] = r;
     }
     _placed = 0;
+    _explain = const [];
+    _demo.stop();
   }
 
   static const _sriId = 'reading.dynamics.order';
@@ -98,7 +121,14 @@ class _DynamicsOrderScreenState extends State<DynamicsOrderScreen>
         if (!answeredWrong) {
           context.read<SriService>().recordResponse(_sriId, true);
         }
+        final ladder = [
+          for (final m in _cards) MusicTerm.dynamicFromMark(m.name)!,
+        ]..sort((a, b) => a.rank.compareTo(b.rank));
+        setState(() => _explain = ladder);
         resolveAnswer(correct: true);
+        if (!finished) {
+          _demo.play(context.read<AudioService>(), ladder, notesPerLevel: 1);
+        }
       }
     } else {
       context.read<AudioService>().playWrong();
@@ -152,10 +182,17 @@ class _DynamicsOrderScreenState extends State<DynamicsOrderScreen>
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      l10n.dynamicsOrderHint,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    if (_explain.isNotEmpty)
+                      AnswerExplanation(
+                        terms: _explain,
+                        sounding: _demo.sounding,
+                        onNext: advancePending ? advanceNow : null,
+                      )
+                    else
+                      Text(
+                        l10n.dynamicsOrderHint,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                   ],
                 ),
               ),

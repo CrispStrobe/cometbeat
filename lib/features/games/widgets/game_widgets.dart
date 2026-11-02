@@ -143,12 +143,15 @@ class FeedbackLine extends StatelessWidget {
           if (showMascot) NoteMascot(mood: mood, size: 30),
           if (correct != null) ...[
             if (showMascot) const SizedBox(width: 10),
-            Text(
-              correct! ? l10n.feedbackCorrect : l10n.feedbackTryAgain,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: correct! ? Colors.green : Colors.redAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
+            Flexible(
+              child: Text(
+                correct! ? l10n.feedbackCorrect : l10n.feedbackTryAgain,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: correct! ? Colors.green : Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
             ),
           ],
         ],
