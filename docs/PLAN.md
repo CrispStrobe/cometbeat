@@ -28,6 +28,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> 🎚️ **opus/stems — ACTIVE 2026-11-02** (worktree `../mus-followups`): isolate-capture audit, linked stereo stretch (`time_stretch.dart`), real-song probe, one ARB string (`practiceStemsUnavailable`, en/de).
+>
 > 🎚️ **opus/stems — IDLE, shipped 2026-11-02** (branch `feature/stems-practice`,
 > merged). "Practise with your song" (CrispASR stems, minus-one, sing-along
 > over your own song), selectable separator model, beat-this beat grid,
