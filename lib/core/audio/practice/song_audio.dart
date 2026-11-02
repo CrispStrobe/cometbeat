@@ -83,6 +83,9 @@ SongAudio _deinterleave(Float64List samples, int channels, int sampleRate) {
   return SongAudio(l, r, sampleRate);
 }
 
+/// Whether [b] starts like a RIFF/WAVE file.
+bool isWavBytes(Uint8List b) => _isWav(b);
+
 bool _isWav(Uint8List b) =>
     b.length >= 12 &&
     b[0] == 0x52 && // R

@@ -84,7 +84,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
   Future<void> _pickAndSplit() async {
     const group = XTypeGroup(
       label: 'Audio',
-      extensions: ['wav', 'mp3', 'flac'],
+      extensions: ['wav', 'mp3', 'flac', 'ogg', 'opus', 'aac'],
     );
     final file = await openFile(acceptedTypeGroups: const [group]);
     if (file == null || !mounted) return;

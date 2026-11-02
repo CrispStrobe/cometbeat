@@ -3803,7 +3803,7 @@
   "gamePracticeStems": "Mit deinem Song üben",
   "gamePracticeStemsSubtitle": "Zerlege einen Song in Gesang, Schlagzeug, Bass und Rest – schalte eins stumm und spiel mit",
   "practiceStemsPick": "Song auswählen",
-  "practiceStemsPickHint": "WAV, MP3 oder FLAC. Der Song verlässt dieses Gerät nicht.",
+  "practiceStemsPickHint": "WAV, MP3, FLAC, OGG, Opus oder AAC. Der Song verlässt dieses Gerät nicht.",
   "practiceStemsModeFour": "Gesang, Schlagzeug, Bass, Rest",
   "practiceStemsModeVoice": "Nur Gesang (Karaoke)",
   "practiceStemsDownloadNote": "Beim ersten Mal wird das Trennmodell heruntergeladen ({mb} MB).",

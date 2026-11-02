@@ -4573,7 +4573,7 @@
   "gamePracticeStems": "Practise with your song",
   "gamePracticeStemsSubtitle": "Split a song into voice, drums, bass and the rest — mute one and play along",
   "practiceStemsPick": "Choose a song",
-  "practiceStemsPickHint": "WAV, MP3 or FLAC. The song never leaves this device.",
+  "practiceStemsPickHint": "WAV, MP3, FLAC, OGG, Opus or AAC. The song never leaves this device.",
   "practiceStemsModeFour": "Voice, drums, bass, rest",
   "practiceStemsModeVoice": "Voice only (karaoke)",
   "practiceStemsDownloadNote": "The first time downloads the splitting model ({mb} MB).",

@@ -10552,7 +10552,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get practiceStemsPickHint =>
-      'WAV, MP3 or FLAC. The song never leaves this device.';
+      'WAV, MP3, FLAC, OGG, Opus or AAC. The song never leaves this device.';
 
   @override
   String get practiceStemsModeFour => 'Voice, drums, bass, rest';

@@ -19043,7 +19043,7 @@ abstract class AppLocalizations {
   /// No description provided for @practiceStemsPickHint.
   ///
   /// In en, this message translates to:
-  /// **'WAV, MP3 or FLAC. The song never leaves this device.'**
+  /// **'WAV, MP3, FLAC, OGG, Opus or AAC. The song never leaves this device.'**
   String get practiceStemsPickHint;
 
   /// No description provided for @practiceStemsModeFour.
