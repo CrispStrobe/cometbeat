@@ -150,29 +150,29 @@ packages:
       path: "../crisp_notation/packages/crisp_notation"
       relative: true
     source: path
-    version: "0.7.1"
+    version: "0.14.0"
   crisp_notation_core:
     dependency: "direct main"
     description:
       path: "../crisp_notation/packages/crisp_notation_core"
       relative: true
     source: path
-    version: "0.7.1"
+    version: "0.14.0"
   crispasr:
     dependency: "direct main"
     description:
       name: crispasr
-      sha256: "60416f04a505783aa8af95d0355903ecb587ddb207a06dfe659cc141740809cb"
+      sha256: d6820ffa0d13d1ce822051da6b3134bce3d0a88ca8d40895a259edbf60e895fa
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.35"
+    version: "0.8.49"
   crispembed:
     dependency: "direct main"
     description:
       path: "../CrispEmbed/flutter/crispembed"
       relative: true
     source: path
-    version: "0.17.11"
+    version: "0.16.1"
   cross_file:
     dependency: transitive
     description:
@@ -189,6 +189,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.7"
+  csslib:
+    dependency: transitive
+    description:
+      name: csslib
+      sha256: "09bad715f418841f976c77db72d5398dc1253c21fb9c0c7f0b0b985860b2d58e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   cupertino_icons:
     dependency: "direct main"
     description:
@@ -402,6 +410,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.2"
+  html:
+    dependency: transitive
+    description:
+      name: html
+      sha256: "43b67b8f43321ab066817dfac5619596c98bb1b61624e77203bb4351785f9699"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.15.7"
   http:
     dependency: "direct main"
     description:
@@ -629,7 +645,7 @@ packages:
       path: "../onnx_runtime_dart"
       relative: true
     source: path
-    version: "0.10.8"
+    version: "0.10.3"
   onnxruntime:
     dependency: "direct main"
     description:
