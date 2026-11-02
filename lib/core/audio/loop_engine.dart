@@ -30,6 +30,7 @@ import 'package:comet_beat/core/audio/loop_audio_fit.dart';
 import 'package:comet_beat/core/audio/loop_automation.dart';
 import 'package:comet_beat/core/audio/loop_instrument_render.dart'
     show renderCellsWithInstrument;
+import 'package:comet_beat/core/audio/loop_style_recipes.dart';
 import 'package:comet_beat/core/audio/loop_track_length.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
@@ -437,9 +438,16 @@ const kProgressions = [
 /// indices (0 = root, 1 = third, 2 = fifth, 3 = root an octave up), resolved
 /// per progression chord at render time. Step counts sum to one bar (8).
 class ChordBar {
-  const ChordBar(this.cells);
+  const ChordBar(this.cells, {this.scaleSteps});
 
   final List<({List<int>? tones, int steps})> cells;
+
+  /// Optional, parallel to [cells]: a nonzero entry moves that cell's (single)
+  /// resolved note by that many C-major-pentatonic degrees — a passing or
+  /// neighbour tone for generated melodies (see loop_style_recipes.dart), which
+  /// only ever set it on off-beats so beats stay chord tones. Null (every
+  /// authored bar) resolves exactly as before.
+  final List<int>? scaleSteps;
 
   /// Resolves this bar onto [degree] as absolute midi cells. [baseMidi] is
   /// the C the roots build on; roots that would land above [foldAbove] fold
@@ -451,19 +459,40 @@ class ChordBar {
   }) {
     var root = baseMidi + degree.rootOffset;
     if (root > foldAbove) root -= 12;
+    final shifts = scaleSteps;
     return [
-      for (final cell in cells)
+      for (var i = 0; i < cells.length; i++)
         PatternCell(
-          midis: cell.tones == null
+          midis: cells[i].tones == null
               ? null
               : [
-                  for (final t in cell.tones!)
-                    root + (t == 3 ? 12 : degree.triad[t]),
+                  for (final t in cells[i].tones!)
+                    shifts != null && i < shifts.length && shifts[i] != 0
+                        ? pentatonicStep(
+                            root + (t == 3 ? 12 : degree.triad[t]),
+                            shifts[i],
+                          )
+                        : root + (t == 3 ? 12 : degree.triad[t]),
                 ],
-          steps: cell.steps,
+          steps: cells[i].steps,
         ),
     ];
   }
+}
+
+/// [midi] moved [degrees] notes along C major pentatonic (C D E G A) — up for
+/// positive, down for negative. A start pitch outside the scale (F, B) counts
+/// its first move as reaching the nearest scale tone in that direction.
+int pentatonicStep(int midi, int degrees) {
+  const penta = {0, 2, 4, 7, 9};
+  var m = midi;
+  final dir = degrees > 0 ? 1 : -1;
+  for (var k = 0; k < degrees.abs(); k++) {
+    do {
+      m += dir;
+    } while (!penta.contains(m % 12));
+  }
+  return m;
 }
 
 /// How a track plays in progression mode: chord-relative bar shapes (one per
@@ -547,6 +576,9 @@ class GrooveSpec {
     this.scale = GrooveScale.majorPentatonic,
     this.kitId = 'clean',
     this.styleId = 'default',
+    this.recipeId,
+    this.recipeSeed = 0,
+    this.trackPins = const {},
     this.userCells,
     this.userInstrument,
     this.beatRows,
@@ -621,6 +653,20 @@ class GrooveSpec {
 
   /// The band-flavour id (a [kGrooveStyles] entry; 'default' = the original).
   final String styleId;
+
+  /// A generated style ([kStyleRecipes] id) — when set it replaces [styleId]'s
+  /// hand-authored band with the band [generateRecipeTracks] builds from
+  /// ([recipeId], [recipeSeed]). Null for every groove made before the style
+  /// catalog, which is why all three fields are omitted from the json then and
+  /// old tokens decode exactly as before.
+  final String? recipeId;
+
+  /// The groove seed the generated band derives from.
+  final int recipeSeed;
+
+  /// Tracks pinned to their own (recipe, track-seed): a per-track dice roll,
+  /// or a locked track carried across a whole-groove roll.
+  final Map<String, RecipePin> trackPins;
 
   /// A [kProgressions] id, or null for the free 2-bar vamp.
   final String? progressionId;
@@ -701,6 +747,14 @@ class GrooveSpec {
             : GrooveScale.majorPentatonic,
         kitId: json['kt'] as String? ?? 'clean',
         styleId: json['st'] as String? ?? 'default',
+        // Untrusted: an unknown recipe (a newer build's) falls back to the
+        // style band rather than failing the whole token.
+        recipeId: styleRecipeById(json['rc'] as String?)?.id,
+        recipeSeed: switch (json['rs']) {
+          final num n => n.toInt().clamp(0, kMaxRecipeSeed),
+          _ => 0,
+        },
+        trackPins: _trackPinsFromJson(json['rp']),
         userCells:
             json['u'] is Map ? _cellsFromJson((json['u'] as Map)['c']) : null,
         userInstrument:
@@ -775,6 +829,15 @@ class GrooveSpec {
         if (scale == GrooveScale.minorPentatonic) 'sc': 'min',
         if (kitId != 'clean') 'kt': kitId,
         if (styleId != 'default') 'st': styleId,
+        if (recipeId != null) ...{
+          'rc': recipeId,
+          'rs': recipeSeed,
+          if (trackPins.isNotEmpty)
+            'rp': {
+              for (final id in trackPins.keys.toList()..sort())
+                id: trackPins[id].toString(),
+            },
+        },
         if (userCells != null)
           'u': {
             'c': _cellsToJson(userCells!),
@@ -886,6 +949,19 @@ Map<String, int> _trackStepsFromJson(dynamic json) {
     if (value is! num) continue;
     final steps = value.toInt();
     if (steps != kPatternSteps && isLoopTrackLength(steps)) out[key] = steps;
+  }
+  return out;
+}
+
+/// Parses recipe track pins (id → `recipeId:seed`); malformed entries are
+/// skipped so one bad pin cannot sink the token.
+Map<String, RecipePin> _trackPinsFromJson(dynamic json) {
+  if (json is! Map) return const {};
+  final out = <String, RecipePin>{};
+  for (final MapEntry(:key, :value) in json.entries) {
+    if (key is! String || !kRecipeTrackIds.contains(key)) continue;
+    final pin = RecipePin.tryParse(value);
+    if (pin != null) out[key] = pin;
   }
   return out;
 }
@@ -1730,14 +1806,119 @@ class LoopEngine {
   String get styleId => _styleId;
   set styleId(String id) {
     final style = grooveStyleById(id);
-    if (style.id == _styleId) return;
+    // Picking a hand-authored style while a generated one plays must swap the
+    // band back even when the style id itself is unchanged.
+    if (style.id == _styleId && _recipeId == null) return;
     _styleId = style.id;
+    _recipeId = null;
+    _trackPins.clear();
     _baseTracks = style.tracks;
     _tempoBpm = style.tempoBpm.clamp(kMinTempoBpm, kMaxTempoBpm);
     _swing = style.swing;
     _kit = drumKitById(style.kitId);
     _scale = style.scale;
     _clearRenderCaches();
+  }
+
+  // --- Generated styles (loop_style_recipes.dart) ---------------------------
+
+  String? _recipeId;
+  int _recipeSeed = 0;
+  final Map<String, RecipePin> _trackPins = {};
+
+  /// Tracks the dice must not change (a UI lock pin; not in the spec — what a
+  /// lock PRESERVES is in the spec as a [RecipePin], so undo/share hold).
+  final Set<String> lockedTracks = {};
+
+  /// The active generated style, or null for a hand-authored [styleId] band.
+  String? get recipeId => _recipeId;
+  int get recipeSeed => _recipeSeed;
+  Map<String, RecipePin> get trackPins => Map.unmodifiable(_trackPins);
+
+  /// Switches the band to the one [recipeId] generates from [seed]. With
+  /// [bias] the recipe's tempo/swing/kit/scale/progression are applied too
+  /// (a fresh pick); [applySpec] passes false and restores the saved values.
+  /// Unknown ids are ignored (returns false).
+  bool setRecipe(
+    String recipeId,
+    int seed, {
+    Map<String, RecipePin> pins = const {},
+    bool bias = true,
+  }) {
+    final recipe = styleRecipeById(recipeId);
+    if (recipe == null) return false;
+    _recipeId = recipe.id;
+    _recipeSeed = seed.clamp(0, kMaxRecipeSeed);
+    _trackPins
+      ..clear()
+      ..addAll({
+        for (final e in pins.entries)
+          if (kRecipeTrackIds.contains(e.key)) e.key: e.value,
+      });
+    _baseTracks =
+        generateRecipeTracks(recipe, _recipeSeed, pins: Map.of(_trackPins));
+    if (bias) {
+      final b = recipeBias(recipe, _recipeSeed);
+      _tempoBpm = b.tempoBpm.clamp(kMinTempoBpm, kMaxTempoBpm);
+      _swing = b.swing;
+      _kit = drumKitById(b.kitId);
+      _scale = b.scale;
+      _key = 0;
+      Progression? found;
+      for (final p in kProgressions) {
+        if (p.id == b.progressionId) found = p;
+      }
+      _progression = found;
+    }
+    _clearRenderCaches();
+    return true;
+  }
+
+  /// The (recipe, track-seed) [trackId] currently plays, or null when no
+  /// generated style is active.
+  RecipePin? effectivePin(String trackId) {
+    final rid = _recipeId;
+    if (rid == null || !kRecipeTrackIds.contains(trackId)) return null;
+    return _trackPins[trackId] ??
+        RecipePin(rid, deriveTrackSeed(rid, _recipeSeed, trackId));
+  }
+
+  /// Whole-groove dice: a new generated band from [recipeId] + [seed]. Locked
+  /// tracks keep exactly what they play (pinned to their current recipe/seed)
+  /// and their variant. Everything else — including old per-track pins — is
+  /// fresh.
+  void rollGroove(String recipeId, int seed) {
+    final keep = <String, RecipePin>{
+      for (final id in lockedTracks)
+        if (effectivePin(id) case final pin?) id: pin,
+    };
+    // A lock on a hand-authored band has nothing to pin it to (no recipe to
+    // regenerate it from), so the first roll away from such a band replaces it.
+    setRecipe(recipeId, seed, pins: keep);
+    for (final id in kRecipeTrackIds) {
+      if (!lockedTracks.contains(id)) variants.remove(id);
+    }
+  }
+
+  /// Per-track dice: [trackId] gets a fresh take of the CURRENT recipe from
+  /// [trackSeed]; every other track is untouched. No-op (false) when locked,
+  /// when no generated style is active, or for a non-generated track.
+  bool rollTrack(String trackId, int trackSeed) {
+    final rid = _recipeId;
+    if (rid == null ||
+        lockedTracks.contains(trackId) ||
+        !kRecipeTrackIds.contains(trackId)) {
+      return false;
+    }
+    _trackPins[trackId] = RecipePin(rid, trackSeed.clamp(0, kMaxRecipeSeed));
+    final recipe = styleRecipeById(rid)!;
+    _baseTracks = generateRecipeTracks(
+      recipe,
+      _recipeSeed,
+      pins: Map.of(_trackPins),
+    );
+    _clearRenderCaches();
+    return true;
   }
 
   /// The built-in band plus the captured user tracks (voice / beatbox).
@@ -2561,6 +2742,9 @@ class LoopEngine {
         scale: _scale,
         kitId: _kit.id,
         styleId: _styleId,
+        recipeId: _recipeId,
+        recipeSeed: _recipeSeed,
+        trackPins: Map.of(_trackPins),
         userCells: (_userTrack?.variants.first as MelodicPattern?)?.cells,
         userInstrument: _userTrack == null
             ? null
@@ -2600,6 +2784,16 @@ class LoopEngine {
     // kit/scale bias); the explicit fields below then override that bias, so a
     // saved groove restores its exact tempo/kit/etc. rather than the default.
     styleId = next.styleId;
+    // A generated band replaces the style's; its bias is NOT applied — the
+    // explicit tempo/kit/progression fields below restore what was saved.
+    if (next.recipeId != null) {
+      setRecipe(
+        next.recipeId!,
+        next.recipeSeed,
+        pins: next.trackPins,
+        bias: false,
+      );
+    }
     // Install the sung layer first so 'voice' counts as a known id below.
     final userCells = next.userCells;
     if (userCells != null) {

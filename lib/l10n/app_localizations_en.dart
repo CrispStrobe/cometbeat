@@ -1668,6 +1668,135 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerStyleChill => 'Lounge';
 
   @override
+  String get loopStyleGallery => 'Style gallery';
+
+  @override
+  String get loopStyleDice => 'Roll a whole new groove';
+
+  @override
+  String loopStyleRolled(String style) {
+    return 'New groove: $style';
+  }
+
+  @override
+  String get loopStyleUndo => 'Undo';
+
+  @override
+  String loopStyleBpm(String bpm) {
+    return '$bpm BPM';
+  }
+
+  @override
+  String get loopStyleGenrePopRock => 'Pop & Rock';
+
+  @override
+  String get loopStyleGenreGroove => 'Groove';
+
+  @override
+  String get loopStyleGenreWorld => 'World';
+
+  @override
+  String get loopStyleGenreClassic => 'Classics';
+
+  @override
+  String get loopStyleFeelStraight => 'straight';
+
+  @override
+  String get loopStyleFeelDriving => 'driving';
+
+  @override
+  String get loopStyleFeelSwung => 'swung';
+
+  @override
+  String get loopStyleFeelShuffle => 'shuffle';
+
+  @override
+  String get loopStyleFeelLaidBack => 'laid-back';
+
+  @override
+  String get loopStyleFeelGentle => 'gentle';
+
+  @override
+  String get loopStyleNamePop => 'Pop';
+
+  @override
+  String get loopStyleNameRock => 'Rock';
+
+  @override
+  String get loopStyleNameBallad => 'Ballad';
+
+  @override
+  String get loopStyleNameFunk => 'Funk';
+
+  @override
+  String get loopStyleNameHiphop => 'Hip-hop';
+
+  @override
+  String get loopStyleNameHouse => 'House';
+
+  @override
+  String get loopStyleNameLofi => 'Lo-fi';
+
+  @override
+  String get loopStyleNameReggae => 'Reggae';
+
+  @override
+  String get loopStyleNameBossa => 'Bossa nova';
+
+  @override
+  String get loopStyleNameSwing => 'Swing';
+
+  @override
+  String get loopStyleNameMarch => 'March';
+
+  @override
+  String get loopStyleNameKinderlied => 'Children\'s song';
+
+  @override
+  String loopStyleDiceTrack(String track) {
+    return 'New take for $track';
+  }
+
+  @override
+  String loopStyleLock(String track) {
+    return 'Lock $track';
+  }
+
+  @override
+  String loopStyleUnlock(String track) {
+    return 'Unlock $track';
+  }
+
+  @override
+  String loopStylePreview(String style) {
+    return 'Listen to $style';
+  }
+
+  @override
+  String get loopStyleStopPreview => 'Stop listening';
+
+  @override
+  String get loopStyleUse => 'Use this style';
+
+  @override
+  String get loopStyleSavePreset => 'Save as my preset';
+
+  @override
+  String get loopStyleMyPresets => 'My presets';
+
+  @override
+  String get loopStylePresetName => 'Preset name';
+
+  @override
+  String get loopStyleSave => 'Save';
+
+  @override
+  String get loopStyleCancel => 'Cancel';
+
+  @override
+  String get loopStylePresetSaved => 'Saved to my presets';
+
+  @override
   String get loopMixerHarmonyOff => 'Free';
 
   @override

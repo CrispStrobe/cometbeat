@@ -276,6 +276,20 @@ extension _LoopMixerPanels on _LoopMixerScreenState {
           child: VerticalDivider(width: 12, thickness: 1),
         );
     final tools = <Widget>[
+      IconButton(
+        key: const Key('loop-style-gallery'),
+        icon: const Icon(Icons.style),
+        tooltip: l10n.loopStyleGallery,
+        onPressed: _openStyleGallery,
+        visualDensity: VisualDensity.compact,
+      ),
+      IconButton(
+        key: const Key('loop-style-dice'),
+        icon: const Text('🎲', style: TextStyle(fontSize: 20)),
+        tooltip: l10n.loopStyleDice,
+        onPressed: _rollStyleGroove,
+        visualDensity: VisualDensity.compact,
+      ),
       if (advanced)
         IconButton(
           icon: const Icon(Icons.casino),

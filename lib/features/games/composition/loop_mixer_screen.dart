@@ -41,6 +41,7 @@ import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/loop_stack_render.dart'
     show crossfadePcm16Seam;
+import 'package:comet_beat/core/audio/loop_style_recipes.dart';
 import 'package:comet_beat/core/audio/loop_track_length.dart';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
@@ -85,6 +86,7 @@ import 'package:comet_beat/features/games/composition/loop_challenges.dart';
 import 'package:comet_beat/features/games/composition/loop_creatures.dart';
 import 'package:comet_beat/features/games/composition/loop_pattern_editor.dart';
 import 'package:comet_beat/features/games/composition/loop_secrets.dart';
+import 'package:comet_beat/features/games/composition/loop_style_gallery.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
     show harmonicFunctionColor;
@@ -268,6 +270,12 @@ abstract interface class LoopMixerTester {
   void toggleSolo(String id);
   void cycleTrackVariant(String id);
   void rollTrackVariant(String id);
+
+  /// Style catalog: switch to a generated style (locks carry over), or roll a
+  /// random style + seed — the gallery card and the 🎲, minus the UI.
+  void pickStyleRecipe(String id, {int? seed});
+  void rollStyleGroove();
+  String? get recipeId;
   void setTrackLevel(String id, double level);
   void pauseOrResume();
 
@@ -1014,6 +1022,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void cycleTrackVariant(String id) => _cycleVariant(id);
   @override
   void rollTrackVariant(String id) => _rollVariant(id);
+  @override
+  void pickStyleRecipe(String id, {int? seed}) => _pickRecipe(id, seed: seed);
+  @override
+  void rollStyleGroove() => _rollStyleGroove();
+  @override
+  String? get recipeId => _engine.recipeId;
   @override
   void setTrackLevel(String id, double level) => _setLevel(id, level);
   @override
@@ -3816,6 +3830,57 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     });
     _syncPlayback();
     _checkCombo();
+  }
+
+  // --- Style catalog (loop_style_recipes.dart) -------------------------------
+
+  void _openStyleGallery() => showLoopStyleGallery(
+        context,
+        currentRecipeId: _engine.recipeId,
+        onPick: _pickRecipe,
+        onRoll: _rollStyleGroove,
+      );
+
+  /// Switches to generated style [id] with a fresh (or given) seed. Locked
+  /// tracks carry over; the recipe's tempo/kit/progression bias may change the
+  /// grid, so restart from the top like a style change. One undoable edit —
+  /// it lands through [_syncPlayback]'s history hook like everything else.
+  void _pickRecipe(String id, {int? seed}) {
+    setState(() {
+      _discardSolo();
+      _engine.rollGroove(id, seed ?? _rng.nextInt(kMaxRecipeSeed));
+      // A style you cannot hear is no style: bring the band in when nothing
+      // generated is playing yet (sparkle stays an opt-in garnish).
+      if (!kRecipeTrackIds.any(_engine.enabled.contains)) {
+        _engine.enabled.addAll(const ['drums', 'bass', 'chords', 'melody']);
+      }
+    });
+    _tempoController.text = _engine.tempoBpm.toString();
+    _restartGroove();
+    _checkCombo();
+  }
+
+  /// The whole-groove 🎲: a random style (a different one when possible) and
+  /// seed, with a snackbar offering the undo right where the child looks.
+  void _rollStyleGroove() {
+    final others =
+        kStyleRecipes.where((r) => r.id != _engine.recipeId).toList();
+    final pick = others[_rng.nextInt(others.length)];
+    _pickRecipe(pick.id);
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(l10n.loopStyleRolled(styleRecipeName(l10n, pick.id))),
+          action: SnackBarAction(
+            label: l10n.loopStyleUndo,
+            onPressed: () {
+              if (mounted) _undoEdit();
+            },
+          ),
+        ),
+      );
   }
 
   void _cycleVariant(String id) {

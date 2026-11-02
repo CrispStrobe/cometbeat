@@ -10,6 +10,16 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Since 1.0.3 — unreleased
 
+- **Loop Studio style catalog + dice** (2026-11-02): 12 generated styles
+  (Pop, Rock, Ballad, Funk, Hip-hop, House, Lo-fi, Reggae, Bossa nova, Swing,
+  March, Kinderlied) described as RULES (`StyleRecipe`: grid-safe tempos,
+  feel, kit, progression pool, drum templates, bass/comping/melody shapes) and
+  turned into the band by a deterministic generator — same (style, seed) →
+  byte-identical render; the share token carries only the style id + seed.
+  Style gallery grouped by genre (tempo + feel on each card) and a 🎲 that
+  rolls a whole new groove, undoable. Guardrails make any seed consonant:
+  bass on chord roots, melody chord tones on every beat, drums bounded by
+  their template.
 - **Practise with your song** (2026-11-02): pick a WAV/MP3/FLAC; CrispASR
   splits it on the device into voice, drums, bass and the rest (or voice /
   accompaniment); mute, solo and level each stem instantly, or one tap for

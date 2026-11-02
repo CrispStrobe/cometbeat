@@ -1672,6 +1672,135 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerStyleChill => 'Lounge';
 
   @override
+  String get loopStyleGallery => 'Stil-Galerie';
+
+  @override
+  String get loopStyleDice => 'Zufall: ganz neuer Groove';
+
+  @override
+  String loopStyleRolled(String style) {
+    return 'Neuer Groove: $style';
+  }
+
+  @override
+  String get loopStyleUndo => 'Rückgängig';
+
+  @override
+  String loopStyleBpm(String bpm) {
+    return '$bpm BPM';
+  }
+
+  @override
+  String get loopStyleGenrePopRock => 'Pop & Rock';
+
+  @override
+  String get loopStyleGenreGroove => 'Groove';
+
+  @override
+  String get loopStyleGenreWorld => 'Welt';
+
+  @override
+  String get loopStyleGenreClassic => 'Klassiker';
+
+  @override
+  String get loopStyleFeelStraight => 'gerade';
+
+  @override
+  String get loopStyleFeelDriving => 'treibend';
+
+  @override
+  String get loopStyleFeelSwung => 'geswingt';
+
+  @override
+  String get loopStyleFeelShuffle => 'Shuffle';
+
+  @override
+  String get loopStyleFeelLaidBack => 'entspannt';
+
+  @override
+  String get loopStyleFeelGentle => 'sanft';
+
+  @override
+  String get loopStyleNamePop => 'Pop';
+
+  @override
+  String get loopStyleNameRock => 'Rock';
+
+  @override
+  String get loopStyleNameBallad => 'Ballade';
+
+  @override
+  String get loopStyleNameFunk => 'Funk';
+
+  @override
+  String get loopStyleNameHiphop => 'Hip-Hop';
+
+  @override
+  String get loopStyleNameHouse => 'House';
+
+  @override
+  String get loopStyleNameLofi => 'Lo-Fi';
+
+  @override
+  String get loopStyleNameReggae => 'Reggae';
+
+  @override
+  String get loopStyleNameBossa => 'Bossa Nova';
+
+  @override
+  String get loopStyleNameSwing => 'Swing';
+
+  @override
+  String get loopStyleNameMarch => 'Marsch';
+
+  @override
+  String get loopStyleNameKinderlied => 'Kinderlied';
+
+  @override
+  String loopStyleDiceTrack(String track) {
+    return 'Zufall für $track';
+  }
+
+  @override
+  String loopStyleLock(String track) {
+    return '$track sperren';
+  }
+
+  @override
+  String loopStyleUnlock(String track) {
+    return '$track entsperren';
+  }
+
+  @override
+  String loopStylePreview(String style) {
+    return '$style anhören';
+  }
+
+  @override
+  String get loopStyleStopPreview => 'Anhören stoppen';
+
+  @override
+  String get loopStyleUse => 'Diesen Stil nehmen';
+
+  @override
+  String get loopStyleSavePreset => 'Als meine Vorlage speichern';
+
+  @override
+  String get loopStyleMyPresets => 'Meine Vorlagen';
+
+  @override
+  String get loopStylePresetName => 'Name der Vorlage';
+
+  @override
+  String get loopStyleSave => 'Speichern';
+
+  @override
+  String get loopStyleCancel => 'Abbrechen';
+
+  @override
+  String get loopStylePresetSaved => 'In meinen Vorlagen gespeichert';
+
+  @override
   String get loopMixerHarmonyOff => 'Frei';
 
   @override
@@ -6291,7 +6420,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get termAdagioInfo =>
-      'Ruhig und gemächlich – „adagio“ heißt etwa „gemütlich“.';
+      'Ruhig und gemächlich – „adagio“ heißt etwa „bequem“.';
 
   @override
   String get termAndanteMeaning => 'gehend';

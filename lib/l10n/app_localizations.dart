@@ -3080,6 +3080,240 @@ abstract class AppLocalizations {
   /// **'Lounge'**
   String get loopMixerStyleChill;
 
+  /// No description provided for @loopStyleGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Style gallery'**
+  String get loopStyleGallery;
+
+  /// No description provided for @loopStyleDice.
+  ///
+  /// In en, this message translates to:
+  /// **'Roll a whole new groove'**
+  String get loopStyleDice;
+
+  /// No description provided for @loopStyleRolled.
+  ///
+  /// In en, this message translates to:
+  /// **'New groove: {style}'**
+  String loopStyleRolled(String style);
+
+  /// No description provided for @loopStyleUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get loopStyleUndo;
+
+  /// No description provided for @loopStyleBpm.
+  ///
+  /// In en, this message translates to:
+  /// **'{bpm} BPM'**
+  String loopStyleBpm(String bpm);
+
+  /// No description provided for @loopStyleGenrePopRock.
+  ///
+  /// In en, this message translates to:
+  /// **'Pop & Rock'**
+  String get loopStyleGenrePopRock;
+
+  /// No description provided for @loopStyleGenreGroove.
+  ///
+  /// In en, this message translates to:
+  /// **'Groove'**
+  String get loopStyleGenreGroove;
+
+  /// No description provided for @loopStyleGenreWorld.
+  ///
+  /// In en, this message translates to:
+  /// **'World'**
+  String get loopStyleGenreWorld;
+
+  /// No description provided for @loopStyleGenreClassic.
+  ///
+  /// In en, this message translates to:
+  /// **'Classics'**
+  String get loopStyleGenreClassic;
+
+  /// No description provided for @loopStyleFeelStraight.
+  ///
+  /// In en, this message translates to:
+  /// **'straight'**
+  String get loopStyleFeelStraight;
+
+  /// No description provided for @loopStyleFeelDriving.
+  ///
+  /// In en, this message translates to:
+  /// **'driving'**
+  String get loopStyleFeelDriving;
+
+  /// No description provided for @loopStyleFeelSwung.
+  ///
+  /// In en, this message translates to:
+  /// **'swung'**
+  String get loopStyleFeelSwung;
+
+  /// No description provided for @loopStyleFeelShuffle.
+  ///
+  /// In en, this message translates to:
+  /// **'shuffle'**
+  String get loopStyleFeelShuffle;
+
+  /// No description provided for @loopStyleFeelLaidBack.
+  ///
+  /// In en, this message translates to:
+  /// **'laid-back'**
+  String get loopStyleFeelLaidBack;
+
+  /// No description provided for @loopStyleFeelGentle.
+  ///
+  /// In en, this message translates to:
+  /// **'gentle'**
+  String get loopStyleFeelGentle;
+
+  /// No description provided for @loopStyleNamePop.
+  ///
+  /// In en, this message translates to:
+  /// **'Pop'**
+  String get loopStyleNamePop;
+
+  /// No description provided for @loopStyleNameRock.
+  ///
+  /// In en, this message translates to:
+  /// **'Rock'**
+  String get loopStyleNameRock;
+
+  /// No description provided for @loopStyleNameBallad.
+  ///
+  /// In en, this message translates to:
+  /// **'Ballad'**
+  String get loopStyleNameBallad;
+
+  /// No description provided for @loopStyleNameFunk.
+  ///
+  /// In en, this message translates to:
+  /// **'Funk'**
+  String get loopStyleNameFunk;
+
+  /// No description provided for @loopStyleNameHiphop.
+  ///
+  /// In en, this message translates to:
+  /// **'Hip-hop'**
+  String get loopStyleNameHiphop;
+
+  /// No description provided for @loopStyleNameHouse.
+  ///
+  /// In en, this message translates to:
+  /// **'House'**
+  String get loopStyleNameHouse;
+
+  /// No description provided for @loopStyleNameLofi.
+  ///
+  /// In en, this message translates to:
+  /// **'Lo-fi'**
+  String get loopStyleNameLofi;
+
+  /// No description provided for @loopStyleNameReggae.
+  ///
+  /// In en, this message translates to:
+  /// **'Reggae'**
+  String get loopStyleNameReggae;
+
+  /// No description provided for @loopStyleNameBossa.
+  ///
+  /// In en, this message translates to:
+  /// **'Bossa nova'**
+  String get loopStyleNameBossa;
+
+  /// No description provided for @loopStyleNameSwing.
+  ///
+  /// In en, this message translates to:
+  /// **'Swing'**
+  String get loopStyleNameSwing;
+
+  /// No description provided for @loopStyleNameMarch.
+  ///
+  /// In en, this message translates to:
+  /// **'March'**
+  String get loopStyleNameMarch;
+
+  /// No description provided for @loopStyleNameKinderlied.
+  ///
+  /// In en, this message translates to:
+  /// **'Children\'s song'**
+  String get loopStyleNameKinderlied;
+
+  /// No description provided for @loopStyleDiceTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'New take for {track}'**
+  String loopStyleDiceTrack(String track);
+
+  /// No description provided for @loopStyleLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock {track}'**
+  String loopStyleLock(String track);
+
+  /// No description provided for @loopStyleUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock {track}'**
+  String loopStyleUnlock(String track);
+
+  /// No description provided for @loopStylePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen to {style}'**
+  String loopStylePreview(String style);
+
+  /// No description provided for @loopStyleStopPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop listening'**
+  String get loopStyleStopPreview;
+
+  /// No description provided for @loopStyleUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this style'**
+  String get loopStyleUse;
+
+  /// No description provided for @loopStyleSavePreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as my preset'**
+  String get loopStyleSavePreset;
+
+  /// No description provided for @loopStyleMyPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'My presets'**
+  String get loopStyleMyPresets;
+
+  /// No description provided for @loopStylePresetName.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset name'**
+  String get loopStylePresetName;
+
+  /// No description provided for @loopStyleSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get loopStyleSave;
+
+  /// No description provided for @loopStyleCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get loopStyleCancel;
+
+  /// No description provided for @loopStylePresetSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to my presets'**
+  String get loopStylePresetSaved;
+
   /// No description provided for @loopMixerHarmonyOff.
   ///
   /// In en, this message translates to:
