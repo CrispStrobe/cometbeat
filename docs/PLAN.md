@@ -28,7 +28,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
-> 💾 **opus/loopexport — ACTIVE 2026-11-02** (branch `fix/loop-export`, worktree `../mus-loopexport`): Loop Studio save/export paths (audio WAV/MP3/Opus/AAC, notation, share sheet, Simple-view export button). Touching: `loop_mixer_screen.dart` (export/save methods + share sheet only), `loop_mixer_screen_panels.dart` (one action-bar button), `shared/music_io/{audio_export,music_export,file_delivery*}.dart`, new `core/audio/loop_export_render.dart`, new integration test. NOT the ARBs (unless noted here).
+> 💾 **opus/loopexport — IDLE, shipped 2026-11-02** (`4ece3081`..`dc371e15`): Loop Studio save/export — Simple-view export button, scrollable share sheet, audio/MusicXML export via deliverBytes on mobile/web, export render keeps master bus + stereo, AAC saved as `.aac` (raw ADTS), macOS integration test `integration_test/loop_studio_export_test.dart` (35/35).
 
 > 🗣️ **opus/tts-voices — idle (shipped 2026-11-02)**: neural narration fixed (Kokoro voice pack never fetched → silent; C curl downloader swallowed errors), small CrispASR Piper voices (Thorsten/Kerstin/Eva/Ramona/Karlsson/Cori), voice picker in Settings + lesson sheet (persisted lesson override). See docs/TTS_ARCHITECTURE.md "Narration voices". Follow-ups: CrispASR piper synth is ~RTF 1–3 on a loaded M1; thorsten-high/_emotional/mls GGUFs crash libcrispasr 0.8.49.
 
