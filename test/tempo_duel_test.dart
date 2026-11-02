@@ -3,6 +3,7 @@
 // provider harness is enough; we read the two shown terms and tap the faster.
 
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
 import 'package:comet_beat/features/games/note_values/tempo_duel_screen.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +25,7 @@ Future<void> _tapFaster(WidgetTester tester) async {
   final names = _shownTerms()
     ..sort((a, b) => _rankOf(b).compareTo(_rankOf(a))); // fastest first
   await tester.tap(find.text(names.first));
-  await tester.pump(const Duration(milliseconds: 800));
+  await tester.pump(kExplanationHold + const Duration(milliseconds: 100));
 }
 
 void main() {

@@ -13,6 +13,8 @@ import 'dart:math';
 
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
+import 'package:comet_beat/features/games/explain/music_terms.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/features/games/widgets/reading_staff.dart';
@@ -69,6 +71,9 @@ class _CrescendoReadScreenState extends State<CrescendoReadScreen>
     super.initState();
     prepareRound();
   }
+
+  @override
+  Duration get advanceDelay => kExplanationHold;
 
   @override
   void prepareRound() {
@@ -175,6 +180,17 @@ class _CrescendoReadScreenState extends State<CrescendoReadScreen>
                       ),
                     ),
                     const SizedBox(height: 16),
+                    // After an answer: what the term means (the right one, or
+                    // the one tapped if wrong), with a small picture of it.
+                    if (_tapped != null) ...[
+                      AnswerExplanation(
+                        terms: [
+                          _tapped! ? MusicTerm.crescendo : MusicTerm.diminuendo,
+                        ],
+                        onNext: advancePending ? advanceNow : null,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     FeedbackLine(correct: _lastAnswer),
                     const SizedBox(height: 16),
                     AnswerRow(

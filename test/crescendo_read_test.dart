@@ -3,6 +3,7 @@
 // used; we tap the button matching the game's own report of the wedge type.
 
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
 import 'package:comet_beat/features/games/expression/crescendo_read_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart' show HairpinType, StaffView;
 import 'package:flutter/material.dart' hide Step;
@@ -20,7 +21,9 @@ Future<void> _answerCorrectly(WidgetTester tester) async {
   final label =
       _game(tester).answerCrescendo ? 'Getting louder' : 'Getting softer';
   await tester.tap(find.text(label));
-  await tester.pump(const Duration(milliseconds: 800)); // auto-advance
+  await tester.pump(
+    kExplanationHold + const Duration(milliseconds: 100),
+  ); // auto-advance
 }
 
 void main() {
@@ -59,5 +62,27 @@ void main() {
     }
     expect(_game(tester).isFinished, isTrue);
     expect(find.byIcon(Icons.star).evaluate().length, greaterThanOrEqualTo(1));
+  });
+
+  testWidgets('an answer explains the hairpin it names (right or wrong)',
+      (tester) async {
+    await pumpGame(tester, const CrescendoReadScreen());
+    final cresc = _game(tester).answerCrescendo;
+    // Tap the WRONG button first: the card explains what was tapped.
+    await tester.tap(find.text(cresc ? 'Getting softer' : 'Getting louder'));
+    await tester.pump();
+    expect(find.byKey(AnswerExplanation.panelKey), findsOneWidget);
+    expect(find.byType(HairpinRamp), findsOneWidget);
+    expect(
+      tester.widget<HairpinRamp>(find.byType(HairpinRamp)).rising,
+      !cresc,
+    );
+    // Then the right one: the card switches to the real answer.
+    await tester.tap(find.text(cresc ? 'Getting louder' : 'Getting softer'));
+    await tester.pump();
+    expect(
+      tester.widget<HairpinRamp>(find.byType(HairpinRamp)).rising,
+      cresc,
+    );
   });
 }

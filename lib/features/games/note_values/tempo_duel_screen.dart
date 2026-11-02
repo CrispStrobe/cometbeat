@@ -5,11 +5,18 @@
 // the reading twin of the aural tempo sense. No staff, no glyphs — the marks are
 // the words themselves. No-fail loop (a wrong tap buzzes; the answer is shown).
 //
+// After an answer a "Good to know" card explains the words ("Andante =
+// gehend") with a pulsing beat dot per word at its typical speed, so the two
+// tempi can be SEEN side by side; the solved round holds for kExplanationHold
+// (or until "Next").
+//
 // SRI: 'reading.tempo.<term>' — both terms are recorded each round.
 
 import 'dart:math';
 
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
+import 'package:comet_beat/features/games/explain/music_terms.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -45,6 +52,11 @@ class _TempoDuelScreenState extends State<TempoDuelScreen>
   late TempoTerm _right;
   TempoTerm? _tapped;
 
+  /// Terms the explanation card shows (empty = no card yet this round).
+  List<MusicTerm> _explain = const [];
+
+  static MusicTerm _term(TempoTerm t) => MusicTerm.tempoFromMark(t.name)!;
+
   TempoTerm get _faster => _left.rank >= _right.rank ? _left : _right;
 
   @override
@@ -52,6 +64,9 @@ class _TempoDuelScreenState extends State<TempoDuelScreen>
 
   @override
   String get gameType => 'tempo_duel';
+
+  @override
+  Duration get advanceDelay => kExplanationHold;
 
   @override
   void initState() {
@@ -65,6 +80,7 @@ class _TempoDuelScreenState extends State<TempoDuelScreen>
     _left = pool.first;
     _right = pool.firstWhere((t) => t.rank != _left.rank);
     _tapped = null;
+    _explain = const [];
   }
 
   String _sriId(TempoTerm t) => 'reading.tempo.${t.name.toLowerCase()}';
@@ -79,7 +95,14 @@ class _TempoDuelScreenState extends State<TempoDuelScreen>
       sri.recordResponse(_sriId(_right), correct);
     }
 
-    setState(() => _tapped = choice);
+    setState(() {
+      _tapped = choice;
+      // Right: both words, slower first. Wrong: the word that was tapped.
+      _explain = correct
+          ? ([_term(_left), _term(_right)]
+            ..sort((a, b) => a.rank.compareTo(b.rank)))
+          : [_term(choice)];
+    });
     resolveAnswer(correct: correct);
   }
 
@@ -116,6 +139,13 @@ class _TempoDuelScreenState extends State<TempoDuelScreen>
                         ],
                       ),
                     ),
+                    if (_explain.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      AnswerExplanation(
+                        terms: _explain,
+                        onNext: advancePending ? advanceNow : null,
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     FeedbackLine(
                       correct: _tapped == null ? null : _tapped == _faster,

@@ -3,6 +3,7 @@
 // report of the answer.
 
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
 import 'package:comet_beat/features/games/expression/articulation_ear_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +19,9 @@ ArticulationEarTester _game(WidgetTester tester) =>
 Future<void> _answerCorrectly(WidgetTester tester) async {
   final label = _game(tester).answerLegato ? 'Smooth' : 'Short';
   await tester.tap(find.text(label));
-  await tester.pump(const Duration(milliseconds: 800)); // auto-advance
+  await tester.pump(
+    kExplanationHold + const Duration(milliseconds: 100),
+  ); // auto-advance
 }
 
 void main() {

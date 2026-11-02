@@ -6,6 +6,7 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
 import 'package:comet_beat/features/games/expression/charades_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -44,7 +45,7 @@ Future<void> _solveRound(WidgetTester tester) async {
   final label = _game(tester).answerLabel;
   await tester.tap(find.widgetWithText(FilledButton, label));
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 800));
+  await tester.pump(kExplanationHold + const Duration(milliseconds: 100));
 }
 
 void main() {

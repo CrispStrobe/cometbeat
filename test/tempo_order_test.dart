@@ -3,6 +3,7 @@
 // that order.
 
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
 import 'package:comet_beat/features/games/note_values/tempo_order_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,7 +20,9 @@ Future<void> _solveRound(WidgetTester tester) async {
     await tester.tap(find.byKey(ValueKey('tempo_card_$i')));
     await tester.pump();
   }
-  await tester.pump(const Duration(milliseconds: 800)); // auto-advance
+  await tester.pump(
+    kExplanationHold + const Duration(milliseconds: 100),
+  ); // auto-advance
 }
 
 void main() {

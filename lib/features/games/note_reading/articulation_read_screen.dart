@@ -8,6 +8,10 @@
 // Binary at 1★ (Staccato vs Accent — the most distinct); the full four-way
 // (adding Tenuto and Marcato) from 2★. Big staff card, tap buttons, no-fail.
 //
+// After an answer a "Good to know" card explains the mark (the right one, or
+// the one tapped if wrong) — what it looks like and how it is played — with
+// note-length bars; the solved round holds for kExplanationHold.
+//
 // SRI: 'reading.articulation.<staccato|tenuto|accent|marcato>'.
 
 import 'dart:math';
@@ -15,6 +19,8 @@ import 'dart:math';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
+import 'package:comet_beat/features/games/explain/music_terms.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/features/games/widgets/playing_staff.dart';
@@ -85,6 +91,17 @@ class _ArticulationReadScreenState extends State<ArticulationReadScreen>
   // A correct answer sounds the note (short for staccato); a miss buzzes.
   @override
   bool get playFeedbackSounds => false;
+
+  @override
+  Duration get advanceDelay => kExplanationHold;
+
+  static MusicTerm? _termFor(Articulation a) => switch (a) {
+        Articulation.staccato => MusicTerm.staccato,
+        Articulation.tenuto => MusicTerm.tenuto,
+        Articulation.accent => MusicTerm.accent,
+        Articulation.marcato => MusicTerm.marcato,
+        _ => null,
+      };
 
   @override
   void initState() {
@@ -202,6 +219,16 @@ class _ArticulationReadScreenState extends State<ArticulationReadScreen>
                         ),
                       ),
                     ),
+                    // After an answer: what the mark means (the right one, or
+                    // the one tapped if wrong).
+                    if (_tapped case final tapped?)
+                      if (_termFor(tapped) case final term?) ...[
+                        const SizedBox(height: 12),
+                        AnswerExplanation(
+                          terms: [term],
+                          onNext: advancePending ? advanceNow : null,
+                        ),
+                      ],
                     const SizedBox(height: 16),
                     FeedbackLine(correct: _lastAnswer),
                     const SizedBox(height: 16),

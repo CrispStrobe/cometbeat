@@ -4,6 +4,7 @@
 
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
 import 'package:comet_beat/features/games/note_reading/articulation_read_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show Articulation, NoteElement, StaffView;
@@ -28,7 +29,9 @@ const _labels = {
 
 Future<void> _answerCorrectly(WidgetTester tester) async {
   await tester.tap(find.text(_labels[_game(tester).answer]!));
-  await tester.pump(const Duration(milliseconds: 800)); // auto-advance
+  await tester.pump(
+    kExplanationHold + const Duration(milliseconds: 100),
+  ); // auto-advance
 }
 
 void main() {

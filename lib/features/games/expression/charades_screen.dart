@@ -6,6 +6,10 @@
 // (pp→ff); the child names what they heard. Big replay button; keyboard 1–4.
 //
 // Star-gated: the two clear extremes for beginners, all four terms at 2★+.
+// After an answer a "Good to know" card explains the term (the right one, or
+// the one tapped if wrong): a loudness ladder for dynamics, a beat dot at the
+// typical speed for tempo. The solved round holds for kExplanationHold.
+//
 // SRI: 'expression.hear.tempo.<term>' / 'expression.hear.dynamics.<term>'.
 
 import 'dart:math';
@@ -13,6 +17,8 @@ import 'dart:math';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
+import 'package:comet_beat/features/games/explain/music_terms.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -81,11 +87,21 @@ class _CharadesScreenState extends State<CharadesScreen>
   bool? _lastAnswer;
   bool _wide = false;
 
+  /// The term the explanation card shows (null = not answered yet).
+  MusicTerm? _explain;
+
+  static MusicTerm _term(Object o) => o is _Tempo
+      ? MusicTerm.tempoFromMark(o.label)!
+      : MusicTerm.dynamicFromMark((o as _Dyn).label)!;
+
   @override
   int get totalRounds => 10;
 
   @override
   String get gameType => 'charades';
+
+  @override
+  Duration get advanceDelay => kExplanationHold;
 
   // We play the phrase ourselves; the tap feedback blips are fine on top.
   @override
@@ -110,6 +126,7 @@ class _CharadesScreenState extends State<CharadesScreen>
     _answer = _options[_random.nextInt(_options.length)];
     _tapped = null;
     _lastAnswer = null;
+    _explain = null;
     if (round > 0) _playPhrase();
   }
 
@@ -137,6 +154,7 @@ class _CharadesScreenState extends State<CharadesScreen>
     setState(() {
       _tapped = choice;
       _lastAnswer = correct;
+      _explain = _term(choice); // right: the answer; wrong: what was tapped
     });
     resolveAnswer(correct: correct);
   }
@@ -188,6 +206,13 @@ class _CharadesScreenState extends State<CharadesScreen>
                       l10n.listenAgain,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
+                    if (_explain case final term?) ...[
+                      const SizedBox(height: 8),
+                      AnswerExplanation(
+                        terms: [term],
+                        onNext: advancePending ? advanceNow : null,
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     FeedbackLine(correct: _lastAnswer),
                     const SizedBox(height: 12),

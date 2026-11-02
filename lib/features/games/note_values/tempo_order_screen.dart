@@ -7,12 +7,18 @@
 // (Faster or Slower?) or matching a term to its meaning (Connect the Tempo
 // Words): here it's the whole Largo…Presto ladder in order.
 //
+// When the order is complete a "Good to know" card names the four words
+// ("Andante = gehend") each with a beat dot pulsing at its typical speed; the
+// solved round holds for kExplanationHold (or until "Next").
+//
 // SRI: 'reading.tempo.order'.
 
 import 'dart:math';
 
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
+import 'package:comet_beat/features/games/explain/music_terms.dart';
 import 'package:comet_beat/features/games/note_values/tempo_duel_screen.dart'
     show TempoTerm, kTempoTerms;
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
@@ -59,12 +65,18 @@ class _TempoOrderScreenState extends State<TempoOrderScreen>
   late List<int> _rank; // _rank[i] = target position of _cards[i] (0 = slowest)
   int _placed = 0;
 
+  /// Terms the explanation card shows (empty until the order is complete).
+  List<MusicTerm> _explain = const [];
+
   @override
   int get totalRounds => 8;
   @override
   String get gameType => 'tempo_order';
   @override
   bool get playFeedbackSounds => false; // a wrong tap buzzes; correct is silent
+
+  @override
+  Duration get advanceDelay => kExplanationHold;
 
   @override
   void initState() {
@@ -84,6 +96,7 @@ class _TempoOrderScreenState extends State<TempoOrderScreen>
       _rank[order[r]] = r;
     }
     _placed = 0;
+    _explain = const [];
   }
 
   static const _sriId = 'reading.tempo.order';
@@ -97,6 +110,11 @@ class _TempoOrderScreenState extends State<TempoOrderScreen>
         if (!answeredWrong) {
           context.read<SriService>().recordResponse(_sriId, true);
         }
+        setState(
+          () => _explain = [
+            for (final t in _cards) MusicTerm.tempoFromMark(t.name)!,
+          ]..sort((a, b) => a.rank.compareTo(b.rank)),
+        );
         resolveAnswer(correct: true);
       }
     } else {
@@ -151,10 +169,16 @@ class _TempoOrderScreenState extends State<TempoOrderScreen>
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      l10n.tempoOrderHint,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    if (_explain.isNotEmpty)
+                      AnswerExplanation(
+                        terms: _explain,
+                        onNext: advancePending ? advanceNow : null,
+                      )
+                    else
+                      Text(
+                        l10n.tempoOrderHint,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                   ],
                 ),
               ),
