@@ -9,21 +9,41 @@ import 'dart:io';
 
 import 'package:crispasr/crispasr.dart';
 
-/// Open a session for [backend] (e.g. `crepe`, `piano-transcription`,
-/// `htdemucs`), or null. [download] fetches the GGUF if not cached.
-CrispasrSession? openCrispasrSession(String backend, {bool download = false}) {
+/// Whether this device's libcrispasr loads and knows [backend] — the model
+/// may still need downloading. Lets a screen offer a feature (and say how big
+/// the download is) without fetching anything.
+bool crispasrBackendRegistered(String backend) {
+  final lib = _openLib();
+  return lib != null && registryLookup(backend, lib: lib) != null;
+}
+
+/// The local path of [backend]'s GGUF, resolved through CrispASR's registry +
+/// cache, or null (no lib, backend not registered, not cached and no
+/// [download]). Cheap when the model is cached: it loads nothing but the lib —
+/// which is why it, not [openCrispasrSession], is the availability probe for a
+/// model that takes seconds to load.
+String? crispasrModelPath(String backend, {bool download = false}) {
   final lib = _openLib();
   if (lib == null) return null;
   final entry = registryLookup(backend, lib: lib);
   if (entry == null) return null; // this build has no such backend registered
   final dir = cacheDir(lib: lib);
   final cached = dir == null ? null : File('$dir/${entry.filename}');
-  String? modelPath;
   if (cached != null && cached.existsSync() && cached.lengthSync() > 0) {
-    modelPath = cached.path;
-  } else if (download) {
-    modelPath = cacheEnsureFile(entry.filename, entry.url, lib: lib);
+    return cached.path;
   }
+  if (!download) return null;
+  try {
+    return cacheEnsureFile(entry.filename, entry.url, lib: lib);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Open a session for [backend] (e.g. `crepe`, `piano-transcription`,
+/// `htdemucs`), or null. [download] fetches the GGUF if not cached.
+CrispasrSession? openCrispasrSession(String backend, {bool download = false}) {
+  final modelPath = crispasrModelPath(backend, download: download);
   if (modelPath == null) return null;
   try {
     return CrispasrSession.open(

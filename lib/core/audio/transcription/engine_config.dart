@@ -112,6 +112,41 @@ extension CrispasrNoteModelInfo on CrispasrNoteModel {
   int get sampleRate => this == CrispasrNoteModel.basicPitch ? 22050 : 16000;
 }
 
+/// Which separation model the `crispasr` runtime loads for
+/// [TranscriptionStep.separation] and for the practice-stems player. All three
+/// are MIT and run through the same `CrispasrSession.separate` entry point, so
+/// this is a choice of model, not of code path.
+///
+/// - [htdemucs]: Hybrid Transformer Demucs, 4 stems, ~38 MB (q4_k).
+/// - [miniBsRoformer]: HiDolen Mini-BS-RoFormer V2.5 (46M params), 4 stems,
+///   ~50 MB (q8_0).
+/// - [melBandRoformer]: vocals / instrumental only, ~436 MB (f16) — the
+///   dedicated vocal splitter, for karaoke and the sing-along melody.
+///
+/// [auto] = [htdemucs], today's model, until the synthetic ground-truth harness
+/// (`bin/stem_quality.dart`) says otherwise.
+enum CrispasrSeparatorModel { auto, htdemucs, miniBsRoformer, melBandRoformer }
+
+extension CrispasrSeparatorModelInfo on CrispasrSeparatorModel {
+  /// The CrispASR registry key ([auto] resolves here).
+  String get registryBackend => switch (this) {
+        CrispasrSeparatorModel.auto ||
+        CrispasrSeparatorModel.htdemucs =>
+          'htdemucs',
+        CrispasrSeparatorModel.miniBsRoformer => 'mini-bs-roformer',
+        CrispasrSeparatorModel.melBandRoformer => 'mel-band-roformer',
+      };
+
+  /// Approximate download, in bytes. Advisory; the registry is the authority.
+  int get approxDownloadBytes => switch (this) {
+        CrispasrSeparatorModel.auto ||
+        CrispasrSeparatorModel.htdemucs =>
+          38 * 1024 * 1024,
+        CrispasrSeparatorModel.miniBsRoformer => 50 * 1024 * 1024,
+        CrispasrSeparatorModel.melBandRoformer => 436 * 1024 * 1024,
+      };
+}
+
 enum ModelSize { tiny, full }
 
 enum ModelQuant { q4k, q8, f16 }
@@ -133,6 +168,7 @@ class TranscriptionEngineConfig {
     this.quality = ModelQuality.balanced,
     this.f0Viterbi = false,
     this.crispasrNoteModel = CrispasrNoteModel.auto,
+    this.crispasrSeparatorModel = CrispasrSeparatorModel.auto,
   });
 
   /// Per-step backend preference; a missing step means [Backend.auto].
@@ -151,6 +187,10 @@ class TranscriptionEngineConfig {
   /// every other backend ignores it.
   final CrispasrNoteModel crispasrNoteModel;
 
+  /// Which model the `crispasr` runtime loads for
+  /// [TranscriptionStep.separation] (and the practice-stems player).
+  final CrispasrSeparatorModel crispasrSeparatorModel;
+
   Backend backendFor(TranscriptionStep step) => backends[step] ?? Backend.auto;
 
   TranscriptionEngineConfig copyWith({
@@ -158,12 +198,15 @@ class TranscriptionEngineConfig {
     ModelQuality? quality,
     bool? f0Viterbi,
     CrispasrNoteModel? crispasrNoteModel,
+    CrispasrSeparatorModel? crispasrSeparatorModel,
   }) =>
       TranscriptionEngineConfig(
         backends: backends ?? this.backends,
         quality: quality ?? this.quality,
         f0Viterbi: f0Viterbi ?? this.f0Viterbi,
         crispasrNoteModel: crispasrNoteModel ?? this.crispasrNoteModel,
+        crispasrSeparatorModel:
+            crispasrSeparatorModel ?? this.crispasrSeparatorModel,
       );
 
   /// Resolve the engine for [step]. [isWeb] forces pure-Dart/ONNX (no FFI);
@@ -221,6 +264,7 @@ class TranscriptionEngineConfig {
         'quality': quality.name,
         'f0Viterbi': f0Viterbi,
         'crispasrNoteModel': crispasrNoteModel.name,
+        'crispasrSeparatorModel': crispasrSeparatorModel.name,
         'backends': {
           for (final e in backends.entries) e.key.name: e.value.name,
         },
@@ -240,6 +284,9 @@ class TranscriptionEngineConfig {
       crispasrNoteModel:
           CrispasrNoteModel.values.asNameMap()[json['crispasrNoteModel']] ??
               CrispasrNoteModel.auto,
+      crispasrSeparatorModel: CrispasrSeparatorModel.values
+              .asNameMap()[json['crispasrSeparatorModel']] ??
+          CrispasrSeparatorModel.auto,
       backends: {
         for (final e in raw.entries)
           if (steps[e.key] case final s?)

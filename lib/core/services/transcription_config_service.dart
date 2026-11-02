@@ -53,6 +53,12 @@ class TranscriptionConfigService with ChangeNotifier {
   Future<void> setCrispasrNoteModel(CrispasrNoteModel m) =>
       _update(_config.copyWith(crispasrNoteModel: m));
 
+  /// Which separation model the `crispasr` runtime loads (transcription and
+  /// the practice-stems player). Takes effect on the next separation; changing
+  /// it downloads nothing on its own.
+  Future<void> setCrispasrSeparatorModel(CrispasrSeparatorModel m) =>
+      _update(_config.copyWith(crispasrSeparatorModel: m));
+
   /// Push the config's F0-Viterbi choice to the process-wide override the neural
   /// F0 model stores read. Enabling forces it on; leaving it off defers to the
   /// per-model `COMET_*_VITERBI` env gates (so a dev env var still works).

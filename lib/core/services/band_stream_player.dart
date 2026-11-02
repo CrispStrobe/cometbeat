@@ -56,15 +56,22 @@ class BandStreamPlayer {
     return _ready;
   }
 
-  /// Opens [voices] mono float streams at [sampleRate], paused until the first
-  /// [add]. False when streaming is unavailable here.
-  Future<bool> start(int sampleRate, {int voices = 3}) async {
+  /// Opens [voices] float streams at [sampleRate], paused until the first
+  /// [add]. Mono by default; with [stereo] each voice takes INTERLEAVED
+  /// `L,R,L,R,…` buffers (the practice-stems player). False when streaming is
+  /// unavailable here.
+  Future<bool> start(
+    int sampleRate, {
+    int voices = 3,
+    bool stereo = false,
+  }) async {
     await stop();
     if (!await _ensure()) return false;
     try {
       for (var v = 0; v < voices; v++) {
         final source = _soloud.setBufferStream(
           sampleRate: sampleRate,
+          channels: stereo ? Channels.stereo : Channels.mono,
           format: BufferType.f32le,
           bufferingType: BufferingType.released,
           // A window is several seconds; half a second of cushion is plenty

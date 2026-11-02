@@ -215,21 +215,28 @@ Future<TranscriptionEngines> resolveEngines(
 /// The `crispasr` separation backend: the in-app FFI htdemucs
 /// (`CrispasrSession.separate`, crispasr 0.8.17+), falling back to the
 /// `--separate` CLI (env-gated) for a dev box without a bundled lib.
-Future<Separator?> _crispasrSeparator({bool download = false}) async =>
-    await loadCrispasrFfiSeparator(download: download) ??
+Future<Separator?> _crispasrSeparator({
+  bool download = false,
+  CrispasrSeparatorModel model = CrispasrSeparatorModel.auto,
+}) async =>
+    await loadCrispasrFfiSeparator(download: download, model: model) ??
     await loadCrispasrSeparatorFromEnv();
 
 Future<Separator?> resolveSeparator(
   TranscriptionEngineConfig config, {
   bool isWeb = kIsWeb,
   Future<Separator?> Function({bool download}) loadOnnx = loadUmxSeparator,
-  Future<Separator?> Function({bool download}) loadCrispasr =
-      _crispasrSeparator,
+  Future<Separator?> Function({bool download})? loadCrispasr,
 }) async {
   final explicit =
       config.backendFor(TranscriptionStep.separation) != Backend.auto;
   final onnx = await loadOnnx(download: explicit);
-  final ggml = await loadCrispasr(download: explicit);
+  final loadGgml = loadCrispasr ??
+      ({bool download = false}) => _crispasrSeparator(
+            download: download,
+            model: config.crispasrSeparatorModel,
+          );
+  final ggml = await loadGgml(download: explicit);
   final r = config.resolve(
     TranscriptionStep.separation,
     isWeb: isWeb,
