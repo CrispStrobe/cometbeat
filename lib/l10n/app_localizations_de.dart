@@ -10643,7 +10643,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get practiceStemsUnavailable =>
-      'Zum Zerlegen eines Songs braucht es die Engine der Desktop- und Mobil-Apps. Hier ist sie nicht verfügbar.';
+      'Zum Zerlegen eines Songs braucht es die Engine auf dem Gerät – auf diesem Gerät gibt es sie noch nicht.';
 
   @override
   String get practiceStemsFailed =>

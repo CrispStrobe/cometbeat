@@ -244,20 +244,21 @@ Float64List _render(
   return Float64List.sublistView(out, 0, targetLen);
 }
 
-/// Time-stretches both channels with identical WSOLA settings so a stereo
-/// recording keeps its authored duration and shared timing relationship.
+/// Time-stretches a stereo pair LOCKED together: one frame plan, chosen on
+/// the mid (L+R) signal, renders both channels — so the stereo image cannot
+/// wobble and the mono fold-down is exactly the stretch of the mono mix.
+/// (Stretched separately, each channel picks its own splice offsets and the
+/// two drift by up to the search tolerance, frame by frame.)
 ({Float64List left, Float64List right}) timeStretchStereo(
   Float64List left,
   Float64List right,
   double factor, {
   int sampleRate = kSampleRate,
   StretchQuality quality = StretchQuality.balanced,
-}) =>
-    (
-      left: timeStretch(left, factor, sampleRate: sampleRate, quality: quality),
-      right:
-          timeStretch(right, factor, sampleRate: sampleRate, quality: quality),
-    );
+}) {
+  final out = timeStretchLinked([left, right], factor, quality: quality);
+  return (left: out[0], right: out[1]);
+}
 
 /// Finds the input offset in [nominal - tolerance, nominal + tolerance]
 /// (clamped) whose leading [_overlap] samples best cross-correlate (normalized

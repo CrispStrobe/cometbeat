@@ -2850,6 +2850,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// Desktop: a save dialog for the current loop's WAV. Platforms without
   /// one (web/mobile) just report that audio saving isn't available there —
   /// audio is juice, the groove code still travels everywhere.
+  // Static ON PURPOSE: an Isolate.run closure written inside an instance
+  // method shares its context with that method's other closures, so the first
+  // setState lambda added there would drag the State into the isolate message
+  // and every export would throw "object is unsendable".
+  static Future<Uint8List> _renderInIsolate(GrooveSpec spec) =>
+      Isolate.run(() => (LoopEngine()..applySpec(spec)).renderLoop());
+
   Future<void> _saveWav() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
@@ -2857,10 +2864,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       // Render off the UI isolate so exporting a long/complex groove never
       // freezes the frame. We send only the small serializable GrooveSpec (not
       // the whole engine + its stem cache), rebuild + render in the worker.
-      final spec = _engine.spec;
-      final wav = await Isolate.run(
-        () => (LoopEngine()..applySpec(spec)).renderLoop(),
-      );
+      final wav = await _renderInIsolate(_engine.spec);
       if (!mounted) return;
       // Offer WAV or MP3 (both pure-Dart, web-safe) from the shared sheet.
       final pcm = wavToMonoFloat(readWavPcm16(wav));

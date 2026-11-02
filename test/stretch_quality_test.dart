@@ -224,6 +224,28 @@ void main() {
           timeStretchStereo(note, note, 1.4, quality: StretchQuality.deep);
       expect(out.left, orderedEquals(out.right));
     });
+
+    test('the channels are LOCKED: the fold-down is the stretch of the mix',
+        () {
+      // Two different signals, as a real stereo mix has. Stretched one by one
+      // they would splice at different offsets; locked, L'+R' is exactly the
+      // stretch of L+R.
+      final l = _note(220);
+      final r = _note(331);
+      final mix = Float64List(l.length);
+      for (var i = 0; i < l.length; i++) {
+        mix[i] = l[i] + r[i];
+      }
+      for (final f in [0.75, 1.4]) {
+        final out = timeStretchStereo(l, r, f, quality: StretchQuality.deep);
+        final ref = timeStretch(mix, f, quality: StretchQuality.deep);
+        expect(out.left.length, ref.length);
+        expect(out.right.length, ref.length);
+        for (var i = 0; i < ref.length; i++) {
+          expect(out.left[i] + out.right[i], closeTo(ref[i], 1e-9));
+        }
+      }
+    });
   });
 
   group('degenerate inputs', () {

@@ -19085,7 +19085,7 @@ abstract class AppLocalizations {
   /// No description provided for @practiceStemsUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Splitting a song needs the on-device engine of the desktop and mobile apps. It isn\'t available here.'**
+  /// **'Splitting a song needs the on-device engine, and it isn\'t available on this device yet.'**
   String get practiceStemsUnavailable;
 
   /// No description provided for @practiceStemsFailed.

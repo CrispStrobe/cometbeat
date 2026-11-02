@@ -3810,7 +3810,7 @@
   "practiceStemsDecoding": "Song wird gelesen …",
   "practiceStemsSeparating": "Song wird zerlegt – das dauert etwa {minutes} Min.",
   "practiceStemsBeats": "Suche den Takt …",
-  "practiceStemsUnavailable": "Zum Zerlegen eines Songs braucht es die Engine der Desktop- und Mobil-Apps. Hier ist sie nicht verfügbar.",
+  "practiceStemsUnavailable": "Zum Zerlegen eines Songs braucht es die Engine auf dem Gerät – auf diesem Gerät gibt es sie noch nicht.",
   "practiceStemsFailed": "Diese Datei konnte nicht gelesen oder zerlegt werden.",
   "practiceStemsNoAudio": "Audiowiedergabe ist hier nicht verfügbar.",
   "practiceStemVocals": "Gesang",

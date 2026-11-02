@@ -10578,7 +10578,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get practiceStemsUnavailable =>
-      'Splitting a song needs the on-device engine of the desktop and mobile apps. It isn\'t available here.';
+      'Splitting a song needs the on-device engine, and it isn\'t available on this device yet.';
 
   @override
   String get practiceStemsFailed => 'That file couldn\'t be read or split.';
