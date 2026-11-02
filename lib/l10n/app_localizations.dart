@@ -11378,6 +11378,318 @@ abstract class AppLocalizations {
   /// **'very fast'**
   String get tempoVeryFast;
 
+  /// No description provided for @explainTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Good to know'**
+  String get explainTitle;
+
+  /// No description provided for @explainNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get explainNext;
+
+  /// No description provided for @explainClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close explanation'**
+  String get explainClose;
+
+  /// Typical speed of a tempo term in the answer explanation
+  ///
+  /// In en, this message translates to:
+  /// **'about {bpm} beats per minute'**
+  String explainBpm(int bpm);
+
+  /// No description provided for @explainAxisSoft.
+  ///
+  /// In en, this message translates to:
+  /// **'soft'**
+  String get explainAxisSoft;
+
+  /// No description provided for @explainAxisLoud.
+  ///
+  /// In en, this message translates to:
+  /// **'loud'**
+  String get explainAxisLoud;
+
+  /// No description provided for @explainAxisSlow.
+  ///
+  /// In en, this message translates to:
+  /// **'slow'**
+  String get explainAxisSlow;
+
+  /// No description provided for @explainAxisFast.
+  ///
+  /// In en, this message translates to:
+  /// **'fast'**
+  String get explainAxisFast;
+
+  /// No description provided for @termPpMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'very soft'**
+  String get termPpMeaning;
+
+  /// No description provided for @termPpInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Play very gently – almost like a whisper.'**
+  String get termPpInfo;
+
+  /// No description provided for @termPMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'soft'**
+  String get termPMeaning;
+
+  /// No description provided for @termPInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Play quietly and calmly.'**
+  String get termPInfo;
+
+  /// No description provided for @termMpMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'medium soft'**
+  String get termMpMeaning;
+
+  /// No description provided for @termMpInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'“Mezzo” means “half”: a little louder than piano, but still quiet.'**
+  String get termMpInfo;
+
+  /// No description provided for @termMfMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'medium loud'**
+  String get termMfMeaning;
+
+  /// No description provided for @termMfInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'“Mezzo” means “half”: a little softer than forte – a middle loudness.'**
+  String get termMfInfo;
+
+  /// No description provided for @termFMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'loud'**
+  String get termFMeaning;
+
+  /// No description provided for @termFInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Play strongly and loudly.'**
+  String get termFInfo;
+
+  /// No description provided for @termFfMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'very loud'**
+  String get termFfMeaning;
+
+  /// No description provided for @termFfInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Play with full power – very loudly.'**
+  String get termFfInfo;
+
+  /// No description provided for @termCrescMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'getting louder'**
+  String get termCrescMeaning;
+
+  /// No description provided for @termCrescInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'The music grows louder little by little. The hairpin opens up: <'**
+  String get termCrescInfo;
+
+  /// No description provided for @termDimMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'getting softer'**
+  String get termDimMeaning;
+
+  /// No description provided for @termDimInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'The music fades little by little. The hairpin closes: > (Decrescendo means the same.)'**
+  String get termDimInfo;
+
+  /// No description provided for @termLargoMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'broad, very slow'**
+  String get termLargoMeaning;
+
+  /// No description provided for @termLargoInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Slow and stately – every note gets plenty of time.'**
+  String get termLargoInfo;
+
+  /// No description provided for @termAdagioMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'slow'**
+  String get termAdagioMeaning;
+
+  /// No description provided for @termAdagioInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Calm and unhurried – “adagio” means roughly “at ease”.'**
+  String get termAdagioInfo;
+
+  /// No description provided for @termAndanteMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'walking pace'**
+  String get termAndanteMeaning;
+
+  /// No description provided for @termAndanteInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'About as fast as a relaxed walk.'**
+  String get termAndanteInfo;
+
+  /// No description provided for @termModeratoMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'moderate'**
+  String get termModeratoMeaning;
+
+  /// No description provided for @termModeratoInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Neither slow nor fast – a middle speed.'**
+  String get termModeratoInfo;
+
+  /// No description provided for @termAllegroMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'fast, cheerful'**
+  String get termAllegroMeaning;
+
+  /// No description provided for @termAllegroInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick and bright – “allegro” really means “cheerful”.'**
+  String get termAllegroInfo;
+
+  /// No description provided for @termVivaceMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'lively'**
+  String get termVivaceMeaning;
+
+  /// No description provided for @termVivaceInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Lively and spirited, usually a bit faster than Allegro.'**
+  String get termVivaceInfo;
+
+  /// No description provided for @termPrestoMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'very fast'**
+  String get termPrestoMeaning;
+
+  /// No description provided for @termPrestoInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Very fast and nimble.'**
+  String get termPrestoInfo;
+
+  /// No description provided for @termAccelMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'getting faster'**
+  String get termAccelMeaning;
+
+  /// No description provided for @termAccelInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'The tempo speeds up little by little – the beats move closer together.'**
+  String get termAccelInfo;
+
+  /// No description provided for @termRitMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'getting slower'**
+  String get termRitMeaning;
+
+  /// No description provided for @termRitInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'The tempo slows down little by little – often near the end of a piece.'**
+  String get termRitInfo;
+
+  /// No description provided for @termStaccatoMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'short, detached'**
+  String get termStaccatoMeaning;
+
+  /// No description provided for @termStaccatoInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'A dot on the note: play it short, with a little gap after it.'**
+  String get termStaccatoInfo;
+
+  /// No description provided for @termLegatoMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'smooth, connected'**
+  String get termLegatoMeaning;
+
+  /// No description provided for @termLegatoInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'The notes flow into each other with no gaps – often shown by a slur.'**
+  String get termLegatoInfo;
+
+  /// No description provided for @termTenutoMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'held'**
+  String get termTenutoMeaning;
+
+  /// No description provided for @termTenutoInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'A short line: hold the note for its whole length.'**
+  String get termTenutoInfo;
+
+  /// No description provided for @termAccentMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'stressed'**
+  String get termAccentMeaning;
+
+  /// No description provided for @termAccentInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'A wedge >: play this note stronger than the others.'**
+  String get termAccentInfo;
+
+  /// No description provided for @termMarcatoMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'strongly stressed'**
+  String get termMarcatoMeaning;
+
+  /// No description provided for @termMarcatoInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'A little roof ^: an even stronger stress than an accent.'**
+  String get termMarcatoInfo;
+
   /// No description provided for @gameConnectBeats.
   ///
   /// In en, this message translates to:

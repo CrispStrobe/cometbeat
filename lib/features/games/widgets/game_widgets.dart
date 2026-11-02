@@ -3,6 +3,8 @@
 // Shared building blocks for minigame screens: the round header (progress +
 // prompt) and the end-of-game result view (stars, score, replay).
 
+import 'dart:async';
+
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
@@ -401,19 +403,46 @@ mixin QuizRoundMixin<T extends StatefulWidget> on State<T> {
     });
 
     if (correct && !finished) {
-      Future.delayed(const Duration(milliseconds: 700), () {
-        if (!mounted) return;
-        setState(() {
-          round++;
-          answeredWrong = false;
-          prepareRound();
-        });
-      });
+      _advanceTimer?.cancel();
+      _advanceTimer = Timer(advanceDelay, advanceNow);
     }
     return correct;
   }
 
+  /// How long a solved round stays on screen before the next one. Screens
+  /// that show an answer explanation hold longer (see `kExplanationHold`);
+  /// the learner can always skip ahead with [advanceNow].
+  Duration get advanceDelay => const Duration(milliseconds: 700);
+
+  Timer? _advanceTimer;
+
+  /// Whether a solved round is waiting to advance (the auto-advance is
+  /// scheduled but has not fired yet).
+  bool get advancePending => _advanceTimer?.isActive ?? false;
+
+  /// Advances to the next round right away instead of waiting for
+  /// [advanceDelay] — e.g. from an explanation card's "Next" button. A no-op
+  /// unless an advance is pending, so it can never skip an unsolved round.
+  void advanceNow() {
+    if (!mounted || _advanceTimer == null) return;
+    _advanceTimer!.cancel();
+    _advanceTimer = null;
+    setState(() {
+      round++;
+      answeredWrong = false;
+      prepareRound();
+    });
+  }
+
+  @override
+  void dispose() {
+    _advanceTimer?.cancel();
+    super.dispose();
+  }
+
   void restartGame() {
+    _advanceTimer?.cancel();
+    _advanceTimer = null;
     _timer
       ..stop()
       ..reset();

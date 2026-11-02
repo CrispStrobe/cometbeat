@@ -6171,6 +6171,179 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tempoVeryFast => 'very fast';
 
   @override
+  String get explainTitle => 'Good to know';
+
+  @override
+  String get explainNext => 'Next';
+
+  @override
+  String get explainClose => 'Close explanation';
+
+  @override
+  String explainBpm(int bpm) {
+    return 'about $bpm beats per minute';
+  }
+
+  @override
+  String get explainAxisSoft => 'soft';
+
+  @override
+  String get explainAxisLoud => 'loud';
+
+  @override
+  String get explainAxisSlow => 'slow';
+
+  @override
+  String get explainAxisFast => 'fast';
+
+  @override
+  String get termPpMeaning => 'very soft';
+
+  @override
+  String get termPpInfo => 'Play very gently – almost like a whisper.';
+
+  @override
+  String get termPMeaning => 'soft';
+
+  @override
+  String get termPInfo => 'Play quietly and calmly.';
+
+  @override
+  String get termMpMeaning => 'medium soft';
+
+  @override
+  String get termMpInfo =>
+      '“Mezzo” means “half”: a little louder than piano, but still quiet.';
+
+  @override
+  String get termMfMeaning => 'medium loud';
+
+  @override
+  String get termMfInfo =>
+      '“Mezzo” means “half”: a little softer than forte – a middle loudness.';
+
+  @override
+  String get termFMeaning => 'loud';
+
+  @override
+  String get termFInfo => 'Play strongly and loudly.';
+
+  @override
+  String get termFfMeaning => 'very loud';
+
+  @override
+  String get termFfInfo => 'Play with full power – very loudly.';
+
+  @override
+  String get termCrescMeaning => 'getting louder';
+
+  @override
+  String get termCrescInfo =>
+      'The music grows louder little by little. The hairpin opens up: <';
+
+  @override
+  String get termDimMeaning => 'getting softer';
+
+  @override
+  String get termDimInfo =>
+      'The music fades little by little. The hairpin closes: > (Decrescendo means the same.)';
+
+  @override
+  String get termLargoMeaning => 'broad, very slow';
+
+  @override
+  String get termLargoInfo =>
+      'Slow and stately – every note gets plenty of time.';
+
+  @override
+  String get termAdagioMeaning => 'slow';
+
+  @override
+  String get termAdagioInfo =>
+      'Calm and unhurried – “adagio” means roughly “at ease”.';
+
+  @override
+  String get termAndanteMeaning => 'walking pace';
+
+  @override
+  String get termAndanteInfo => 'About as fast as a relaxed walk.';
+
+  @override
+  String get termModeratoMeaning => 'moderate';
+
+  @override
+  String get termModeratoInfo => 'Neither slow nor fast – a middle speed.';
+
+  @override
+  String get termAllegroMeaning => 'fast, cheerful';
+
+  @override
+  String get termAllegroInfo =>
+      'Quick and bright – “allegro” really means “cheerful”.';
+
+  @override
+  String get termVivaceMeaning => 'lively';
+
+  @override
+  String get termVivaceInfo =>
+      'Lively and spirited, usually a bit faster than Allegro.';
+
+  @override
+  String get termPrestoMeaning => 'very fast';
+
+  @override
+  String get termPrestoInfo => 'Very fast and nimble.';
+
+  @override
+  String get termAccelMeaning => 'getting faster';
+
+  @override
+  String get termAccelInfo =>
+      'The tempo speeds up little by little – the beats move closer together.';
+
+  @override
+  String get termRitMeaning => 'getting slower';
+
+  @override
+  String get termRitInfo =>
+      'The tempo slows down little by little – often near the end of a piece.';
+
+  @override
+  String get termStaccatoMeaning => 'short, detached';
+
+  @override
+  String get termStaccatoInfo =>
+      'A dot on the note: play it short, with a little gap after it.';
+
+  @override
+  String get termLegatoMeaning => 'smooth, connected';
+
+  @override
+  String get termLegatoInfo =>
+      'The notes flow into each other with no gaps – often shown by a slur.';
+
+  @override
+  String get termTenutoMeaning => 'held';
+
+  @override
+  String get termTenutoInfo =>
+      'A short line: hold the note for its whole length.';
+
+  @override
+  String get termAccentMeaning => 'stressed';
+
+  @override
+  String get termAccentInfo =>
+      'A wedge >: play this note stronger than the others.';
+
+  @override
+  String get termMarcatoMeaning => 'strongly stressed';
+
+  @override
+  String get termMarcatoInfo =>
+      'A little roof ^: an even stronger stress than an accent.';
+
+  @override
   String get gameConnectBeats => 'Connect the Beats';
 
   @override
