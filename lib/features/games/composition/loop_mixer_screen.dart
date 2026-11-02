@@ -2404,130 +2404,136 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final messenger = ScaffoldMessenger.of(context);
     final action = await showModalBottomSheet<String>(
       context: context,
+      // ~20 rows: without scroll control the sheet is capped at 9/16 of the
+      // window and the bottom half — "Save as audio" among it — was simply
+      // out of reach, behind a RenderFlex overflow.
+      isScrollControlled: true,
       builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.copy),
-              title: Text(l10n.loopMixerCopyCode),
-              onTap: () => Navigator.pop(sheet, 'copy'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.content_paste_go),
-              title: Text(l10n.loopMixerPasteCode),
-              onTap: () => Navigator.pop(sheet, 'paste'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.bookmark_add),
-              title: Text(l10n.loopMixerSaveSlot),
-              enabled: _engine.enabled.isNotEmpty,
-              onTap: () => Navigator.pop(sheet, 'save'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.bookmarks),
-              title: Text(l10n.loopMixerMySlots),
-              onTap: () => Navigator.pop(sheet, 'slots'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.library_music),
-              title: Text(l10n.loopMixerSaveSongBook),
-              enabled: hasPitchedTrack,
-              onTap: () => Navigator.pop(sheet, 'songbook'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.music_note),
-              title: Text(l10n.loopMixerExportMusicXml),
-              enabled: hasPitchedTrack,
-              onTap: () => Navigator.pop(sheet, 'musicxml'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.ios_share),
-              title: Text(l10n.musicExportTitle),
-              enabled: hasPitchedTrack,
-              onTap: () => Navigator.pop(sheet, 'export'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.grid_view),
-              title: Text(l10n.loopMixerOpenTracker),
-              enabled: hasPitchedTrack,
-              onTap: () => Navigator.pop(sheet, 'tracker'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_note),
-              title: Text(l10n.loopMixerOpenWorkshop),
-              enabled: hasPitchedTrack,
-              onTap: () => Navigator.pop(sheet, 'workshop'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.download),
-              title: Text(l10n.loopMixerSaveAudio),
-              enabled: _engine.enabled.isNotEmpty,
-              onTap: () => Navigator.pop(sheet, 'wav'),
-            ),
-            // WS-W7: record the session as an arrangement.
-            ListTile(
-              key: const ValueKey('loop-record-arrangement'),
-              leading: Icon(
-                _arrangement.isRecording
-                    ? Icons.stop_circle_outlined
-                    : Icons.fiber_manual_record_outlined,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.copy),
+                title: Text(l10n.loopMixerCopyCode),
+                onTap: () => Navigator.pop(sheet, 'copy'),
               ),
-              title: Text(
-                _arrangement.isRecording
-                    ? l10n.loopArrangementStop
-                    : l10n.loopArrangementRecord,
+              ListTile(
+                leading: const Icon(Icons.content_paste_go),
+                title: Text(l10n.loopMixerPasteCode),
+                onTap: () => Navigator.pop(sheet, 'paste'),
               ),
-              onTap: () => Navigator.pop(sheet, 'arrRecord'),
-            ),
-            ListTile(
-              key: const ValueKey('loop-send-arrangement'),
-              leading: const Icon(Icons.view_timeline_outlined),
-              title: Text(l10n.loopArrangementSend),
-              subtitle: _arrangement.isEmpty
-                  ? null
-                  : Text(
-                      l10n.loopArrangementLength(
-                        _arrangement.runs.fold(0, (n, r) => n + r.passes),
+              ListTile(
+                leading: const Icon(Icons.bookmark_add),
+                title: Text(l10n.loopMixerSaveSlot),
+                enabled: _engine.enabled.isNotEmpty,
+                onTap: () => Navigator.pop(sheet, 'save'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.bookmarks),
+                title: Text(l10n.loopMixerMySlots),
+                onTap: () => Navigator.pop(sheet, 'slots'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.library_music),
+                title: Text(l10n.loopMixerSaveSongBook),
+                enabled: hasPitchedTrack,
+                onTap: () => Navigator.pop(sheet, 'songbook'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.music_note),
+                title: Text(l10n.loopMixerExportMusicXml),
+                enabled: hasPitchedTrack,
+                onTap: () => Navigator.pop(sheet, 'musicxml'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.ios_share),
+                title: Text(l10n.musicExportTitle),
+                enabled: hasPitchedTrack,
+                onTap: () => Navigator.pop(sheet, 'export'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.grid_view),
+                title: Text(l10n.loopMixerOpenTracker),
+                enabled: hasPitchedTrack,
+                onTap: () => Navigator.pop(sheet, 'tracker'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_note),
+                title: Text(l10n.loopMixerOpenWorkshop),
+                enabled: hasPitchedTrack,
+                onTap: () => Navigator.pop(sheet, 'workshop'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.download),
+                title: Text(l10n.loopMixerSaveAudio),
+                enabled: _engine.enabled.isNotEmpty,
+                onTap: () => Navigator.pop(sheet, 'wav'),
+              ),
+              // WS-W7: record the session as an arrangement.
+              ListTile(
+                key: const ValueKey('loop-record-arrangement'),
+                leading: Icon(
+                  _arrangement.isRecording
+                      ? Icons.stop_circle_outlined
+                      : Icons.fiber_manual_record_outlined,
+                ),
+                title: Text(
+                  _arrangement.isRecording
+                      ? l10n.loopArrangementStop
+                      : l10n.loopArrangementRecord,
+                ),
+                onTap: () => Navigator.pop(sheet, 'arrRecord'),
+              ),
+              ListTile(
+                key: const ValueKey('loop-send-arrangement'),
+                leading: const Icon(Icons.view_timeline_outlined),
+                title: Text(l10n.loopArrangementSend),
+                subtitle: _arrangement.isEmpty
+                    ? null
+                    : Text(
+                        l10n.loopArrangementLength(
+                          _arrangement.runs.fold(0, (n, r) => n + r.passes),
+                        ),
                       ),
-                    ),
-              enabled: !_arrangement.isEmpty,
-              onTap: () => Navigator.pop(sheet, 'arrSend'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.library_add),
-              title: Text(l10n.dawSend),
-              enabled: _engine.enabled.isNotEmpty,
-              onTap: () => Navigator.pop(sheet, 'daw'),
-            ),
-            // Shared-groove bridge: publish this mixer's beat / pull the beat
-            // another mode (e.g. the Drum Kit) shared.
-            ListTile(
-              leading: const Icon(Icons.upload),
-              title: Text(l10n.beatShare),
-              enabled: _engine.userBeatPattern != null,
-              onTap: () => Navigator.pop(sheet, 'shareBeat'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.download),
-              title: Text(l10n.beatLoadShared),
-              enabled: BeatBridge.instance.hasBeat,
-              onTap: () => Navigator.pop(sheet, 'loadBeat'),
-            ),
-            // MelodyBridge: the pitched twin — share/pull the tune.
-            ListTile(
-              leading: const Icon(Icons.upload),
-              title: Text(l10n.tuneShare),
-              enabled: _engine.userTrackCells != null,
-              onTap: () => Navigator.pop(sheet, 'shareTune'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.download),
-              title: Text(l10n.tuneLoadShared),
-              enabled: MelodyBridge.instance.hasMelody,
-              onTap: () => Navigator.pop(sheet, 'loadTune'),
-            ),
-          ],
+                enabled: !_arrangement.isEmpty,
+                onTap: () => Navigator.pop(sheet, 'arrSend'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.library_add),
+                title: Text(l10n.dawSend),
+                enabled: _engine.enabled.isNotEmpty,
+                onTap: () => Navigator.pop(sheet, 'daw'),
+              ),
+              // Shared-groove bridge: publish this mixer's beat / pull the beat
+              // another mode (e.g. the Drum Kit) shared.
+              ListTile(
+                leading: const Icon(Icons.upload),
+                title: Text(l10n.beatShare),
+                enabled: _engine.userBeatPattern != null,
+                onTap: () => Navigator.pop(sheet, 'shareBeat'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.download),
+                title: Text(l10n.beatLoadShared),
+                enabled: BeatBridge.instance.hasBeat,
+                onTap: () => Navigator.pop(sheet, 'loadBeat'),
+              ),
+              // MelodyBridge: the pitched twin — share/pull the tune.
+              ListTile(
+                leading: const Icon(Icons.upload),
+                title: Text(l10n.tuneShare),
+                enabled: _engine.userTrackCells != null,
+                onTap: () => Navigator.pop(sheet, 'shareTune'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.download),
+                title: Text(l10n.tuneLoadShared),
+                enabled: MelodyBridge.instance.hasMelody,
+                onTap: () => Navigator.pop(sheet, 'loadTune'),
+              ),
+            ],
+          ),
         ),
       ),
     );

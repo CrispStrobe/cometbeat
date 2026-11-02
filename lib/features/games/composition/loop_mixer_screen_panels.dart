@@ -369,6 +369,17 @@ extension _LoopMixerPanels on _LoopMixerScreenState {
             child: Row(children: tools),
           ),
         ),
+        // Simple view has no overflow menu, and with it went every way to
+        // save or export — so the default view of Loop Studio could not get a
+        // groove out at all. One door, the same sheet Advanced reaches.
+        if (!advanced)
+          IconButton(
+            key: const ValueKey('loop-share-export'),
+            icon: const Icon(Icons.ios_share),
+            tooltip: l10n.loopMixerShareExport,
+            onPressed: _openShareSheet,
+            visualDensity: VisualDensity.compact,
+          ),
         if (advanced) ...[
           IconButton(
             icon: const Icon(Icons.tune),
