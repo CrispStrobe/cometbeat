@@ -275,6 +275,11 @@ abstract interface class LoopMixerTester {
   /// random style + seed — the gallery card and the 🎲, minus the UI.
   void pickStyleRecipe(String id, {int? seed});
   void rollStyleGroove();
+
+  /// Per-track 🎲 and lock pin (generated styles only).
+  void rollRecipeTrack(String id);
+  void toggleTrackLock(String id);
+  bool isTrackLocked(String id);
   String? get recipeId;
   void setTrackLevel(String id, double level);
   void pauseOrResume();
@@ -1026,6 +1031,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void pickStyleRecipe(String id, {int? seed}) => _pickRecipe(id, seed: seed);
   @override
   void rollStyleGroove() => _rollStyleGroove();
+  @override
+  void rollRecipeTrack(String id) => _rollRecipeTrack(id);
+  @override
+  void toggleTrackLock(String id) => _toggleTrackLock(id);
+  @override
+  bool isTrackLocked(String id) => _engine.lockedTracks.contains(id);
   @override
   String? get recipeId => _engine.recipeId;
   @override
@@ -2980,6 +2991,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         onTap: () => _toggle(track.id),
         onCycleVariant: () => _cycleVariant(track.id),
         onRollVariant: () => _rollVariant(track.id),
+        // Style catalog: a per-track 🎲 + lock pin, only while a generated
+        // style plays (a hand-authored band has nothing to re-generate).
+        onDiceTrack:
+            _recipeTrack(track.id) ? () => _rollRecipeTrack(track.id) : null,
+        diceTooltip: l10n.loopStyleDiceTrack(_trackLabel(l10n, track.id)),
+        locked: _engine.lockedTracks.contains(track.id),
+        onToggleLock:
+            _recipeTrack(track.id) ? () => _toggleTrackLock(track.id) : null,
+        lockTooltip: _engine.lockedTracks.contains(track.id)
+            ? l10n.loopStyleUnlock(_trackLabel(l10n, track.id))
+            : l10n.loopStyleLock(_trackLabel(l10n, track.id)),
         steps: _engine.trackSteps(track.id),
         onCycleSteps: () => _cycleTrackSteps(track.id),
         stepsTooltip: l10n.loopMixerTrackLength,
@@ -3839,6 +3861,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         currentRecipeId: _engine.recipeId,
         onPick: _pickRecipe,
         onRoll: _rollStyleGroove,
+        // An audition pauses the groove so two loops never overlap; picking a
+        // style restarts it.
+        onPreviewStart: () {
+          if (mounted && _clock.isRunning) _pauseOrResume();
+        },
       );
 
   /// Switches to generated style [id] with a fresh (or given) seed. Locked
@@ -3859,6 +3886,25 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _restartGroove();
     _checkCombo();
   }
+
+  bool _recipeTrack(String id) =>
+      _engine.recipeId != null && kRecipeTrackIds.contains(id);
+
+  /// Per-track 🎲: a fresh take of this one part within the current style.
+  /// Locked tracks refuse (the engine enforces it too).
+  void _rollRecipeTrack(String id) {
+    var changed = false;
+    setState(
+      () => changed = _engine.rollTrack(id, _rng.nextInt(kMaxRecipeSeed)),
+    );
+    if (changed && _engine.enabled.contains(id)) _syncPlayback();
+  }
+
+  /// A lock pin is a UI guard over the dice, not a sound change — nothing to
+  /// re-render or record. What it protects travels in the spec as a pin.
+  void _toggleTrackLock(String id) => setState(() {
+        if (!_engine.lockedTracks.remove(id)) _engine.lockedTracks.add(id);
+      });
 
   /// The whole-groove 🎲: a random style (a different one when possible) and
   /// seed, with a snackbar offering the undo right where the child looks.
@@ -6368,7 +6414,19 @@ class _TrackCard extends StatelessWidget {
     this.panLabel,
     this.onEdit,
     this.editTooltip,
+    this.onDiceTrack,
+    this.diceTooltip,
+    this.locked = false,
+    this.onToggleLock,
+    this.lockTooltip,
   });
+
+  /// Style catalog: re-roll just this part (null hides it), and its lock pin.
+  final VoidCallback? onDiceTrack;
+  final String? diceTooltip;
+  final bool locked;
+  final VoidCallback? onToggleLock;
+  final String? lockTooltip;
 
   final Color color;
   final CreatureShape shape;
@@ -6545,6 +6603,45 @@ class _TrackCard extends StatelessWidget {
                   if (onEdit != null) _editButton(foreground),
                   _soloButton(foreground),
                   if (onDelete != null) _deleteButton(foreground),
+                ],
+              ),
+            // Its own row rather than more header badges: the header has ~2 px
+            // of headroom (see the note above), and these appear only while a
+            // generated style plays.
+            if (onDiceTrack != null || onToggleLock != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onDiceTrack != null)
+                    IconButton(
+                      key: Key('loop-track-dice-$label'),
+                      tooltip: diceTooltip,
+                      onPressed: locked ? null : onDiceTrack,
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 28),
+                      icon: Opacity(
+                        opacity: locked ? 0.35 : 1,
+                        child: const Text('🎲', style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                  if (onToggleLock != null)
+                    IconButton(
+                      key: Key('loop-track-lock-$label'),
+                      tooltip: lockTooltip,
+                      onPressed: onToggleLock,
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 28),
+                      icon: Icon(
+                        locked ? Icons.lock : Icons.lock_open,
+                        size: 18,
+                        color: locked ? Colors.amber : foreground,
+                      ),
+                    ),
                 ],
               ),
             // Per-card level, only offered while the layer sounds.
