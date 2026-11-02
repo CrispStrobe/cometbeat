@@ -36,34 +36,43 @@ typedef _Decode = Pointer<Float> Function(
 typedef _FreeNative = Void Function(Pointer<Void>);
 typedef _Free = void Function(Pointer<Void>);
 
-/// Where glint's symbols are: null = in this process (the app's plugin),
-/// otherwise a library path or name to open. Resolution order: [explicit];
-/// `COMET_GLINT_LIB`; the process; the platform's bundled library names.
-/// Null when none of them provides `glint_decode_audio`.
+/// The oldest glint whose MP3 decode is gapless (glint_version, 0.8.1).
+const int kGlintGaplessVersion = (0 << 16) | (8 << 8) | 1;
+
+typedef _VersionNative = Int32 Function();
+typedef _Version = int Function();
+
+/// Where a USABLE glint is: null path = this process (the app's plugin),
+/// otherwise a library path to open. Order: [explicit]; `COMET_GLINT_LIB`;
+/// the process. Null when none provides `glint_decode_audio` at
+/// [kGlintGaplessVersion] or later.
+///
+/// Deliberately NO lookup by bare library name: the system loader then
+/// searches /usr/local/lib and friends, and found a months-old
+/// libglint.dylib there that decodes every MP3 ~25 ms late. In the app the
+/// glint_vorbis plugin links glint into the process, so the process is the
+/// only place it needs to look; the version check refuses a stale library
+/// handed in explicitly, too.
 ({String? path})? resolveGlint({String? explicit}) {
-  bool has(DynamicLibrary l) => l.providesSymbol('glint_decode_audio');
+  bool usable(DynamicLibrary l) {
+    if (!l.providesSymbol('glint_decode_audio') ||
+        !l.providesSymbol('glint_version')) {
+      return false;
+    }
+    final v = l.lookupFunction<_VersionNative, _Version>('glint_version')();
+    return v >= kGlintGaplessVersion;
+  }
+
   final env = Platform.environment['COMET_GLINT_LIB'];
   for (final p in [explicit, if (env != null && env.isNotEmpty) env]) {
     if (p == null) continue;
     try {
-      if (has(DynamicLibrary.open(p))) return (path: p);
+      if (usable(DynamicLibrary.open(p))) return (path: p);
     } catch (_) {}
   }
   try {
-    if (has(DynamicLibrary.process())) return (path: null);
+    if (usable(DynamicLibrary.process())) return (path: null);
   } catch (_) {}
-  final names = Platform.isMacOS
-      ? const ['libglint.dylib', 'glint.framework/glint']
-      : Platform.isIOS
-          ? const ['glint.framework/glint']
-          : Platform.isWindows
-              ? const ['glint.dll']
-              : const ['libglint.so'];
-  for (final n in names) {
-    try {
-      if (has(DynamicLibrary.open(n))) return (path: n);
-    } catch (_) {}
-  }
   return null;
 }
 

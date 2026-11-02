@@ -106,4 +106,16 @@ void main() {
     },
     skip: skip,
   );
+
+  test('a glint older than the gapless fix is refused, even when named', () {
+    // /usr/local/lib/libglint.dylib is a months-old install on the dev Mac
+    // where a bare-name lookup once picked it up silently. Any library that
+    // reports a glint_version below 0.8.1 must not be used.
+    const stale = '/usr/local/lib/libglint.dylib';
+    if (!File(stale).existsSync()) {
+      markTestSkipped('no stale glint installed here');
+      return;
+    }
+    expect(resolveGlint(explicit: stale), anyOf(isNull, isNot((path: stale))));
+  });
 }
