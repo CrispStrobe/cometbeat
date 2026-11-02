@@ -33,6 +33,10 @@ is recorded in [HISTORY.md](HISTORY.md).
 > over your own song), selectable separator model, beat-this beat grid,
 > `bin/stem_quality.dart`. Results + caveats: `docs/STEM_SEPARATION.md`;
 > follow-ups in root `PLAN.md` (Mini-BS-RoFormer GPU blocked on CrispASR #568).
+> Follow-up wave (same day, `588cd095`): glint song import, loop + slow-down,
+> pickup bars from downbeats, real-app e2e test. macOS bundling: libcrispasr's
+> deps are now `crispasr-`-prefixed (`tool/bundle_macos_tts.sh`) — re-bundle
+> before a release, else it clashes with CrispEmbed's ggml.
 
 > 🎹 **opus/note-models — branch `feat/crispasr-note-models` (worktree
 > `../cometbeat-notemodels`), 2026-09-21.** The ggml polyphonic path loaded ONE

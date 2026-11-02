@@ -19,6 +19,15 @@ the repo root (detailed roadmap planning and the agent board are in
   RoFormer), stems stay stereo, and separation runs off the UI isolate.
   Whole-song transcription takes its beats and bar length from beat-this.
   Measurements and caveats: [STEM_SEPARATION.md](STEM_SEPARATION.md).
+- Songs in more formats: MP3, FLAC, Ogg Vorbis, Opus and AAC decode
+  through glint (gapless MP3 since glint 0.8.1; an older glint is refused).
+- Loop a passage (snapped to the beat) and slow it down to 50–90 % without
+  changing pitch; the stems stay locked together.
+- Transcribed songs that start on an upbeat get a proper pickup bar,
+  taken from the tracked downbeats.
+- Fixed: splitting failed on every song in the real app (an isolate call
+  captured the screen). Now covered by an end-to-end test on macOS
+  (`integration_test/practice_stems_test.dart`).
 - crispasr 0.8.49.
 
 ## Release 1.0.3 (build 8) — TestFlight, internal and external (2026-10-19)
