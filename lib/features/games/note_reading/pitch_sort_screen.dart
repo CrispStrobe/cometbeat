@@ -203,8 +203,6 @@ class _PitchSortScreenState extends State<PitchSortScreen> with QuizRoundMixin {
                                             width: 84,
                                             height: 104,
                                           ),
-                                          onDraggableCanceled: (_, __) =>
-                                              _onMiss(i),
                                           child: _NoteCard(
                                             score: _score(_cards[i]),
                                           ),
@@ -224,10 +222,12 @@ class _PitchSortScreenState extends State<PitchSortScreen> with QuizRoundMixin {
                                         horizontal: 6,
                                       ),
                                       child: DragTarget<int>(
-                                        onWillAcceptWithDetails: (d) =>
-                                            _high[d.data] == high,
+                                        // Any drop on a basket is judged here; a release on no basket
+// (a tap, or a drag dropped back) is NOT an answer.
                                         onAcceptWithDetails: (d) =>
-                                            _onAccept(d.data, high),
+                                            _high[d.data] == high
+                                                ? _onAccept(d.data, high)
+                                                : _onMiss(d.data),
                                         builder: (context, candidate, __) =>
                                             _Bucket(
                                           high: high,

@@ -144,7 +144,6 @@ class _BeatSortScreenState extends State<BeatSortScreen> with QuizRoundMixin {
                                     width: 60,
                                     height: 80,
                                   ),
-                                  onDraggableCanceled: (_, __) => _onMiss(i),
                                   child: _GlyphCard(glyph: _cards[i].glyph),
                                 ),
                           ],
@@ -161,10 +160,12 @@ class _BeatSortScreenState extends State<BeatSortScreen> with QuizRoundMixin {
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 6),
                               child: DragTarget<int>(
-                                onWillAcceptWithDetails: (d) =>
-                                    _beats4(_cards[d.data]) == bucket,
+                                // Any drop on a basket is judged here; a release on no basket
+// (a tap, or a drag dropped back) is NOT an answer.
                                 onAcceptWithDetails: (d) =>
-                                    _onAccept(d.data, bucket),
+                                    _beats4(_cards[d.data]) == bucket
+                                        ? _onAccept(d.data, bucket)
+                                        : _onMiss(d.data),
                                 builder: (context, candidate, __) => _Bucket(
                                   beats: bucket,
                                   label: l10n.beatsCount(bucket),

@@ -218,8 +218,6 @@ class _AccidentalSortScreenState extends State<AccidentalSortScreen>
                                             width: 84,
                                             height: 104,
                                           ),
-                                          onDraggableCanceled: (_, __) =>
-                                              _onMiss(i),
                                           child: _NoteCard(
                                             score: _score(_cards[i]),
                                           ),
@@ -239,10 +237,12 @@ class _AccidentalSortScreenState extends State<AccidentalSortScreen>
                                         horizontal: 6,
                                       ),
                                       child: DragTarget<int>(
-                                        onWillAcceptWithDetails: (d) =>
-                                            _alter[d.data] == alter,
+                                        // Any drop on a basket is judged here; a release on no basket
+// (a tap, or a drag dropped back) is NOT an answer.
                                         onAcceptWithDetails: (d) =>
-                                            _onAccept(d.data, alter),
+                                            _alter[d.data] == alter
+                                                ? _onAccept(d.data, alter)
+                                                : _onMiss(d.data),
                                         builder: (context, candidate, __) =>
                                             _Bucket(
                                           glyph: _signGlyph(alter),

@@ -173,7 +173,6 @@ class _DottedSortScreenState extends State<DottedSortScreen>
                                     width: 84,
                                     height: 104,
                                   ),
-                                  onDraggableCanceled: (_, __) => _onMiss(i),
                                   child: _NoteCard(score: _scoreOf(i)),
                                 ),
                           ],
@@ -190,10 +189,12 @@ class _DottedSortScreenState extends State<DottedSortScreen>
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 6),
                               child: DragTarget<int>(
-                                onWillAcceptWithDetails: (d) =>
-                                    _dotted[d.data] == dotted,
+                                // Any drop on a basket is judged here; a release on no basket
+// (a tap, or a drag dropped back) is NOT an answer.
                                 onAcceptWithDetails: (d) =>
-                                    _onAccept(d.data, dotted),
+                                    _dotted[d.data] == dotted
+                                        ? _onAccept(d.data, dotted)
+                                        : _onMiss(d.data),
                                 builder: (context, candidate, __) => _Bucket(
                                   dotted: dotted,
                                   label: dotted

@@ -215,7 +215,6 @@ class _MajorMinorSortScreenState extends State<MajorMinorSortScreen>
                                     width: 84,
                                     height: 104,
                                   ),
-                                  onDraggableCanceled: (_, __) => _onMiss(i),
                                   child: _ChordCard(score: _score(_cards[i])),
                                 ),
                           ],
@@ -232,10 +231,12 @@ class _MajorMinorSortScreenState extends State<MajorMinorSortScreen>
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 6),
                               child: DragTarget<int>(
-                                onWillAcceptWithDetails: (d) =>
-                                    _cards[d.data].quality == quality,
+                                // Any drop on a basket is judged here; a release on no basket
+// (a tap, or a drag dropped back) is NOT an answer.
                                 onAcceptWithDetails: (d) =>
-                                    _onAccept(d.data, quality),
+                                    _cards[d.data].quality == quality
+                                        ? _onAccept(d.data, quality)
+                                        : _onMiss(d.data),
                                 builder: (context, candidate, __) => _Bucket(
                                   glyph: _qualityGlyph(quality),
                                   label: _qualityLabel(l10n, quality),
