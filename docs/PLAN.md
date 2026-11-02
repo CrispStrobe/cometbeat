@@ -30,6 +30,14 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 > 🏷️ **sonnet/stufe — ACTIVE 2026-11-02** (branch `fix/stufe-and-lesson-end`): rename Klasse/Grades labels → Stufe/Level (`app_de.arb`, `app_en.arb`, `concept_map.dart`) + lesson-end audio cut-off (shared game flow).
 
+> 📖 **opus/explain — ACTIVE 2026-11-02** (branch `feat/answer-explanations`, worktree
+> `../mus-explain`). Answer explanations: a term glossary (dynamics/tempo/articulation,
+> "mezzoforte = halblaut") + a post-answer card with a loudness ladder / tempo pulse,
+> wired into the dynamics/tempo/articulation games. Touching: **both ARBs**,
+> `game_widgets.dart` (QuizRoundMixin: overridable advance delay + skip only — NOT the
+> finish flow), the term-game screens under `note_values/` + `expression/` +
+> `note_reading/articulation_read_screen.dart`. Not touching TTS/voice, primers, finish.
+
 > 🎚️ **opus/stems — IDLE, shipped 2026-11-02** (branch `feature/stems-practice`,
 > merged). "Practise with your song" (CrispASR stems, minus-one, sing-along
 > over your own song), selectable separator model, beat-this beat grid,
