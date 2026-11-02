@@ -158,4 +158,51 @@ void main() {
       plain.score!.parts.single.timeSignature?.beats,
     );
   });
+
+  test('pickupBeatsOf counts the beats before the first downbeat', () {
+    final beats = [for (var i = 0; i < 12; i++) i * 500.0];
+    BeatGrid g(List<double> down) =>
+        BeatGrid(beatMs: beats, downbeatMs: down, bpm: 120);
+    expect(pickupBeatsOf(g([0, 1500]), 3), 0);
+    expect(pickupBeatsOf(g([500, 2000]), 3), 1);
+    // The first downbeat may come after a whole bar or more of beats.
+    expect(pickupBeatsOf(g([2000, 3500]), 3), 1);
+    // Float times need not match the beat exactly.
+    expect(pickupBeatsOf(g([1000.4]), 4), 2);
+    expect(pickupBeatsOf(g([]), 4), 0);
+  });
+
+  test('a downbeat after the first beat makes bar 1 an upbeat', () async {
+    final Stems stems = (
+      vocals: _line(const [67, 72, 74, 76, 77, 76, 74, 72, 71]),
+      bass: null,
+      drums: null,
+      other: null,
+    );
+    final beats = [for (var i = 0; i < 12; i++) i * 500.0];
+    // 3/4 with the first downbeat on the SECOND beat: one beat of upbeat.
+    final r = await transcribeStems(
+      stems,
+      beats: BeatGrid(
+        beatMs: beats,
+        downbeatMs: [for (var i = 1; i < 12; i += 3) beats[i]],
+        bpm: 120,
+      ),
+    );
+    final part = r.score!.parts.single;
+    expect(part.timeSignature?.beats, 3);
+    expect(part.measures.first.pickup, isTrue);
+    expect(part.measures.first.totalDuration, Fraction(1, 4));
+    expect(part.measures.skip(1).every((m) => !m.pickup), isTrue);
+    // Same notes as without a phase; only where the bars fall moved.
+    final noPhase = await transcribeStems(
+      stems,
+      beats: BeatGrid(
+        beatMs: beats,
+        downbeatMs: [for (var i = 0; i < 12; i += 3) beats[i]],
+        bpm: 120,
+      ),
+    );
+    expect(_partMidis(part), _partMidis(noPhase.score!.parts.single));
+  });
 }

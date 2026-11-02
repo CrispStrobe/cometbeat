@@ -73,6 +73,11 @@ Future<StemTranscription> transcribeStems(
   final barBeats = tracked ? beats.beatsPerBar : null;
   final beatsPerBar =
       barBeats != null && barBeats >= 2 && barBeats <= 7 ? barBeats : null;
+  // ...and where bar 1 starts: the beats before the first downbeat are an
+  // upbeat. Only with a tracked bar length — a phase without a period means
+  // nothing.
+  final pickupBeats =
+      tracked && beatsPerBar != null ? pickupBeatsOf(beats, beatsPerBar) : 0;
 
   final parts = <Score>[];
   final names = <String>[];
@@ -92,6 +97,7 @@ Future<StemTranscription> transcribeStems(
         f0: f0,
         force: force,
         beatsPerBar: beatsPerBar,
+        pickupBeats: pickupBeats,
       ),
     );
     names.add(name);
@@ -151,6 +157,7 @@ Future<Score> _stemToScore(
   F0Estimator? f0,
   TranscriptionEngine? force,
   int? beatsPerBar,
+  int pickupBeats = 0,
 }) async {
   final routed = await transcribeAuto(
     mono,
@@ -163,6 +170,7 @@ Future<Score> _stemToScore(
     routed.notes,
     grid,
     beatsPerBar: beatsPerBar ?? estimateMeter(grid).beatsPerBar,
+    pickupBeats: pickupBeats,
     clef: chooseClef(routed.notes),
   );
   return respell(raw, fifths: estimateKey(routed.notes).fifths);

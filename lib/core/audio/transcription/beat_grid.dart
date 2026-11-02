@@ -49,3 +49,20 @@ class BeatGrid {
       ? downbeatMs.first
       : (beatMs.isEmpty ? null : beatMs.first);
 }
+
+/// How many beats of [grid] come before its first downbeat, modulo
+/// [beatsPerBar] — the length of the upbeat when bar 1 starts on that
+/// downbeat. 0 (no pickup) without downbeats.
+int pickupBeatsOf(BeatGrid grid, int beatsPerBar) {
+  final first = grid.downbeatMs.isEmpty ? null : grid.downbeatMs.first;
+  if (first == null || grid.beatMs.isEmpty || beatsPerBar < 2) return 0;
+  // The downbeat's index in the beat list: the nearest beat (they are the same
+  // event, but float times need not match bit for bit).
+  var index = 0;
+  for (var i = 1; i < grid.beatMs.length; i++) {
+    if ((grid.beatMs[i] - first).abs() < (grid.beatMs[index] - first).abs()) {
+      index = i;
+    }
+  }
+  return index % beatsPerBar;
+}

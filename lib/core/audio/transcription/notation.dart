@@ -129,17 +129,15 @@ Score respell(Score score, {int? fifths}) {
   List<MusicElement> voice(List<MusicElement> els) => [
         for (final e in els) _respellElement(e, f),
       ];
+  // copyWith, not a fresh Measure: rebuilding field by field silently
+  // dropped everything not listed — the pickup flag, barlines, repeats.
   final measures = [
     for (final m in score.measures)
-      Measure(
-        voice(m.elements),
+      m.copyWith(
+        elements: voice(m.elements),
         voice2: voice(m.voice2),
         voice3: voice(m.voice3),
         voice4: voice(m.voice4),
-        clefChange: m.clefChange,
-        keyChange: m.keyChange,
-        timeChange: m.timeChange,
-        tempoChange: m.tempoChange,
       ),
   ];
   return Score(

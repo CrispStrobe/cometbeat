@@ -53,13 +53,22 @@ const List<(int, NoteDuration)> _durations = [
 /// note. Independent voices are re-articulated at each new onset rather than
 /// tied per-voice — acceptable for a first-pass lead sheet; true voice/staff
 /// separation is a follow-up (W-NOTATION).
+///
+/// [pickupBeats] (0 < n < [beatsPerBar]) makes the first bar an upbeat that
+/// long — the beats before the grid's first downbeat — flagged
+/// [Measure.pickup] (MusicXML `implicit="yes"`), so bar 1 starts ON the
+/// downbeat instead of wherever the first tracked beat happened to fall.
 Score transcribeToScore(
   List<NoteEvent> notes,
   RhythmGrid grid, {
   Clef clef = Clef.treble,
   int beatsPerBar = 4,
+  int pickupBeats = 0,
 }) {
   final stepsPerBar = beatsPerBar * _stepsPerBeat;
+  final firstBarSteps = pickupBeats > 0 && pickupBeats < beatsPerBar
+      ? pickupBeats * _stepsPerBeat
+      : stepsPerBar;
   final gridded = quantizeToGrid(notes, grid);
 
   // Note spans in steps: (startStep, endStep, midi).
@@ -108,7 +117,8 @@ Score transcribeToScore(
   void emit(List<int> midis, int steps) {
     var remaining = steps;
     while (remaining > 0) {
-      final room = stepsPerBar - posInBar;
+      final barSteps = measures.isEmpty ? firstBarSteps : stepsPerBar;
+      final room = barSteps - posInBar;
       final fit = math.min(remaining, room);
       final (chunk, duration) = _durations.firstWhere((d) => d.$1 <= fit);
       final id = 'e${nextId++}';
@@ -128,8 +138,8 @@ Score transcribeToScore(
       );
       posInBar += chunk;
       remaining -= chunk;
-      if (posInBar == stepsPerBar) {
-        measures.add(Measure(bar));
+      if (posInBar == barSteps) {
+        measures.add(Measure(bar, pickup: barSteps < stepsPerBar));
         bar = <MusicElement>[];
         posInBar = 0;
       }
@@ -140,7 +150,9 @@ Score transcribeToScore(
     emit(c.midis, c.steps);
   }
   // Complete the final bar with a rest so every measure is full.
-  if (posInBar > 0) emit(const [], stepsPerBar - posInBar);
+  if (posInBar > 0) {
+    emit(const [], (measures.isEmpty ? firstBarSteps : stepsPerBar) - posInBar);
+  }
 
   return Score(
     clef: clef,
