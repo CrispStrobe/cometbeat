@@ -18,18 +18,15 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/practice/practice_mix.dart';
+import 'package:comet_beat/core/audio/practice/sing_melody.dart';
 import 'package:comet_beat/core/audio/practice/song_audio.dart';
 import 'package:comet_beat/core/audio/practice/song_audio_file.dart';
 import 'package:comet_beat/core/audio/transcription/crispasr_ffi_beats.dart';
 import 'package:comet_beat/core/audio/transcription/crispasr_ffi_separate.dart';
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
-import 'package:comet_beat/core/audio/transcription/route.dart'
-    show transcribeMonophonic;
 import 'package:comet_beat/core/services/transcription_config_service.dart';
 import 'package:comet_beat/features/games/playalong/play_along_screen.dart';
 import 'package:comet_beat/features/games/practice/stem_player.dart';
-import 'package:comet_beat/features/games/transcribe/transcribe_engines.dart'
-    show resolveEngines;
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:file_selector/file_selector.dart';
@@ -337,11 +334,12 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
     _uiTick?.cancel();
     setState(() => _findingMelody = true);
     try {
-      final engines = await resolveEngines(cfg);
-      final notes = await transcribeMonophonic(
+      // Off the UI isolate: a whole song's vocal stem takes tens of seconds.
+      final f0Choice = cfg.backendFor(TranscriptionStep.f0);
+      final (:notes, engine: _) = await singMelody(
         vocals.mono(),
-        sampleRate: vocals.sampleRate,
-        f0: engines.f0,
+        vocals.sampleRate,
+        useCrepe: f0Choice == Backend.auto || f0Choice == Backend.crispasr,
       );
       final chart = melodyChart(notes, grid: _grid, name: _songName);
       if (!mounted) return;

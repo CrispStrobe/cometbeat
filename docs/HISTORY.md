@@ -28,6 +28,9 @@ the repo root (detailed roadmap planning and the agent board are in
 - Fixed: splitting failed on every song in the real app (an isolate call
   captured the screen). Now covered by an end-to-end test on macOS
   (`integration_test/practice_stems_test.dart`).
+- Sing-along finds the melody off the UI thread (a 4–6 min song took
+  ~45–50 s, which used to freeze the screen); stereo time-stretch keeps
+  both channels locked.
 - crispasr 0.8.49.
 
 ## Release 1.0.3 (build 8) — TestFlight, internal and external (2026-10-19)

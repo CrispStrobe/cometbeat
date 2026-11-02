@@ -28,8 +28,6 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
-> 🎚️ **opus/stems — ACTIVE 2026-11-02** (worktree `../mus-followups`): isolate-capture audit, linked stereo stretch (`time_stretch.dart`), real-song probe, one ARB string (`practiceStemsUnavailable`, en/de).
->
 > 🎚️ **opus/stems — IDLE, shipped 2026-11-02** (branch `feature/stems-practice`,
 > merged). "Practise with your song" (CrispASR stems, minus-one, sing-along
 > over your own song), selectable separator model, beat-this beat grid,
@@ -39,6 +37,12 @@ is recorded in [HISTORY.md](HISTORY.md).
 > pickup bars from downbeats, real-app e2e test. macOS bundling: libcrispasr's
 > deps are now `crispasr-`-prefixed (`tool/bundle_macos_tts.sh`) — re-bundle
 > before a release, else it clashes with CrispEmbed's ggml.
+> Real-song probe (6:14 + 4:10 MP3s, macOS): split 249 s / 157 s, beats ~30 s,
+> melody ~45–50 s (now off the UI isolate). ⚠ peak RSS ~2.4 GB on the 6 min
+> song — fine on a Mac, a real risk on iOS: cap song length or chunk before
+> enabling there. Catalog MP3 switch DEFERRED: Ze Bellas MP3 loads in ~39 s
+> (pure-Dart decode, every load) vs 1.3 s WAV — needs decoded-PCM caching or
+> native decode first.
 
 > 🎹 **opus/note-models — branch `feat/crispasr-note-models` (worktree
 > `../cometbeat-notemodels`), 2026-09-21.** The ggml polyphonic path loaded ONE
