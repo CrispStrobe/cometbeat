@@ -37,13 +37,12 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 > 🏷️ **sonnet/stufe — IDLE, shipped 2026-11-02**: Stufe/Level relabel (`ba7d9f23`) + lesson-end playback wait in `QuizRoundMixin` (`99ba5dc3`).
 
-> 📖 **opus/explain — ACTIVE 2026-11-02** (branch `feat/answer-explanations`, worktree
-> `../mus-explain`). Answer explanations: a term glossary (dynamics/tempo/articulation,
-> "mezzoforte = halblaut") + a post-answer card with a loudness ladder / tempo pulse,
-> wired into the dynamics/tempo/articulation games. Touching: **both ARBs**,
-> `game_widgets.dart` (QuizRoundMixin: overridable advance delay + skip only — NOT the
-> finish flow), the term-game screens under `note_values/` + `expression/` +
-> `note_reading/articulation_read_screen.dart`. Not touching TTS/voice, primers, finish.
+> 📖 **opus/explain — IDLE, shipped 2026-11-02** (branch `feat/answer-explanations`, merged).
+> Post-answer "Good to know" card: `lib/features/games/explain/` (MusicTerm glossary,
+> `term<Name>Meaning/Info` ARB keys, AnswerExplanation, DynamicsDemo). Wired into
+> Louder or Softer?, Soft to Loud, Faster or Slower?, Slow to Fast, Charades, both
+> hairpin games, Speeding Up/Slowing Down, Smooth or Short?, Read the Mark.
+> QuizRoundMixin gained `advanceDelay` / `advanceNow()` (cancellable timer).
 
 > 🎚️ **opus/stems — IDLE, shipped 2026-11-02** (branch `feature/stems-practice`,
 > merged). "Practise with your song" (CrispASR stems, minus-one, sing-along
