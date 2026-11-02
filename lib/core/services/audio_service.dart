@@ -84,26 +84,63 @@ class AudioService {
     return Duration(microseconds: (wav.length - 44) * 1000000 ~/ byteRate);
   }
 
-  Future<void> _play(Uint8List wav) async {
+  /// The clip that is still STARTING (stop + play are platform round trips),
+  /// so [playbackRemainingAfterStart] can wait for it.
+  Future<void>? _starting;
+
+  Future<void> _play(Uint8List wav) {
+    // Recorded synchronously, before the first await: a caller that asks right
+    // after the tap that started the clip must see it, not an idle player.
+    final f = _start(wav);
+    _starting = f;
+    return f;
+  }
+
+  Future<void> _start(Uint8List wav) async {
     if (!soundOn) return; // master mute (SettingsService.soundOn)
     _busyUntil = null;
     try {
-      final player = _player ??= AudioPlayer();
-      await player.stop();
-      if (kIsWeb) {
-        // BytesSource is not supported by the web implementation; a data
-        // URI plays fine in the browser's audio element.
-        await player
-            .play(UrlSource('data:audio/wav;base64,${base64Encode(wav)}'));
-      } else {
-        await player.play(BytesSource(wav, mimeType: 'audio/wav'));
-      }
+      await startPlayer(wav);
       // Only once the player actually started: a platform without audio (or a
       // test) must not look like it is busy for the clip's length.
       _busyUntil = DateTime.now().add(_wavDuration(wav));
     } catch (e) {
       if (kDebugMode) debugPrint('[AUDIO] playback unavailable: $e');
     }
+  }
+
+  /// Hands [wav] to the platform player. A seam for tests (the real call is
+  /// two platform round trips, which is exactly the latency that matters).
+  @visibleForTesting
+  Future<void> startPlayer(Uint8List wav) async {
+    final player = _player ??= AudioPlayer();
+    await player.stop();
+    if (kIsWeb) {
+      // BytesSource is not supported by the web implementation; a data
+      // URI plays fine in the browser's audio element.
+      await player
+          .play(UrlSource('data:audio/wav;base64,${base64Encode(wav)}'));
+    } else {
+      await player.play(BytesSource(wav, mimeType: 'audio/wav'));
+    }
+  }
+
+  /// [playbackRemaining] once a clip that is still starting has started (or
+  /// [timeout] passed). Use this, not [playbackRemaining], right after the
+  /// tap that started a clip: until the platform player has started, the
+  /// remaining time reads zero.
+  Future<Duration> playbackRemainingAfterStart({
+    Duration timeout = const Duration(milliseconds: 750),
+  }) async {
+    final s = _starting;
+    if (s != null) {
+      try {
+        await s.timeout(timeout);
+      } catch (_) {
+        // a stuck start: report what we know
+      }
+    }
+    return playbackRemaining;
   }
 
   /// Play a ready-made WAV clip (e.g. TTS narration from the neural backend).

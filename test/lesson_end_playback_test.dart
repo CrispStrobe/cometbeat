@@ -3,6 +3,8 @@
 // shares the app's single audio player, so playing it at once cut the example
 // off and the result screen replaced the question mid-phrase.
 
+import 'dart:typed_data';
+
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/songs/instrument_family_screen.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +31,22 @@ class _FakeAudio extends AudioService {
   Future<void> playWrong() async {}
 }
 
+/// The REAL service with only the platform start made slow — the case the
+/// fixed-remaining fake above cannot show: the remaining time is unknown until
+/// the player has started, which takes platform round trips.
+class _SlowStartAudio extends AudioService {
+  int fanfares = 0;
+  @override
+  Future<void> startPlayer(Uint8List wav) =>
+      Future<void>.delayed(const Duration(milliseconds: 60));
+  @override
+  Future<void> playFanfare() async => fanfares++;
+  @override
+  Future<void> playCorrect() async {}
+  @override
+  Future<void> playWrong() async {}
+}
+
 const _label = {
   'strings': 'Strings',
   'woodwind': 'Woodwind',
@@ -43,7 +61,14 @@ InstrumentFamilyTester _game(WidgetTester tester) =>
     ) as InstrumentFamilyTester;
 
 /// Answers every round correctly; returns right after the LAST answer.
-Future<void> _playToLastAnswer(WidgetTester tester, _FakeAudio audio) async {
+///
+/// [exampleBeforeLastTap]: start a 1.5 s example in the same turn as the last
+/// answer, the way a game's answer handler does (play, then resolveAnswer).
+Future<void> _playToLastAnswer(
+  WidgetTester tester,
+  AudioService audio, {
+  bool exampleBeforeLastTap = false,
+}) async {
   await pumpGame(
     tester,
     const InstrumentFamilyScreen(),
@@ -52,6 +77,10 @@ Future<void> _playToLastAnswer(WidgetTester tester, _FakeAudio audio) async {
   for (var i = 0; i < 9; i++) {
     await tester.tap(find.text(_label[_game(tester).answerFamily]!));
     await tester.pump(const Duration(milliseconds: 800));
+  }
+  if (exampleBeforeLastTap) {
+    // ignore: unawaited_futures
+    audio.playMidiNote(60, ms: 1500);
   }
   await tester.tap(find.text(_label[_game(tester).answerFamily]!));
   await tester.pump();
@@ -102,5 +131,35 @@ void main() {
     await _playToLastAnswer(tester, audio);
     await tester.pump(const Duration(milliseconds: 1));
     expect(_game(tester).isFinished, isTrue);
+  });
+
+  testWidgets('a slow platform start still holds the result screen', (
+    tester,
+  ) async {
+    // Regression: the finish flow read playbackRemaining one tick after the
+    // answer, while the player was still starting — it read zero, and the
+    // result screen cut the last example off in the real app.
+    final audio = _SlowStartAudio();
+    await _playToLastAnswer(tester, audio, exampleBeforeLastTap: true);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      _game(tester).isFinished,
+      isFalse,
+      reason: 'the example had only just started',
+    );
+    expect(audio.fanfares, 0);
+    await tester.pump(const Duration(seconds: 5));
+    expect(_game(tester).isFinished, isTrue);
+    expect(audio.fanfares, 1);
+  });
+
+  test('playbackRemainingAfterStart waits for the start', () async {
+    final audio = _SlowStartAudio();
+    // ignore: unawaited_futures
+    audio.playMidiNote(60, ms: 1500);
+    await Future<void>.delayed(Duration.zero);
+    expect(audio.playbackRemaining, Duration.zero, reason: 'still starting');
+    final left = await audio.playbackRemainingAfterStart();
+    expect(left, greaterThan(const Duration(milliseconds: 1000)));
   });
 }

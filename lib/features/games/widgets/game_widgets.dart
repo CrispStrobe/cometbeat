@@ -466,9 +466,11 @@ mixin QuizRoundMixin<T extends StatefulWidget> on State<T> {
 
     GestureBinding.instance.pointerRouter.addGlobalRoute(onPointer);
     try {
-      // Let the tap handler that called resolveAnswer start its example first.
+      // Let the tap handler that called resolveAnswer start its example first,
+      // then wait for the platform player to have STARTED it: until then the
+      // remaining time reads zero and the result screen would cut it off.
       await Future<void>.delayed(Duration.zero);
-      var wait = audio.playbackRemaining;
+      var wait = await audio.playbackRemainingAfterStart();
       if (wait > finishPlaybackCap) wait = finishPlaybackCap;
       if (wait > Duration.zero) {
         final timer = Timer(wait, () {
