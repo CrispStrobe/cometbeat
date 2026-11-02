@@ -28,6 +28,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> 🥁 **sonnet/beatclear — ACTIVE 2026-11-02** (branch `fix/beatbox-clear`, worktree `../mus-beatclear`): editor "Clear part" really empties + new "Reset to preset". Touching: **both ARBs** (1 key), `loop_engine.dart` (setTrackCells/setTrackDrums), `loop_pattern_editor.dart`.
+
 > 🏷️ **sonnet/stufe — ACTIVE 2026-11-02** (branch `fix/stufe-and-lesson-end`): rename Klasse/Grades labels → Stufe/Level (`app_de.arb`, `app_en.arb`, `concept_map.dart`) + lesson-end audio cut-off (shared game flow).
 
 > 📖 **opus/explain — ACTIVE 2026-11-02** (branch `feat/answer-explanations`, worktree
