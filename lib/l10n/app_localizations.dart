@@ -10469,49 +10469,49 @@ abstract class AppLocalizations {
   /// No description provided for @curriculumTitle.
   ///
   /// In en, this message translates to:
-  /// **'Topics by grade'**
+  /// **'Topics by level'**
   String get curriculumTitle;
 
   /// No description provided for @curriculumTooltip.
   ///
   /// In en, this message translates to:
-  /// **'Topics by grade'**
+  /// **'Topics by level'**
   String get curriculumTooltip;
 
   /// No description provided for @curSchoolYears.
   ///
   /// In en, this message translates to:
-  /// **'By grade'**
+  /// **'By level'**
   String get curSchoolYears;
 
   /// No description provided for @curLevelGrades12.
   ///
   /// In en, this message translates to:
-  /// **'Grades 1–2'**
+  /// **'Level 1'**
   String get curLevelGrades12;
 
   /// No description provided for @curLevelGrades34.
   ///
   /// In en, this message translates to:
-  /// **'Grades 3–4'**
+  /// **'Level 2'**
   String get curLevelGrades34;
 
   /// No description provided for @curLevelGrades56.
   ///
   /// In en, this message translates to:
-  /// **'Grades 5–6'**
+  /// **'Level 3'**
   String get curLevelGrades56;
 
   /// No description provided for @curLevelGrades78.
   ///
   /// In en, this message translates to:
-  /// **'Grades 7–8'**
+  /// **'Level 4'**
   String get curLevelGrades78;
 
   /// No description provided for @curLevelGrades910.
   ///
   /// In en, this message translates to:
-  /// **'Grades 9–10'**
+  /// **'Level 5'**
   String get curLevelGrades910;
 
   /// No description provided for @curTopicNoteReading.
@@ -10625,7 +10625,7 @@ abstract class AppLocalizations {
   /// No description provided for @curGuideNote.
   ///
   /// In en, this message translates to:
-  /// **'A practice guide — topics arranged by grade, distilled from public school curricula.'**
+  /// **'A practice guide — topics arranged by level, distilled from public school curricula.'**
   String get curGuideNote;
 
   /// No description provided for @curNoGames.
@@ -17123,31 +17123,31 @@ abstract class AppLocalizations {
   /// No description provided for @textbookGradesG12.
   ///
   /// In en, this message translates to:
-  /// **'Grades 1–2'**
+  /// **'Level 1'**
   String get textbookGradesG12;
 
   /// No description provided for @textbookGradesG34.
   ///
   /// In en, this message translates to:
-  /// **'Grades 3–4'**
+  /// **'Level 2'**
   String get textbookGradesG34;
 
   /// No description provided for @textbookGradesG56.
   ///
   /// In en, this message translates to:
-  /// **'Grades 5–6'**
+  /// **'Level 3'**
   String get textbookGradesG56;
 
   /// No description provided for @textbookGradesG78.
   ///
   /// In en, this message translates to:
-  /// **'Grades 7–8'**
+  /// **'Level 4'**
   String get textbookGradesG78;
 
   /// No description provided for @textbookGradesG910.
   ///
   /// In en, this message translates to:
-  /// **'Grades 9–10'**
+  /// **'Level 5'**
   String get textbookGradesG910;
 
   /// No description provided for @tutorialReadAloud.

@@ -5689,28 +5689,28 @@ class AppLocalizationsDe extends AppLocalizations {
   String get chordChartPrompt => 'Welche Noten gehören zu diesem Akkordsymbol?';
 
   @override
-  String get curriculumTitle => 'Themen nach Klasse';
+  String get curriculumTitle => 'Themen nach Stufe';
 
   @override
-  String get curriculumTooltip => 'Themen nach Klasse';
+  String get curriculumTooltip => 'Themen nach Stufe';
 
   @override
-  String get curSchoolYears => 'Nach Klasse';
+  String get curSchoolYears => 'Nach Stufe';
 
   @override
-  String get curLevelGrades12 => 'Klasse 1–2';
+  String get curLevelGrades12 => 'Stufe 1';
 
   @override
-  String get curLevelGrades34 => 'Klasse 3–4';
+  String get curLevelGrades34 => 'Stufe 2';
 
   @override
-  String get curLevelGrades56 => 'Klasse 5–6';
+  String get curLevelGrades56 => 'Stufe 3';
 
   @override
-  String get curLevelGrades78 => 'Klasse 7–8';
+  String get curLevelGrades78 => 'Stufe 4';
 
   @override
-  String get curLevelGrades910 => 'Klasse 9–10';
+  String get curLevelGrades910 => 'Stufe 5';
 
   @override
   String get curTopicNoteReading => 'Noten lesen';
@@ -5772,7 +5772,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get curGuideNote =>
-      'Ein Übungsleitfaden — Themen nach Klasse, zusammengestellt aus öffentlichen Lehrplänen.';
+      'Ein Übungsleitfaden — Themen nach Stufe, zusammengestellt aus öffentlichen Lehrplänen.';
 
   @override
   String get curNoGames => 'Noch keine Spiele für dieses Thema';
@@ -9511,19 +9511,19 @@ class AppLocalizationsDe extends AppLocalizations {
       'Das fortgeschrittene Werkzeug: Akkord-Umkehrungen, transponierende Instrumente, das Lesen einer ganzen Partitur und die Formen und Farben (Form, Kirchentonarten), mit denen Komponisten ganze Stücke bauen.';
 
   @override
-  String get textbookGradesG12 => 'Klasse 1–2';
+  String get textbookGradesG12 => 'Stufe 1';
 
   @override
-  String get textbookGradesG34 => 'Klasse 3–4';
+  String get textbookGradesG34 => 'Stufe 2';
 
   @override
-  String get textbookGradesG56 => 'Klasse 5–6';
+  String get textbookGradesG56 => 'Stufe 3';
 
   @override
-  String get textbookGradesG78 => 'Klasse 7–8';
+  String get textbookGradesG78 => 'Stufe 4';
 
   @override
-  String get textbookGradesG910 => 'Klasse 9–10';
+  String get textbookGradesG910 => 'Stufe 5';
 
   @override
   String get tutorialReadAloud => 'Vorlesen';

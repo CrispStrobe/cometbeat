@@ -13,16 +13,16 @@
 // A `Concept` with an empty [gameIds] is a KNOWN COVERAGE GAP left in on purpose,
 // so the analysis and the textbook both make it visible rather than hiding it.
 
-/// School-year bands, coarse on purpose (Klasse 1–2 … 9–10).
+/// School-year bands, coarse on purpose (Stufe 1 … 5).
 enum GradeBand { g12, g34, g56, g78, g910 }
 
 extension GradeBandLabel on GradeBand {
   String get label => switch (this) {
-        GradeBand.g12 => 'Grades 1–2',
-        GradeBand.g34 => 'Grades 3–4',
-        GradeBand.g56 => 'Grades 5–6',
-        GradeBand.g78 => 'Grades 7–8',
-        GradeBand.g910 => 'Grades 9–10',
+        GradeBand.g12 => 'Level 1',
+        GradeBand.g34 => 'Level 2',
+        GradeBand.g56 => 'Level 3',
+        GradeBand.g78 => 'Level 4',
+        GradeBand.g910 => 'Level 5',
       };
 }
 

@@ -62,7 +62,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // German band label, area sub-header and concept title all render.
-    expect(find.text('Klasse 1–2'), findsOneWidget);
+    expect(find.text('Stufe 1'), findsOneWidget);
     expect(find.text('Ein gleichmäßiger Puls (Grundschlag)'), findsOneWidget);
     // The English forms must be absent under a German locale.
     expect(find.text('A steady beat (pulse)'), findsNothing);

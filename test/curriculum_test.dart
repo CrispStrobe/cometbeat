@@ -88,8 +88,8 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Grades 1–2'), findsOneWidget);
-    expect(find.text('Grades 9–10'), findsOneWidget);
+    expect(find.text('Level 1'), findsOneWidget);
+    expect(find.text('Level 5'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsWidgets);
   });
 }
