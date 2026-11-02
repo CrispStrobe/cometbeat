@@ -11,6 +11,7 @@ import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/tuning.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/widgets/note_mascot.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -373,13 +374,20 @@ mixin QuizRoundMixin<T extends StatefulWidget> on State<T> {
   /// Times the whole session (first answer → finish), for the personal best.
   final Stopwatch _timer = Stopwatch();
 
+  /// Longest the final answer's example may keep the result screen waiting.
+  Duration get finishPlaybackCap => const Duration(seconds: 4);
+
+  /// True from the last correct answer until the result screen is shown.
+  bool _finishing = false;
+
   /// Handle a resolved answer. Returns true if the round advances.
   /// Call from the tap handler AFTER recording SRI.
   bool resolveAnswer({required bool correct}) {
+    if (_finishing) return correct; // result screen already on its way
     _timer.start(); // no-op once already running
     final audio = context.read<AudioService>();
-    if (correct && round + 1 >= totalRounds) {
-      audio.playFanfare();
+    final isLast = correct && round + 1 >= totalRounds;
+    if (isLast) {
       _timer.stop();
       if (!isReviewSession) {
         final finalScore = score + (answeredWrong ? 0 : pointsPerRound);
@@ -396,13 +404,15 @@ mixin QuizRoundMixin<T extends StatefulWidget> on State<T> {
     setState(() {
       if (correct) {
         if (!answeredWrong) score += pointsPerRound;
-        if (round + 1 >= totalRounds) finished = true;
       } else {
         answeredWrong = true;
       }
     });
 
-    if (correct && !finished) {
+    if (isLast) {
+      _finishing = true;
+      unawaited(_finishAfterPlayback(audio));
+    } else if (correct) {
       _advanceTimer?.cancel();
       _advanceTimer = Timer(advanceDelay, advanceNow);
     }
@@ -440,12 +450,45 @@ mixin QuizRoundMixin<T extends StatefulWidget> on State<T> {
     super.dispose();
   }
 
+  /// The final answer usually starts the musical example (or already has one
+  /// sounding). The fanfare shares the app's single audio player, so playing it
+  /// at once would cut that example off and the result screen would replace the
+  /// question mid-phrase. Let it ring out first — at most [finishPlaybackCap],
+  /// and any tap skips the wait.
+  Future<void> _finishAfterPlayback(AudioService audio) async {
+    final skip = Completer<void>();
+    void onPointer(PointerEvent e) {
+      if (e is PointerDownEvent && !skip.isCompleted) skip.complete();
+    }
+
+    GestureBinding.instance.pointerRouter.addGlobalRoute(onPointer);
+    try {
+      // Let the tap handler that called resolveAnswer start its example first.
+      await Future<void>.delayed(Duration.zero);
+      var wait = audio.playbackRemaining;
+      if (wait > finishPlaybackCap) wait = finishPlaybackCap;
+      if (wait > Duration.zero) {
+        final timer = Timer(wait, () {
+          if (!skip.isCompleted) skip.complete();
+        });
+        await skip.future;
+        timer.cancel();
+      }
+    } finally {
+      GestureBinding.instance.pointerRouter.removeGlobalRoute(onPointer);
+    }
+    if (!mounted) return;
+    unawaited(audio.playFanfare());
+    setState(() => finished = true);
+  }
+
   void restartGame() {
     _advanceTimer?.cancel();
     _advanceTimer = null;
     _timer
       ..stop()
       ..reset();
+    _finishing = false;
     setState(() {
       round = 0;
       score = 0;

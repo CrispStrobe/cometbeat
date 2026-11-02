@@ -61,8 +61,32 @@ class AudioService {
     return renderWav(segments, timbre: timbreFor(instrument), gain: gain);
   }
 
+  /// Wall-clock moment the clip handed to [_play] finishes sounding.
+  DateTime? _busyUntil;
+
+  /// How much of the clip currently playing is still to come (zero when idle,
+  /// muted, or on a player that never started). Lets a caller let the last
+  /// musical example ring out before it plays something over the top of it:
+  /// every clip goes through the one shared player, and starting another one
+  /// stops the first.
+  Duration get playbackRemaining {
+    final until = _busyUntil;
+    if (until == null) return Duration.zero;
+    final left = until.difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  /// Length of a canonical 44-byte-header PCM WAV, from its byte rate.
+  static Duration _wavDuration(Uint8List wav) {
+    if (wav.length <= 44) return Duration.zero;
+    final byteRate = ByteData.sublistView(wav).getUint32(28, Endian.little);
+    if (byteRate == 0) return Duration.zero;
+    return Duration(microseconds: (wav.length - 44) * 1000000 ~/ byteRate);
+  }
+
   Future<void> _play(Uint8List wav) async {
     if (!soundOn) return; // master mute (SettingsService.soundOn)
+    _busyUntil = null;
     try {
       final player = _player ??= AudioPlayer();
       await player.stop();
@@ -74,6 +98,9 @@ class AudioService {
       } else {
         await player.play(BytesSource(wav, mimeType: 'audio/wav'));
       }
+      // Only once the player actually started: a platform without audio (or a
+      // test) must not look like it is busy for the clip's length.
+      _busyUntil = DateTime.now().add(_wavDuration(wav));
     } catch (e) {
       if (kDebugMode) debugPrint('[AUDIO] playback unavailable: $e');
     }
@@ -330,6 +357,7 @@ class AudioService {
   /// Stops whatever is currently sounding. Used by hold-to-play games so a note
   /// rings only while the pad is held.
   Future<void> stop() async {
+    _busyUntil = null;
     try {
       await _player?.stop();
     } catch (e) {
