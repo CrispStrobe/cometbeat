@@ -8,6 +8,19 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
+## Since 1.0.3 — unreleased
+
+- **Practise with your song** (2026-11-02): pick a WAV/MP3/FLAC; CrispASR
+  splits it on the device into voice, drums, bass and the rest (or voice /
+  accompaniment); mute, solo and level each stem instantly, or one tap for
+  "Without drums" etc. "Sing the melody" puts the song's own vocal line on
+  the note highway over the song minus its voice. Nothing leaves the device.
+- Separation model is a setting (htdemucs, Mini-BS-RoFormer, Mel-Band
+  RoFormer), stems stay stereo, and separation runs off the UI isolate.
+  Whole-song transcription takes its beats and bar length from beat-this.
+  Measurements and caveats: [STEM_SEPARATION.md](STEM_SEPARATION.md).
+- crispasr 0.8.49.
+
 ## Release 1.0.3 (build 8) — TestFlight, internal and external (2026-10-19)
 
 - Workshop: vector PDF export (crisp_notation's PDF writer), lyrics spaced

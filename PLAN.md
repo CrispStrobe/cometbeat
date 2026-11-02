@@ -436,6 +436,24 @@ Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
 on one pure-Dart detection core so it stays testable headlessly and from a CLI.
 
+### Practise with your song — follow-ups (shipped 2026-11-02, see docs/STEM_SEPARATION.md)
+
+- **Mini-BS-RoFormer on the GPU** — blocked on CrispASR #568 (Metal path
+  returns a silent vocals stem). When fixed: drop `CrispasrSeparatorModel.
+  cpuOnly`, re-run `bin/stem_quality.dart --voice`, reconsider `auto` (on the
+  CPU it already has the best vocals of the 4-stem models).
+- **A singing voice in the harness** — the only voice measured is macOS
+  `say` speech. A licence-clean sung multitrack (eval only, never shipped)
+  would make the vocal ranking trustworthy.
+- **Clean timings** — every timing so far was taken with load average 9–43.
+  Measure real-time factor per model on an idle machine before quoting any.
+- **Bar phase from downbeats** in whole-song transcription — beats and bar
+  length come from beat-this now; moving bar 1 onto the first downbeat needs
+  pickup handling in the score builder.
+- **MP3 decode is pure Dart (~real time)** — fine for a one-off import, but a
+  native decode (CrispASR's miniaudio, stereo) would cut the wait.
+- **Loop a passage / slow down** in the stem player (time-stretch per stem).
+
 ## Tune identification & melodic search (scoped 2026-08-01, NOT STARTED)
 
 **"What is this tune?" — hum, play or pick a melody and find it in the corpus.**
