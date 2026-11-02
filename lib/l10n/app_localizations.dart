@@ -95,7 +95,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en'),
+    Locale('en')
   ];
 
   /// Inspector heading: pizzicato or arco
@@ -18985,6 +18985,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Auto-advance'**
   String get gigAutoAdvance;
+
+  /// No description provided for @transcriptionSepModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Separation model (GGUF native)'**
+  String get transcriptionSepModelLabel;
+
+  /// No description provided for @transcriptionSepModelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Splits a song into stems, for transcribing it and for practising with your own song. Downloaded the first time it is used.'**
+  String get transcriptionSepModelSubtitle;
+
+  /// No description provided for @transcriptionSepModelAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto (HTDemucs, 38 MB)'**
+  String get transcriptionSepModelAuto;
+
+  /// No description provided for @transcriptionSepModelHtdemucs.
+  ///
+  /// In en, this message translates to:
+  /// **'HTDemucs — 4 stems (38 MB)'**
+  String get transcriptionSepModelHtdemucs;
+
+  /// No description provided for @transcriptionSepModelMiniBs.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini BS-RoFormer — 4 stems (50 MB)'**
+  String get transcriptionSepModelMiniBs;
+
+  /// No description provided for @transcriptionSepModelMelBand.
+  ///
+  /// In en, this message translates to:
+  /// **'Mel-Band RoFormer — voice only (436 MB)'**
+  String get transcriptionSepModelMelBand;
+
+  /// No description provided for @gamePracticeStems.
+  ///
+  /// In en, this message translates to:
+  /// **'Practise with your song'**
+  String get gamePracticeStems;
+
+  /// No description provided for @gamePracticeStemsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Split a song into voice, drums, bass and the rest — mute one and play along'**
+  String get gamePracticeStemsSubtitle;
+
+  /// No description provided for @practiceStemsPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a song'**
+  String get practiceStemsPick;
+
+  /// No description provided for @practiceStemsPickHint.
+  ///
+  /// In en, this message translates to:
+  /// **'WAV, MP3 or FLAC. The song never leaves this device.'**
+  String get practiceStemsPickHint;
+
+  /// No description provided for @practiceStemsModeFour.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice, drums, bass, rest'**
+  String get practiceStemsModeFour;
+
+  /// No description provided for @practiceStemsModeVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice only (karaoke)'**
+  String get practiceStemsModeVoice;
+
+  /// No description provided for @practiceStemsDownloadNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The first time downloads the splitting model ({mb} MB).'**
+  String practiceStemsDownloadNote(int mb);
+
+  /// No description provided for @practiceStemsDecoding.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the song…'**
+  String get practiceStemsDecoding;
+
+  /// No description provided for @practiceStemsSeparating.
+  ///
+  /// In en, this message translates to:
+  /// **'Splitting the song — this takes about {minutes} min'**
+  String practiceStemsSeparating(int minutes);
+
+  /// No description provided for @practiceStemsBeats.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding the beat…'**
+  String get practiceStemsBeats;
+
+  /// No description provided for @practiceStemsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Splitting a song needs the on-device engine of the desktop and mobile apps. It isn\'t available here.'**
+  String get practiceStemsUnavailable;
+
+  /// No description provided for @practiceStemsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That file couldn\'t be read or split.'**
+  String get practiceStemsFailed;
+
+  /// No description provided for @practiceStemsNoAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio playback isn\'t available here.'**
+  String get practiceStemsNoAudio;
+
+  /// No description provided for @practiceStemVocals.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice'**
+  String get practiceStemVocals;
+
+  /// No description provided for @practiceStemDrums.
+  ///
+  /// In en, this message translates to:
+  /// **'Drums'**
+  String get practiceStemDrums;
+
+  /// No description provided for @practiceStemBass.
+  ///
+  /// In en, this message translates to:
+  /// **'Bass'**
+  String get practiceStemBass;
+
+  /// No description provided for @practiceStemOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything else'**
+  String get practiceStemOther;
+
+  /// No description provided for @practiceStemsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything'**
+  String get practiceStemsAll;
+
+  /// No description provided for @practiceStemsWithout.
+  ///
+  /// In en, this message translates to:
+  /// **'Without {stem}'**
+  String practiceStemsWithout(String stem);
+
+  /// No description provided for @practiceStemsSolo.
+  ///
+  /// In en, this message translates to:
+  /// **'Solo'**
+  String get practiceStemsSolo;
+
+  /// No description provided for @practiceStemsMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get practiceStemsMute;
+
+  /// No description provided for @practiceStemsTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'≈ {bpm} BPM'**
+  String practiceStemsTempo(int bpm);
+
+  /// No description provided for @practiceStemsBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back 10 s'**
+  String get practiceStemsBack;
+
+  /// No description provided for @practiceStemsForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward 10 s'**
+  String get practiceStemsForward;
+
+  /// No description provided for @practiceStemsSingAlong.
+  ///
+  /// In en, this message translates to:
+  /// **'Sing the melody'**
+  String get practiceStemsSingAlong;
+
+  /// No description provided for @practiceStemsFindingMelody.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding the melody…'**
+  String get practiceStemsFindingMelody;
+
+  /// No description provided for @practiceStemsNoMelody.
+  ///
+  /// In en, this message translates to:
+  /// **'No clear melody was found in the voice.'**
+  String get practiceStemsNoMelody;
+
+  /// No description provided for @practiceStemsAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'Another song'**
+  String get practiceStemsAnother;
 }
 
 class _AppLocalizationsDelegate
@@ -19014,9 +19218,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

@@ -10583,4 +10583,123 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get gigAutoAdvance => 'Automatisch weiter';
+
+  @override
+  String get transcriptionSepModelLabel => 'Trennmodell (GGUF nativ)';
+
+  @override
+  String get transcriptionSepModelSubtitle =>
+      'Zerlegt einen Song in Spuren – zum Transkribieren und zum Üben mit deinem eigenen Song. Wird beim ersten Gebrauch heruntergeladen.';
+
+  @override
+  String get transcriptionSepModelAuto => 'Auto (HTDemucs, 38 MB)';
+
+  @override
+  String get transcriptionSepModelHtdemucs => 'HTDemucs – 4 Spuren (38 MB)';
+
+  @override
+  String get transcriptionSepModelMiniBs =>
+      'Mini BS-RoFormer – 4 Spuren (50 MB)';
+
+  @override
+  String get transcriptionSepModelMelBand =>
+      'Mel-Band RoFormer – nur Gesang (436 MB)';
+
+  @override
+  String get gamePracticeStems => 'Mit deinem Song üben';
+
+  @override
+  String get gamePracticeStemsSubtitle =>
+      'Zerlege einen Song in Gesang, Schlagzeug, Bass und Rest – schalte eins stumm und spiel mit';
+
+  @override
+  String get practiceStemsPick => 'Song auswählen';
+
+  @override
+  String get practiceStemsPickHint =>
+      'WAV, MP3 oder FLAC. Der Song verlässt dieses Gerät nicht.';
+
+  @override
+  String get practiceStemsModeFour => 'Gesang, Schlagzeug, Bass, Rest';
+
+  @override
+  String get practiceStemsModeVoice => 'Nur Gesang (Karaoke)';
+
+  @override
+  String practiceStemsDownloadNote(int mb) {
+    return 'Beim ersten Mal wird das Trennmodell heruntergeladen ($mb MB).';
+  }
+
+  @override
+  String get practiceStemsDecoding => 'Song wird gelesen …';
+
+  @override
+  String practiceStemsSeparating(int minutes) {
+    return 'Song wird zerlegt – das dauert etwa $minutes Min.';
+  }
+
+  @override
+  String get practiceStemsBeats => 'Suche den Takt …';
+
+  @override
+  String get practiceStemsUnavailable =>
+      'Zum Zerlegen eines Songs braucht es die Engine der Desktop- und Mobil-Apps. Hier ist sie nicht verfügbar.';
+
+  @override
+  String get practiceStemsFailed =>
+      'Diese Datei konnte nicht gelesen oder zerlegt werden.';
+
+  @override
+  String get practiceStemsNoAudio =>
+      'Audiowiedergabe ist hier nicht verfügbar.';
+
+  @override
+  String get practiceStemVocals => 'Gesang';
+
+  @override
+  String get practiceStemDrums => 'Schlagzeug';
+
+  @override
+  String get practiceStemBass => 'Bass';
+
+  @override
+  String get practiceStemOther => 'Alles andere';
+
+  @override
+  String get practiceStemsAll => 'Alles';
+
+  @override
+  String practiceStemsWithout(String stem) {
+    return 'Ohne $stem';
+  }
+
+  @override
+  String get practiceStemsSolo => 'Solo';
+
+  @override
+  String get practiceStemsMute => 'Stumm';
+
+  @override
+  String practiceStemsTempo(int bpm) {
+    return '≈ $bpm BPM';
+  }
+
+  @override
+  String get practiceStemsBack => '10 s zurück';
+
+  @override
+  String get practiceStemsForward => '10 s vor';
+
+  @override
+  String get practiceStemsSingAlong => 'Melodie singen';
+
+  @override
+  String get practiceStemsFindingMelody => 'Suche die Melodie …';
+
+  @override
+  String get practiceStemsNoMelody =>
+      'Im Gesang wurde keine deutliche Melodie gefunden.';
+
+  @override
+  String get practiceStemsAnother => 'Anderer Song';
 }

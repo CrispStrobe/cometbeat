@@ -806,6 +806,9 @@ class _TranscriptionEngineSection extends StatelessWidget {
                       // No native-ORT separator; UMX (onnx) + ggml htdemucs.
                       const [Backend.auto, Backend.onnx, Backend.crispasr],
                     ),
+                    // Which ggml separator that step (and the practice-stems
+                    // player) loads. Native only, like the note model.
+                    if (!kIsWeb) _separatorModelPicker(context, svc),
                     _stepPicker(
                       context,
                       svc,
@@ -883,6 +886,43 @@ class _TranscriptionEngineSection extends StatelessWidget {
     );
   }
 
+  /// The CrispASR separation-model chips, each with its download size (the
+  /// vocal-only Mel-Band RoFormer is 436 MB).
+  Widget _separatorModelPicker(
+    BuildContext context,
+    TranscriptionConfigService svc,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final cur = svc.config.crispasrSeparatorModel;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.transcriptionSepModelLabel,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          Text(
+            l10n.transcriptionSepModelSubtitle,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final m in CrispasrSeparatorModel.values)
+                ChoiceChip(
+                  label: Text(separatorModelName(l10n, m)),
+                  selected: cur == m,
+                  onSelected: (_) => svc.setCrispasrSeparatorModel(m),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _stepPicker(
     BuildContext context,
     TranscriptionConfigService svc,
@@ -930,6 +970,16 @@ String _noteModelName(AppLocalizations l10n, CrispasrNoteModel m) =>
       CrispasrNoteModel.basicPitch => l10n.transcriptionNoteModelBasicPitch,
       CrispasrNoteModel.pianoTranscription => l10n.transcriptionNoteModelPiano,
       CrispasrNoteModel.mt3 => l10n.transcriptionNoteModelMt3,
+    };
+
+/// A separation model's label (with its download size).
+String separatorModelName(AppLocalizations l10n, CrispasrSeparatorModel m) =>
+    switch (m) {
+      CrispasrSeparatorModel.auto => l10n.transcriptionSepModelAuto,
+      CrispasrSeparatorModel.htdemucs => l10n.transcriptionSepModelHtdemucs,
+      CrispasrSeparatorModel.miniBsRoformer => l10n.transcriptionSepModelMiniBs,
+      CrispasrSeparatorModel.melBandRoformer =>
+        l10n.transcriptionSepModelMelBand,
     };
 
 String _backendName(AppLocalizations l10n, Backend b) => switch (b) {

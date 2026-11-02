@@ -114,6 +114,7 @@ import 'package:comet_beat/features/games/note_values/triplet_read_screen.dart';
 import 'package:comet_beat/features/games/note_values/value_order_screen.dart';
 import 'package:comet_beat/features/games/playalong/midi_play_along_screen.dart';
 import 'package:comet_beat/features/games/playalong/play_along_screen.dart';
+import 'package:comet_beat/features/games/practice/practice_stems_screen.dart';
 import 'package:comet_beat/features/games/scales/command_caller_screen.dart';
 import 'package:comet_beat/features/games/scales/count_notes_screen.dart';
 import 'package:comet_beat/features/games/scales/direction_ear_screen.dart';
@@ -1516,6 +1517,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameMidiPlayAlong,
       subtitle: (l) => l.gameMidiPlayAlongSubtitle,
       builder: (_) => const MidiPlayAlongScreen(),
+    ),
+    // Practise with your own song: CrispASR splits it into stems on the
+    // device; mute one part and play along, or sing its melody over the rest.
+    GameInfo(
+      id: 'practice_stems',
+      icon: Icons.call_split,
+      title: (l) => l.gamePracticeStems,
+      subtitle: (l) => l.gamePracticeStemsSubtitle,
+      builder: (_) => const PracticeStemsScreen(),
     ),
     GameInfo(
       id: 'tune_quiz',

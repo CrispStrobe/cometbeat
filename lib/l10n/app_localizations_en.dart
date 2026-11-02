@@ -10518,4 +10518,120 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gigAutoAdvance => 'Auto-advance';
+
+  @override
+  String get transcriptionSepModelLabel => 'Separation model (GGUF native)';
+
+  @override
+  String get transcriptionSepModelSubtitle =>
+      'Splits a song into stems, for transcribing it and for practising with your own song. Downloaded the first time it is used.';
+
+  @override
+  String get transcriptionSepModelAuto => 'Auto (HTDemucs, 38 MB)';
+
+  @override
+  String get transcriptionSepModelHtdemucs => 'HTDemucs — 4 stems (38 MB)';
+
+  @override
+  String get transcriptionSepModelMiniBs =>
+      'Mini BS-RoFormer — 4 stems (50 MB)';
+
+  @override
+  String get transcriptionSepModelMelBand =>
+      'Mel-Band RoFormer — voice only (436 MB)';
+
+  @override
+  String get gamePracticeStems => 'Practise with your song';
+
+  @override
+  String get gamePracticeStemsSubtitle =>
+      'Split a song into voice, drums, bass and the rest — mute one and play along';
+
+  @override
+  String get practiceStemsPick => 'Choose a song';
+
+  @override
+  String get practiceStemsPickHint =>
+      'WAV, MP3 or FLAC. The song never leaves this device.';
+
+  @override
+  String get practiceStemsModeFour => 'Voice, drums, bass, rest';
+
+  @override
+  String get practiceStemsModeVoice => 'Voice only (karaoke)';
+
+  @override
+  String practiceStemsDownloadNote(int mb) {
+    return 'The first time downloads the splitting model ($mb MB).';
+  }
+
+  @override
+  String get practiceStemsDecoding => 'Reading the song…';
+
+  @override
+  String practiceStemsSeparating(int minutes) {
+    return 'Splitting the song — this takes about $minutes min';
+  }
+
+  @override
+  String get practiceStemsBeats => 'Finding the beat…';
+
+  @override
+  String get practiceStemsUnavailable =>
+      'Splitting a song needs the on-device engine of the desktop and mobile apps. It isn\'t available here.';
+
+  @override
+  String get practiceStemsFailed => 'That file couldn\'t be read or split.';
+
+  @override
+  String get practiceStemsNoAudio => 'Audio playback isn\'t available here.';
+
+  @override
+  String get practiceStemVocals => 'Voice';
+
+  @override
+  String get practiceStemDrums => 'Drums';
+
+  @override
+  String get practiceStemBass => 'Bass';
+
+  @override
+  String get practiceStemOther => 'Everything else';
+
+  @override
+  String get practiceStemsAll => 'Everything';
+
+  @override
+  String practiceStemsWithout(String stem) {
+    return 'Without $stem';
+  }
+
+  @override
+  String get practiceStemsSolo => 'Solo';
+
+  @override
+  String get practiceStemsMute => 'Mute';
+
+  @override
+  String practiceStemsTempo(int bpm) {
+    return '≈ $bpm BPM';
+  }
+
+  @override
+  String get practiceStemsBack => 'Back 10 s';
+
+  @override
+  String get practiceStemsForward => 'Forward 10 s';
+
+  @override
+  String get practiceStemsSingAlong => 'Sing the melody';
+
+  @override
+  String get practiceStemsFindingMelody => 'Finding the melody…';
+
+  @override
+  String get practiceStemsNoMelody => 'No clear melody was found in the voice.';
+
+  @override
+  String get practiceStemsAnother => 'Another song';
 }

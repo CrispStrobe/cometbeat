@@ -97,6 +97,15 @@ String playAlongSriId(String prefix, int midi) {
   return '$prefix.${p.step.name}$acc${p.octave}';
 }
 
+/// A recorded track to play along with instead of the synthesized melody — the
+/// instrumental stems of the learner's own song (practice stems). It starts on
+/// the chart's beat 0, which is why such a chart is laid out in absolute song
+/// time (`melodyChart`).
+abstract class PlayAlongAudioBacking {
+  Future<void> start();
+  Future<void> stop();
+}
+
 class PlayAlongScreen extends StatefulWidget {
   const PlayAlongScreen({
     super.key,
@@ -106,7 +115,14 @@ class PlayAlongScreen extends StatefulWidget {
     required this.sriPrefix,
     this.scaleStarsToLength = false,
     this.fingeringInstrument,
+    this.audioBacking,
   });
+
+  /// When set, the backing toggle (on by default) plays this recording instead
+  /// of the melody. The slow-down menu is hidden — a recording cannot follow
+  /// it — and the metronome falls silent once the song starts, since the song
+  /// carries its own beat and the clicks would not share its phase.
+  final PlayAlongAudioBacking? audioBacking;
 
   final PlayAlongChart chart;
   final String title;
@@ -299,10 +315,12 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
     // Create the ticker eagerly so it is never lazily created during dispose
     // (which would look up an ancestor on a deactivated element).
     _ticker = createTicker(_onTick);
+    _backing = widget.audioBacking != null;
   }
 
   @override
   void dispose() {
+    widget.audioBacking?.stop();
     _ticker.dispose();
     _sub?.cancel();
     _service.dispose();
@@ -315,12 +333,21 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
       reading: _latest,
     );
     final c = _clicker.update(_engine.currentBeat);
-    if (c.click) context.read<AudioService>().playTick(accent: c.accent);
+    final songPlaying =
+        widget.audioBacking != null && _backing && _engine.currentBeat >= 0;
+    if (c.click && !songPlaying) {
+      context.read<AudioService>().playTick(accent: c.accent);
+    }
     // Tier 0/1: at the downbeat, start the backing track (headphones, or the
     // platform echo-canceller so the mic doesn't grade the speaker).
     if (_backing && !_backingStarted && _engine.currentBeat >= 0) {
       _backingStarted = true;
-      context.read<AudioService>().playSequence(_melody());
+      final audio = widget.audioBacking;
+      if (audio != null) {
+        audio.start();
+      } else {
+        context.read<AudioService>().playSequence(_melody());
+      }
     }
     if (_engine.finished) {
       _finish();
@@ -410,6 +437,7 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
 
   Future<void> _stop() async {
     _ticker.stop();
+    await widget.audioBacking?.stop();
     await _service.stop();
     await _sub?.cancel();
     // The mic (record) can leave the iOS/Android audio session routed to the
@@ -445,7 +473,7 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
       appBar: GameAppBar(
         title: widget.title,
         actions: [
-          if (!_finished)
+          if (!_finished && widget.audioBacking == null)
             PopupMenuButton<double>(
               icon: const Icon(Icons.speed),
               tooltip: l.playAlongTempo,
