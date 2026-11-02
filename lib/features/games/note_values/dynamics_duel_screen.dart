@@ -6,11 +6,20 @@
 // The marks are the real SMuFL dynamic glyphs. No-fail loop (a wrong tap buzzes;
 // the answer is shown).
 //
+// After an answer a "Good to know" card explains the marks ("mf  mezzoforte =
+// halblaut") on a pp…ff loudness ladder; a correct answer also PLAYS both marks
+// (left card, then right) and the ladder lights up with the sound. The solved
+// round holds for kExplanationHold (or until "Next").
+//
 // SRI: 'reading.dynamics.<mark>' - both marks are recorded each round.
 
 import 'dart:math';
 
+import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/explain/answer_explanation.dart';
+import 'package:comet_beat/features/games/explain/dynamics_demo.dart';
+import 'package:comet_beat/features/games/explain/music_terms.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -48,6 +57,12 @@ class _DynamicsDuelScreenState extends State<DynamicsDuelScreen>
   late DynamicMark _right;
   DynamicMark? _tapped;
 
+  /// Terms the explanation card shows (empty = no card yet this round).
+  List<MusicTerm> _explain = const [];
+  final _demo = DynamicsDemo();
+
+  static MusicTerm _term(DynamicMark m) => MusicTerm.dynamicFromMark(m.name)!;
+
   DynamicMark get _louder => _left.rank >= _right.rank ? _left : _right;
 
   @override
@@ -57,9 +72,18 @@ class _DynamicsDuelScreenState extends State<DynamicsDuelScreen>
   String get gameType => 'dynamics_duel';
 
   @override
+  Duration get advanceDelay => kExplanationHold;
+
+  @override
   void initState() {
     super.initState();
     prepareRound();
+  }
+
+  @override
+  void dispose() {
+    _demo.dispose();
+    super.dispose();
   }
 
   @override
@@ -68,6 +92,8 @@ class _DynamicsDuelScreenState extends State<DynamicsDuelScreen>
     _left = pool.first;
     _right = pool.firstWhere((m) => m.rank != _left.rank);
     _tapped = null;
+    _explain = const [];
+    _demo.stop();
   }
 
   String _sriId(DynamicMark m) => 'reading.dynamics.${m.name}';
@@ -82,8 +108,20 @@ class _DynamicsDuelScreenState extends State<DynamicsDuelScreen>
       sri.recordResponse(_sriId(_right), correct);
     }
 
-    setState(() => _tapped = choice);
+    setState(() {
+      _tapped = choice;
+      // Right: explain both marks, softer first (ladder order). Wrong: explain
+      // the mark that was tapped, so the child learns what it really means.
+      _explain = correct
+          ? ([_term(_left), _term(_right)]
+            ..sort((a, b) => a.rank.compareTo(b.rank)))
+          : [_term(choice)];
+    });
     resolveAnswer(correct: correct);
+    if (correct && !finished) {
+      // Hear the two cards, left then right, as the ladder lights up.
+      _demo.play(context.read<AudioService>(), [_term(_left), _term(_right)]);
+    }
   }
 
   @override
@@ -119,6 +157,14 @@ class _DynamicsDuelScreenState extends State<DynamicsDuelScreen>
                         ],
                       ),
                     ),
+                    if (_explain.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      AnswerExplanation(
+                        terms: _explain,
+                        sounding: _demo.sounding,
+                        onNext: advancePending ? advanceNow : null,
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     FeedbackLine(
                       correct: _tapped == null ? null : _tapped == _louder,
