@@ -43,8 +43,15 @@ enum _Phase { idle, decoding, separating, beats, ready }
 
 enum _Mode { fourStems, voiceOnly }
 
+/// A picked song file (name for display, path for decoders that read files).
+typedef PickedSong = ({String name, String path, Uint8List bytes});
+
 class PracticeStemsScreen extends StatefulWidget {
-  const PracticeStemsScreen({super.key});
+  const PracticeStemsScreen({super.key, this.debugPickSong});
+
+  /// Test seam: replaces the file dialog (integration tests drive the real
+  /// pipeline with a song they made). Null in the app.
+  final Future<PickedSong?> Function()? debugPickSong;
 
   @override
   State<PracticeStemsScreen> createState() => _PracticeStemsScreenState();
@@ -100,20 +107,25 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
       label: 'Audio',
       extensions: ['wav', 'mp3', 'flac', 'ogg', 'opus', 'aac'],
     );
-    final file = await openFile(acceptedTypeGroups: const [group]);
-    if (file == null || !mounted) return;
+    final PickedSong? picked;
+    if (widget.debugPickSong != null) {
+      picked = await widget.debugPickSong!();
+    } else {
+      final file = await openFile(acceptedTypeGroups: const [group]);
+      picked = file == null
+          ? null
+          : (name: file.name, path: file.path, bytes: await file.readAsBytes());
+    }
+    if (picked == null || !mounted) return;
     final model = _model;
     setState(() {
       _error = null;
       _phase = _Phase.decoding;
-      _songName = file.name;
+      _songName = picked!.name;
     });
     final l = AppLocalizations.of(context)!;
     try {
-      final SongAudio? song = await decodeSongFile(
-        file.path,
-        await file.readAsBytes(),
-      );
+      final SongAudio? song = await decodeSongFile(picked.path, picked.bytes);
       if (song == null || song.frames == 0) {
         throw StateError('undecodable');
       }
@@ -131,13 +143,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
       );
       if (stems == null || stems.isEmpty) throw StateError('separation');
       // All stems on must sound like the song that was loaded.
-      final whole = await Isolate.run(
-        () => mixtureConsistent(
-          stems,
-          _atRate(song.left, song.sampleRate, stems.first.sampleRate),
-          _atRate(song.right, song.sampleRate, stems.first.sampleRate),
-        ),
-      );
+      final whole = await _consistentInIsolate(stems, song);
       if (!mounted) return;
       setState(() => _phase = _Phase.beats);
       // Best effort: a song without a clear beat still plays and separates.
@@ -159,7 +165,8 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
         _speed = 1;
         _phase = _Phase.ready;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('practice: split failed: $e');
       if (!mounted) return;
       setState(() {
         _phase = _Phase.idle;
@@ -167,6 +174,30 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
       });
     }
   }
+
+  // Isolate work lives in static helpers ON PURPOSE: a closure written inside
+  // an instance method shares its context with the method's other closures
+  // (the setState lambdas), drags `this` along, and the State is unsendable.
+  static Future<List<SeparatedStem>> _consistentInIsolate(
+    List<SeparatedStem> stems,
+    SongAudio song,
+  ) {
+    final rate = stems.first.sampleRate;
+    final left = song.left, right = song.right, from = song.sampleRate;
+    return Isolate.run(
+      () => mixtureConsistent(
+        stems,
+        _atRate(left, from, rate),
+        _atRate(right, from, rate),
+      ),
+    );
+  }
+
+  static Future<List<SeparatedStem>> _slowInIsolate(
+    List<SeparatedStem> stems,
+    double speed,
+  ) =>
+      Isolate.run(() => slowStems(stems, speed));
 
   static Float32List _atRate(Float32List x, int from, int to) {
     if (from == to) return x;
@@ -222,7 +253,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
     if (_speed < 1) {
       final region = buf;
       final speed = _speed;
-      buf = await Isolate.run(() => slowStems(region, speed));
+      buf = await _slowInIsolate(region, speed);
     }
     if (!mounted) return;
     setState(() {
@@ -555,6 +586,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
         const SizedBox(height: 16),
         if (hasVocals)
           FilledButton.tonalIcon(
+            key: const Key('practice-sing-along'),
             onPressed: _findingMelody ? null : _singAlong,
             icon: _findingMelody
                 ? const SizedBox.square(
@@ -655,6 +687,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
     final s = _strips[i];
     final audible = effectiveVolumes(_strips)[i] > 0;
     return Row(
+      key: Key('practice-stem-${s.name}'),
       children: [
         Icon(
           _stemIcon(s.name),
@@ -672,6 +705,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
           ),
         ),
         IconButton(
+          key: Key('practice-mute-${s.name}'),
           tooltip: l.practiceStemsMute,
           isSelected: s.muted,
           icon: const Icon(Icons.volume_up),

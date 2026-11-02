@@ -57,6 +57,18 @@ _resolve() { # $1 = dep ref
 # bash 3.2 (macOS default) — no associative arrays; queue holds "refname|realpath".
 SEEN=" "
 declare -a QUEUE
+
+# Every dependency is bundled under a "crispasr-" prefixed name (the root keeps
+# its own). WHY: another plugin in the same app ships its OWN ggml under the
+# same install names — CrispEmbed's libggml.0.dylib / libggml-base.0.dylib,
+# linked at launch. dyld then hands libcrispasr the already-loaded copy of
+# that NAME, and dlopen fails ("Symbol not found: _ggml_prec_set_acc") — or
+# worse, binds to an ABI-mismatched ggml. Distinct install names make them
+# distinct images; macOS's two-level namespace keeps each library bound to its
+# own copy. The root is not renamed: callers look for libcrispasr.dylib.
+_bundled() { # $1 = referenced basename → name it is stored + referenced as
+  if [[ "$1" == "$ROOT_REF" ]]; then echo "$1"; else echo "crispasr-$1"; fi
+}
 _seen()   { case "$SEEN" in *" $1 "*) return 0;; *) return 1;; esac; }
 _mark()   { SEEN="$SEEN$1 "; }
 _enqueue() { QUEUE+=("$1"); }
@@ -73,8 +85,9 @@ while ((${#QUEUE[@]})); do
   refname="${cur%%|*}"; real="${cur#*|}"
   _seen "$refname" && continue
   _mark "$refname"
-  cp -f "$real" "$DEST/$refname"; chmod u+w "$DEST/$refname"
-  echo "  + $refname"
+  out="$(_bundled "$refname")"
+  cp -f "$real" "$DEST/$out"; chmod u+w "$DEST/$out"
+  echo "  + $out"
   _load_rpaths "$real"
   while IFS= read -r dep; do
     r="$(_resolve "$dep" || true)"
@@ -92,7 +105,7 @@ for f in "$DEST"/*.dylib; do
   while IFS= read -r dep; do
     db="$(basename "$dep")"
     if _seen "$db"; then
-      install_name_tool -change "$dep" "@rpath/$db" "$f" 2>/dev/null || true
+      install_name_tool -change "$dep" "@rpath/$(_bundled "$db")" "$f" 2>/dev/null || true
     fi
   done < <(otool -L "$f" | tail -n +2 | awk '{print $1}')
   # Drop every existing rpath, then add just @loader_path.
