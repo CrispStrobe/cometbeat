@@ -61,10 +61,10 @@ is recorded in [HISTORY.md](HISTORY.md).
 > before a release, else it clashes with CrispEmbed's ggml.
 > Real-song probe (6:14 + 4:10 MP3s, macOS): split 249 s / 157 s, beats ~30 s,
 > melody ~45–50 s (now off the UI isolate). ⚠ peak RSS ~2.4 GB on the 6 min
-> song — fine on a Mac, a real risk on iOS: cap song length or chunk before
-> enabling there. Catalog MP3 switch DEFERRED: Ze Bellas MP3 loads in ~39 s
-> (pure-Dart decode, every load) vs 1.3 s WAV — needs decoded-PCM caching or
-> native decode first.
+> song. **Both caveats resolved 2026-11-03:** memory is bounded (opus/splitmem
+> above; 1.2 GB peak htdemucs, 10-minute cap on phones) and MP3 decodes through
+> native glint (`3e56f26c`, Ze Bellas 1.7 s vs 1.4 s WAV). The catalog MP3
+> switch now waits only on 1.0.4 adoption — root `PLAN.md` handover card R1.
 
 > 🎹 **opus/note-models — branch `feat/crispasr-note-models` (worktree
 > `../cometbeat-notemodels`), 2026-09-21.** The ggml polyphonic path loaded ONE

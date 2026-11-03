@@ -8,7 +8,45 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Progression
 
-## Since 1.0.3 — unreleased
+## Release 1.0.4 (build 9) — App Store Connect (iOS + macOS) and web (2026-11-03)
+
+Tags `v1.0.4` / `mac-v1.0.4` on `18b8318c`. Distribution to testers or review
+is pending (PLAN.md handover card R0).
+
+- **Lessons** (2026-11-02):
+  - Curriculum levels read "Stufe N" / "Level N" instead of school-year
+    bands.
+  - A "Good to know" card explains the answer after each item (term glossary,
+    e.g. *mezzoforte = halblaut*, with a loudness visual), and in the dynamics
+    games it plays both marks.
+  - A lesson's last example now rings out before the result screen. The wait
+    comes from `AudioService.playbackRemainingAfterStart()`, so a slow player
+    start no longer skips it.
+  - Sort games no longer count a tap, or a drop outside any basket, as an
+    error.
+  - "Fortschritt" module cards no longer show "0 von 0".
+  - In the loop editor, "Clear part" really empties the part, and a separate
+    "Reset to preset" was added.
+- **Narration voices** (2026-11-02): neural narration actually speaks. The
+  small CrispASR voices are downloaded and played, and download errors are
+  surfaced instead of being swallowed. Lessons have their own voice picker,
+  which overrides the global voice. See
+  [TTS_ARCHITECTURE.md](TTS_ARCHITECTURE.md).
+- **MP3 through glint** (2026-11-02): SFZ samples and imported songs decode
+  MP3 natively through glint, gapless, on desktop/mobile (FFI) and web (wasm),
+  falling back to pure Dart only where no glint ≥ 0.8.1 loads. glint 0.10.0
+  replaced libm calls in the decoder's inner loop with tables, with
+  bit-identical output: about 17× faster (glint_audio 0.12.0, glint_audio_pure
+  0.7.0, Rust 0.12.0).
+- **Release CI** (2026-11-03):
+  - The store workflows pin CrispEmbed to a full SHA and fetch its published
+    0.17.12 prebuilt libs (`CRISPEMBED_PREBUILT_VERSION`), because CrispEmbed
+    main's 0.17.14 has no release yet.
+  - The CrispEmbed macOS dylibs are flattened to one `@rpath/libX.dylib` each,
+    so builds no longer need hand-made `.0` symlinks.
+  - CI now runs only the jobs a change needs (#16): a release tag runs 3 jobs
+    instead of 37, docs-only PRs run nothing, and the A/B pool workflow has a
+    2-hour timeout.
 
 - **Practice stems: bounded memory** (2026-11-03): "practise with your song"
   on a 6:14 MP3 peaked at 3.7 GB (htdemucs) / 3.8 GB (Mini-BS-RoFormer)

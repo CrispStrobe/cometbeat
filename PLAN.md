@@ -13,6 +13,172 @@
 > looking for how something already-built came out, or for the reasoning behind
 > a shipped decision, it is in HISTORY. 46 ⬜ cards remain.
 
+## Handover — pending work after release 1.0.4 (2026-11-03)
+
+**State.** `main` is green. **1.0.4 (build 9)** was built from tags `v1.0.4` / `mac-v1.0.4`, then uploaded to App Store Connect (iOS and macOS) and deployed to the web; all three runs succeeded. What shipped is listed in
+[docs/HISTORY.md](docs/HISTORY.md) → "Release 1.0.4". No agent holds a claim on
+this lane (see the board in `docs/PLAN.md`). Each card states **Goal · Where ·
+How · Accept**, plus what blocks it, if anything. The older cards (H1–H11) below
+are still valid.
+
+House rules that bite here:
+- Work in a sibling worktree, branched from `origin/main`.
+- `dart format` first, then `flutter analyze` must report "No issues found".
+- Use `set -o pipefail` whenever a piped test gates a push.
+- Apple builds on the shared Mac need the Ruby env wrapper documented in the
+  local dev notes.
+- Release workflows are tag-triggered: `v*` runs iOS + web deploy, `mac-v*`
+  runs macOS. Bump `version:` (`x.y.z+BUILD`) in `pubspec.yaml` first; Apple
+  rejects a reused build number.
+- Validate a release workflow with **Run workflow → `dry_run: true`** before
+  tagging. It builds and signs without uploading.
+
+### Release follow-through (maintainer actions first)
+
+- ⬜ **R0 — get 1.0.4 to people.** *Needs the maintainer.* The builds are in
+  App Store Connect, but nobody has them yet. *How:* either run the
+  `testflight-distribute.yml` workflow (inputs: version `1.0.4`, build `9`,
+  "What to Test" text taken from the HISTORY entry), or submit for review in
+  App Store Connect. *Accept:* testers can install 1.0.4 (9).
+- ⬜ **R1 — switch Ze Bellas in the sound catalog from WAV to MP3.** *Blocked
+  until* most installs are on 1.0.4 or later. Builds before 1.0.4 decode MP3
+  without the gapless trim, so they play every MP3 sample about 23 ms late.
+  *Gain:* 514 MB → 8.9 MB to download. *Where:* the asset catalog lives outside
+  this repo (music-db, emitted by `emit_catalog.py` to the HF dataset). The
+  maintainer's local HF runbook covers emit and upload. The `ZeBellas-mp3.sfz`
+  file already sits next to the WAV one and is deliberately left out of
+  `db.json`. *How:*
+  1. Give the MP3 SFZ the catalog row instead of the WAV SFZ.
+  2. Stage only the files it references.
+  3. Re-emit the catalog and upload it.
+  4. Check unauthenticated: the SFZ and every MP3 it references return 200.
+
+  *Accept:* in the app, the Ze Bellas instrument loads, and a key sweep
+  rendered with `bin/rendersong.dart --sf2 <sfz>` has no silent notes. Its
+  onset must match the WAV within 1 frame (the regression test
+  `test/mp3_gapless_test.dart` covers the decoder side).
+- ⬜ **R2 — drop the CrispEmbed version override in the store workflows.**
+  *Blocked until* CrispEmbed publishes the v0.17.14 release (its main says
+  0.17.14 but has no release, so its podspecs got a 404 on the prebuilt
+  tarball). *Where:* `.github/workflows/ios-release.yml` and
+  `macos-release.yml`. Both set `CRISPEMBED_PREBUILT_VERSION: '0.17.12'` and
+  pin the CrispEmbed checkout to `0d3974abe84508b994b068f66172a8d438fc7b9b`.
+  *How:*
+  1. Delete the env var.
+  2. Move the pin to the v0.17.14 commit. It must be a **full 40-char SHA**;
+     `actions/checkout` rejects short ones.
+  3. Do a dry run of both workflows.
+
+  *Accept:* both dry runs pass. CometBeat only calls `CrispEmbedOmr`, whose C
+  API has not changed since 0.16, so no Dart change is expected.
+- ⬜ **R3 — verify neural narration in the shipped macOS build.**
+  `tool/bundle_macos_tts.sh` re-bundles libcrispasr with `crispasr-`-prefixed
+  ggml so it cannot clash with CrispEmbed's ggml. `macos-release.yml` does
+  **not** run it. *How:*
+  1. Install 1.0.4 on a Mac from TestFlight.
+  2. Open a lesson.
+  3. Pick a neural voice in the lesson voice picker and let it read.
+
+  *Accept:* the neural voice speaks; device voices are not a fallback. If it
+  stays silent, add the bundling step to the workflow and dry-run it.
+
+### Practise with your song — memory and speed
+
+Background: [docs/STEM_SEPARATION.md](docs/STEM_SEPARATION.md) and the HISTORY
+entry "Practice stems: bounded memory". Measure with
+`test/practice/real_song_probe_test.dart`, which reports phys_footprint per
+stage, old pipeline next to new. It needs a glint ≥ 0.8.1 via
+`COMET_GLINT_LIB`; build one from `native/glint/src` with cmake, because an
+older glint makes the probe fall back to the slow pure-Dart decoder.
+
+- ⬜ **P1 — Mini-BS-RoFormer working set (~1 GB, independent of song
+  length).** *Blocked on* CrispASR: the separator session API has no
+  `segment_seconds`. *How:*
+  1. In CrispASR, expose the model's segment length on the session.
+  2. Bump `crispasr`.
+  3. Pass a shorter segment from `crispasr_ffi_separate_io.dart` on mobile.
+
+  *Accept:* the probe shows Mini-BS peak < 1 GB on the 6-minute song, and
+  stems stay within 1 dB SDR of the current output.
+- ⬜ **P2 — decode leaves ~400 MB in the macOS allocator's large-block
+  cache.** With `MallocLargeCache=0`, htdemucs peaks at 0.80 GB instead of
+  1.2 GB. *Fix belongs in* glint: compile in and export the frame-level
+  decoder it already declares, so the worker decodes in blocks rather than
+  into one whole-song buffer. Then release glint, re-vendor `native/glint/`,
+  rebuild `web/glint/glint.wasm`, and read through it in
+  `practice_song_split_io.dart`. *Accept:* htdemucs peak < 0.9 GB without
+  allocator flags. First check whether iOS keeps the same cache; if it does
+  not, this is macOS-only and lower priority.
+- ⬜ **P3 — sing-along still makes a Float64 copy of the vocals.**
+  `singMelody(Float64List …)` in `lib/core/audio/practice/sing_melody.dart` is
+  called from `practice_stems_screen.dart`. Change it to take the Float32 stem,
+  or a memory-mapped stem file, and convert per frame inside the isolate.
+  *Accept:* `test/practice/sing_melody_test.dart` passes, and sing-along on the
+  6-minute song adds < 100 MB.
+- ⬜ **P4 — on-device check (iPhone or iPad).**
+  1. Import a 6-minute MP3 and split it.
+  2. Play it, loop a passage, and slow it to 50 %.
+  3. Import an 11-minute song.
+
+  *Accept:* no jetsam kill; the 11-minute song is refused with the localized
+  message (`PracticeSongTooLong`).
+- ⬜ **P5 — Mini-BS-RoFormer on the GPU.** Blocked on CrispASR #568 (its Metal
+  path returns a silent vocals stem). Details in the "Practise with your song —
+  follow-ups" card further down.
+
+### Toolchain
+
+- ⬜ **T1 — Flutter SDK upgrade.** The 3.44 SDK pins `meta 1.18.0`, Dart 3.12
+  and `intl 0.20.2`, which holds back:
+  - flutter_soloud 5 (needs `native_toolchain_c ≥0.19.4`);
+  - sqlite3 ≥3.6 (needs `hooks ^2.2`);
+  - xml 7.1 (needs Dart 3.13);
+  - intl 0.20.3;
+  - web 1.1.2.
+
+  *How:*
+  1. Upgrade Flutter locally.
+  2. Set `FLUTTER_VERSION` in every workflow that pins it (grep
+     `.github/workflows`).
+  3. Run `flutter pub upgrade --major-versions`.
+  4. Run the full suite, the macOS and web builds, and dry runs of both store
+     workflows.
+
+  *Accept:* zero new test failures against the 8036-pass baseline.
+- ⬜ **T2 — move the local CrispEmbed path dependency to 0.17.x.** CometBeat's
+  `pubspec.yaml` points at a sibling CrispEmbed checkout that is still 0.16.
+  CI already checks out current CrispEmbed and fetches 0.17.12 libs. No Dart
+  change is needed: `CrispEmbedOmr`'s source is byte-identical. *How:* point
+  the sibling at a clean CrispEmbed checkout (≥ `0d3974ab`), then run
+  `pod install` and a clean macOS build. *Accept:* Contents/Frameworks holds
+  the six flat `libX.dylib`, and the OMR tests pass.
+
+### Unmerged branches — decide, then merge or delete
+
+- ⬜ **B1 — `backup/feature/tracker-ux`** (9 commits, top: "Fix exact retrigger
+  timing, add boundary-level test, and fix MOD tick preservation"). It was
+  never pushed until the 2026-11-03 cleanup. The original worktree also holds
+  2 staged, uncommitted edits (`advanced_tracker_screen.dart` and its test).
+  *How:*
+  1. Rebase onto main.
+  2. Run the tracker suites (`test/tracker*`, `test/advanced_tracker*`,
+     `test/mod*`).
+  3. Merge if they pass; otherwise write down what it was for and delete it.
+- ⬜ **B2 — `feature/composition-opt`** (9 commits) and
+  **`feature/asset-catalog`** (2 commits): pushed, never merged. Same
+  treatment: check whether the work is superseded on main first (`git log
+  origin/main..origin/<branch>`, `git cherry`).
+
+### Small, optional
+
+- ⬜ **S1 — always-stereo sections export.** `renderArrangement` returns mono
+  when no section pans a track (same as the single-groove export). If users
+  expect stereo files regardless, duplicate the mono channel in the WAV writer.
+  Do **not** do it in the render, which other callers share.
+- ⬜ **S2 — 3/4 and 6/8 in Loop Studio.** Stopped on purpose: the 4/4
+  eighth-step grid is a constant in 36 files. Needs a design note before code;
+  see the Loop Studio style-catalog entry in HISTORY.
+
 ## Handover — pending work, scoped for a fresh agent (2026-10-15)
 
 State at handover: `main` is green; 1.0.2 (build 7) went to TestFlight
@@ -447,12 +613,9 @@ on one pure-Dart detection core so it stays testable headlessly and from a CLI.
   would make the vocal ranking trustworthy.
 - **Clean timings** — every timing so far was taken with load average 9–43.
   Measure real-time factor per model on an idle machine before quoting any.
-- **Bar phase from downbeats** in whole-song transcription — beats and bar
-  length come from beat-this now; moving bar 1 onto the first downbeat needs
-  pickup handling in the score builder.
-- **MP3 decode is pure Dart (~real time)** — fine for a one-off import, but a
-  native decode (CrispASR's miniaudio, stereo) would cut the wait.
-- **Loop a passage / slow down** in the stem player (time-stretch per stem).
+- ~~Bar phase from downbeats~~, ~~native MP3 decode~~, ~~loop a passage /
+  slow down~~ — all shipped (see HISTORY, 1.0.4). Memory and speed follow-ups:
+  the 2026-11-03 handover cards P1–P5 at the top of this file.
 
 ## Tune identification & melodic search (scoped 2026-08-01, NOT STARTED)
 
