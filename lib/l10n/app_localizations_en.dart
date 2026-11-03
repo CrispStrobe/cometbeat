@@ -1637,6 +1637,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerExportArrangement => 'Export the sections as one track';
 
   @override
+  String get loopMixerNoPitchedNotes =>
+      'Only drums so far — there are no pitched notes yet';
+
+  @override
+  String get loopMixerSoloTrack => 'Solo';
+
+  @override
+  String get loopMixerUnsoloTrack => 'Unsolo';
+
+  @override
   String get loopMixerChallengeSparkle =>
       'Try: add something high and sparkly ✨';
 
@@ -7290,6 +7300,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioExportMp3Encoder => 'MP3 encoder';
 
   @override
+  String audioExportAction(String format) {
+    return 'Export $format';
+  }
+
+  @override
+  String get audioExportQualityFast => 'Fast';
+
+  @override
+  String get audioExportQualityGood => 'Good';
+
+  @override
+  String get audioExportQualityBest => 'Best';
+
+  @override
+  String get audioExportEncoderBuiltIn => 'Built-in';
+
+  @override
+  String get audioExportEncoderNative => 'Native (faster)';
+
+  @override
   String get exportLoopRenderedDetail => 'The loop, rendered';
 
   @override
@@ -7522,6 +7552,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get showTimerLabel => 'Show your time';
+
+  @override
+  String get answerExplanationsLabel => 'Explain answers';
+
+  @override
+  String get answerExplanationsSubtitle =>
+      'After an answer, show a short \"Good to know\" card (e.g. mezzoforte = medium loud). Off: rounds move on faster.';
 
   @override
   String get soundOnLabel => 'Sound';

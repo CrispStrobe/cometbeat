@@ -54,6 +54,7 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
     show showMelodicSearch;
+import 'package:comet_beat/shared/music_io/deliver_export.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
@@ -1743,24 +1744,19 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     String label,
     List<String> extensions,
   ) async {
+    // A Save dialog on desktop, the share sheet on mobile, a download on the
+    // web — getSaveLocation alone exists only on desktop.
     final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final location = await getSaveLocation(
-        suggestedName: suggestedName,
-        acceptedTypeGroups: [
-          XTypeGroup(label: label, extensions: extensions),
-        ],
-      );
-      if (location == null || !mounted) return;
-      await XFile.fromData(bytes, name: suggestedName).saveTo(location.path);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.tabSavedTo(location.path))),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.tabExportFailed)));
-    }
+    await deliverExport(
+      ScaffoldMessenger.of(context),
+      bytes: bytes,
+      suggestedName: suggestedName,
+      label: label,
+      extension: extensions.first,
+      savedMessage: l10n.tabSavedTo,
+      sharedMessage: l10n.musicExportShared,
+      failedMessage: l10n.tabExportFailed,
+    );
   }
 
   void _snack(String msg) => ScaffoldMessenger.of(context)

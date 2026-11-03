@@ -94,6 +94,7 @@ import 'package:comet_beat/shared/music_io/audio_export.dart'
     show AudioStem, showAudioExportSheet, showAudioStemsExportSheet;
 import 'package:comet_beat/shared/music_io/audio_import.dart'
     show importAudioAsync, kAudioImportExtensions;
+import 'package:comet_beat/shared/music_io/deliver_export.dart';
 import 'package:comet_beat/shared/music_io/export_sheet.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart'
     show showMusicExportSheet;
@@ -1853,25 +1854,27 @@ class _DawScreenState extends State<DawScreen>
   Future<void> _saveProject() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final String json;
     try {
-      final json = _daw.saveProject();
-      final loc = await getSaveLocation(
-        suggestedName: 'project.cbdaw',
-        acceptedTypeGroups: const [_kProjectGroup],
-      );
-      if (loc == null) return;
-      await XFile.fromData(
-        Uint8List.fromList(utf8.encode(json)),
-        name: 'project.cbdaw',
-      ).saveTo(loc.path);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.dawProjectSaved)),
-      );
+      json = _daw.saveProject();
     } catch (_) {
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.dawProjectSaveFailed)),
       );
+      return;
     }
+    // A Save dialog on desktop, the share sheet on mobile, a download on the
+    // web — getSaveLocation alone exists only on desktop.
+    await deliverExport(
+      messenger,
+      bytes: Uint8List.fromList(utf8.encode(json)),
+      suggestedName: 'project.cbdaw',
+      label: _kProjectGroup.label!,
+      extension: 'cbdaw',
+      savedMessage: (_) => l10n.dawProjectSaved,
+      sharedMessage: l10n.dawProjectSaved,
+      failedMessage: l10n.dawProjectSaveFailed,
+    );
   }
 
   Future<void> _openProject() async {

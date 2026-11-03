@@ -126,6 +126,7 @@ import 'package:comet_beat/shared/music/music_picker.dart'
     show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
+import 'package:comet_beat/shared/music_io/deliver_export.dart';
 import 'package:comet_beat/shared/music_io/export_sheet.dart';
 import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
@@ -5038,24 +5039,20 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     String label,
     List<String> extensions,
   ) async {
+    // A Save dialog on desktop, the share sheet on mobile, a download on the
+    // web. This called getSaveLocation directly, which only exists on desktop,
+    // so every Tracker export failed on iOS, Android and the web.
     final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final location = await getSaveLocation(
-        suggestedName: suggestedName,
-        acceptedTypeGroups: [
-          XTypeGroup(label: label, extensions: extensions),
-        ],
-      );
-      if (location == null || !mounted) return;
-      await XFile.fromData(bytes, name: suggestedName).saveTo(location.path);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.trackerModFailed)));
-    }
+    await deliverExport(
+      ScaffoldMessenger.of(context),
+      bytes: bytes,
+      suggestedName: suggestedName,
+      label: label,
+      extension: extensions.first,
+      savedMessage: l10n.workshopSavedTo,
+      sharedMessage: l10n.musicExportShared,
+      failedMessage: l10n.trackerModFailed,
+    );
   }
 
   Future<void> _exportMidi() async {
@@ -5146,7 +5143,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     }
     final xml = multiPartToMusicXml(mp.score, partNames: mp.names);
     await _saveBytes(
-      Uint8List.fromList(xml.codeUnits),
+      // UTF-8, not `codeUnits`: those are UTF-16 code units, and squeezing
+      // them into bytes mangled any non-ASCII part or title name.
+      Uint8List.fromList(utf8.encode(xml)),
       'tracker.musicxml',
       'MusicXML',
       ['musicxml', 'xml'],

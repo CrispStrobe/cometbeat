@@ -312,6 +312,8 @@ Uint8List pcmFloatToNative(
 enum Mp3Encoder { dart, native }
 
 extension Mp3EncoderX on Mp3Encoder {
+  /// A stable English name for logs and error messages. The export UI shows
+  /// [_mp3EncoderLabel] instead, which is localized.
   String get label => switch (this) {
         Mp3Encoder.dart => 'Built-in',
         Mp3Encoder.native => 'Native (faster)',
@@ -557,9 +559,9 @@ Future<void> showAudioExportSheet(
                     values: ResampleQuality.values,
                     selected: selectedResampleQuality,
                     labelFor: (q) => switch (q) {
-                      ResampleQuality.fast => 'Fast',
-                      ResampleQuality.good => 'Good',
-                      ResampleQuality.best => 'Best',
+                      ResampleQuality.fast => l10n.audioExportQualityFast,
+                      ResampleQuality.good => l10n.audioExportQualityGood,
+                      ResampleQuality.best => l10n.audioExportQualityBest,
                     },
                     onSelected: (q) =>
                         setSheetState(() => selectedResampleQuality = q),
@@ -615,7 +617,7 @@ Future<void> showAudioExportSheet(
                   label: AppLocalizations.of(context)!.audioExportMp3Encoder,
                   values: Mp3Encoder.values,
                   selected: selectedMp3Encoder,
-                  labelFor: (e) => e.label,
+                  labelFor: (e) => _mp3EncoderLabel(l10n, e),
                   onSelected: (e) =>
                       setSheetState(() => selectedMp3Encoder = e),
                 ),
@@ -625,7 +627,8 @@ Future<void> showAudioExportSheet(
                 alignment: Alignment.centerRight,
                 child: FilledButton.icon(
                   icon: const Icon(Icons.ios_share),
-                  label: Text('Export ${selectedFormat.shortLabel}'),
+                  label:
+                      Text(l10n.audioExportAction(selectedFormat.shortLabel)),
                   onPressed: () async {
                     Navigator.of(ctx).pop();
                     await _exportAs(
@@ -662,6 +665,12 @@ List<int> _uniqueRates(List<int> rates) {
   }
   return out;
 }
+
+String _mp3EncoderLabel(AppLocalizations l10n, Mp3Encoder encoder) =>
+    switch (encoder) {
+      Mp3Encoder.dart => l10n.audioExportEncoderBuiltIn,
+      Mp3Encoder.native => l10n.audioExportEncoderNative,
+    };
 
 String _formatLabel(AppLocalizations l10n, AudioExportFormat format) =>
     switch (format) {
@@ -780,7 +789,7 @@ Future<void> showAudioStemsExportSheet(
                   label: AppLocalizations.of(context)!.audioExportMp3Encoder,
                   values: Mp3Encoder.values,
                   selected: mp3Encoder,
-                  labelFor: (e) => e.label,
+                  labelFor: (e) => _mp3EncoderLabel(l10n, e),
                   onSelected: (e) => setDialog(() => mp3Encoder = e),
                 ),
               ],

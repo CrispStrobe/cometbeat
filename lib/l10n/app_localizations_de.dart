@@ -1641,6 +1641,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerExportArrangement => 'Teile als einen Track exportieren';
 
   @override
+  String get loopMixerNoPitchedNotes =>
+      'Bisher nur Schlagzeug – es gibt noch keine Töne mit Tonhöhe';
+
+  @override
+  String get loopMixerSoloTrack => 'Solo';
+
+  @override
+  String get loopMixerUnsoloTrack => 'Solo aufheben';
+
+  @override
   String get loopMixerChallengeSparkle =>
       'Versuch: etwas Hohes und Glitzerndes ✨';
 
@@ -7327,6 +7337,26 @@ class AppLocalizationsDe extends AppLocalizations {
   String get audioExportMp3Encoder => 'MP3-Encoder';
 
   @override
+  String audioExportAction(String format) {
+    return '$format exportieren';
+  }
+
+  @override
+  String get audioExportQualityFast => 'Schnell';
+
+  @override
+  String get audioExportQualityGood => 'Gut';
+
+  @override
+  String get audioExportQualityBest => 'Beste';
+
+  @override
+  String get audioExportEncoderBuiltIn => 'Eingebaut';
+
+  @override
+  String get audioExportEncoderNative => 'System (schneller)';
+
+  @override
   String get exportLoopRenderedDetail => 'Die Schleife als Audio';
 
   @override
@@ -7563,6 +7593,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get showTimerLabel => 'Zeit anzeigen';
+
+  @override
+  String get answerExplanationsLabel => 'Antworten erklären';
+
+  @override
+  String get answerExplanationsSubtitle =>
+      'Nach einer Antwort eine kurze „Gut zu wissen“-Karte zeigen (z. B. mezzoforte = halblaut). Aus: Die Runden gehen schneller weiter.';
 
   @override
   String get soundOnLabel => 'Ton';

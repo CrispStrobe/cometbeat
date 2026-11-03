@@ -48,6 +48,7 @@ import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
     show showMyInstrumentsSheet;
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music_io/deliver_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
@@ -848,24 +849,30 @@ class _TrackerScreenState extends State<TrackerScreen>
   Future<void> _exportModule(ModuleFormat fmt) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final Uint8List bytes;
     try {
-      final bytes = exportModuleBytes(fmt.name);
-      final name = 'tracker.${fmt.name}';
-      final location = await getSaveLocation(
-        suggestedName: name,
-        acceptedTypeGroups: [
-          XTypeGroup(label: fmt.name.toUpperCase(), extensions: [fmt.name]),
-        ],
-      );
-      if (location == null || !mounted) return;
-      await XFile.fromData(bytes, name: name).saveTo(location.path);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
-      );
+      bytes = exportModuleBytes(fmt.name);
     } catch (_) {
-      if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l10n.trackerModFailed)));
+      return;
     }
+    await _deliver(bytes, 'tracker.${fmt.name}', fmt.name.toUpperCase());
+  }
+
+  /// Hands an export to the user — a Save dialog on desktop, the share sheet
+  /// on mobile, a download on the web (see [deliverExport]).
+  Future<void> _deliver(Uint8List bytes, String name, String label) {
+    final l10n = AppLocalizations.of(context)!;
+    return deliverExport(
+      ScaffoldMessenger.of(context),
+      bytes: bytes,
+      suggestedName: name,
+      label: label,
+      extension: name.substring(name.lastIndexOf('.') + 1),
+      savedMessage: l10n.workshopSavedTo,
+      sharedMessage: l10n.musicExportShared,
+      failedMessage: l10n.trackerModFailed,
+    );
   }
 
   Future<void> _pickModuleFormat() async {
@@ -976,25 +983,16 @@ class _TrackerScreenState extends State<TrackerScreen>
   }
 
   Future<void> _exportMidi() async {
-    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final failed = AppLocalizations.of(context)!.trackerModFailed;
+    final Uint8List bytes;
     try {
-      final bytes = scoreToMidi(_trackerAsScore());
-      final location = await getSaveLocation(
-        suggestedName: 'tracker.mid',
-        acceptedTypeGroups: [
-          const XTypeGroup(label: 'MIDI', extensions: ['mid', 'midi']),
-        ],
-      );
-      if (location == null || !mounted) return;
-      await XFile.fromData(bytes, name: 'tracker.mid').saveTo(location.path);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
-      );
+      bytes = scoreToMidi(_trackerAsScore());
     } catch (_) {
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.trackerModFailed)));
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+      return;
     }
+    await _deliver(bytes, 'tracker.mid', 'MIDI');
   }
 
   // ── ABC import / export (via the Score bridge) ─────────────────────────────
@@ -1017,26 +1015,16 @@ class _TrackerScreenState extends State<TrackerScreen>
   }
 
   Future<void> _exportAbc() async {
-    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final failed = AppLocalizations.of(context)!.trackerModFailed;
+    final Uint8List bytes;
     try {
-      final bytes =
-          Uint8List.fromList(utf8.encode(scoreToAbc(_trackerAsScore())));
-      final location = await getSaveLocation(
-        suggestedName: 'tracker.abc',
-        acceptedTypeGroups: [
-          const XTypeGroup(label: 'ABC', extensions: ['abc']),
-        ],
-      );
-      if (location == null || !mounted) return;
-      await XFile.fromData(bytes, name: 'tracker.abc').saveTo(location.path);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
-      );
+      bytes = Uint8List.fromList(utf8.encode(scoreToAbc(_trackerAsScore())));
     } catch (_) {
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.trackerModFailed)));
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+      return;
     }
+    await _deliver(bytes, 'tracker.abc', 'ABC');
   }
 
   /// The song picker — the Workshop ↔ Tracker bridge: the built-in song book

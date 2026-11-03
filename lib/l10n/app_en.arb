@@ -700,6 +700,9 @@
   "loopMixerScenesHint": "Tap to launch, hold to capture the current layers",
   "loopMixerChain": "Chain sections (auto-advance)",
   "loopMixerExportArrangement": "Export the sections as one track",
+  "loopMixerNoPitchedNotes": "Only drums so far — there are no pitched notes yet",
+  "loopMixerSoloTrack": "Solo",
+  "loopMixerUnsoloTrack": "Unsolo",
   "loopMixerChallengeSparkle": "Try: add something high and sparkly ✨",
   "loopMixerChallengeBass": "Try: add a deep bassline",
   "loopMixerChallengeMelody": "Try: add a tune on top",
@@ -3284,6 +3287,19 @@
   "audioExportDitherHint": "Smoother fades (adds a faint noise floor)",
   "audioExportBitrate": "Bitrate",
   "audioExportMp3Encoder": "MP3 encoder",
+  "audioExportAction": "Export {format}",
+  "@audioExportAction": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "audioExportQualityFast": "Fast",
+  "audioExportQualityGood": "Good",
+  "audioExportQualityBest": "Best",
+  "audioExportEncoderBuiltIn": "Built-in",
+  "audioExportEncoderNative": "Native (faster)",
   "exportLoopRenderedDetail": "The loop, rendered",
   "exportShareCodeDetail": "A short code someone else can paste in",
   "errorLogTitle": "Error log",
@@ -3491,6 +3507,8 @@
   "studioModeLabel": "Studio tools",
   "studioModeSubtitle": "Show the score workshop, tracker, tab editor, Loop Studio, audio editor and projects on the home screen. For older kids and grown-ups.",
   "showTimerLabel": "Show your time",
+  "answerExplanationsLabel": "Explain answers",
+  "answerExplanationsSubtitle": "After an answer, show a short \"Good to know\" card (e.g. mezzoforte = medium loud). Off: rounds move on faster.",
   "soundOnLabel": "Sound",
   "soundOnSubtitle": "Notes, chords and sound effects (the microphone still works)",
   "narrationOnLabel": "Read aloud",

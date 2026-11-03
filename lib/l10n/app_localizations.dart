@@ -3020,6 +3020,24 @@ abstract class AppLocalizations {
   /// **'Export the sections as one track'**
   String get loopMixerExportArrangement;
 
+  /// No description provided for @loopMixerNoPitchedNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Only drums so far — there are no pitched notes yet'**
+  String get loopMixerNoPitchedNotes;
+
+  /// No description provided for @loopMixerSoloTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Solo'**
+  String get loopMixerSoloTrack;
+
+  /// No description provided for @loopMixerUnsoloTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsolo'**
+  String get loopMixerUnsoloTrack;
+
   /// No description provided for @loopMixerChallengeSparkle.
   ///
   /// In en, this message translates to:
@@ -13412,6 +13430,42 @@ abstract class AppLocalizations {
   /// **'MP3 encoder'**
   String get audioExportMp3Encoder;
 
+  /// No description provided for @audioExportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Export {format}'**
+  String audioExportAction(String format);
+
+  /// No description provided for @audioExportQualityFast.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast'**
+  String get audioExportQualityFast;
+
+  /// No description provided for @audioExportQualityGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get audioExportQualityGood;
+
+  /// No description provided for @audioExportQualityBest.
+  ///
+  /// In en, this message translates to:
+  /// **'Best'**
+  String get audioExportQualityBest;
+
+  /// No description provided for @audioExportEncoderBuiltIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in'**
+  String get audioExportEncoderBuiltIn;
+
+  /// No description provided for @audioExportEncoderNative.
+  ///
+  /// In en, this message translates to:
+  /// **'Native (faster)'**
+  String get audioExportEncoderNative;
+
   /// No description provided for @exportLoopRenderedDetail.
   ///
   /// In en, this message translates to:
@@ -13741,6 +13795,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show your time'**
   String get showTimerLabel;
+
+  /// No description provided for @answerExplanationsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Explain answers'**
+  String get answerExplanationsLabel;
+
+  /// No description provided for @answerExplanationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'After an answer, show a short \"Good to know\" card (e.g. mezzoforte = medium loud). Off: rounds move on faster.'**
+  String get answerExplanationsSubtitle;
 
   /// No description provided for @soundOnLabel.
   ///

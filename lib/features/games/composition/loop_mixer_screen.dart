@@ -109,8 +109,8 @@ import 'package:comet_beat/shared/music/music_picker.dart'
     show showMelodicSearch, showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
+import 'package:comet_beat/shared/music_io/deliver_export.dart';
 import 'package:comet_beat/shared/music_io/export_sheet.dart';
-import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/tutorial/primers.dart' show loopMixerPrimer;
@@ -2678,7 +2678,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           // Drums are unpitched, so a beat-only groove has no score — the same
           // honest refusal the Audio Editor makes.
           enabled: hasPitchedTrack,
-          disabledReason: 'Only drums so far — there are no pitched notes yet',
+          disabledReason: l10n.loopMixerNoPitchedNotes,
         ),
         ExportOption(
           kind: ExportKind.share,
@@ -2839,28 +2839,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final messenger = ScaffoldMessenger.of(context);
     final xml = _grooveMusicXml();
     if (xml == null) return;
-    try {
-      final result = await deliverBytes(
-        bytes: Uint8List.fromList(utf8.encode(xml)),
-        suggestedName: 'groove.musicxml',
-        label: 'MusicXML',
-        extension: 'musicxml',
-        mimeType: 'application/vnd.recordare.musicxml+xml',
-      );
-      final message = switch (result.kind) {
-        DeliveryKind.saved => l10n.workshopSavedTo(result.path ?? ''),
-        DeliveryKind.shared ||
-        DeliveryKind.downloaded =>
-          l10n.musicExportShared,
-        DeliveryKind.cancelled => null, // a cancel is not an error
-      };
-      if (message != null) {
-        messenger.showSnackBar(SnackBar(content: Text(message)));
-      }
-    } catch (e, st) {
-      debugPrint('[LOOP] musicxml save failed: $e\n$st');
-      messenger.showSnackBar(SnackBar(content: Text(l10n.musicExportFailed)));
-    }
+    await deliverExport(
+      messenger,
+      bytes: Uint8List.fromList(utf8.encode(xml)),
+      suggestedName: 'groove.musicxml',
+      label: 'MusicXML',
+      extension: 'musicxml',
+      savedMessage: l10n.workshopSavedTo,
+      sharedMessage: l10n.musicExportShared,
+      failedMessage: l10n.musicExportFailed,
+    );
   }
 
   Future<void> _promptForToken() async {
@@ -6647,7 +6635,7 @@ class _TrackCard extends StatelessWidget {
                   Icon(Icons.piano, size: 18, color: foreground),
                 ],
                 if (!split && onEdit != null) _editButton(foreground),
-                if (!split) _soloButton(foreground),
+                if (!split) _soloButton(context, foreground),
                 if (!split && onDelete != null) _deleteButton(foreground),
               ],
             ),
@@ -6658,7 +6646,7 @@ class _TrackCard extends StatelessWidget {
                 children: [
                   if (!phone) _stepsBadge(foreground),
                   if (onEdit != null) _editButton(foreground),
-                  _soloButton(foreground),
+                  _soloButton(context, foreground),
                   if (onDelete != null) _deleteButton(foreground),
                 ],
               ),
@@ -6794,8 +6782,10 @@ class _TrackCard extends StatelessWidget {
         ),
       );
 
-  Widget _soloButton(Color foreground) => IconButton(
-        tooltip: soloed ? 'Unsolo' : 'Solo',
+  Widget _soloButton(BuildContext context, Color foreground) => IconButton(
+        tooltip: soloed
+            ? AppLocalizations.of(context)!.loopMixerUnsoloTrack
+            : AppLocalizations.of(context)!.loopMixerSoloTrack,
         onPressed: onSolo,
         visualDensity: VisualDensity.compact,
         padding: EdgeInsets.zero,
