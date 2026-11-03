@@ -19754,6 +19754,12 @@ abstract class AppLocalizations {
   /// **'That file couldn\'t be read or split.'**
   String get practiceStemsFailed;
 
+  /// No description provided for @practiceStemsTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'This song is longer than {minutes} minutes, too long to split on this device. Try a shorter song, or trim this one first.'**
+  String practiceStemsTooLong(int minutes);
+
   /// No description provided for @practiceStemsNoAudio.
   ///
   /// In en, this message translates to:

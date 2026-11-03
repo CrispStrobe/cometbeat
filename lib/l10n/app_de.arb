@@ -3922,6 +3922,7 @@
   "practiceStemsBeats": "Suche den Takt …",
   "practiceStemsUnavailable": "Zum Zerlegen eines Songs braucht es die Engine auf dem Gerät – auf diesem Gerät gibt es sie noch nicht.",
   "practiceStemsFailed": "Diese Datei konnte nicht gelesen oder zerlegt werden.",
+  "practiceStemsTooLong": "Dieser Song ist länger als {minutes} Minuten – zu lang, um ihn auf diesem Gerät zu zerlegen. Nimm einen kürzeren Song oder kürze diesen vorher.",
   "practiceStemsNoAudio": "Audiowiedergabe ist hier nicht verfügbar.",
   "practiceStemVocals": "Gesang",
   "practiceStemDrums": "Schlagzeug",

@@ -10961,6 +10961,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get practiceStemsFailed => 'That file couldn\'t be read or split.';
 
   @override
+  String practiceStemsTooLong(int minutes) {
+    return 'This song is longer than $minutes minutes, too long to split on this device. Try a shorter song, or trim this one first.';
+  }
+
+  @override
   String get practiceStemsNoAudio => 'Audio playback isn\'t available here.';
 
   @override

@@ -11028,6 +11028,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Datei konnte nicht gelesen oder zerlegt werden.';
 
   @override
+  String practiceStemsTooLong(int minutes) {
+    return 'Dieser Song ist länger als $minutes Minuten – zu lang, um ihn auf diesem Gerät zu zerlegen. Nimm einen kürzeren Song oder kürze diesen vorher.';
+  }
+
+  @override
   String get practiceStemsNoAudio =>
       'Audiowiedergabe ist hier nicht verfügbar.';
 

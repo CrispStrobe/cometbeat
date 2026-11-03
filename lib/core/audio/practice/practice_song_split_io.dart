@@ -53,6 +53,8 @@ Future<PracticeSongSplit> splitSongForPractice(
   final backend = model.registryBackend;
   final modelPath = crispasrModelPath(backend, download: download);
   if (modelPath == null) throw StateError('separation');
+  final maxSeconds =
+      Platform.isIOS || Platform.isAndroid ? kPracticeMaxSecondsMobile : null;
   final folder = !inMemory && stemFilesSupported ? newStemFolder().path : null;
   final port = ReceivePort();
   var done = false;
@@ -70,6 +72,7 @@ Future<PracticeSongSplit> splitSongForPractice(
       backend,
       model.cpuOnly,
       folder,
+      maxSeconds,
       port.sendPort,
     );
   } finally {
@@ -149,6 +152,7 @@ Future<_Result> _spawn(
   String backend,
   bool cpuOnly,
   String? folder,
+  int? maxSeconds,
   SendPort phases,
 ) =>
     Isolate.run(
@@ -160,6 +164,7 @@ Future<_Result> _spawn(
         backend,
         cpuOnly,
         folder,
+        maxSeconds,
         phases,
       ),
     );
@@ -172,12 +177,16 @@ Future<_Result> _work(
   String backend,
   bool cpuOnly,
   String? folder,
+  int? maxSeconds,
   SendPort phases,
 ) async {
   phases.send([PracticeSplitPhase.decoding.index, null]);
   SongAudio? song = await decodeSongFile(path, bytes);
   if (song == null || song.frames == 0) throw StateError('undecodable');
   final seconds = song.seconds;
+  if (maxSeconds != null && seconds > maxSeconds) {
+    throw PracticeSongTooLong(seconds, maxSeconds);
+  }
   phases.send([PracticeSplitPhase.separating.index, seconds]);
   CrispasrSession? session;
   try {

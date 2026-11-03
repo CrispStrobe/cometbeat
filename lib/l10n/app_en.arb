@@ -4753,6 +4753,8 @@
   "practiceStemsBeats": "Finding the beat…",
   "practiceStemsUnavailable": "Splitting a song needs the on-device engine, and it isn't available on this device yet.",
   "practiceStemsFailed": "That file couldn't be read or split.",
+  "practiceStemsTooLong": "This song is longer than {minutes} minutes, too long to split on this device. Try a shorter song, or trim this one first.",
+  "@practiceStemsTooLong": {"placeholders": {"minutes": {"type": "int"}}},
   "practiceStemsNoAudio": "Audio playback isn't available here.",
   "practiceStemVocals": "Voice",
   "practiceStemDrums": "Drums",

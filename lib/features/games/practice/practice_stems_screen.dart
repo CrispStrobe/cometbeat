@@ -204,7 +204,9 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
       if (!mounted) return;
       setState(() {
         _phase = _Phase.idle;
-        _error = l.practiceStemsFailed;
+        _error = e is PracticeSongTooLong
+            ? l.practiceStemsTooLong(e.maxSeconds ~/ 60)
+            : l.practiceStemsFailed;
       });
     }
   }
