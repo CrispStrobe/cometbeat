@@ -39,6 +39,11 @@ env:
   BUNDLE_ID: com.crispstrobe.cometBeat
   PROFILE_NAME: CometBeat AppStore CI
   FLUTTER_VERSION: '3.44.4'
+  # CrispEmbed main's pubspec says 0.17.14 but no v0.17.14 release (and so no
+  # prebuilt tarball) exists yet; the podspecs would 404. Fetch the published
+  # v0.17.12 libs instead. CometBeat only uses CrispEmbedOmr, whose C API is
+  # unchanged since 0.16. Drop once v0.17.14 is released.
+  CRISPEMBED_PREBUILT_VERSION: '0.17.12'
 
 jobs:
   build-upload:
@@ -69,7 +74,10 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: CrispStrobe/CrispEmbed
-          ref: main
+          # Pinned for reproducible store builds: 0d3974ab (#132) carries the
+          # macOS dylib flatten fix (#128) and the CRISPEMBED_PREBUILT_VERSION
+          # override. Bump together with the env var below.
+          ref: 0d3974ab
           path: CrispEmbed
 
       # onnx_runtime_dart is a dev_dependency; pub get resolves dev deps, so the
