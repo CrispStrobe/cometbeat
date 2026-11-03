@@ -101,7 +101,7 @@ class _CharadesScreenState extends State<CharadesScreen>
   String get gameType => 'charades';
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   // We play the phrase ourselves; the tap feedback blips are fine on top.
   @override

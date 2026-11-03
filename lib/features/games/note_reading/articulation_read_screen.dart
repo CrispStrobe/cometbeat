@@ -93,7 +93,7 @@ class _ArticulationReadScreenState extends State<ArticulationReadScreen>
   bool get playFeedbackSounds => false;
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   static MusicTerm? _termFor(Articulation a) => switch (a) {
         Articulation.staccato => MusicTerm.staccato,

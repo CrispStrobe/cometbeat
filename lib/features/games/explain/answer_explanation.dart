@@ -19,16 +19,38 @@
 
 import 'dart:math' as math;
 
+import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/explain/music_terms.dart';
+import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/widgets/music_glyph.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// How long a solved round with an explanation stays up before the game moves
 /// on by itself (the learner can always tap "Next" sooner). Long enough to
 /// read one line and hear the example, short enough not to drag.
 const kExplanationHold = Duration(milliseconds: 2800);
+
+/// Whether the explanation card is switched on in Settings
+/// ([SettingsService.answerExplanations]). True when no [SettingsService] is
+/// provided, so a screen pumped on its own keeps the default behaviour.
+bool answerExplanationsOn(BuildContext context, {bool listen = false}) {
+  try {
+    return Provider.of<SettingsService>(context, listen: listen)
+        .answerExplanations;
+  } on ProviderNotFoundException {
+    return true;
+  }
+}
+
+/// The solved-round hold for a screen that shows the explanation card:
+/// [kExplanationHold] while the card is on, the ordinary [kRoundAdvanceDelay]
+/// when the learner switched it off in Settings — the longer hold exists only
+/// to read the card, so it goes with it.
+Duration explanationHold(BuildContext context) =>
+    answerExplanationsOn(context) ? kExplanationHold : kRoundAdvanceDelay;
 
 /// The explanation card. Explains [terms] (in order). [highlight] picks which
 /// rungs of a ladder visualization are lit (defaults to [terms]); [sounding]
@@ -75,7 +97,11 @@ class _AnswerExplanationState extends State<AnswerExplanation> {
 
   @override
   Widget build(BuildContext context) {
-    if (_closed || widget.terms.isEmpty) return const SizedBox.shrink();
+    if (_closed ||
+        widget.terms.isEmpty ||
+        !answerExplanationsOn(context, listen: true)) {
+      return const SizedBox.shrink();
+    }
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;

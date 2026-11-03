@@ -16,6 +16,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+/// How long a solved round stays on screen before the next one, by default
+/// (see [QuizRoundMixin.advanceDelay]).
+const kRoundAdvanceDelay = Duration(milliseconds: 700);
+
 class RoundHeader extends StatelessWidget {
   final int round; // 1-based
   final int totalRounds;
@@ -425,7 +429,7 @@ mixin QuizRoundMixin<T extends StatefulWidget> on State<T> {
   /// How long a solved round stays on screen before the next one. Screens
   /// that show an answer explanation hold longer (see `kExplanationHold`);
   /// the learner can always skip ahead with [advanceNow].
-  Duration get advanceDelay => const Duration(milliseconds: 700);
+  Duration get advanceDelay => kRoundAdvanceDelay;
 
   Timer? _advanceTimer;
 

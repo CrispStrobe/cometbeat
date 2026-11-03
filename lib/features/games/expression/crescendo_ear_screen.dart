@@ -79,7 +79,7 @@ class _CrescendoEarScreenState extends State<CrescendoEarScreen>
   }
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   @override
   void prepareRound() {

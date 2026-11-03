@@ -72,7 +72,7 @@ class _DynamicsDuelScreenState extends State<DynamicsDuelScreen>
   String get gameType => 'dynamics_duel';
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   @override
   void initState() {
@@ -120,7 +120,9 @@ class _DynamicsDuelScreenState extends State<DynamicsDuelScreen>
     resolveAnswer(correct: correct);
     // Not on the last item: the mixin then goes straight to the fanfare +
     // result screen, and a delayed demo would sound over the fanfare.
-    if (correct && round + 1 < totalRounds) {
+    // Nor when the explanation card is switched off: the demo belongs to the
+    // card, and the round no longer waits for it.
+    if (correct && round + 1 < totalRounds && answerExplanationsOn(context)) {
       // Hear the two cards, left then right, as the ladder lights up.
       _demo.play(context.read<AudioService>(), [_term(_left), _term(_right)]);
     }

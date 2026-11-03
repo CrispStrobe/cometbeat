@@ -32,6 +32,7 @@ class SettingsService with ChangeNotifier {
   static const _authenticSlidesKey = 'tracker_authentic_slides';
   static const _chartLevelKey = 'chart_level';
   static const _studioModeKey = 'studio_mode';
+  static const _answerExplanationsKey = 'answer_explanations';
 
   Locale? _locale;
   NoteNaming _noteNaming = NoteNaming.auto;
@@ -45,6 +46,7 @@ class SettingsService with ChangeNotifier {
   bool _smartTabFingering = true;
   bool _authenticSlides = true;
   bool _studioMode = false;
+  bool _answerExplanations = true;
   ChartLevel _chartLevel = ChartLevel.learner;
   Instrument _instrument = Instrument.piano;
   String _voiceId = Instrument.piano.name;
@@ -130,6 +132,13 @@ class SettingsService with ChangeNotifier {
   /// songs made in the app, which have their own profile.
   bool get authenticSlides => _authenticSlides;
 
+  /// Whether lessons show the post-answer "Good to know" card (term + a small
+  /// visualization, e.g. "mf  mezzoforte = halblaut" over a loudness ladder)
+  /// and hold the solved round ~2.8 s longer for it. On by default; off skips
+  /// the card, its demo sound and the extra hold, so rounds move at the
+  /// ordinary pace.
+  bool get answerExplanations => _answerExplanations;
+
   void _applyScoreFont() => appScoreFont = musicFontFor(_scoreFont);
 
   Future<void> load() async {
@@ -153,6 +162,7 @@ class SettingsService with ChangeNotifier {
     _showNoteNames = prefs.getBool(_showNoteNamesKey) ?? false;
     _smartTabFingering = prefs.getBool(_smartTabFingeringKey) ?? true;
     _authenticSlides = prefs.getBool(_authenticSlidesKey) ?? true;
+    _answerExplanations = prefs.getBool(_answerExplanationsKey) ?? true;
     _chartLevel = ChartLevel.fromName(prefs.getString(_chartLevelKey));
     // Studio tools are opt-in for a NEW install, but an install that already
     // holds data predates the switch and had them on the home bar — keep them
@@ -235,6 +245,13 @@ class SettingsService with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_authenticSlidesKey, value);
+  }
+
+  Future<void> setAnswerExplanations(bool value) async {
+    _answerExplanations = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_answerExplanationsKey, value);
   }
 
   Future<void> setSmartTabFingering(bool value) async {

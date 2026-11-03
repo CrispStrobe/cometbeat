@@ -192,6 +192,16 @@ class SettingsScreen extends StatelessWidget {
               onChanged: settings.setShowTimer,
             ),
           ),
+          Card(
+            child: SwitchListTile(
+              key: const ValueKey('settings_answer_explanations'),
+              secondary: const Icon(Icons.lightbulb_outline),
+              title: Text(l10n.answerExplanationsLabel),
+              subtitle: Text(l10n.answerExplanationsSubtitle),
+              value: settings.answerExplanations,
+              onChanged: settings.setAnswerExplanations,
+            ),
+          ),
           const SizedBox(height: 20),
           Text(
             l10n.notationFontLabel,

@@ -76,7 +76,7 @@ class _TempoOrderScreenState extends State<TempoOrderScreen>
   bool get playFeedbackSounds => false; // a wrong tap buzzes; correct is silent
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   @override
   void initState() {

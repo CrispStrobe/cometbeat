@@ -76,7 +76,7 @@ class _TempoChangeEarScreenState extends State<TempoChangeEarScreen>
   }
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   @override
   void prepareRound() {

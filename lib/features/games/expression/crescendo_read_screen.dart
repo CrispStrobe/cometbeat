@@ -73,7 +73,7 @@ class _CrescendoReadScreenState extends State<CrescendoReadScreen>
   }
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   @override
   void prepareRound() {

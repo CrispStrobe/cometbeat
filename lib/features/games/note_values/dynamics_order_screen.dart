@@ -80,7 +80,7 @@ class _DynamicsOrderScreenState extends State<DynamicsOrderScreen>
   bool get playFeedbackSounds => false; // a wrong tap buzzes; correct is silent
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   @override
   void initState() {
@@ -128,7 +128,9 @@ class _DynamicsOrderScreenState extends State<DynamicsOrderScreen>
         resolveAnswer(correct: true);
         // Not on the last item: the mixin then goes straight to the fanfare +
         // result screen, and a delayed demo would sound over the fanfare.
-        if (round + 1 < totalRounds) {
+        // Nor when the explanation card is switched off: the demo belongs to
+        // the card, and the round no longer waits for it.
+        if (round + 1 < totalRounds && answerExplanationsOn(context)) {
           _demo.play(context.read<AudioService>(), ladder, notesPerLevel: 1);
         }
       }

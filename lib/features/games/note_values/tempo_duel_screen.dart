@@ -66,7 +66,7 @@ class _TempoDuelScreenState extends State<TempoDuelScreen>
   String get gameType => 'tempo_duel';
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   @override
   void initState() {

@@ -77,7 +77,7 @@ class _ArticulationEarScreenState extends State<ArticulationEarScreen>
   }
 
   @override
-  Duration get advanceDelay => kExplanationHold;
+  Duration get advanceDelay => explanationHold(context);
 
   @override
   void prepareRound() {
