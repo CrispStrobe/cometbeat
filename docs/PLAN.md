@@ -28,7 +28,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
-> 🧠 **opus/splitmem — ACTIVE 2026-11-03** (branch `feature/split-mem`, worktree `../mus-splitmem`): bounding peak memory of the practice-stems split (decode → CrispASR separate → mixtureConsistent). Touching `practice_stems_screen.dart`, `crispasr_ffi_separate_io.dart`, `practice_mix.dart`, `song_audio*.dart`, `glint_audio_ffi.dart`, maybe the ARBs (song-length cap).
+> 🧠 **opus/splitmem — IDLE, shipped 2026-11-03**: practice-stems split memory bounded — grid-aligned windowed separation, one worker isolate, stems memory-mapped from disk, loops/slow-down rendered per window, 10-min cap on mobile. 6:14 song: 3.7→1.2 GB peak (htdemucs), 3.8→1.8 GB (Mini-BS). Follow-ups (not ours): CrispASR Mini-BS working set ~1 GB; glint decode leaves ~400 MB in macOS's malloc large cache. See HISTORY.md.
 
 > 📦 **opus/depbump — IDLE, shipped 2026-11-03**: all pub deps bumped to latest resolvable (share_plus 13, package_info_plus 10, flutter_soloud 4, xml 7, equatable 3, cupertino_icons 2, flutter_lints 6) + Podfile.locks. Held by the Flutter 3.44 SDK pins: flutter_soloud 5, sqlite3 ≥3.6, xml 7.1, intl 0.20.3. See HISTORY.md.
 

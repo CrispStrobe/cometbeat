@@ -10,6 +10,46 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Since 1.0.3 — unreleased
 
+- **Practice stems: bounded memory** (2026-11-03): "practise with your song"
+  on a 6:14 MP3 peaked at 3.7 GB (htdemucs) / 3.8 GB (Mini-BS-RoFormer)
+  phys_footprint and held ~2.9 GB just playing; slowing the unlooped song to
+  50 % reached 6.0 GB. Now 1.2 GB / 1.8 GB peak, 0.3–0.4 GB while playing,
+  0.5 GB slowed (`test/practice/real_song_probe_test.dart`, which also runs a
+  verbatim copy of the old pipeline for the comparison). What changed:
+  - **Windows on the model's own chunk grid** (`practice_split.dart`).
+    CrispASR's separators already cut their input into model chunks
+    (Mini-BS 8 s every 4 s, htdemucs 7.8 s every 5.85 s, mel-band 8 s every
+    6 s), but a whole-song call still holds the song ~10× in native and Dart
+    copies. The song now goes in ~40 s windows that start on that grid and
+    overlap by one segment; the frames whose chunks reach past a window are
+    discarded. Result: identical to a whole-song split (windowed-vs-whole
+    233–249 dB, the model's own run-to-run agreement). Windows cut off the
+    grid were audibly different in the bass (2 dB SDR at a seam), so the grid
+    matters, not just the crossfade. Cost: one or two extra model chunks per
+    window (htdemucs ~+30 % time, Mini-BS ~+12 %).
+  - **One worker isolate** decodes, separates, makes the stems
+    mixture-consistent block by block and writes them to disk; the UI
+    isolate never holds the song, and nothing song-sized crosses isolates.
+  - **Stems are memory-mapped read-only** (`stem_files_io.dart`): file-backed
+    clean pages do not count towards phys_footprint (a fully read 132 MB
+    mapping: +0 MB; an anonymous copy: +132 MB). `SeparatedStem` keeps its
+    `Float32List` API. Windows / 32-bit devices keep them in memory (1.6 GB
+    peak there).
+  - **Loops and slow-down are rendered per window** while the player streams
+    (`StemRegion`, `renderStretchSpan`): only the WSOLA splice plan is
+    computed up front, so neither a loop nor a slowed song is ever copied
+    whole. Same samples as before (unit-tested against `slowStems`).
+  - float32 throughout (no float64 or boxed `List<double>` whole-song copies),
+    beat tracking from a 22 kHz float32 mix (`crispasrBeatGrid32`).
+  - Songs over 10 min are refused on iOS/Android after decoding, before the
+    model loads (`practiceStemsTooLong`, de/en).
+  What is left, and is not ours to shrink: Mini-BS-RoFormer's per-chunk
+  working set (~1 GB, fixed by CrispASR — `segment_seconds` is not in the
+  session API) and glint's whole-file decode, which on macOS leaves ~400 MB
+  of freed blocks in libmalloc's large-allocation cache
+  (`malloc_zone_pressure_relief` does not return them). With
+  `MallocLargeCache=0` the same song peaks at **0.80 GB (htdemucs)** /
+  1.39 GB (Mini-BS). Seams: `test/practice/separation_seam_live_test.dart`.
 - **Dependency bump** (2026-11-03): every pub dependency at its latest
   resolvable version — majors share_plus 13, package_info_plus 10,
   flutter_soloud 4 (`play()` is now synchronous, awaits dropped), xml 7,
