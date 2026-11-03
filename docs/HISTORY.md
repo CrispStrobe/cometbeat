@@ -10,6 +10,15 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Since 1.0.3 — unreleased
 
+- **Dependency bump** (2026-11-03): every pub dependency at its latest
+  resolvable version — majors share_plus 13, package_info_plus 10,
+  flutter_soloud 4 (`play()` is now synchronous, awaits dropped), xml 7,
+  equatable 3, cupertino_icons 2, flutter_lints 6 (no new lints); minor
+  floors tightened, transitive deps + Podfile.locks refreshed. Held back by
+  the Flutter 3.44 SDK pins (meta 1.18.0, Dart 3.12, intl 0.20.2):
+  flutter_soloud 5, sqlite3 ≥3.6, xml 7.1, intl 0.20.3, web 1.1.2. No
+  platform minimum changed. Tests 8036/0 fail before and after.
+
 - **Export follow-ups + "Explain answers" switch** (2026-11-03): Loop Studio's
   "sections as one track" export keeps its stereo image (`renderArrangement`
   returns `(left, right?)` with `renderLoop`'s channel layout — mono only when

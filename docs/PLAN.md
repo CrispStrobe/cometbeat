@@ -30,7 +30,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 > 🧠 **opus/splitmem — ACTIVE 2026-11-03** (branch `feature/split-mem`, worktree `../mus-splitmem`): bounding peak memory of the practice-stems split (decode → CrispASR separate → mixtureConsistent). Touching `practice_stems_screen.dart`, `crispasr_ffi_separate_io.dart`, `practice_mix.dart`, `song_audio*.dart`, `glint_audio_ffi.dart`, maybe the ARBs (song-length cap).
 
-> 📦 **opus/depbump — ACTIVE 2026-11-03** (branch `chore/dep-bump`, worktree `../mus-depbump`): bumping every pub dependency to latest (majors included) + API fixes. Touching `pubspec.yaml`, `pubspec.lock`, `macos/Podfile(.lock)`, `ios/Podfile(.lock)`, `android/` gradle/minSdk files. Avoid editing those meanwhile.
+> 📦 **opus/depbump — IDLE, shipped 2026-11-03**: all pub deps bumped to latest resolvable (share_plus 13, package_info_plus 10, flutter_soloud 4, xml 7, equatable 3, cupertino_icons 2, flutter_lints 6) + Podfile.locks. Held by the Flutter 3.44 SDK pins: flutter_soloud 5, sqlite3 ≥3.6, xml 7.1, intl 0.20.3. See HISTORY.md.
 
 > 🔧 **opus/exportfix — IDLE, shipped 2026-11-03** (`c956f17b`..`efc2e7d1`): stereo sections export, Tracker/Tab Workshop/DAW project/Sample Extractor exports via `deliverExport` (share sheet on mobile, download on web), export-UI strings localized, `_TrackCard` reflows by card width (no overflow; integration test strict again), Settings → "Explain answers" toggle. See HISTORY.md.
 
