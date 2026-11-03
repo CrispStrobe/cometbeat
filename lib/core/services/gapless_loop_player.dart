@@ -125,7 +125,7 @@ class GaplessLoopPlayer {
       // Start silent + looping the whole buffer (loopingStartAt defaults to 0,
       // so the loop region is [0..end]). Then enter at the live groove phase and
       // fade up over the seam.
-      final handle = await _soloud.play(src, volume: 0, looping: true);
+      final handle = _soloud.play(src, volume: 0, looping: true);
       if (position > Duration.zero) {
         try {
           _soloud.seek(handle, position);

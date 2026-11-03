@@ -47,7 +47,7 @@ class SoLoudLiveVoice implements LiveVoice {
     if (!_ready) return;
     try {
       final src = _sources[key] ??= await _soloud.loadMem(key, wav);
-      await _soloud.play(src, volume: volume.clamp(0.0, 1.0));
+      _soloud.play(src, volume: volume.clamp(0.0, 1.0));
     } catch (e) {
       if (kDebugMode) debugPrint('[SOLOUD] play failed: $e');
     }

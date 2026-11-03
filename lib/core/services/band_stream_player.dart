@@ -83,7 +83,7 @@ class BandStreamPlayer {
               : null,
         );
         _sources.add(source);
-        _handles.add(await _soloud.play(source, paused: true));
+        _handles.add(_soloud.play(source, paused: true));
       }
       final group = _soloud.createVoiceGroup();
       _soloud.addVoicesToGroup(group, _handles);
