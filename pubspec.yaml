@@ -29,28 +29,28 @@ dependencies:
     sdk: flutter
 
   # State Management
-  provider: ^6.1.1
+  provider: ^6.1.5+1
 
   # UI
-  cupertino_icons: ^1.0.6
+  cupertino_icons: ^2.0.0
 
   # Storage & Data
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.5.6
 
   # Audio
-  audioplayers: ^6.1.0
+  audioplayers: ^6.8.1
   # Real-time, low-latency polyphonic voice for the Perform play-in keyboard/pads
   # (the "3" of the feel/instrument arc). Used ONLY behind LiveVoiceEngine's
   # capability hook (core/services/live_voice.dart) with graceful degrade to the
   # audioplayers pool — if it can't init (unsupported platform / headless test),
   # playback falls back and nothing breaks.
-  flutter_soloud: ^3.1.10
+  flutter_soloud: ^4.1.7
 
   # Files (import of MIDI etc.)
-  file_selector: ^1.0.3
+  file_selector: ^1.1.0
   # Native OS share sheet (AirDrop / Files / Messages …) for exporting a score
   # on mobile + web, where a save-file dialog isn't available.
-  share_plus: ^12.0.2
+  share_plus: ^13.3.1
 
   # Web-only DOM access for browser downloads (file_delivery_web.dart). The io
   # build never imports it; version follows the Flutter SDK's pin.
@@ -58,16 +58,16 @@ dependencies:
 
   # Utils
   intl: any
-  equatable: ^2.0.5
-  package_info_plus: ^8.0.0
-  url_launcher: ^6.3.0
-  http: ^1.2.0
-  xml: ^6.5.0
+  equatable: ^3.0.0
+  package_info_plus: ^10.2.2
+  url_launcher: ^6.3.3
+  http: ^1.6.0
+  xml: ^7.0.1
   # Already pulled in transitively (crisp_notation reads .mxl); promoted to a
   # direct dep because the Sample Extractor imports sample PACKS with it.
   # MIT + pure Dart (so it works on web too): Zip/Tar/GZip/BZip2/XZ. It does
   # NOT do 7z — see the explicit .7z error in sample_extractor.dart.
-  archive: ^4.0.0
+  archive: ^4.6.0
 
   # Notation rendering — path dep on the local library workspace, which tracks
   # main ahead of the pub.dev releases (see ../crisp_notation/docs/CONTRACT.md).
@@ -77,13 +77,13 @@ dependencies:
   # CLI (bin/listen.dart --transcribe) and transcription/transcribe.dart so the
   # whole pipeline runs under `dart run`. Pinned to the path by the override.
   crisp_notation_core: any
-  record: ^7.1.1
+  record: ^7.1.2
   # Platform text-to-speech (AVSpeechSynthesizer / Android TTS / web
   # SpeechSynthesis) — on-device, offline, free de+en voices. Reached only
   # through core/services/tts_service.dart (the sole plugin-facing file), which
   # abstracts a TtsBackend so the neural backend (crispasr, below) can slot in.
   # Narrates lesson/primer text for pre-readers + accessibility.
-  flutter_tts: ^4.2.2
+  flutter_tts: ^4.2.5
   # CrispASR — on-device NEURAL ggml, TWO uses (both pure-Dart FFI over
   # libcrispasr; pub-get/analyze/test need no native lib — it's
   # DynamicLibrary.open'd only when the feature runs, else we fall back):
@@ -104,7 +104,7 @@ dependencies:
   # FFI helpers (allocators) for the native glint Vorbis decoder that backs the
   # .sf3 SoundFont path (native only; web uses a wasm/stub seam). See
   # docs/GLINT_VORBIS_HANDOVER.md + core/audio/sf2/.
-  ffi: ^2.1.0
+  ffi: ^2.2.0
   # OMR (optical music recognition): photograph/scan sheet music → a Score. The
   # crispembed Flutter FFI plugin runs the CrispEmbed ggml engine (native only —
   # web gets a stub); `image` decodes the picture to raw pixels; `image_picker`
@@ -112,8 +112,8 @@ dependencies:
   # gated), the token→Score parse is pure-Dart in crisp_notation_core.
   crispembed:
     path: ../CrispEmbed/flutter/crispembed
-  image: ^4.2.0
-  image_picker: ^1.1.2
+  image: ^4.12.0
+  image_picker: ^1.2.4
   # Native Ogg-Vorbis DECODER (glint, MIT) compiled into the app as an FFI
   # plugin → makes .sf3 SoundFonts decodable on native. Reached ONLY through
   # core/audio/sf2/vorbis_capability.dart (web gets the dart:ffi-free stub); the
@@ -121,8 +121,8 @@ dependencies:
   # glint sources with native/glint/sync_glint.sh.
   glint_vorbis:
     path: native/glint
-  sqlite3: ^3.5.0
-  wakelock_plus: ^1.3.3
+  sqlite3: ^3.5.2
+  wakelock_plus: ^1.8.2
 dependency_overrides:
   crisp_notation_core:
     path: ../crisp_notation/packages/crisp_notation_core
@@ -132,8 +132,8 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
-  flutter_launcher_icons: ^0.14.1
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
   # Test-only: fake the file picker to drive the import file-pick paths.
   file_selector_platform_interface: ^2.7.0
   plugin_platform_interface: ^2.1.8
