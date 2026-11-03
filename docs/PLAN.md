@@ -28,7 +28,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
-> 🔧 **opus/exportfix — ACTIVE 2026-11-03** (worktree `../mus-exportfix`): loop-export follow-ups — stereo `renderArrangement` (`loop_engine.dart`), Tracker exports via shared file delivery (`tracker_*`), export-UI strings → ARBs (**touching `app_en.arb`/`app_de.arb`**), `_TrackCard` 0.5px overflow, Settings toggle for the post-answer explanation card (settings + quiz mixin).
+> 🔧 **opus/exportfix — IDLE, shipped 2026-11-03** (`c956f17b`..`efc2e7d1`): stereo sections export, Tracker/Tab Workshop/DAW project/Sample Extractor exports via `deliverExport` (share sheet on mobile, download on web), export-UI strings localized, `_TrackCard` reflows by card width (no overflow; integration test strict again), Settings → "Explain answers" toggle. See HISTORY.md.
 
 > 💾 **opus/loopexport — IDLE, shipped 2026-11-02** (`4ece3081`..`dc371e15`): Loop Studio save/export — Simple-view export button, scrollable share sheet, audio/MusicXML export via deliverBytes on mobile/web, export render keeps master bus + stereo, AAC saved as `.aac` (raw ADTS), macOS integration test `integration_test/loop_studio_export_test.dart` (35/35).
 

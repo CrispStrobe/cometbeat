@@ -10,6 +10,23 @@ the repo root (detailed roadmap planning and the agent board are in
 
 ## Since 1.0.3 — unreleased
 
+- **Export follow-ups + "Explain answers" switch** (2026-11-03): Loop Studio's
+  "sections as one track" export keeps its stereo image (`renderArrangement`
+  returns `(left, right?)` with `renderLoop`'s channel layout — mono only when
+  no section pans). Every Tracker export (module, MIDI, ABC, MusicXML), the Tab
+  Workshop's file exports, the Audio Editor's project save and the Sample
+  Extractor's "export all" now go through `deliverExport`
+  (`lib/shared/music_io/deliver_export.dart`): Save dialog on desktop, share
+  sheet on iOS/Android, download on the web — they called `getSaveLocation` /
+  `getDirectoryPath` directly, which only exist on desktop. The Advanced
+  Tracker's MusicXML is UTF-8 again (was UTF-16 code units cut to bytes).
+  Export-sheet strings ("Export WAV", Fast/Good/Best, MP3 encoder names, the
+  "only drums so far" reason, Solo/Unsolo) are localized de/en. Loop Studio
+  track cards reflow by their own width instead of the screen's (the 0.5 px
+  overflow at an 800 px window); the macOS export integration test fails on
+  overflow again and checks the sections WAV is stereo. Settings → "Explain
+  answers" (on by default) turns off the post-answer "Good to know" card, its
+  demo sound and its ~2.8 s hold.
 - **Loop Studio style catalog + dice** (2026-11-02): 12 generated styles
   (Pop, Rock, Ballad, Funk, Hip-hop, House, Lo-fi, Reggae, Bossa nova, Swing,
   March, Kinderlied) described as RULES (`StyleRecipe`: grid-safe tempos,
