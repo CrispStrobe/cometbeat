@@ -82,9 +82,9 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   aec_fullduplex: 8146c22506bf584cf739380d2b648c55cf6f6ca2
   audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
-  crispembed: af844fb5afe152c3514922b6c9426b61ac7a49f9
+  crispembed: e2022c98c282745048e83558fe7001393bfd96a5
   file_selector_macos: 9e9e068e90ebee155097d00e89ae91edb2374db7
-  flutter_soloud: 93c20641a100d25bfbc84a8b86e867f350ef29ac
+  flutter_soloud: 4322a497664da9906d95dc91d7588751659d9dbf
   flutter_tts: ae915565cc6948444b513acc8ee021993281e027
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   glint_vorbis: 27dba1bb6d744c2869fbac165bf8fdd131c9ef2d
