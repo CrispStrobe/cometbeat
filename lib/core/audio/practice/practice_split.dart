@@ -2,15 +2,17 @@
 //
 // The memory-bounded core of "practise with your song": separate a whole song
 // in overlapping WINDOWS rather than in one call, and the in-place helpers
-// around it. Pure Dart (web-safe, unit-tested with a fake separator in
-// test/practice/practice_split_test.dart); the CrispASR worker that drives it
-// lives in practice_split_io.dart.
+// around it. Pure Dart (web-safe, unit-tested with fake separators — including
+// stand-ins for CrispASR's own segmenting loops — in
+// test/practice/practice_split_test.dart); the worker that drives it with
+// CrispASR lives in practice_song_split_io.dart.
 //
-// Why windows: a separator handed a whole song holds the whole song several
-// times over — its input, its internal spectrogram, one output per stem — and
-// the Dart side copies each of those again. A 6-minute song peaked at 2.4 GB.
-// In windows, only the four output stems are song-sized; everything else is
-// window-sized.
+// Why windows: a separator handed a whole song holds the whole song many
+// times over — its input copy, one accumulator and one result copy per stem —
+// and the Dart side copies each of those again. In windows all of that is
+// window-sized, and [separateInWindowsTo] hands each finished block to a sink,
+// so not even the output has to be song-sized in memory (the practice worker
+// writes it to disk).
 //
 // How the windows join: neighbours overlap by `2·margin + fade`. A window's
 // outer margin on each side is discarded, and across the fade in the middle of
