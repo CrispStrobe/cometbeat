@@ -37,9 +37,12 @@ on:
       - 'tool/pool_workers_ab.dart'
       - '.github/workflows/pool-ab.yml'
 
+# Concurrency (2026-11-03, CI trim): a new push to a PR cancels that PR's
+# superseded run. Every other event (main push, tag, dispatch) gets its own
+# group keyed by run_id, so it is never cancelled and never cancels anything.
 concurrency:
-  group: pool-ab-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
+  group: pool-ab-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   ab:
@@ -48,6 +51,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    # 2026-11-03, CI trim: all three runs this workflow has ever had (Sept)
+    # hung to GitHub's 6-hour default on all three OSes — 54 runner-hours, 18
+    # of them macOS, for zero numbers. A leg is ~40 inferences; 2 h is a
+    # generous ceiling. Raise it if a healthy leg is ever measured near it.
+    timeout-minutes: 120
     steps:
       - name: Checkout cometbeat
         uses: actions/checkout@v5

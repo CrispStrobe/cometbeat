@@ -7,7 +7,10 @@ name: aec-native
 # Only runs when the plugin itself changes.
 
 on:
+  # main only (2026-11-03, CI trim): see glint-native.yml — tag pushes ignore
+  # `paths`, so every release tag ran this; branches are covered by PRs.
   push:
+    branches: [main]
     paths:
       - 'native/aec/**'
       - '.github/workflows/aec-native.yml'
@@ -15,10 +18,14 @@ on:
     paths:
       - 'native/aec/**'
       - '.github/workflows/aec-native.yml'
+  workflow_dispatch:
 
+# Concurrency (2026-11-03, CI trim): a new push to a PR cancels that PR's
+# superseded run. Every other event (main push, tag, dispatch) gets its own
+# group keyed by run_id, so it is never cancelled and never cancels anything.
 concurrency:
-  group: aec-native-${{ github.ref }}
-  cancel-in-progress: true
+  group: aec-native-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # 1) C portability + AEC correctness: build the standalone lib via the

@@ -24,9 +24,13 @@ on:
     types: [published]
   workflow_dispatch:
 
+# One production deploy at a time, but a release/tag/manual deploy is never
+# cancelled (2026-11-03, CI trim): a newer run waits for the running one
+# instead of killing it mid-upload. (GitHub keeps at most one PENDING run in
+# the group, so a burst still collapses to "current + latest".)
 concurrency:
   group: deploy-production
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   VERCEL_ORG_ID: team_uvAE8yHK3Zi7pXobhJmwckcQ
