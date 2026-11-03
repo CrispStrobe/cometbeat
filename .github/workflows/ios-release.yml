@@ -77,7 +77,7 @@ jobs:
           # Pinned for reproducible store builds: 0d3974ab (#132) carries the
           # macOS dylib flatten fix (#128) and the CRISPEMBED_PREBUILT_VERSION
           # override. Bump together with the env var below.
-          ref: 0d3974ab
+          ref: 0d3974abe84508b994b068f66172a8d438fc7b9b
           path: CrispEmbed
 
       # onnx_runtime_dart is a dev_dependency; pub get resolves dev deps, so the
