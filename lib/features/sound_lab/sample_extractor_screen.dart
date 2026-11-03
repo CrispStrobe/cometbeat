@@ -12,6 +12,8 @@ import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/features/sound_lab/sample_extractor.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
+import 'package:comet_beat/shared/music_io/deliver_export.dart';
+import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:comet_beat/shared/widgets/waveform_thumbnail.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -166,9 +168,36 @@ class _SampleExtractorScreenState extends State<SampleExtractorScreen>
       );
 
   /// Writes every extracted sample as a WAV into a chosen folder.
+  ///
+  /// The folder picker only exists on desktop (getDirectoryPath throws on
+  /// iOS/Android/web), so there each sample is handed over on its own through
+  /// the share sheet / a download instead.
   Future<void> _exportAllToFolder() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    if (!deliveryHasSavePath()) {
+      setState(() => _busy = true);
+      final names = uniqueWavNames([for (final s in _samples) s.displayName]);
+      var delivered = 0;
+      for (var i = 0; i < _samples.length; i++) {
+        final s = _samples[i];
+        final kind = await deliverExport(
+          messenger,
+          bytes: pcmFloatToWav(s.pcm, sampleRate: s.sampleRate),
+          suggestedName: names[i],
+          label: 'WAV',
+          extension: 'wav',
+          savedMessage: l10n.workshopSavedTo,
+          sharedMessage: l10n.musicExportShared,
+          failedMessage: l10n.musicExportFailed,
+        );
+        if (kind == null || kind == DeliveryKind.cancelled) break;
+        delivered++;
+      }
+      if (mounted) setState(() => _busy = false);
+      debugPrint('[SAMPLES] delivered $delivered of ${_samples.length}');
+      return;
+    }
     final dir = await getDirectoryPath();
     if (dir == null || !mounted) return;
     setState(() => _busy = true);

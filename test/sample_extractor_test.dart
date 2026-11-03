@@ -13,6 +13,7 @@ import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart';
 import 'package:comet_beat/features/sound_lab/sample_extractor.dart';
 import 'package:comet_beat/features/sound_lab/sample_extractor_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -271,6 +272,49 @@ void main() {
       await s.addToLibrary(0);
       await tester.pump();
       expect(s.librarySize, 1);
+    });
+
+    testWidgets(
+        '"export all" shares each WAV on a phone (no folder picker there)',
+        (tester) async {
+      final tmp = Directory.systemTemp.createTempSync('extract-share');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      final shared = <String>[];
+      final bin =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const share = MethodChannel('dev.fluttercommunity.plus/share');
+      const paths = MethodChannel('plugins.flutter.io/path_provider');
+      bin
+        ..setMockMethodCallHandler(paths, (call) async => tmp.path)
+        ..setMockMethodCallHandler(share, (call) async {
+          final args = call.arguments as Map<Object?, Object?>;
+          shared.addAll([for (final p in args['paths']! as List) p as String]);
+          return 'dev.fluttercommunity.plus/share/success';
+        });
+      addTearDown(() {
+        bin
+          ..setMockMethodCallHandler(paths, null)
+          ..setMockMethodCallHandler(share, null);
+      });
+
+      await pumpGame(tester, const SampleExtractorScreen());
+      _screen(tester)
+        ..debugLoad(_moduleWith('one'), 'a')
+        ..debugLoad(_moduleWith('two'), 'b');
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.drive_folder_upload));
+      for (var i = 0; i < 60 && shared.length < 2; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(shared, hasLength(2));
+      for (final p in shared) {
+        expect(p, endsWith('.wav'));
+        expect(String.fromCharCodes(File(p).readAsBytesSync().take(4)), 'RIFF');
+      }
     });
   });
 }
