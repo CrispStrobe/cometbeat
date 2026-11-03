@@ -16,11 +16,10 @@ import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart';
 import 'package:comet_beat/core/audio/practice/practice_mix.dart';
+import 'package:comet_beat/core/audio/practice/practice_song_split.dart';
 import 'package:comet_beat/core/audio/practice/sing_melody.dart';
-import 'package:comet_beat/core/audio/practice/song_audio.dart';
-import 'package:comet_beat/core/audio/practice/song_audio_file.dart';
 import 'package:comet_beat/core/audio/transcription/crispasr_ffi_beats.dart';
 import 'package:comet_beat/core/audio/transcription/crispasr_ffi_separate.dart';
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
@@ -122,31 +121,28 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
     });
     final l = AppLocalizations.of(context)!;
     try {
-      final SongAudio? song = await decodeSongFile(picked.path, picked.bytes);
-      if (song == null || song.frames == 0) {
-        throw StateError('undecodable');
-      }
-      if (!mounted) return;
-      setState(() {
-        _phase = _Phase.separating;
-        _songSeconds = song.seconds;
-      });
-      final stems = await separateStereoCrispasr(
-        song.left,
-        song.right,
-        song.sampleRate,
+      // Decode, separate and mix-match in one worker isolate: the song's PCM
+      // never sits on this isolate and is never copied between isolates.
+      final split = await splitSongForPractice(
+        picked.path,
+        picked.bytes,
         model: model,
         download: true,
+        onPhase: (phase, seconds) {
+          if (!mounted || phase != PracticeSplitPhase.separating) return;
+          setState(() {
+            _phase = _Phase.separating;
+            _songSeconds = seconds ?? 0;
+          });
+        },
       );
-      if (stems == null || stems.isEmpty) throw StateError('separation');
-      // All stems on must sound like the song that was loaded.
-      final whole = await _consistentInIsolate(stems, song);
+      final whole = split.stems;
       if (!mounted) return;
       setState(() => _phase = _Phase.beats);
       // Best effort: a song without a clear beat still plays and separates.
-      final grid = await crispasrBeatGrid(
-        song.mono(),
-        song.sampleRate,
+      final grid = await crispasrBeatGrid32(
+        split.beatMono,
+        split.beatRate,
         download: true,
       );
       if (!mounted) return;
@@ -175,32 +171,16 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
   // Isolate work lives in static helpers ON PURPOSE: a closure written inside
   // an instance method shares its context with the method's other closures
   // (the setState lambdas), drags `this` along, and the State is unsendable.
-  static Future<List<SeparatedStem>> _consistentInIsolate(
-    List<SeparatedStem> stems,
-    SongAudio song,
-  ) {
-    final rate = stems.first.sampleRate;
-    final left = song.left, right = song.right, from = song.sampleRate;
-    return Isolate.run(
-      () => mixtureConsistent(
-        stems,
-        _atRate(left, from, rate),
-        _atRate(right, from, rate),
-      ),
-    );
-  }
-
-  static Future<List<SeparatedStem>> _slowInIsolate(
-    List<SeparatedStem> stems,
-    double speed,
-  ) =>
-      Isolate.run(() => slowStems(stems, speed));
-
-  static Float32List _atRate(Float32List x, int from, int to) {
-    if (from == to) return x;
-    final y = resampleLinear(Float64List.fromList(x), from / to);
-    return Float32List.fromList(y);
-  }
+  /// The splice plan for slowing to [speed] (WSOLA's search is the slow part;
+  /// only the guide goes over, and only the small plan comes back).
+  static Future<StretchPlan?> _planInIsolate(Float32List guide, double speed) =>
+      Isolate.run(
+        () => planStretch(
+          Float64List.fromList(guide),
+          1 / speed,
+          quality: StretchQuality.deep,
+        ),
+      );
 
   /// Voice first, then the rhythm section, then the rest — the order a
   /// learner looks for them in.
@@ -237,24 +217,36 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
     _uiTick?.cancel();
     await _player?.stop();
     setState(() => _preparing = _speed < 1);
-    var buf = whole;
+    // A view of the stems (the loop, faded like loopRegion), slowed by a
+    // frame plan — rendered window by window as the player feeds, so neither
+    // the loop nor the slowed song is ever copied whole.
     final loop = _loop;
-    if (_looping && loop != null) {
-      final sr = whole.first.sampleRate;
-      buf = loopRegion(
-        whole,
-        (loop.start * sr).round(),
-        (loop.end * sr).round(),
-      );
-    }
+    final looping = _looping && loop != null;
+    final sr = whole.first.sampleRate;
+    var region = looping
+        ? StemRegion(
+            whole,
+            start: (loop.start * sr).round(),
+            end: (loop.end * sr).round(),
+            fadeFrames: 220,
+          )
+        : StemRegion(whole);
     if (_speed < 1) {
-      final region = buf;
-      final speed = _speed;
-      buf = await _slowInIsolate(region, speed);
+      final guide = await region.stretchGuide();
+      final plan = await _planInIsolate(guide, _speed);
+      region = looping
+          ? StemRegion(
+              whole,
+              start: (loop.start * sr).round(),
+              end: (loop.end * sr).round(),
+              fadeFrames: 220,
+              plan: plan,
+            )
+          : StemRegion(whole, plan: plan);
     }
     if (!mounted) return;
     setState(() {
-      _player = StemPlayer(buf, loop: _looping && loop != null);
+      _player = StemPlayer.source(region, loop: looping);
       _preparing = false;
     });
     if (wasPlaying) await _togglePlay();

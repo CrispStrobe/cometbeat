@@ -14,3 +14,10 @@ Future<BeatGrid?> crispasrBeatGrid(
   bool download = false,
 }) async =>
     null;
+
+Future<BeatGrid?> crispasrBeatGrid32(
+  Float32List mono,
+  int sampleRate, {
+  bool download = false,
+}) async =>
+    null;

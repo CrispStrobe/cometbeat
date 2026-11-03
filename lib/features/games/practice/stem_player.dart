@@ -19,11 +19,15 @@ import 'package:comet_beat/features/games/playalong/play_along_screen.dart'
     show PlayAlongAudioBacking;
 
 class StemPlayer {
-  StemPlayer(this.stems, {this.loop = false})
-      : assert(stems.isNotEmpty),
-        _volumes = List.filled(stems.length, 1);
+  StemPlayer(List<SeparatedStem> stems, {bool loop = false})
+      : this.source(StemListSource(stems), loop: loop);
 
-  final List<SeparatedStem> stems;
+  /// Plays [source] — a loop region or a slowed song is rendered window by
+  /// window as it is fed, never whole.
+  StemPlayer.source(this.source, {this.loop = false})
+      : _volumes = List.filled(source.count, 1);
+
+  final StemSource source;
 
   /// Repeat the whole buffer seamlessly (a practice loop) instead of ending.
   final bool loop;
@@ -39,8 +43,8 @@ class StemPlayer {
   /// Seconds queued ahead of the play position.
   static const double _aheadSeconds = 6;
 
-  int get sampleRate => stems.first.sampleRate;
-  int get frames => stems.map((s) => s.frames).reduce(math.min);
+  int get sampleRate => source.sampleRate;
+  int get frames => source.frames;
   Duration get length => Duration(microseconds: frames * 1000000 ~/ sampleRate);
   bool get playing => _playing;
 
@@ -54,7 +58,7 @@ class StemPlayer {
   /// Applies [volumes] (one per stem, 0 = silent). Instant.
   void setVolumes(List<double> volumes) {
     _volumes = List.of(volumes);
-    for (var i = 0; i < stems.length && i < volumes.length; i++) {
+    for (var i = 0; i < source.count && i < volumes.length; i++) {
       _band.setVolume(i, volumes[i]);
     }
   }
@@ -69,7 +73,7 @@ class StemPlayer {
     _startFrame = start;
     if (start >= frames) return false;
     _band.onBuffering = (b) => b ? _clock.stop() : _clock.start();
-    if (!await _band.start(sampleRate, voices: stems.length, stereo: true)) {
+    if (!await _band.start(sampleRate, voices: source.count, stereo: true)) {
       return false;
     }
     setVolumes(_volumes);
@@ -102,7 +106,7 @@ class StemPlayer {
       final from = _fedTo % frames;
       final chunk = math.min(want - _fedTo, frames - from);
       _band.add([
-        for (final s in stems) interleavedWindow(s, from, chunk),
+        for (var i = 0; i < source.count; i++) source.window(i, from, chunk),
       ]);
       _fedTo += chunk;
     }

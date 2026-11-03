@@ -10,6 +10,8 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/core/audio/practice/practice_split.dart'
+    show mixtureConsistentInPlace;
 import 'package:comet_beat/core/audio/transcription/beat_grid.dart';
 import 'package:comet_beat/core/audio/transcription/contracts.dart'
     show NoteEvent;
@@ -72,30 +74,17 @@ List<SeparatedStem> mixtureConsistent(
         math.min(left.length, right.length),
         math.min,
       );
-  final share = 1 / stems.length;
-  final rl = Float32List(n), rr = Float32List(n);
-  for (var i = 0; i < n; i++) {
-    var sl = 0.0, sr = 0.0;
-    for (final s in stems) {
-      sl += s.left[i];
-      sr += s.right[i];
-    }
-    rl[i] = (left[i] - sl) * share;
-    rr[i] = (right[i] - sr) * share;
-  }
-  return [
+  final out = [
     for (final s in stems)
       SeparatedStem(
         s.name,
-        Float32List.fromList([
-          for (var i = 0; i < n; i++) s.left[i] + rl[i],
-        ]),
-        Float32List.fromList([
-          for (var i = 0; i < n; i++) s.right[i] + rr[i],
-        ]),
+        Float32List.fromList(Float32List.sublistView(s.left, 0, n)),
+        Float32List.fromList(Float32List.sublistView(s.right, 0, n)),
         s.sampleRate,
       ),
   ];
+  mixtureConsistentInPlace(out, left, right);
+  return out;
 }
 
 /// The strips for "minus one": every stem on except [without].
@@ -114,6 +103,123 @@ Float32List interleavedWindow(SeparatedStem stem, int start, int frames) {
     out[o + 1] = stem.right[i];
   }
   return out;
+}
+
+/// What the stem player streams: [count] stereo stems, [frames] long, read a
+/// window at a time — so a loop, or a slowed song, need never exist whole.
+abstract interface class StemSource {
+  int get count;
+  int get frames;
+  int get sampleRate;
+
+  /// [frames] frames of stem [stem] from [start], interleaved `L,R,…`. Past
+  /// the end it is shorter (possibly empty), never padded.
+  Float32List window(int stem, int start, int frames);
+}
+
+/// Stems as they are.
+class StemListSource implements StemSource {
+  StemListSource(this.stems) : assert(stems.isNotEmpty);
+
+  final List<SeparatedStem> stems;
+
+  @override
+  int get count => stems.length;
+  @override
+  int get frames => stems.map((s) => s.frames).reduce(math.min);
+  @override
+  int get sampleRate => stems.first.sampleRate;
+  @override
+  Float32List window(int stem, int start, int frames) {
+    final int n = math.min(frames, this.frames - start);
+    return interleavedWindow(stems[stem], start, n);
+  }
+}
+
+/// Frames [start, end) of [stems], faded in and out over [fadeFrames] exactly
+/// like [loopRegion], and — with a [plan] from [stretchGuide] + [planStretch] —
+/// slowed exactly like [slowStems]. Rendered window by window from views of
+/// the stems: nothing song-sized is copied.
+class StemRegion implements StemSource {
+  StemRegion(
+    List<SeparatedStem> stems, {
+    int start = 0,
+    int? end,
+    int fadeFrames = 0,
+    this.plan,
+  }) : assert(stems.isNotEmpty) {
+    final int all = stems.map((s) => s.frames).reduce(math.min);
+    _a = math.min(math.max(start, 0), all);
+    final b = math.min(math.max(end ?? all, _a), all);
+    _n = b - _a;
+    _fade = math.min(fadeFrames, _n ~/ 2);
+    _left = [for (final s in stems) Float32List.sublistView(s.left, _a, b)];
+    _right = [for (final s in stems) Float32List.sublistView(s.right, _a, b)];
+    _rate = stems.first.sampleRate;
+  }
+
+  /// The stretch, or null to play at speed.
+  final StretchPlan? plan;
+  late final int _a, _n, _fade, _rate;
+  late final List<Float32List> _left, _right;
+
+  /// Region frames before any stretch.
+  int get regionFrames => _n;
+
+  @override
+  int get count => _left.length;
+  @override
+  int get frames => plan?.targetLen ?? _n;
+  @override
+  int get sampleRate => _rate;
+
+  /// The [loopRegion] fade at region frame [i].
+  double gain(int i) {
+    if (i < _fade) return i / _fade;
+    if (i >= _n - _fade) return (_n - 1 - i) / _fade;
+    return 1;
+  }
+
+  @override
+  Float32List window(int stem, int start, int frames) {
+    final int from = math.min(math.max(start, 0), this.frames);
+    final int to = math.min(this.frames, from + math.max(0, frames));
+    final out = Float32List((to - from) * 2);
+    final l = _left[stem], r = _right[stem];
+    final p = plan;
+    if (p == null) {
+      for (var t = from, o = 0; t < to; t++, o += 2) {
+        final g = gain(t);
+        out[o] = l[t] * g;
+        out[o + 1] = r[t] * g;
+      }
+      return out;
+    }
+    final fade = _fade == 0 ? null : gain;
+    renderStretchSpan(p, l, from, to, out, stride: 2, gain: fade);
+    renderStretchSpan(p, r, from, to, out, outStart: 1, stride: 2, gain: fade);
+    return out;
+  }
+
+  /// The guide [timeStretchLinked] picks its splices on — the sum of every
+  /// faded channel — in float32, built in slices so the UI isolate never
+  /// stalls on a whole song. Feed it (as float64) to [planStretch].
+  Future<Float32List> stretchGuide() async {
+    final g = Float32List(_n);
+    const slice = 1 << 16;
+    for (var a = 0; a < _n; a += slice) {
+      final b = math.min(_n, a + slice);
+      for (var t = a; t < b; t++) {
+        var sum = 0.0;
+        for (var k = 0; k < _left.length; k++) {
+          sum += _left[k][t] + _right[k][t];
+        }
+        g[t] = sum * gain(t);
+      }
+      await Future<void>.delayed(Duration.zero);
+    }
+    return g;
+  }
 }
 
 /// Shortest note kept in a sing-along chart: anything briefer is a pitch

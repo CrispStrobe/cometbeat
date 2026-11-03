@@ -15,6 +15,8 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
+import 'package:comet_beat/core/audio/practice/practice_split.dart'
+    show resampleLinear32, separateInWindows;
 import 'package:comet_beat/core/audio/transcription/crispasr_ffi_session_io.dart';
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
 import 'package:comet_beat/core/audio/transcription/separated_stem.dart';
@@ -54,21 +56,18 @@ Future<List<SeparatedStem>?> separateStereoCrispasr(
   return Isolate.run(() {
     CrispasrSession? session;
     try {
-      session = _open(modelPath, libPath, backend, cpuOnly: cpuOnly);
+      session =
+          openCrispasrSeparator(modelPath, libPath, backend, cpuOnly: cpuOnly);
       final sr = session.separateSampleRate;
       if (sr <= 0) return null;
-      final l = _toRate(left, sampleRate, sr);
-      final r = _toRate(right, sampleRate, sr);
-      final n = l.length < r.length ? l.length : r.length;
-      final inter = Float32List(n * 2);
-      for (var i = 0; i < n; i++) {
-        inter[2 * i] = l[i];
-        inter[2 * i + 1] = r[i];
-      }
-      return [
-        for (final s in session.separate(inter))
-          SeparatedStem.fromInterleaved(s.name, s.pcm, sr),
-      ];
+      // Window by window (practice_split.dart): only the stems are song-sized.
+      final stems = separateInWindows(
+        resampleLinear32(left, sampleRate, sr),
+        resampleLinear32(right, sampleRate, sr),
+        sr,
+        session.separate,
+      );
+      return stems.isEmpty ? null : stems;
     } catch (_) {
       return null;
     } finally {
@@ -77,9 +76,9 @@ Future<List<SeparatedStem>?> separateStereoCrispasr(
   });
 }
 
-/// Opens the session, on the CPU when [cpuOnly] — falling back to a plain
-/// open on a lib too old for `openWithParams`.
-CrispasrSession _open(
+/// Opens a separation session, on the CPU when [cpuOnly] — falling back to a
+/// plain open on a lib too old for `openWithParams`. The caller closes it.
+CrispasrSession openCrispasrSeparator(
   String modelPath,
   String libPath,
   String backend, {
@@ -98,16 +97,6 @@ CrispasrSession _open(
     }
   }
   return CrispasrSession.open(modelPath, libPath: libPath, backend: backend);
-}
-
-Float32List _toRate(Float32List x, int from, int to) {
-  if (from == to) return x;
-  final f64 = Float64List(x.length);
-  for (var i = 0; i < x.length; i++) {
-    f64[i] = x[i];
-  }
-  final y = resampleLinear(f64, from / to);
-  return Float32List.fromList(y);
 }
 
 /// A CrispASR-FFI [Separator] for whole-song transcription (mono in, mono stems

@@ -6,6 +6,8 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
+import 'package:comet_beat/core/audio/practice/practice_split.dart'
+    show resampleLinear32;
 import 'package:comet_beat/core/audio/transcription/beat_grid.dart';
 import 'package:comet_beat/core/audio/transcription/crispasr_ffi_session_io.dart';
 import 'package:crispasr/crispasr.dart' show CrispasrSession;
@@ -43,6 +45,40 @@ Future<BeatGrid?> crispasrBeatGrid(
         pcm[i] = at[i];
       }
       final beats = session.beats(pcm);
+      return BeatGrid(
+        beatMs: [for (final b in beats) b.timeS * 1000],
+        downbeatMs: [
+          for (final b in beats)
+            if (b.isDownbeat) b.timeS * 1000,
+        ],
+        bpm: session.beatsTempoBpm,
+      );
+    } catch (_) {
+      return null;
+    } finally {
+      session?.close();
+    }
+  });
+}
+
+/// [crispasrBeatGrid] for a float32 [mono] — what the practice player has.
+/// Resampled in float32, so a song-length float64 copy is never made.
+Future<BeatGrid?> crispasrBeatGrid32(
+  Float32List mono,
+  int sampleRate, {
+  bool download = false,
+}) async {
+  final modelPath = crispasrModelPath(_backend, download: download);
+  if (modelPath == null || mono.isEmpty) return null;
+  final libPath = crispasrLibPath();
+  return Isolate.run(() {
+    CrispasrSession? session;
+    try {
+      session =
+          CrispasrSession.open(modelPath, libPath: libPath, backend: _backend);
+      final sr = session.beatsSampleRate;
+      if (sr <= 0) return null;
+      final beats = session.beats(resampleLinear32(mono, sampleRate, sr));
       return BeatGrid(
         beatMs: [for (final b in beats) b.timeS * 1000],
         downbeatMs: [
