@@ -6516,10 +6516,64 @@ class _TrackCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final String? editTooltip;
 
+  // Widths of the header's fixed-size parts. The header row used to hold
+  // every control at once and decide by SCREEN width whether to move some of
+  // them down; but the card's width comes from the lane's column count, not
+  // the screen, so a desktop window around 800 px gave a ~182 px card a
+  // ~188 px header and it overflowed (by 0.5 px on macOS, a few px in tests).
+  // These are the sizes the widgets below actually take, so the header can
+  // ask "does everything fit" of the card it is really in.
+  static const double _creatureW = 32;
+  static const double _gutterW = 8;
+  static const double _variantW = 26; // CircleAvatar radius 13
+  static const double _stepsW = 4 + 20; // gap + radius-10 badge
+  static const double _voicedW = 8 + 18;
+  static const double _editW = 4 + 20;
+  static const double _soloW = 18;
+  static const double _deleteW = 4 + 18;
+
+  /// The narrowest a label may get before the controls move to their own row
+  /// — a few letters, so the track stays identifiable.
+  static const double _minLabelW = 44;
+
+  /// The thickest border the card draws (armed / active), on each side.
+  static const double _borderW = 3;
+
+  /// Whether the header can hold all of its controls in a card [width] wide.
+  bool _headerFits(double width) {
+    final fixed = _creatureW +
+        _gutterW +
+        _minLabelW +
+        _gutterW +
+        (variantCount > 1 ? _variantW : 0) +
+        _stepsW +
+        (voiced ? _voicedW : 0) +
+        (onEdit != null ? _editW : 0) +
+        _soloW +
+        (onDelete != null ? _deleteW : 0);
+    return fixed <= width - 2 * _borderW;
+  }
+
   @override
   Widget build(BuildContext context) {
+    // A phone keeps its long-standing layout (no loop-length badge, the
+    // buttons on their own row); anything wider moves the controls down only
+    // when THIS card is too narrow for them — reflowed, never clipped.
+    final phone = MediaQuery.sizeOf(context).width < 420;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final split = phone || !_headerFits(c.maxWidth);
+        return _buildCard(context, phone: phone, split: split);
+      },
+    );
+  }
+
+  Widget _buildCard(
+    BuildContext context, {
+    required bool phone,
+    required bool split,
+  }) {
     final foreground = active ? Colors.white : color;
-    final compact = MediaQuery.sizeOf(context).width < 420;
     return GestureDetector(
       onTap: onTap,
       onLongPress: onVoice,
@@ -6549,18 +6603,9 @@ class _TrackCard extends StatelessWidget {
                   color: foreground,
                   size: 32,
                 ),
-                // 8, not 12. This row's own comment below already noted it was
-                // "within a pixel of overflowing on a narrow card", and a later
-                // badge pushed it 5.5 px over — which fails `live_flow_test`'s
-                // registry smoke, so `main` was red for everyone. Narrowing the
-                // two gutters flanking the label buys 8 px, which clears it.
-                //
-                // It is a stopgap by someone who does not own this screen: the
-                // row now has ~2.5 px of headroom, so the NEXT badge breaks it
-                // again. The real fix is a reflow (wrap the badge cluster, or
-                // drop badges below a width threshold as `compact` already
-                // does) and that is a design call for whoever owns the card —
-                // please override this.
+                // The controls after the label move to a row of their own when
+                // this card is too narrow for them ([_headerFits]) — so adding a
+                // badge means adding its width there, not shaving gutters.
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -6593,66 +6638,32 @@ class _TrackCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                // Loop length. Shown only when this track is SHORTER than the
-                // others: at full length it is the default everybody already
-                // has, and a badge reading "16" on every card would be noise.
-                // The control stays reachable either way — the tap target is
-                // the variant badge's neighbour, and a child who shortens one
-                // track can tap it back.
-                // Deliberately smaller than the variant badge and with a
-                // tighter gutter: this row was already within a pixel of
-                // overflowing on a narrow card, and a 1px RenderFlex overflow
-                // is a test failure, not a cosmetic one. Full length draws a
-                // dimmed ∞ so the control is still discoverable without
-                // shouting on every card.
-                if (!compact) ...[
-                  const SizedBox(width: 4),
-                  Tooltip(
-                    message: stepsTooltip,
-                    child: GestureDetector(
-                      key: Key('loop-steps-$label'),
-                      onTap: onCycleSteps,
-                      child: CircleAvatar(
-                        radius: 10,
-                        backgroundColor: foreground.withValues(
-                          alpha: steps == kPatternSteps ? 0.10 : 0.22,
-                        ),
-                        child: Text(
-                          steps == kPatternSteps ? '∞' : '$steps',
-                          style: TextStyle(
-                            color: foreground,
-                            fontWeight: FontWeight.bold,
-                            fontSize: steps == kPatternSteps ? 12 : 11,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                // Loop length (see [_stepsBadge]).
+                if (!split && !phone) _stepsBadge(foreground),
                 // A small keyboard glyph marks a track voiced by a saved
                 // instrument (long-press to change / reset).
                 if (voiced) ...[
                   const SizedBox(width: 8),
                   Icon(Icons.piano, size: 18, color: foreground),
                 ],
-                if (!compact && onEdit != null) _editButton(foreground),
-                if (!compact) _soloButton(foreground),
-                if (!compact && onDelete != null) _deleteButton(foreground),
+                if (!split && onEdit != null) _editButton(foreground),
+                if (!split) _soloButton(foreground),
+                if (!split && onDelete != null) _deleteButton(foreground),
               ],
             ),
-            if (compact)
+            if (split)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (!phone) _stepsBadge(foreground),
                   if (onEdit != null) _editButton(foreground),
                   _soloButton(foreground),
                   if (onDelete != null) _deleteButton(foreground),
                 ],
               ),
-            // Its own row rather than more header badges: the header has ~2 px
-            // of headroom (see the note above), and these appear only while a
-            // generated style plays.
+            // Its own row rather than more header badges: these appear only
+            // while a generated style plays.
             if (onDiceTrack != null || onToggleLock != null)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -6754,6 +6765,34 @@ class _TrackCard extends StatelessWidget {
       ),
     );
   }
+
+  // Loop length. Deliberately smaller than the variant badge and with a
+  // tighter gutter. Full length draws a dimmed ∞ so the control is still
+  // discoverable without shouting on every card.
+  Widget _stepsBadge(Color foreground) => Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Tooltip(
+          message: stepsTooltip,
+          child: GestureDetector(
+            key: Key('loop-steps-$label'),
+            onTap: onCycleSteps,
+            child: CircleAvatar(
+              radius: 10,
+              backgroundColor: foreground.withValues(
+                alpha: steps == kPatternSteps ? 0.10 : 0.22,
+              ),
+              child: Text(
+                steps == kPatternSteps ? '∞' : '$steps',
+                style: TextStyle(
+                  color: foreground,
+                  fontWeight: FontWeight.bold,
+                  fontSize: steps == kPatternSteps ? 12 : 11,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 
   Widget _soloButton(Color foreground) => IconButton(
         tooltip: soloed ? 'Unsolo' : 'Solo',

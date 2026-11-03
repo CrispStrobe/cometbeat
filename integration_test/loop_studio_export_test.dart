@@ -105,18 +105,9 @@ void main() {
     await _settle(tester, 3000);
     debugPrint('[loop-export] booted');
 
-    // The track cards overflow by half a pixel at this 800 px test window —
-    // pre-existing, owned elsewhere (see the comment in `_TrackCard`), and not
-    // an export path. Counted and reported rather than failing every export.
-    final reportError = FlutterError.onError;
-    var overflows = 0;
-    FlutterError.onError = (details) {
-      if (details.exceptionAsString().contains('overflowed')) {
-        overflows++;
-        return;
-      }
-      reportError?.call(details);
-    };
+    // No error filter: a layout overflow anywhere on this path (the track
+    // cards used to overflow by half a pixel at this 800 px window) fails the
+    // test, as it should.
 
     final out = Directory.systemTemp.createTempSync('loop-export');
     final panel = _FakeSavePanel(out);
@@ -435,9 +426,12 @@ void main() {
       await tester.ensureVisible(arrange.first);
       await tester.tap(arrange.first);
       await _settle(tester);
+      // The chords are panned (above), so the sections file is stereo — it
+      // used to be folded to mono.
       checkWav(
         await exportAudioAs(l10n.audioExportWav, 'arrangement wav'),
         'arrangement wav',
+        stereo: true,
       );
       await tester.tap(arrange.first);
       await _settle(tester);
@@ -459,10 +453,6 @@ void main() {
 
     debugPrint('[loop-export] files: ${panel.written.join('\n  ')}');
     out.deleteSync(recursive: true);
-    FlutterError.onError = reportError;
-    if (overflows > 0) {
-      debugPrint('[loop-export] note: $overflows layout overflow(s) ignored');
-    }
     expect(failures, isEmpty, reason: failures.join('\n'));
   });
 }
