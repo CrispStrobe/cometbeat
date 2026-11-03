@@ -23,25 +23,58 @@ on:
     # GitHub API response, not file reads) and that nothing under `docs/` is
     # bundled or asserted on.
     #
-    # Deliberately NOT applied to `pull_request` below: it costs nothing there
-    # (we merge straight to main rather than opening PRs), and leaving that
-    # path unfiltered keeps a full-CI escape hatch.
+    # Applied to `pull_request` too since 2026-11-03 (CI trim): the shared
+    # free-tier runner pool had 130+ queued runs, and a prose-only PR is as
+    # much a no-op as a prose-only main commit. The full-CI escape hatch that
+    # the unfiltered PR trigger used to provide is now `workflow_dispatch`
+    # (Actions -> CI -> Run workflow, on any branch): it always runs everything.
     paths-ignore:
       - 'docs/**'
       - '**.md'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  workflow_dispatch:
 
-# Group per PR (a new push to a PR cancels its superseded run) but per COMMIT on
-# main (github.sha is unique, so main pushes are NEVER cancelled — every commit
-# runs a full CI to completion, in parallel). During heavy multi-agent
-# development a single `group: ${{ github.ref }}` made rapid main pushes cancel
-# each other, so regressions reached main with their validating run cancelled
-# (never green, never red — just "cancelled"). Per-SHA on main fixes that.
+# Group per PR (a new push to a PR cancels its superseded run) but per RUN for
+# everything else (github.run_id is unique, so main pushes and manual runs are
+# NEVER cancelled — every commit runs a full CI to completion, in parallel).
+# During heavy multi-agent development a single `group: ${{ github.ref }}` made
+# rapid main pushes cancel each other, so regressions reached main with their
+# validating run cancelled (never green, never red — just "cancelled").
+# Per-SHA did the same job until 2026-11-03; per-run_id additionally keeps a
+# dispatch on an already-tested SHA from cancelling (or being cancelled by) it.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Which expensive jobs this PR needs. Cheap (reads the PR's file list, no
+  # Flutter). PR-only: main pushes and manual runs need no classification.
+  changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            android:
+              - 'android/**'
+              - 'native/**'
+              - 'assets/**'
+              - 'pubspec.yaml'
+              - 'pubspec.lock'
+              - '.github/workflows/ci.yml'
+
+  # Analyze + format + full test suite: runs on EVERY code change (no gate).
   analyze-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -146,7 +179,18 @@ jobs:
   # Gradle-9-removed Project.exec(), onnxruntime pinning compileSdk 33 against a
   # dependency needing >=34, and the iOS-side blocker), and because nothing here
   # ever built Android, all three sat undetected. Guard it so that cannot recur.
+  #
+  # Gate (2026-11-03, CI trim): on a PR it runs only when the change can affect
+  # the Android packaging — android/, native/ (FFI plugins incl. glint), assets/,
+  # pubspec.yaml/.lock, or this workflow. A Dart-only PR is already compiled by
+  # analyze-and-test. On main pushes and manual runs it ALWAYS runs, so drift in
+  # the sibling repos (CrispEmbed main etc. — how the original three breaks
+  # arrived) is still caught on the next main commit.
   android-build:
+    needs: changes
+    # !cancelled(): `changes` is skipped on non-PR events, and a skipped
+    # dependency would otherwise skip this job too.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.android == 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout cometbeat

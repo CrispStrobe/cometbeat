@@ -13,7 +13,13 @@ name: glint-native
 #      gradle NDK) is exercised, not just the compiler.
 
 on:
+  # main only (2026-11-03, CI trim). Without `branches`, every TAG push ran this
+  # workflow too — GitHub does not evaluate `paths` for tag pushes — so each
+  # v*/mac-v* tag started 9 jobs (3 on macOS) that test nothing new; no
+  # release workflow consumes their output. Feature branches are covered by
+  # `pull_request` below, so a branch push no longer runs it twice.
   push:
+    branches: [main]
     paths:
       - 'native/glint/**'
       - 'web/glint/**'
@@ -25,9 +31,12 @@ on:
       - '.github/workflows/glint-native.yml'
   workflow_dispatch:
 
+# Concurrency (2026-11-03, CI trim): a new push to a PR cancels that PR's
+# superseded run. Every other event (main push, tag, dispatch) gets its own
+# group keyed by run_id, so it is never cancelled and never cancels anything.
 concurrency:
-  group: glint-native-${{ github.ref }}
-  cancel-in-progress: true
+  group: glint-native-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # 1) C++ portability + codec correctness. No Flutter needed — the round-trip

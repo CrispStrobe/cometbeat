@@ -13,6 +13,12 @@ name: Pages
 on:
   push:
     branches: [main]
+    # Same prose-only skip as ci.yml (2026-11-03, CI trim): nothing under docs/
+    # and no .md is bundled into the web build, so such a commit would publish
+    # byte-identical output. The site keeps the last code commit's build.
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   workflow_dispatch:
 
 concurrency:
