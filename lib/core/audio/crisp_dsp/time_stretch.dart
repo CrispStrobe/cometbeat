@@ -161,6 +161,82 @@ List<Float64List> timeStretchLinked(
   ];
 }
 
+/// A [timeStretchLinked] frame plan, kept so the output can be rendered a
+/// span at a time ([renderStretchSpan]) instead of all at once — a slowed song
+/// then never exists whole in memory, only the window being played.
+class StretchPlan {
+  const StretchPlan(this.targetLen, this.offsets, this.quality);
+
+  /// Output length in samples.
+  final int targetLen;
+
+  /// The input offset each synthesis frame reads.
+  final Int32List offsets;
+  final StretchQuality quality;
+}
+
+/// The frame plan [timeStretchLinked] would choose on [guide] (the sum of the
+/// channels it locks together), or null when nothing would be produced.
+StretchPlan? planStretch(
+  Float64List guide,
+  double factor, {
+  StretchQuality quality = StretchQuality.balanced,
+}) {
+  if (factor <= 0 || guide.isEmpty) return null;
+  final p = _planOffsets(guide, factor, quality);
+  if (p == null) return null;
+  return StretchPlan(p.targetLen, Int32List.fromList(p.offsets), quality);
+}
+
+/// Renders output samples [from, to) of [input] stretched by [plan] into
+/// [out] at `outStart + k·stride` — sample for sample what [timeStretchLinked]
+/// returns for that span (same frames, same summation order). [gain], when
+/// given, scales input sample `i` first (a fade applied before stretching).
+void renderStretchSpan(
+  StretchPlan plan,
+  Float32List input,
+  int from,
+  int to,
+  Float32List out, {
+  int outStart = 0,
+  int stride = 1,
+  double Function(int i)? gain,
+}) {
+  from = math.max(0, from);
+  to = math.min(to, plan.targetLen);
+  if (to <= from) return;
+  final n = input.length;
+  final frameSize = plan.quality.frameSize;
+  final hs = plan.quality.hop;
+  final window = _hannCache.putIfAbsent(frameSize, () => _hann(frameSize));
+  final len = to - from;
+  final acc = Float64List(len), winSum = Float64List(len);
+  // Frames whose [synPos, synPos + frameSize) meets [from, to).
+  final kLo = from < frameSize ? 0 : (from - frameSize) ~/ hs + 1;
+  final kHi = math.min(plan.offsets.length - 1, (to - 1) ~/ hs);
+  for (var k = kLo; k <= kHi; k++) {
+    final synPos = k * hs;
+    final offset = plan.offsets[k];
+    final a = math.max(from, synPos), b = math.min(to, synPos + frameSize);
+    for (var t = a; t < b; t++) {
+      final i = t - synPos;
+      final src = offset + i;
+      if (src < 0 || src >= n) continue;
+      final w = window[i];
+      final x = gain == null ? input[src] : input[src] * gain(src);
+      acc[t - from] += x * w;
+      winSum[t - from] += w;
+    }
+  }
+  const eps = 1e-6;
+  for (var j = 0, o = outStart; j < len; j++, o += stride) {
+    final s = winSum[j];
+    out[o] = s > eps ? acc[j] / s : 0.0;
+  }
+}
+
+final _hannCache = <int, Float64List>{};
+
 /// The WSOLA frame plan for [input]: the target length and, per synthesis
 /// frame, the input offset it reads. Null when nothing would be produced.
 ({int targetLen, List<int> offsets})? _planOffsets(
