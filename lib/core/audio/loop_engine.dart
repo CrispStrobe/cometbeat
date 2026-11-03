@@ -3132,42 +3132,56 @@ class LoopEngine {
   GrooveScene captureScene() => GrooveScene({...enabled}, {...variants});
 
   /// Render a section arrangement (§G-2): play each of [scenes] for
-  /// [loopsPerScene] loops back-to-back and concatenate into one mono buffer —
-  /// the "it's just one loop" → "a whole arranged track" export. Only the layer
+  /// [loopsPerScene] loops back-to-back and concatenate into one track — the
+  /// "it's just one loop" → "a whole arranged track" export. Only the layer
   /// set changes per section (tempo/key/kit/etc. stay), so every section is the
   /// same loop length. Restores the pre-call layer state; empty in → empty out.
-  /// Renders [scenes] end to end. [repeats] gives each scene its own number of
-  /// passes (A×4, B×2, A×4); when it is null every scene plays [loopsPerScene]
-  /// times, which is the older whole-arrangement behaviour.
-  Float64List renderArrangement(
+  /// [repeats] gives each scene its own number of passes (A×4, B×2, A×4); when
+  /// it is null every scene plays [loopsPerScene] times, which is the older
+  /// whole-arrangement behaviour.
+  ///
+  /// The channel layout is [renderLoop]'s: each section is exactly the loop
+  /// that section plays live, so it is MONO ([right] null) unless a section
+  /// pans a track, and then STEREO for the whole track — a mono section is
+  /// duplicated to both sides rather than folding the panned ones down. (This
+  /// used to fold everything to mono, so a panned arrangement exported without
+  /// its stereo image while the single-loop export kept it.)
+  ({Float64List left, Float64List? right}) renderArrangement(
     List<GrooveScene> scenes, {
     int loopsPerScene = 2,
     List<int>? repeats,
   }) {
-    if (scenes.isEmpty || loopsPerScene < 1) return Float64List(0);
+    if (scenes.isEmpty || loopsPerScene < 1) {
+      return (left: Float64List(0), right: null);
+    }
     final saved = captureScene();
-    final sections = <Float64List>[];
+    final sections = <({Float64List left, Float64List? right})>[];
     var total = 0;
+    var stereo = false;
     for (var s = 0; s < scenes.length; s++) {
       final scene = scenes[s];
       applyScene(scene);
-      final mono = wavToMonoFloat(readWavPcm16(renderLoop()));
+      final section = wavToChannels(readWavPcm16(renderLoop()));
+      if (section.right != null) stereo = true;
       final passes = (repeats != null && s < repeats.length)
           ? (repeats[s] < 1 ? 1 : repeats[s])
           : loopsPerScene;
       for (var i = 0; i < passes; i++) {
-        sections.add(mono);
-        total += mono.length;
+        sections.add(section);
+        total += section.left.length;
       }
     }
     applyScene(saved);
-    final out = Float64List(total);
+    final left = Float64List(total);
+    final right = stereo ? Float64List(total) : null;
     var offset = 0;
     for (final section in sections) {
-      out.setRange(offset, offset + section.length, section);
-      offset += section.length;
+      final n = section.left.length;
+      left.setRange(offset, offset + n, section.left);
+      right?.setRange(offset, offset + n, section.right ?? section.left);
+      offset += n;
     }
-    return out;
+    return (left: left, right: right);
   }
 
   /// Apply a [scene]: replace the enabled set + variants with its snapshot

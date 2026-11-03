@@ -12,6 +12,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Int16List _pcm(Uint8List wav) => Int16List.sublistView(wav, 44);
@@ -592,7 +593,7 @@ void main() {
 
     final oneLoop = e.timing.totalSamples; // mono samples per loop
     const loopsPerScene = 3;
-    final arr = e.renderArrangement([a, b], loopsPerScene: loopsPerScene);
+    final arr = e.renderArrangement([a, b], loopsPerScene: loopsPerScene).left;
 
     // Two sections × loopsPerScene loops each, back-to-back.
     expect(arr.length, oneLoop * 2 * loopsPerScene);
@@ -604,8 +605,71 @@ void main() {
     expect(e.enabled, {'drums', 'bass'});
 
     // Degenerate inputs are safe.
-    expect(e.renderArrangement([]), isEmpty);
-    expect(e.renderArrangement([a], loopsPerScene: 0), isEmpty);
+    expect(e.renderArrangement([]).left, isEmpty);
+    expect(e.renderArrangement([a], loopsPerScene: 0).left, isEmpty);
+  });
+
+  group('renderArrangement keeps the stereo image', () {
+    test('nothing panned: mono, like the single-loop render', () {
+      final e = LoopEngine()..enabled.addAll({'drums', 'bass'});
+      final scene = e.captureScene();
+      final arr = e.renderArrangement([scene], loopsPerScene: 1);
+      expect(arr.right, isNull);
+      expect(arr.left.length, e.timing.totalSamples);
+    });
+
+    test(
+        'a panned stem: 2-channel, sides differ, and each section IS the '
+        'single-loop stereo render', () {
+      final e = LoopEngine()
+        ..enabled.addAll({'drums', 'bass'})
+        ..setPan('bass', -1)
+        ..setPan('drums', 0.8);
+      final panned = e.captureScene();
+      final loop = wavToChannels(readWavPcm16(e.renderLoop()));
+      expect(loop.right, isNotNull, reason: 'precondition: loop is stereo');
+
+      final arr = e.renderArrangement([panned]);
+      final right = arr.right;
+      expect(right, isNotNull, reason: 'the sections export must be stereo');
+      final n = e.timing.totalSamples;
+      expect(arr.left.length, n * 2);
+      expect(right!.length, n * 2);
+
+      var differs = false;
+      for (var i = 0; i < n && !differs; i++) {
+        if ((arr.left[i] - right[i]).abs() > 1e-4) differs = true;
+      }
+      expect(differs, isTrue, reason: 'hard-panned bass: L and R differ');
+
+      // Both passes are the exact stereo loop the speakers play.
+      for (var pass = 0; pass < 2; pass++) {
+        for (var i = 0; i < n; i += 97) {
+          expect(arr.left[pass * n + i], loop.left[i]);
+          expect(right[pass * n + i], loop.right![i]);
+        }
+      }
+    });
+
+    test('a mono section next to a panned one is duplicated to both sides', () {
+      final e = LoopEngine()..enabled.add('drums');
+      final mono = e.captureScene(); // drums, centred
+      e
+        ..enabled.add('bass')
+        ..setPan('bass', 1);
+      final wide = e.captureScene();
+      final arr = e.renderArrangement([mono, wide], loopsPerScene: 1);
+      final n = e.timing.totalSamples;
+      expect(arr.right, isNotNull);
+      for (var i = 0; i < n; i++) {
+        expect(arr.right![i], arr.left[i], reason: 'mono section, frame $i');
+      }
+      var differs = false;
+      for (var i = n; i < 2 * n && !differs; i++) {
+        if ((arr.left[i] - arr.right![i]).abs() > 1e-4) differs = true;
+      }
+      expect(differs, isTrue, reason: 'the panned section stays wide');
+    });
   });
 
   test('the master filter darkens (low-pass) or brightens (high-pass)', () {

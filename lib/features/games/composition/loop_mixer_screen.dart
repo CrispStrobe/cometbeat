@@ -516,7 +516,7 @@ abstract interface class LoopMixerTester {
   /// §G-2: bake the captured section chain into one arranged track (for tests,
   /// the rendered PCM).
   bool get hasScenes;
-  Float64List debugRenderArrangement();
+  ({Float64List left, Float64List? right}) debugRenderArrangement();
 
   /// The current loop rendered to a WAV (mono, or interleaved stereo when a
   /// track is panned) — lets a test assert channel count + pan energy.
@@ -1719,7 +1719,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   int get recordedPasses => _arrangement.runs.fold(0, (n, r) => n + r.passes);
   @override
-  Float64List debugRenderArrangement() =>
+  ({Float64List left, Float64List? right}) debugRenderArrangement() =>
       _engine.renderArrangement(_capturedScenes(), repeats: _capturedRepeats());
   @override
   Uint8List debugRenderLoop() => _engine.renderLoop();
@@ -3754,8 +3754,15 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final messenger = ScaffoldMessenger.of(context);
     final failed = AppLocalizations.of(context)!.audioExportFailed;
     try {
+      // Stereo whenever a section pans a track — the same channel layout as
+      // the single-loop export, so the sections file keeps its stereo image.
       final pcm = _engine.renderArrangement(scenes);
-      await showAudioExportSheet(context, pcm: pcm, baseName: 'my-arrangement');
+      await showAudioExportSheet(
+        context,
+        pcm: pcm.left,
+        rightPcm: pcm.right,
+        baseName: 'my-arrangement',
+      );
     } catch (e, st) {
       // Was unguarded: a render error escaped as an uncaught async error and
       // the button simply did nothing.

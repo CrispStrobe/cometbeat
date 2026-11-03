@@ -1078,7 +1078,7 @@ void main() {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
     expect(game.hasScenes, isFalse);
-    expect(game.debugRenderArrangement(), isEmpty); // nothing captured yet
+    expect(game.debugRenderArrangement().left, isEmpty); // nothing captured yet
 
     // Capture two sections.
     game.toggleTrack('drums');
@@ -1091,7 +1091,7 @@ void main() {
     expect(game.hasScenes, isTrue);
 
     // The arrangement is longer than a single loop (two sections, 2 loops each).
-    final arrangement = game.debugRenderArrangement();
+    final arrangement = game.debugRenderArrangement().left;
     expect(arrangement, isNotEmpty);
     expect(
       arrangement.length,

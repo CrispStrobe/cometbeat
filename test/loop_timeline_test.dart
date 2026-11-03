@@ -239,10 +239,10 @@ void main() {
       game.captureScene(1);
       await tester.pump(const Duration(milliseconds: 50));
 
-      final before = game.debugRenderArrangement();
+      final before = game.debugRenderArrangement().left;
       game.reorderSong(0, 1);
       await tester.pump(const Duration(milliseconds: 50));
-      final after = game.debugRenderArrangement();
+      final after = game.debugRenderArrangement().left;
 
       expect(after.length, before.length, reason: 'same song, same length');
       var differs = false;
