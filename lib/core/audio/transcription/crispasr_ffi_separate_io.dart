@@ -16,7 +16,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/practice/practice_split.dart'
-    show resampleLinear32, separateInWindows;
+    show SeparatorGrid, resampleLinear32, separateInWindows;
 import 'package:comet_beat/core/audio/transcription/crispasr_ffi_session_io.dart';
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
 import 'package:comet_beat/core/audio/transcription/separated_stem.dart';
@@ -66,6 +66,7 @@ Future<List<SeparatedStem>?> separateStereoCrispasr(
         resampleLinear32(right, sampleRate, sr),
         sr,
         session.separate,
+        grid: crispasrSeparatorGrid(backend, sr),
       );
       return stems.isEmpty ? null : stems;
     } catch (_) {
@@ -74,6 +75,33 @@ Future<List<SeparatedStem>?> separateStereoCrispasr(
       session?.close();
     }
   });
+}
+
+/// How CrispASR's [backend] cuts its input internally, at [sampleRate] —
+/// so [separateInWindows] can cut the song on the same grid and reproduce a
+/// whole-song call exactly (practice_split.dart, [SeparatorGrid]). Null for a
+/// backend or rate not listed here, which falls back to plain overlapping
+/// windows. From the CrispASR sources (0.8.49):
+///
+///   • mini-bs-roformer — `mini_bs_roformer_separate`: the checkpoint's
+///     `wave_chunk_size` 352800 (8 s), hop `chunk / 2`;
+///   • htdemucs — `htdemucs_separate`: `(int)(7.8f · 44100)` = 343980,
+///     stride `(int)(0.75f · segment)` = 257985 (a buffer of one segment or
+///     less is not segmented at all; windows are always longer);
+///   • mel-band-roformer — `mel_band_roformer_separate`: the GGUF
+///     `chunk_size` 352800 (Kim vocals), stride `(int)(0.75f · segment)`.
+///
+/// None of these is settable through the session API, and a CrispASR that
+/// changes them makes the windows approximate again, not wrong —
+/// test/practice/separation_seam_live_test.dart measures it.
+SeparatorGrid? crispasrSeparatorGrid(String backend, int sampleRate) {
+  if (sampleRate != 44100) return null;
+  return switch (backend) {
+    'mini-bs-roformer' => const SeparatorGrid(segment: 352800, stride: 176400),
+    'htdemucs' => const SeparatorGrid(segment: 343980, stride: 257985),
+    'mel-band-roformer' => const SeparatorGrid(segment: 352800, stride: 264600),
+    _ => null,
+  };
 }
 
 /// Opens a separation session, on the CPU when [cpuOnly] — falling back to a

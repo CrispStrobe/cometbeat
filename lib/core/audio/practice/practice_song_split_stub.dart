@@ -13,6 +13,7 @@ Future<PracticeSongSplit> splitSongForPractice(
   Uint8List bytes, {
   CrispasrSeparatorModel model = CrispasrSeparatorModel.auto,
   bool download = false,
+  bool inMemory = false,
   void Function(PracticeSplitPhase phase, double? seconds)? onPhase,
 }) =>
     Future.error(StateError('separation'));

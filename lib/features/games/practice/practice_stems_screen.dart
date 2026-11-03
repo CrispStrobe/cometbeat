@@ -67,6 +67,15 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
   /// a slowed version) is derived from, and what sing-along transcribes.
   List<SeparatedStem> _whole = const [];
 
+  /// Unmaps [_whole] (its stems may be mapped from disk). Called only once
+  /// nothing reads them: see [_retire].
+  void Function()? _releaseWhole;
+
+  /// Async readers of [_whole] in flight (the slow-down guide); releases wait
+  /// for them.
+  int _reading = 0;
+  final _pendingReleases = <void Function()>[];
+
   /// A practice loop over song time, in seconds (null = the whole song).
   RangeValues? _loop;
   bool _looping = false;
@@ -94,8 +103,30 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
   @override
   void dispose() {
     _uiTick?.cancel();
+    // stop() cancels the feeder before its first await: nothing reads the
+    // stems after this line, so they can go.
     _player?.stop();
+    _retire(_releaseWhole);
+    _releaseWhole = null;
     super.dispose();
+  }
+
+  /// Releases a split's stems now, or once the async readers finish.
+  void _retire(void Function()? release) {
+    if (release == null) return;
+    if (_reading > 0) {
+      _pendingReleases.add(release);
+    } else {
+      release();
+    }
+  }
+
+  void _doneReading() {
+    if (--_reading > 0) return;
+    for (final r in _pendingReleases) {
+      r();
+    }
+    _pendingReleases.clear();
   }
 
   Future<void> _pickAndSplit() async {
@@ -137,7 +168,10 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
         },
       );
       final whole = split.stems;
-      if (!mounted) return;
+      if (!mounted) {
+        split.release();
+        return;
+      }
       setState(() => _phase = _Phase.beats);
       // Best effort: a song without a clear beat still plays and separates.
       final grid = await crispasrBeatGrid32(
@@ -145,19 +179,26 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
         split.beatRate,
         download: true,
       );
-      if (!mounted) return;
+      if (!mounted) {
+        split.release();
+        return;
+      }
       final ordered = _ordered(whole);
       await _player?.stop();
+      final previous = _releaseWhole;
       setState(() {
         _whole = ordered;
+        _releaseWhole = split.release;
         _player = StemPlayer(ordered);
         _strips = [for (final s in ordered) StemControl(name: s.name)];
         _grid = grid;
         _loop = null;
         _looping = false;
         _speed = 1;
+        _preparing = false;
         _phase = _Phase.ready;
       });
+      _retire(previous);
     } catch (e) {
       debugPrint('practice: split failed: $e');
       if (!mounted) return;
@@ -232,7 +273,15 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
           )
         : StemRegion(whole);
     if (_speed < 1) {
-      final guide = await region.stretchGuide();
+      final Float32List guide;
+      _reading++;
+      try {
+        guide = await region.stretchGuide();
+      } finally {
+        _doneReading();
+      }
+      // Replaced or reset meanwhile: these stems may be gone.
+      if (!mounted || !identical(whole, _whole)) return;
       final plan = await _planInIsolate(guide, _speed);
       region = looping
           ? StemRegion(
@@ -244,7 +293,7 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
             )
           : StemRegion(whole, plan: plan);
     }
-    if (!mounted) return;
+    if (!mounted || !identical(whole, _whole)) return;
     setState(() {
       _player = StemPlayer.source(region, loop: looping);
       _preparing = false;
@@ -370,13 +419,17 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
   Future<void> _reset() async {
     _uiTick?.cancel();
     await _player?.stop();
+    final release = _releaseWhole;
     setState(() {
       _player = null;
+      _releaseWhole = null;
       _whole = const [];
       _strips = const [];
       _grid = null;
+      _preparing = false;
       _phase = _Phase.idle;
     });
+    _retire(release);
   }
 
   @override

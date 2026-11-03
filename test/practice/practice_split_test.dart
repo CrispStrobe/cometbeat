@@ -106,6 +106,37 @@ void main() {
       }
     });
 
+    for (final grid in [null, const SeparatorGrid(segment: 780, stride: 585)]) {
+      test('the sink gets every frame once, in order (grid: ${grid != null})',
+          () {
+        const n = 9001;
+        final l = _noise(n, 21), r = _noise(n, 22);
+        var next = 0;
+        final names = separateInWindowsTo(
+          l,
+          r,
+          44100,
+          _split,
+          (start, names, bl, br) {
+            expect(start, next);
+            expect(names, ['low', 'high']);
+            expect(bl.first.length, br.last.length);
+            for (var i = 0; i < bl.first.length; i++) {
+              expect(bl[0][i], closeTo(.3 * l[start + i], 1e-6));
+              expect(br[1][i], closeTo(.7 * r[start + i], 1e-6));
+            }
+            next = start + bl.first.length;
+          },
+          grid: grid,
+          windowFrames: 2000,
+          marginFrames: 50,
+          fadeFrames: 80,
+        );
+        expect(next, n);
+        expect(names, ['low', 'high']);
+      });
+    }
+
     test('a short song is one call on the whole song', () {
       final l = _noise(300, 3);
       var calls = 0;
@@ -115,6 +146,191 @@ void main() {
       });
       expect(calls, 1);
       expect(stems.first.left[123], closeTo(.3 * l[123], 1e-7));
+    });
+  });
+
+  group('grid-aligned windows reproduce a segmenting separator', () {
+    // A stand-in model whose output for a sample depends on its WHOLE chunk
+    // (like an attention model): stem s = x · (0.1·(s+1) + mean x² of chunk).
+    List<Float32List> chunkModel(Float32List inter, int frames) {
+      var e = 0.0;
+      for (var i = 0; i < frames * 2; i++) {
+        e += inter[i] * inter[i];
+      }
+      e /= frames * 2;
+      return [
+        for (var s = 0; s < 4; s++)
+          Float32List.fromList([
+            for (var i = 0; i < frames * 2; i++) inter[i] * (.1 * (s + 1) + e),
+          ]),
+      ];
+    }
+
+    List<RawStem> wrap(List<Float64List> acc) => [
+          for (var s = 0; s < 4; s++)
+            (name: 's$s', pcm: Float32List.fromList(acc[s])),
+        ];
+
+    // mini_bs_roformer_separate's loop: chunks every `hop` from 0, linear
+    // fades of chunk/10, normalised by the summed weight; zero-padded tail.
+    StemSeparator miniBs(int chunk, int hop) => (inter) {
+          final n = inter.length ~/ 2, fade = chunk ~/ 10;
+          final chunks = ((math.max(n - chunk, 0) + hop - 1) ~/ hop) + 1;
+          final w = Float64List(chunk)..fillRange(0, chunk, 1);
+          for (var t = 0; t < fade; t++) {
+            w[t] = t / (fade - 1);
+            w[chunk - fade + t] = 1 - t / (fade - 1);
+          }
+          final acc = [for (var s = 0; s < 4; s++) Float64List(n * 2)];
+          final counts = Float64List(n);
+          for (var i = 0; i < chunks; i++) {
+            final start = i * hop, count = math.min(chunk, n - start);
+            final block = Float32List(chunk * 2)
+              ..setRange(0, count * 2, inter, start * 2);
+            final r = chunkModel(block, chunk);
+            for (var t = 0; t < count; t++) {
+              counts[start + t] += w[t];
+              for (var s = 0; s < 4; s++) {
+                for (var c = 0; c < 2; c++) {
+                  acc[s][(start + t) * 2 + c] += r[s][t * 2 + c] * w[t];
+                }
+              }
+            }
+          }
+          for (var t = 0; t < n; t++) {
+            for (var s = 0; s < 4; s++) {
+              for (var c = 0; c < 2; c++) {
+                acc[s][t * 2 + c] /= math.max(counts[t], 1e-8);
+              }
+            }
+          }
+          return wrap(acc);
+        };
+
+    // htdemucs_separate's loop (mel-band-roformer's is the same): whole
+    // buffer when it fits one segment, else a chunk at every stride below n,
+    // triangle weights, zero-padded tail.
+    StemSeparator demucs(int seg, int stride) => (inter) {
+          final n = inter.length ~/ 2;
+          if (n <= seg) {
+            return wrap([
+              for (final x in chunkModel(inter, n)) Float64List.fromList(x),
+            ]);
+          }
+          final half = seg ~/ 2;
+          final w = Float64List(seg);
+          for (var i = 0; i < seg; i++) {
+            w[i] = (i < half ? i + 1 : seg - i).toDouble();
+          }
+          final wmax = w.reduce(math.max);
+          for (var i = 0; i < seg; i++) {
+            w[i] /= wmax;
+          }
+          final acc = [for (var s = 0; s < 4; s++) Float64List(n * 2)];
+          final sum = Float64List(n);
+          for (var off = 0; off < n; off += stride) {
+            final valid = math.min(seg, n - off);
+            final block = Float32List(seg * 2)
+              ..setRange(0, valid * 2, inter, off * 2);
+            final r = chunkModel(block, seg);
+            for (var i = 0; i < valid; i++) {
+              sum[off + i] += w[i];
+              for (var s = 0; s < 4; s++) {
+                for (var c = 0; c < 2; c++) {
+                  acc[s][(off + i) * 2 + c] += w[i] * r[s][i * 2 + c];
+                }
+              }
+            }
+          }
+          for (var t = 0; t < n; t++) {
+            for (var s = 0; s < 4; s++) {
+              for (var c = 0; c < 2; c++) {
+                acc[s][t * 2 + c] /= sum[t];
+              }
+            }
+          }
+          return wrap(acc);
+        };
+
+    double maxDiff(List<SeparatedStem> a, List<SeparatedStem> b) {
+      var d = 0.0;
+      for (var s = 0; s < a.length; s++) {
+        for (var t = 0; t < a[s].frames; t++) {
+          d = math.max(d, (a[s].left[t] - b[s].left[t]).abs());
+          d = math.max(d, (a[s].right[t] - b[s].right[t]).abs());
+        }
+      }
+      return d;
+    }
+
+    for (final (name, sep, grid) in [
+      (
+        'mini-bs-roformer',
+        miniBs(800, 400),
+        const SeparatorGrid(segment: 800, stride: 400),
+      ),
+      (
+        'htdemucs',
+        demucs(780, 585),
+        const SeparatorGrid(segment: 780, stride: 585),
+      ),
+    ]) {
+      for (final n in [700, 5000, 10007]) {
+        test('$name, $n frames', () {
+          // Loud and quiet passages, so every chunk's gain differs.
+          final l = _noise(n, 11), r = _noise(n, 12);
+          for (var t = 0; t < n; t++) {
+            final g = 1 + math.sin(t / 300);
+            l[t] *= g;
+            r[t] *= g;
+          }
+          final whole =
+              separateInWindows(l, r, 44100, sep, windowFrames: n + 1);
+          final aligned = separateInWindows(
+            l,
+            r,
+            44100,
+            sep,
+            grid: grid,
+            windowFrames: 3000,
+          );
+          expect(maxDiff(whole, aligned), lessThan(1e-6));
+          if (n > 3000) {
+            // The same windows OFF the grid do not: the model is chunk-
+            // sensitive, which is why alignment matters.
+            final loose = separateInWindows(
+              l,
+              r,
+              44100,
+              sep,
+              windowFrames: 3000,
+              marginFrames: 100,
+              fadeFrames: 100,
+            );
+            expect(maxDiff(whole, loose), greaterThan(1e-3));
+          }
+        });
+      }
+    }
+
+    test('aligned windows: on the grid, a segment of overlap, weights sum to 1',
+        () {
+      const grid = SeparatorGrid(segment: 780, stride: 585);
+      final ws = alignedSeparationWindows(20000, grid, window: 3000);
+      expect(ws.last.end, 20000);
+      for (final w in ws) {
+        expect(w.start % grid.stride, 0);
+        if (w != ws.last) expect(w.length, 780 + 4 * 585);
+        if (w != ws.last) expect(w.length, greaterThan(grid.segment));
+      }
+      expect(ws.last.length, greaterThan(grid.segment));
+      for (var t = 0; t < 20000; t++) {
+        var sum = 0.0;
+        for (final w in ws) {
+          if (t >= w.start && t < w.end) sum += w.weight(t);
+        }
+        expect(sum, closeTo(1, 1e-12), reason: 'frame $t');
+      }
     });
   });
 
