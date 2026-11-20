@@ -39,5 +39,15 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    # Xcode 27 (required for App Store uploads from April 2027, ITMS-90725)
+    # rejects any target below iOS 15 ("range of supported deployment target
+    # versions is 15.0 to 27.x"). Many plugin podspecs still declare 12/13,
+    # and Flutter 3.44's podhelper only clears targets below 13. Raise them
+    # to the Runner's own minimum (iOS 15.0); Flutter 3.47+ does the same.
+    target.build_configurations.each do |config|
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      end
+    end
   end
 end
