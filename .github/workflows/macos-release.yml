@@ -39,7 +39,10 @@ on:
 env:
   BUNDLE_ID: com.crispstrobe.cometBeat
   PROFILE_NAME: CometBeat Mac App Store
-  FLUTTER_VERSION: '3.44.4'
+  # 3.44.8+ carries the Xcode 27 fix for release_unpack_macos ("FlutterMacOS
+  # does not contain architectures arm64 x86_64": Xcode 27's lipo -verify_arch
+  # rejects several archs at once, flutter/flutter#188346).
+  FLUTTER_VERSION: '3.44.9'
   # CrispEmbed main's pubspec says 0.17.14 but no v0.17.14 release (and so no
   # prebuilt tarball) exists yet; the podspecs would 404. Fetch the published
   # v0.17.12 libs instead. CometBeat only uses CrispEmbedOmr, whose C API is
