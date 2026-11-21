@@ -95,6 +95,44 @@ void main() {
     expect(notes.first.midi, 69);
   });
 
+  group('segmentNotesWithPitch (HMM as a voicing mask)', () {
+    PitchTrack flat(double hz, {int frames = 40, double hopMs = 10}) => [
+          for (var i = 0; i < frames; i++)
+            (timeMs: i * hopMs, f0Hz: hz, voicedProb: 0.95),
+        ];
+
+    test('carries the continuous pitch beside the quantised midi', () {
+      final notes = segmentNotesWithPitch(flat(447.7)); // A4 + ~30 cents
+      expect(notes, hasLength(1));
+      expect(notes.single.note.midi, 69); // notation still gets a semitone
+      expect(notes.single.f0Hz, closeTo(447.7, 0.5)); // intonation keeps cents
+    });
+
+    test('uses the median, so a skew of frames cannot drag the note', () {
+      // 10 of 40 frames sit 31 cents sharp (still A4, not a note change). A
+      // mean would report ~442 Hz; the median keeps the note's true centre.
+      final track = <PitchFrame>[
+        for (var i = 0; i < 40; i++)
+          (
+            timeMs: i * 10.0,
+            f0Hz: i % 4 == 0 ? 448.0 : 440.0,
+            voicedProb: 0.95
+          ),
+      ];
+      final p = segmentNotesWithPitch(track).single;
+      expect(p.note.midi, 69);
+      expect(p.f0Hz, closeTo(440, 0.001));
+    });
+
+    test('segmentNotes is the quantised view of the same decode', () {
+      final track = flat(447.7);
+      expect(
+        segmentNotes(track),
+        [for (final p in segmentNotesWithPitch(track)) p.note],
+      );
+    });
+  });
+
   test('silence and too-short input yield no notes', () {
     expect(segmentNotes(pyinF0(Float64List(_sr))), isEmpty);
     expect(segmentNotes(const []), isEmpty);

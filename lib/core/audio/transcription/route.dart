@@ -163,10 +163,12 @@ int _lowestStrongPeak(Float64List mag, double binHz, double thresh) {
   return -1;
 }
 
-/// The monophonic chain as one call: F0 ([f0] or the default pure-Dart pYIN) →
-/// auto-tuning → note-HMM → octave-artifact cleanup → NoteEvents. Web-safe when
-/// [f0] is null (the default).
-Future<List<NoteEvent>> transcribeMonophonic(
+/// The monophonic chain with continuous pitch: the HMM's voicing decision
+/// decides *when* a note sounds, while [PitchedNote.f0Hz] keeps the detector's
+/// own pitch for intonation-sensitive consumers (a tuner, an intonation game, a
+/// pitch-bend-carrying export). [transcribeMonophonic] is the quantised-only
+/// view of this, which is what notation wants.
+Future<List<PitchedNote>> transcribeMonophonicDetailed(
   Float64List mono, {
   int sampleRate = 44100,
   double a4 = 440,
@@ -176,9 +178,30 @@ Future<List<NoteEvent>> transcribeMonophonic(
       ? pyinF0(mono, sampleRate: sampleRate)
       : await f0(mono, sampleRate);
   final ref = tunedReference(track, a4: a4);
-  final notes = segmentNotes(track, a4: ref);
-  return removeOctaveArtifacts(notes);
+  return removeOctaveArtifactsWithPitch(segmentNotesWithPitch(track, a4: ref));
 }
+
+/// The monophonic chain as one call: F0 ([f0] or the default pure-Dart pYIN) →
+/// auto-tuning → note-HMM → octave-artifact cleanup → NoteEvents. Web-safe when
+/// [f0] is null (the default).
+///
+/// This drops the continuous pitch; call [transcribeMonophonicDetailed] when the
+/// consumer needs intonation rather than note identity.
+Future<List<NoteEvent>> transcribeMonophonic(
+  Float64List mono, {
+  int sampleRate = 44100,
+  double a4 = 440,
+  F0Estimator? f0,
+}) async =>
+    [
+      for (final p in await transcribeMonophonicDetailed(
+        mono,
+        sampleRate: sampleRate,
+        a4: a4,
+        f0: f0,
+      ))
+        p.note,
+    ];
 
 /// The result of a routed transcription: the [notes] and which [engine] produced
 /// them (plus the [probe] that decided).

@@ -23,12 +23,27 @@ double _midiToHz(int midi, double a4) =>
     a4 * pow(2, (midi - 69) / 12).toDouble();
 double _cents(double f, double ref) => 1200 * (log(f / ref) / ln2);
 
-/// Segment [track] into notes. [voicedThreshold] gates a frame as pitched;
-/// [switchCost] is the penalty to change note between frames (higher ⇒ more
-/// vibrato/wobble absorbed, but real fast notes need it not too high);
-/// [boundaryCost] gates note↔silence; a decoded note shorter than [minFrames]
-/// windows is dropped as a glitch. [a4] is the reference tuning (see S3).
-List<NoteEvent> segmentNotes(
+/// A [NoteEvent] plus the continuous pitch the HMM's voicing decision masked.
+///
+/// The HMM decides *when* a note sounds; [f0Hz] is the detector's own pitch over
+/// those frames (their median), NOT re-quantised to [NoteEvent.midi]. Notation
+/// reads [note], which has no cents; anything that cares about intonation (a
+/// tuner, an intonation game, a pitch-bend-carrying export) reads [f0Hz]. Keeping
+/// the quantised note and the continuous pitch side by side is the point:
+/// replacing the note with cents would break notation, and dropping the pitch
+/// throws away what the detector already knew.
+typedef PitchedNote = ({NoteEvent note, double f0Hz});
+
+/// Segment [track] into notes, carrying each note's continuous pitch. Same
+/// Viterbi as [segmentNotes]; the only addition is that every note reports the
+/// median `f0Hz` of its voiced frames instead of only the quantised semitone.
+///
+/// [voicedThreshold] gates a frame as pitched; [switchCost] is the penalty to
+/// change note between frames (higher ⇒ more vibrato/wobble absorbed, but real
+/// fast notes need it not too high); [boundaryCost] gates note↔silence; a
+/// decoded note shorter than [minFrames] windows is dropped as a glitch. [a4]
+/// is the reference tuning (see S3).
+List<PitchedNote> segmentNotesWithPitch(
   PitchTrack track, {
   double voicedThreshold = 0.5,
   double switchCost = 1.8,
@@ -149,7 +164,7 @@ List<NoteEvent> segmentNotes(
 
   // Runs of the same NOTE state → NoteEvents (drop < minFrames).
   final hopMs = track[1].timeMs - track[0].timeMs;
-  final notes = <NoteEvent>[];
+  final notes = <PitchedNote>[];
   var runStart = 0;
   for (var t = 1; t <= t0; t++) {
     if (t == t0 || path[t] != path[runStart]) {
@@ -157,17 +172,28 @@ List<NoteEvent> segmentNotes(
       final len = t - runStart;
       if (st != silence && len >= minFrames) {
         var conf = 0.0;
+        final voicedHz = <double>[];
         for (var u = runStart; u < t; u++) {
-          conf += track[u].voicedProb;
+          final f = track[u];
+          conf += f.voicedProb;
+          if (f.voicedProb >= voicedThreshold && f.f0Hz > 0) {
+            voicedHz.add(f.f0Hz);
+          }
         }
         notes.add(
           (
-            midi: minMidi + st,
-            onMs: track[runStart].timeMs,
-            offMs: track[t - 1].timeMs + hopMs,
-            confidence: (conf / len).clamp(0.0, 1.0),
-            // pYIN tracks one f0; it has no notion of timbre or instrument.
-            program: gmProgramUnknown,
+            note: (
+              midi: minMidi + st,
+              onMs: track[runStart].timeMs,
+              offMs: track[t - 1].timeMs + hopMs,
+              confidence: (conf / len).clamp(0.0, 1.0),
+              // pYIN tracks one f0; it has no notion of timbre or instrument.
+              program: gmProgramUnknown,
+            ),
+            // The HMM chose the note; the detector's pitch says how far off the
+            // semitone it actually was. Median, so one vibrato excursion cannot
+            // drag the whole note off centre.
+            f0Hz: _medianOr(voicedHz, _midiToHz(minMidi + st, a4)),
           ),
         );
       }
@@ -175,6 +201,37 @@ List<NoteEvent> segmentNotes(
     }
   }
   return notes;
+}
+
+/// The quantised-only view of [segmentNotesWithPitch] — what notation consumes.
+/// Callers that need intonation should use [segmentNotesWithPitch] instead.
+List<NoteEvent> segmentNotes(
+  PitchTrack track, {
+  double voicedThreshold = 0.5,
+  double switchCost = 1.8,
+  double boundaryCost = 0.6,
+  int minFrames = 5,
+  double a4 = 440,
+}) =>
+    [
+      for (final p in segmentNotesWithPitch(
+        track,
+        voicedThreshold: voicedThreshold,
+        switchCost: switchCost,
+        boundaryCost: boundaryCost,
+        minFrames: minFrames,
+        a4: a4,
+      ))
+        p.note,
+    ];
+
+double _medianOr(List<double> values, double fallback) {
+  if (values.isEmpty) return fallback;
+  values.sort();
+  final mid = values.length ~/ 2;
+  return values.length.isOdd
+      ? values[mid]
+      : (values[mid - 1] + values[mid]) / 2;
 }
 
 /// Drop subharmonic octave-error notes from a transcription.
@@ -193,19 +250,49 @@ List<NoteEvent> removeOctaveArtifacts(
   List<NoteEvent> notes, {
   int octaveDrop = 11,
   double maxMs = 150,
+}) =>
+    _dropOctaveArtifacts(
+      notes,
+      (n) => n,
+      octaveDrop: octaveDrop,
+      maxMs: maxMs,
+    );
+
+/// [removeOctaveArtifacts] over [PitchedNote]s, keeping each note's continuous
+/// pitch attached to the note it belongs to. Uses the same index-based rule as
+/// the plain version, so the two can never disagree about what is an artifact.
+List<PitchedNote> removeOctaveArtifactsWithPitch(
+  List<PitchedNote> notes, {
+  int octaveDrop = 11,
+  double maxMs = 150,
+}) =>
+    _dropOctaveArtifacts(
+      notes,
+      (p) => p.note,
+      octaveDrop: octaveDrop,
+      maxMs: maxMs,
+    );
+
+/// The shared predicate: drop a short note sitting ≥[octaveDrop] semitones below
+/// BOTH neighbours (or its one neighbour at an edge).
+List<T> _dropOctaveArtifacts<T>(
+  List<T> items,
+  NoteEvent Function(T) noteOf, {
+  int octaveDrop = 11,
+  double maxMs = 150,
 }) {
-  if (notes.length < 2) return notes;
-  final out = <NoteEvent>[];
-  for (var i = 0; i < notes.length; i++) {
-    final n = notes[i];
+  if (items.length < 2) return items;
+  final out = <T>[];
+  for (var i = 0; i < items.length; i++) {
+    final n = noteOf(items[i]);
     if (n.offMs - n.onMs <= maxMs) {
-      final prev = i > 0 ? notes[i - 1] : null;
-      final next = i < notes.length - 1 ? notes[i + 1] : null;
+      final prev = i > 0 ? noteOf(items[i - 1]) : null;
+      final next = i < items.length - 1 ? noteOf(items[i + 1]) : null;
       final belowPrev = prev == null || prev.midi - n.midi >= octaveDrop;
       final belowNext = next == null || next.midi - n.midi >= octaveDrop;
       if (belowPrev && belowNext) continue; // a subharmonic blip — drop it
     }
-    out.add(n);
+    out.add(items[i]);
   }
   return out;
 }
