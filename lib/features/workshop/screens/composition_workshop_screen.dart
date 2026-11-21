@@ -269,21 +269,15 @@ final _digitBases = <LogicalKeyboardKey, DurationBase>{
   LogicalKeyboardKey.digit5: DurationBase.sixteenth,
 };
 
-/// The pitch a typed letter means, as MuseScore Studio places it: [step]
-/// (with [alter]) in the octave nearest [reference] — a C after a B4 is C5,
-/// not C4 — or around middle C with no reference.
+/// The pitch a typed letter means: [step] in the SAME octave as [reference].
+///
+/// Deliberately NOT "nearest the previous note": that walks upward through the
+/// octave (a C after B4 became C5), so typing `cdefgabc` repeatedly climbed an
+/// octave per cycle. The octave is fixed by the first note (or the selection)
+/// and moved only by the 8va control / Option modifier.
 @visibleForTesting
-Pitch stepEntryPitch(Step step, int alter, Pitch? reference) {
-  final target = reference?.midiNumber ?? 60;
-  var best = Pitch(step, alter: alter);
-  for (var octave = 0; octave <= 8; octave++) {
-    final p = Pitch(step, alter: alter, octave: octave);
-    if ((p.midiNumber - target).abs() < (best.midiNumber - target).abs()) {
-      best = p;
-    }
-  }
-  return best;
-}
+Pitch stepEntryPitch(Step step, int alter, Pitch? reference) =>
+    Pitch(step, alter: alter, octave: reference?.octave ?? 4);
 
 /// A chord tone added by Shift+letter: [step] in the first octave above
 /// [top], the chord's highest note.
@@ -2499,7 +2493,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   }
 
   /// Computer-keyboard entry, MuseScore Studio's way: A–G place notes in the
-  /// octave nearest the previous one (Shift adds to the chord), 1–5 pick a
+  /// octave of the current entry line (Shift adds to the chord), 1–5 pick a
   /// value, arrows move the caret / pitch (Ctrl/⌘ by an octave), R or 0 a
   /// rest, T or + a tie, `.` a dot, Del/⌫ deletes, Ctrl/⌘ Z·Y·C·X·V for
   /// undo/redo/copy/cut/paste. Option/Alt+letter places that note an octave up
@@ -2593,9 +2587,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         _run(() => _doc.addPitchToSelected(pitch));
         return KeyEventResult.handled;
       }
-      // Nearest the previous note (plus the persistent/one-shot octave shift);
-      // the first note, nearest the staff's middle line (B4 in treble, D3 in
-      // bass).
+      // Same octave as the entry line (plus the persistent/one-shot octave
+      // shift): repeating a letter run never climbs.
       _placeTyped(step, alterOverride: germanFlat ? -1 : null);
       return KeyEventResult.handled;
     }

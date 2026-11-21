@@ -1418,7 +1418,7 @@ void main() {
   });
 
   testWidgets(
-      'step entry: nearest octave, Shift adds to the chord, '
+      'step entry: entry octave is fixed, Shift adds to the chord, '
       'Ctrl+arrow moves an octave, 0 rests', (tester) async {
     await pump(tester);
     final editor = _editor(tester);
@@ -1428,24 +1428,24 @@ void main() {
             for (final e in m.elements)
               if (e is NoteElement) ...e.pitches.map((p) => p.midiNumber),
         ];
-    // B4 then C: the C nearest B4 is C5, not C4.
+    // B4 then C: both stay in the entry octave — C4, not the C5 nearest B4.
     await tester.sendKeyEvent(LogicalKeyboardKey.keyB);
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
     await tester.pump();
-    expect(midi(), [71, 72]);
-    // Shift+E stacks E5 on the C5.
+    expect(midi(), [71, 60]);
+    // Shift+E stacks E4 on the C4.
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pump();
-    expect(midi(), [71, 72, 76]);
+    expect(midi(), [71, 60, 64]);
     // Ctrl+↓ moves the chord down an octave.
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pump();
-    expect(midi(), [71, 60, 64]);
+    expect(midi(), [71, 48, 52]);
     // 0 is a rest.
     final before = editor.noteCount;
     await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
@@ -1453,15 +1453,14 @@ void main() {
     expect(editor.noteCount, before + 1);
   });
 
-  test('stepEntryPitch takes the octave nearest the previous note', () {
+  test('stepEntryPitch keeps the entry octave (no upward walk)', () {
     expect(stepEntryPitch(Step.c, 0, null).midiNumber, 60);
-    expect(
-      stepEntryPitch(Step.c, 0, const Pitch(Step.b)).midiNumber,
-      72,
-    );
+    // A C after B4 stays C4 — it must not climb to C5.
+    expect(stepEntryPitch(Step.c, 0, const Pitch(Step.b)).midiNumber, 60);
+    // Same octave as the reference: G5, not the G4 nearest C5.
     expect(
       stepEntryPitch(Step.g, 0, const Pitch(Step.c, octave: 5)).midiNumber,
-      67,
+      79,
     );
     expect(
       chordTonePitch(Step.e, 0, const Pitch(Step.g)).midiNumber,
@@ -1646,6 +1645,55 @@ void main() {
 
     // The armed ♯ raises C only; D and E are key-spelled, not D♯/E♯.
     expect(notes.map((p) => p.alter).toList(), [1, 0, 0]);
+  });
+
+  testWidgets('repeating cdefgabc stays within one octave', (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    editor.debugSetKey(0); // C major
+    await tester.pump();
+
+    const seq = [
+      LogicalKeyboardKey.keyC,
+      LogicalKeyboardKey.keyD,
+      LogicalKeyboardKey.keyE,
+      LogicalKeyboardKey.keyF,
+      LogicalKeyboardKey.keyG,
+      LogicalKeyboardKey.keyA,
+      LogicalKeyboardKey.keyB,
+      LogicalKeyboardKey.keyC,
+      LogicalKeyboardKey.keyD,
+      LogicalKeyboardKey.keyE,
+      LogicalKeyboardKey.keyF,
+      LogicalKeyboardKey.keyG,
+      LogicalKeyboardKey.keyA,
+      LogicalKeyboardKey.keyB,
+      LogicalKeyboardKey.keyC,
+    ];
+    for (final k in seq) {
+      await tester.sendKeyEvent(k);
+      await tester.pump();
+    }
+
+    final midis = tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .expand((e) => e.pitches)
+        .map((p) => p.midiNumber)
+        .toList();
+
+    expect(midis, hasLength(seq.length));
+    expect(
+      midis.reduce(math.max) - midis.reduce(math.min),
+      lessThan(12),
+      reason: 'the run must stay inside one octave',
+    );
+    // The second pass is identical, not transposed up an octave.
+    expect(midis.sublist(7, 14), midis.sublist(0, 7));
+    expect(midis.last, midis.first);
   });
 
   testWidgets('part view shows one part alone, and back to the full score',
