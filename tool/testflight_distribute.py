@@ -50,16 +50,25 @@ def call(method, path, **kw):
 def find_build(app, version, build, platform=None):
     params = {
         "filter[app]": app, "filter[version]": build,
-        "filter[preReleaseVersion.version]": version, "limit": 5}
-    # iOS and macOS share the version+build number, so without this the lookup
-    # can hand back the other platform's build.
-    if platform:
-        params["filter[platform]"] = platform
+        "filter[preReleaseVersion.version]": version,
+        "include": "preReleaseVersion", "limit": 10}
     code, body = call("GET", "/builds", params=params)
     if code >= 400:
         sys.exit(f"build lookup failed: {code} {body}")
     data = body.get("data", [])
-    return data[0] if data else None
+    if not platform:
+        return data[0] if data else None
+    # `/v1/builds` has no `filter[platform]` (ASC rejects it with
+    # PARAMETER_ERROR.INVALID), so select from the included preReleaseVersion:
+    # iOS and macOS share the version+build number.
+    included = {i["id"]: i for i in body.get("included", [])}
+    for b in data:
+        rel = (b.get("relationships", {}).get("preReleaseVersion", {})
+               .get("data") or {})
+        ver = included.get(rel.get("id"))
+        if ver and ver.get("attributes", {}).get("platform") == platform:
+            return b
+    return None
 
 
 def main():
