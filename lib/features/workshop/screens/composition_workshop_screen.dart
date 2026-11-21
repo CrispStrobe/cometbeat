@@ -775,6 +775,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// notes only.
   int _entryOctaveShift = 0;
   static const _maxEntryOctaveShift = 4;
+
+  /// The un-shifted pitch line typed entry follows. Kept beside the document so
+  /// the 8va control transposes the SAME line rather than compounding on each
+  /// already-shifted note (which walked an octave per keystroke).
+  Pitch? _entryLogicalPitch;
   bool _barNumbers = false; // label each wrapped system with its bar number
   bool _noteNames = false; // draw each note's name below the staff
   String _scoreTitle = '';
@@ -1205,6 +1210,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   bool get _selectionHasNote => _doc.selectedElements.any((e) => !e.isRest);
 
   void _syncControlsToSelection() {
+    // Navigating to a note resets the typed line to it; only uninterrupted
+    // letter entry keeps its own un-shifted reference.
+    _entryLogicalPitch = null;
     final e = _doc.selected;
     if (e == null) return;
     _pendingBase = e.duration.base;
@@ -1227,7 +1235,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     }
   }
 
-  void _onPianoKey(int midi) => _placePitch(pitchFromMidi(midi));
+  void _onPianoKey(int midi) {
+    final p = pitchFromMidi(midi);
+    // The piano is absolute (no 8va applied), but it resets the typed line so a
+    // following letter continues near the key the player tapped.
+    _entryLogicalPitch = p;
+    _placePitch(p);
+  }
 
   /// Adjust the persistent octave applied to letter-key entry (the touch 8va
   /// control and Alt/Option+↑/↓). Clamped so a note always stays in MIDI range.
@@ -1245,10 +1259,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final base = stepEntryPitch(
       step,
       alterOverride ?? _alterOf(_accidental),
-      selected?.pitch ?? _doc.clef.pitchAt(4),
+      _entryLogicalPitch ?? selected?.pitch ?? _doc.clef.pitchAt(4),
     );
-    final octaves = octaveShift + _entryOctaveShift;
-    _placePitch(octaveShiftedPitch(base, octaves));
+    // Remember the UN-shifted line: the octave shift is applied below, not baked
+    // into the reference, or each repeat would transpose the previous result
+    // again and walk away an octave per keystroke.
+    _entryLogicalPitch = base;
+    _placePitch(octaveShiftedPitch(base, octaveShift + _entryOctaveShift));
   }
 
   // ── Shared-tune bridge (MelodyBridge): trade a groove riff both ways ────────

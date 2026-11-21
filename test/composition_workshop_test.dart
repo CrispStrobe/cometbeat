@@ -1514,6 +1514,64 @@ void main() {
     expect(placed().last.alter, -1);
   });
 
+  testWidgets('Option/Alt + letter places the note an octave up',
+      (tester) async {
+    await pump(tester);
+    List<Pitch> placed() => tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .expand((e) => e.pitches)
+        .toList();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.pump();
+    final first = placed().single.midiNumber;
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    await tester.pump();
+    expect(placed(), hasLength(2));
+    expect(
+      placed().last.midiNumber,
+      first + 12,
+      reason: 'Option+C is one octave up',
+    );
+  });
+
+  testWidgets('the 8va control transposes one line, not each note', (
+    tester,
+  ) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.byTooltip(l10n.workshopOctaveDown));
+    await tester.pumpAndSettle();
+
+    for (var i = 0; i < 3; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.pump();
+    }
+    final midis = tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .expand((e) => e.pitches)
+        .map((p) => p.midiNumber)
+        .toList();
+
+    expect(midis, hasLength(3));
+    expect(
+      midis.toSet(),
+      hasLength(1),
+      reason: 'repeated C must stay on one line, not drop an octave per key',
+    );
+  });
+
   testWidgets('part view shows one part alone, and back to the full score',
       (tester) async {
     await pump(tester);
