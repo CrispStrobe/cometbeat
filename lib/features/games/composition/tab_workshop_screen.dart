@@ -57,6 +57,7 @@ import 'package:comet_beat/shared/music/music_picker.dart'
 import 'package:comet_beat/shared/music_io/deliver_export.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
+import 'package:comet_beat/shared/widgets/music_glyph.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:comet_beat/shared/widgets/tray_panel.dart';
 // `chordName` collides: this file wants the app's
@@ -2249,7 +2250,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 color: sel ? scheme.primary : scheme.outlineVariant,
               ),
             ),
-            child: Text(_durLabel(steps), style: const TextStyle(fontSize: 15)),
+            child: _durGlyphWidget(steps),
           ),
         ),
       );
@@ -2283,7 +2284,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
               hint: Text(l10n.tabDuration),
               items: [
                 for (final (dur, steps) in kTabDurations)
-                  DropdownMenuItem(value: dur, child: Text(_durLabel(steps))),
+                  DropdownMenuItem(
+                    value: dur,
+                    child: _durGlyphWidget(steps, size: 16),
+                  ),
               ],
               onChanged: (d) {
                 if (d != null) {
@@ -3834,18 +3838,40 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       };
 
   // Labels for the 32nd-note step grid (a whole note = 32 steps).
-  String _durLabel(int steps) => switch (steps) {
-        32 => '𝅝', // whole
-        24 => '𝅗𝅥.', // dotted half
-        16 => '𝅗𝅥', // half
-        12 => '♩.', // dotted quarter
-        8 => '♩', // quarter
-        6 => '♪.', // dotted eighth
-        4 => '♪', // eighth
-        3 => '𝅘𝅥𝅯.', // dotted sixteenth
-        2 => '𝅘𝅥𝅯', // sixteenth
-        _ => '𝅘𝅥𝅰', // thirty-second
+  /// The Bravura glyph for a duration in 32nd-note steps. The Unicode musical
+  /// symbols (𝅝 U+1D15D, 𝅗𝅥 U+1D15E, …) look right in a font editor but macOS
+  /// ships no font for that block, so those chips rendered as "?" — whereas
+  /// Bravura (the SMuFL font crisp_notation ships) always has them.
+  ({String glyph, bool dotted}) _durGlyph(int steps) => switch (steps) {
+        32 => (glyph: Smufl.wholeNote, dotted: false),
+        24 => (glyph: Smufl.halfNote, dotted: true),
+        16 => (glyph: Smufl.halfNote, dotted: false),
+        12 => (glyph: Smufl.quarterNote, dotted: true),
+        8 => (glyph: Smufl.quarterNote, dotted: false),
+        6 => (glyph: Smufl.eighthNote, dotted: true),
+        4 => (glyph: Smufl.eighthNote, dotted: false),
+        3 => (glyph: Smufl.sixteenthNote, dotted: true),
+        2 => (glyph: Smufl.sixteenthNote, dotted: false),
+        _ => (glyph: Smufl.thirtySecondNote, dotted: false),
       };
+
+  /// A duration chip's note glyph, with the augmentation dot drawn as its own
+  /// SMuFL glyph (Bravura has no pre-dotted note values).
+  Widget _durGlyphWidget(int steps, {double size = 18}) {
+    final d = _durGlyph(steps);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        MusicGlyph(d.glyph, size: size),
+        if (d.dotted)
+          Padding(
+            padding: EdgeInsets.only(bottom: size * 0.16),
+            child: MusicGlyph(Smufl.augmentationDot, size: size * 0.38),
+          ),
+      ],
+    );
+  }
 
   // Major-key name for a circle-of-fifths count.
   String _keyLabel(int fifths) => switch (fifths) {

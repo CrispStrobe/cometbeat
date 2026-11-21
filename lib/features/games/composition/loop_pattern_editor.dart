@@ -232,14 +232,16 @@ String barBeatOf(int step) {
   return '${bar + 1}.${beat + 1}${off ? '+' : ''}';
 }
 
-/// A note length in eighth-steps, named the way it is written.
+/// A note length in eighth-steps, named the way it is written. Deliberately
+/// avoids the U+1D15x musical-symbol block (𝅗𝅥, 𝅝): macOS ships no font for it,
+/// so those rendered as "?" in the status line. ♩/♪ are in the system font.
 String noteLengthLabel(int steps) => switch (steps) {
       1 => '♪',
       2 => '♩',
       3 => '♩.',
-      4 => '𝅗𝅥',
-      6 => '𝅗𝅥.',
-      8 => '𝅝',
+      4 => '1⁄2',
+      6 => '1⁄2.',
+      8 => '1⁄1',
       _ => '$steps⁄8',
     };
 

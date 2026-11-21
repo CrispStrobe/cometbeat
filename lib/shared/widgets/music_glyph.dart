@@ -14,6 +14,8 @@ abstract final class Smufl {
   static const quarterNote = '\uE1D5'; // stem up
   static const eighthNote = '\uE1D7'; // stem up
   static const sixteenthNote = '\uE1D9'; // stem up
+  static const thirtySecondNote = '\uE1DB'; // stem up
+  static const augmentationDot = '\uE1E7';
   static const wholeRest = '\uE4E3';
   static const halfRest = '\uE4E4';
   static const quarterRest = '\uE4E5';
