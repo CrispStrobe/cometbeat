@@ -97,11 +97,16 @@ const _values = <_Value>[
   (glyph: Smufl.sixteenthNote, base: DurationBase.sixteenth),
 ];
 
-/// The accidental the selected note is set to (or the next placed note gets).
-enum _Accidental { natural, sharp, flat }
+/// The accidental mode for the next placed note / the selected note.
+///
+/// `auto` is the default: the note is spelled by the KEY SIGNATURE — typing F
+/// in D major gives F♯ with no accidental drawn. ♮/♯/♭ are explicit one-shot
+/// overrides: the next new note returns to `auto`, so arming a sharp cannot
+/// turn a diatonic run into a chromatic one.
+enum _Accidental { auto, natural, sharp, flat }
 
 int _alterOf(_Accidental a) => switch (a) {
-      _Accidental.natural => 0,
+      _Accidental.auto || _Accidental.natural => 0,
       _Accidental.sharp => 1,
       _Accidental.flat => -1,
     };
@@ -113,6 +118,7 @@ _Accidental _accidentalOf(int alter) => alter > 0
         : _Accidental.natural;
 
 const _accidentalGlyph = {
+  _Accidental.auto: '',
   _Accidental.natural: '♮',
   _Accidental.sharp: '♯',
   _Accidental.flat: '♭',
@@ -627,6 +633,9 @@ abstract interface class CompositionWorkshopTester {
   /// The part menu's "Show this part alone" for part [i].
   void debugTogglePartView(int i);
 
+  /// Test seam: set the active part's key signature (circle-of-fifths fifths).
+  void debugSetKey(int fifths);
+
   /// WS-X2 test seam: land [score]'s parts as new parts, as a drop does.
   void addDroppedParts(MultiPartScore score);
 
@@ -737,9 +746,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   @override
   void debugTogglePartView(int i) => _togglePartView(i);
 
+  @override
+  void debugSetKey(int fifths) =>
+      setState(() => _doc.setKeySignature(KeySignature(fifths)));
+
   DurationBase _pendingBase = DurationBase.quarter;
   bool _dotted = false;
-  _Accidental _accidental = _Accidental.natural;
+  _Accidental _accidental = _Accidental.auto;
   double _zoom = 13;
   _StaffMode _mode = _StaffMode.treble;
   _Shelf _shelf = _Shelf.sandbox; // two shelves on one document; kid default
@@ -1214,11 +1227,21 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     // letter entry keeps its own un-shifted reference.
     _entryLogicalPitch = null;
     final e = _doc.selected;
-    if (e == null) return;
+    if (e == null) {
+      _accidental = _Accidental.auto;
+      return;
+    }
     _pendingBase = e.duration.base;
     _dotted = e.duration.dots > 0;
-    _accidental =
-        e.isRest ? _Accidental.natural : _accidentalOf(e.pitch!.alter);
+    if (e.isRest) {
+      _accidental = _Accidental.auto;
+    } else {
+      final p = e.pitch!;
+      // Only show an accidental the key signature does not already supply.
+      _accidental = p.alter == _doc.keySignature.alterFor(p.step)
+          ? _Accidental.auto
+          : _accidentalOf(p.alter);
+    }
   }
 
   // ---- entry -------------------------------------------------------------
@@ -1232,6 +1255,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       setState(() => _doc.addPitchToSelected(pitch));
     } else if (_doc.length < CompositionWorkshopScreen.maxNotes) {
       setState(() => _doc.insertNote(pitch, _pendingDuration));
+      // A picked ♮/♯/♭ is one-shot: the next new note returns to the key.
+      if (_accidental != _Accidental.auto) {
+        setState(() => _accidental = _Accidental.auto);
+      }
     }
   }
 
@@ -1250,6 +1277,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             .clamp(-_maxEntryOctaveShift, _maxEntryOctaveShift);
       });
 
+  /// The alteration a new [step] gets: the key signature's own spelling under
+  /// `auto` (D major → F♯ and C♯, drawn by the key, not as an accidental), or
+  /// an explicitly picked ♮/♯/♭.
+  int _entryAlter(Step step) => _accidental == _Accidental.auto
+      ? _doc.keySignature.alterFor(step)
+      : _alterOf(_accidental);
+
   /// Place a typed letter. [octaveShift] is the one-shot Alt/Option modifier;
   /// [_entryOctaveShift] is the persistent 8va setting. [alterOverride] lets a
   /// German B mean B♭ regardless of the accidental strip. Spelling is preserved
@@ -1258,7 +1292,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final selected = _doc.selected;
     final base = stepEntryPitch(
       step,
-      alterOverride ?? _alterOf(_accidental),
+      alterOverride ?? _entryAlter(step),
       _entryLogicalPitch ?? selected?.pitch ?? _doc.clef.pitchAt(4),
     );
     // Remember the UN-shifted line: the octave shift is applied below, not baked
@@ -1374,9 +1408,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       setState(_doc.clearSelection);
       return;
     }
+    final clef = _clefForTarget(target);
+    final natural = clef.pitchAt(target.staffPosition);
     final pitch = target.pitchFor(
-      _clefForTarget(target),
-      preferredAlter: _alterOf(_accidental),
+      clef,
+      preferredAlter: _entryAlter(natural.step),
     );
     _placePitch(pitch);
   }
@@ -1545,9 +1581,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       setState(_doc.clearSelection);
       return;
     }
+    final clef = _mpd.clefOf(partIndex);
+    final natural = clef.pitchAt(target.staffPosition);
     final pitch = target.pitchFor(
-      _mpd.clefOf(partIndex),
-      preferredAlter: _alterOf(_accidental),
+      clef,
+      preferredAlter: _entryAlter(natural.step),
     );
     _placePitch(pitch); // targets _doc == the now-active part
   }
@@ -2440,9 +2478,18 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       });
 
   void _pickAccidental(_Accidental a) => setState(() {
-        _accidental = a;
+        // Tapping the armed accidental again returns to key-signature spelling.
+        final next = _accidental == a ? _Accidental.auto : a;
+        _accidental = next;
         if (_pickAppliesToSelection && _doc.hasSelection) {
-          _doc.setAccidentalOfSelected(_alterOf(a));
+          final e = _doc.selected!;
+          if (!e.isRest) {
+            _doc.setAccidentalOfSelected(
+              next == _Accidental.auto
+                  ? _doc.keySignature.alterFor(e.pitch!.step)
+                  : _alterOf(next),
+            );
+          }
         }
       });
 
@@ -2534,7 +2581,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         return KeyEventResult.handled;
       }
       final germanFlat = _germanNaming && key == LogicalKeyboardKey.keyB;
-      final alter = germanFlat ? -1 : _alterOf(_accidental);
+      final alter = germanFlat ? -1 : _entryAlter(step);
       final selected = _doc.selected;
       // Shift+letter stacks the note on the selected chord, above its top.
       if (kb.isShiftPressed && selected != null && !selected.isRest) {
@@ -5198,7 +5245,9 @@ class _InputBar extends StatelessWidget {
                 ),
               ),
               const _Sep(),
-              for (final a in _Accidental.values)
+              for (final a in _Accidental.values.where(
+                (a) => a != _Accidental.auto,
+              ))
                 _GlyphButton(
                   selected: accidental == a,
                   onTap: () => onPickAccidental(a),

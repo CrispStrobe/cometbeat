@@ -1572,6 +1572,82 @@ void main() {
     );
   });
 
+  testWidgets('typed notes follow the key signature, not a sticky sharp',
+      (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    editor.debugSetKey(2); // D major: F♯ and C♯ come from the key
+    await tester.pump();
+
+    for (final k in [
+      LogicalKeyboardKey.keyC,
+      LogicalKeyboardKey.keyD,
+      LogicalKeyboardKey.keyE,
+      LogicalKeyboardKey.keyF,
+      LogicalKeyboardKey.keyG,
+      LogicalKeyboardKey.keyA,
+      LogicalKeyboardKey.keyB,
+      LogicalKeyboardKey.keyC,
+    ]) {
+      await tester.sendKeyEvent(k);
+      await tester.pump();
+    }
+
+    final notes = tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .expand((e) => e.pitches)
+        .toList();
+
+    expect(notes.map((p) => p.step).toList(), [
+      Step.c,
+      Step.d,
+      Step.e,
+      Step.f,
+      Step.g,
+      Step.a,
+      Step.b,
+      Step.c,
+    ]);
+    // Not five explicit sharps: only C and F are sharp, as the key says.
+    expect(notes.map((p) => p.alter).toList(), [1, 0, 0, 1, 0, 0, 0, 1]);
+  });
+
+  testWidgets('an armed sharp applies to one note, then the key takes over',
+      (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    editor.debugSetKey(2); // D major
+    await tester.pump();
+
+    await tester.tap(find.text('♯'));
+    await tester.pump();
+
+    for (final k in [
+      LogicalKeyboardKey.keyC,
+      LogicalKeyboardKey.keyD,
+      LogicalKeyboardKey.keyE,
+    ]) {
+      await tester.sendKeyEvent(k);
+      await tester.pump();
+    }
+
+    final notes = tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .expand((e) => e.pitches)
+        .toList();
+
+    // The armed ♯ raises C only; D and E are key-spelled, not D♯/E♯.
+    expect(notes.map((p) => p.alter).toList(), [1, 0, 0]);
+  });
+
   testWidgets('part view shows one part alone, and back to the full score',
       (tester) async {
     await pump(tester);
