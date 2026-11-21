@@ -19,6 +19,10 @@ on:
         description: 'TestFlight "What to Test" (empty = none)'
         type: string
         default: ''
+      platform:
+        description: 'IOS or MAC_OS (default IOS)'
+        type: string
+        default: 'IOS'
 
 jobs:
   distribute:
@@ -35,6 +39,7 @@ jobs:
           NOTES: ${{ inputs.testflight_notes }}
           VER: ${{ inputs.version }}
           BUILD: ${{ inputs.build }}
+          PLATFORM: ${{ inputs.platform }}
         run: |
           set -euo pipefail
           mkdir -p .appstoreconnect
@@ -43,4 +48,5 @@ jobs:
           .venv-asc/bin/pip install --quiet pyjwt cryptography requests
           ASC_KEY_PATH=".appstoreconnect/AuthKey_${ASC_KEY_ID}.p8" \
             .venv-asc/bin/python tool/testflight_distribute.py \
-              --version "$VER" --build "$BUILD" --notes "${NOTES:-}"
+              --version "$VER" --build "$BUILD" --platform "$PLATFORM" \
+              --notes "${NOTES:-}"

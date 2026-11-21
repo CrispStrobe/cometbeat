@@ -47,10 +47,15 @@ def call(method, path, **kw):
     return r.status_code, (r.json() if r.content else {})
 
 
-def find_build(app, version, build):
-    code, body = call("GET", "/builds", params={
+def find_build(app, version, build, platform=None):
+    params = {
         "filter[app]": app, "filter[version]": build,
-        "filter[preReleaseVersion.version]": version, "limit": 5})
+        "filter[preReleaseVersion.version]": version, "limit": 5}
+    # iOS and macOS share the version+build number, so without this the lookup
+    # can hand back the other platform's build.
+    if platform:
+        params["filter[platform]"] = platform
+    code, body = call("GET", "/builds", params=params)
     if code >= 400:
         sys.exit(f"build lookup failed: {code} {body}")
     data = body.get("data", [])
@@ -62,13 +67,15 @@ def main():
     p.add_argument("--version", required=True)
     p.add_argument("--build", required=True)
     p.add_argument("--notes", default="")
+    p.add_argument("--platform", default=None,
+                   help="IOS or MAC_OS (default: whichever build is returned)")
     p.add_argument("--timeout-min", type=int, default=45)
     a = p.parse_args()
     app = os.environ["ASC_APP_ID"]
 
     deadline = time.time() + a.timeout_min * 60
     while True:
-        b = find_build(app, a.version, a.build)
+        b = find_build(app, a.version, a.build, a.platform)
         state = b["attributes"]["processingState"] if b else "NOT_FOUND"
         print(f"build {a.version} ({a.build}): {state}", flush=True)
         if state == "VALID":
