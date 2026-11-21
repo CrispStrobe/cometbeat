@@ -4,7 +4,7 @@ PODS:
   - audioplayers_darwin (0.0.1):
     - Flutter
     - FlutterMacOS
-  - crispembed (0.16.0)
+  - crispembed (0.17.20)
   - file_selector_ios (0.0.1):
     - Flutter
   - Flutter (1.0.0)
@@ -52,17 +52,14 @@ DEPENDENCIES:
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - onnxruntime (from `.symlinks/plugins/onnxruntime/ios`)
+  - onnxruntime-c (from `Podspecs/onnxruntime-c.podspec.json`)
+  - onnxruntime-objc (from `Podspecs/onnxruntime-objc.podspec.json`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - record_ios (from `.symlinks/plugins/record_ios/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
   - wakelock_plus (from `.symlinks/plugins/wakelock_plus/ios`)
-
-SPEC REPOS:
-  trunk:
-    - onnxruntime-c
-    - onnxruntime-objc
 
 EXTERNAL SOURCES:
   aec_fullduplex:
@@ -87,6 +84,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/integration_test/ios"
   onnxruntime:
     :path: ".symlinks/plugins/onnxruntime/ios"
+  onnxruntime-c:
+    :podspec: Podspecs/onnxruntime-c.podspec.json
+  onnxruntime-objc:
+    :podspec: Podspecs/onnxruntime-objc.podspec.json
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
   record_ios:
@@ -103,7 +104,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   aec_fullduplex: 1613d35f3d16bad3e0c775b207b90002f60686dc
   audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
-  crispembed: ef4a5eb1f4cd79fa3827b1746c89db0272cd0383
+  crispembed: 3ee70c1b009409a4574162edc0587bd62bf30aec
   file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_soloud: a49c4dfe436fd99e47f4777fa270c557f6190054
@@ -112,8 +113,8 @@ SPEC CHECKSUMS:
   image_picker_ios: e0ece4aa2a75771a7de3fa735d26d90817041326
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   onnxruntime: 2ab1957eb029c71d47f7bb35cc4efc9f0d297828
-  onnxruntime-c: ebdcfd8650bcbd10121c125262f99dea681b92a3
-  onnxruntime-objc: ae7acec7a3d03eaf072d340afed7a35635c1c2a6
+  onnxruntime-c: 3be99fb21f73a1e1df25b5a399f0e34290e0f19e
+  onnxruntime-objc: 5123aec4beb0dac5fac0cdd47457b8ee3e8391db
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   record_ios: 390a30c7caaf8b5d0fb1cb1d2fd5064b48b4520c
   share_plus: eccd7beb7cea61271aeed1800e8ccb2b952c0c7f
@@ -121,6 +122,6 @@ SPEC CHECKSUMS:
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
   wakelock_plus: d4ca1e4e4bc9de42cb55d57b5bdc158af318e3c6
 
-PODFILE CHECKSUM: 53a6aebc29ccee84c41f92f409fc20cd4ca011f1
+PODFILE CHECKSUM: 629099a43d460feaf6a67bcce4f1f26cfe8fdec5
 
 COCOAPODS: 1.17.0

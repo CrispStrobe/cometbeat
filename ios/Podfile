@@ -30,6 +30,15 @@ flutter_ios_podfile_setup
 target 'Runner' do
   use_frameworks!
 
+  # ONNX Runtime: Microsoft's CocoaPods archive host returns 404 for every
+  # version, which blocks `pod install` (the `onnxruntime` Flutter plugin pins
+  # onnxruntime-objc 1.15.1). Use the fdddf/onnxruntime-spm mirror instead: the
+  # C framework from its GitHub Release, the Objective-C bindings from its repo.
+  # The local podspecs are labelled 1.15.1 to satisfy the plugin's pin; ORT
+  # keeps the C ABI stable within 1.x.
+  pod 'onnxruntime-c', :podspec => 'Podspecs/onnxruntime-c.podspec.json'
+  pod 'onnxruntime-objc', :podspec => 'Podspecs/onnxruntime-objc.podspec.json'
+
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
