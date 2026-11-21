@@ -136,5 +136,10 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: cometbeat/pages_site
           publish_branch: gh-pages
+          # Keep gh-pages at a single orphan commit. Without this, every deploy
+          # appends a full Flutter web build (~53 MB: main.dart.js, main.dart.wasm,
+          # canvaskit/) to the branch, which grew the repo to ~1 GB of history.
+          # force_orphan replaces the branch each run, so it never accumulates.
+          force_orphan: true
           # A Flutter web build has no Jekyll; .nojekyll is added by default.
           commit_message: "Deploy web build to Pages (${{ github.sha }})"
