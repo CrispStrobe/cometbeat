@@ -1418,10 +1418,11 @@ void main() {
   });
 
   testWidgets(
-      'step entry: entry octave is fixed, Shift adds to the chord, '
+      'step entry: entry octave is fixed, chord toggle stacks, '
       'Ctrl+arrow moves an octave, 0 rests', (tester) async {
     await pump(tester);
     final editor = _editor(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     List<int> midi() => [
           for (final m
               in scoreFromMusicXml(editor.debugMusicXmlExport()).measures)
@@ -1434,10 +1435,10 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
     await tester.pump();
     expect(midi(), [71, 60]);
-    // Shift+E stacks E4 on the C4.
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    // Only the explicit chord toggle stacks; E joins the C4.
+    await tester.tap(find.byTooltip(l10n.workshopChord));
+    await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pump();
     expect(midi(), [71, 60, 64]);
     // Ctrl+↓ moves the chord down an octave.
@@ -1461,10 +1462,6 @@ void main() {
     expect(
       stepEntryPitch(Step.g, 0, const Pitch(Step.c, octave: 5)).midiNumber,
       79,
-    );
-    expect(
-      chordTonePitch(Step.e, 0, const Pitch(Step.g)).midiNumber,
-      76,
     );
   });
 
@@ -1675,17 +1672,23 @@ void main() {
       await tester.pump();
     }
 
-    final midis = tester
+    final elements = tester
         .widget<MultiSystemView>(find.byType(MultiSystemView))
         .score
         .measures
         .expand((m) => m.elements)
         .whereType<NoteElement>()
-        .expand((e) => e.pitches)
-        .map((p) => p.midiNumber)
         .toList();
+    final midis = [
+      for (final e in elements) ...e.pitches.map((p) => p.midiNumber),
+    ];
 
-    expect(midis, hasLength(seq.length));
+    expect(elements, hasLength(seq.length), reason: 'one element per letter');
+    expect(
+      elements.every((e) => e.pitches.length == 1),
+      isTrue,
+      reason: 'no letter may be stacked into a chord',
+    );
     expect(
       midis.reduce(math.max) - midis.reduce(math.min),
       lessThan(12),
@@ -1694,6 +1697,32 @@ void main() {
     // The second pass is identical, not transposed up an octave.
     expect(midis.sublist(7, 14), midis.sublist(0, 7));
     expect(midis.last, midis.first);
+  });
+
+  testWidgets('Shift+letter inserts a note, never stacks a chord',
+      (tester) async {
+    await pump(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+
+    final elements = tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .toList();
+
+    expect(elements, hasLength(2), reason: 'Shift+letter is a new note');
+    expect(
+      elements.every((e) => e.pitches.length == 1),
+      isTrue,
+      reason: 'a held or stuck Shift must not turn the note into a chord',
+    );
   });
 
   testWidgets('part view shows one part alone, and back to the full score',

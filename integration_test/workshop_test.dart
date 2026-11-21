@@ -12,14 +12,25 @@
 // real desktop session or a CI runner with a display. The same flows are also
 // covered headlessly (and in CI) by test/composition_workshop_test.dart.
 
+import 'dart:io';
+import 'dart:math' as math;
+
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/main.dart' as app;
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart'
-    show InteractiveGrandStaffView;
+    show InteractiveGrandStaffView, MultiSystemView, NoteElement;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 CompositionWorkshopTester _editor(WidgetTester tester) =>
@@ -69,5 +80,109 @@ void main() {
     await tester.tap(find.text('𝄞𝄢').last);
     await tester.pumpAndSettle();
     expect(find.byType(InteractiveGrandStaffView), findsOneWidget);
+  });
+
+  testWidgets('typing cdefgabcdefgabc stays in one octave, never chords',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    // The real screen with real fonts, layout and audio on the real device.
+    // Pumped directly rather than navigated to, because a headless macOS run
+    // cannot foreground the window and pointer taps would be dropped.
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<AudioService>(create: (_) => AudioService()),
+          ChangeNotifierProvider(create: (_) => UserSongsService()),
+          ChangeNotifierProvider(create: (_) => SettingsService()),
+          ChangeNotifierProvider(create: (_) => DawService()),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: [Locale('en'), Locale('de')],
+          home: CompositionWorkshopScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(CompositionWorkshopScreen), findsOneWidget);
+
+    final audio = Provider.of<AudioService>(
+      tester.element(find.byType(CompositionWorkshopScreen)),
+      listen: false,
+    );
+
+    // A headless test runner does not foreground its window, so the key events
+    // would be dropped. Bring the app to the front first (macOS only).
+    if (Platform.isMacOS) {
+      await Process.run(
+        'osascript',
+        ['-e', 'tell application "CometBeat" to activate'],
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    const seq = [
+      LogicalKeyboardKey.keyC,
+      LogicalKeyboardKey.keyD,
+      LogicalKeyboardKey.keyE,
+      LogicalKeyboardKey.keyF,
+      LogicalKeyboardKey.keyG,
+      LogicalKeyboardKey.keyA,
+      LogicalKeyboardKey.keyB,
+      LogicalKeyboardKey.keyC,
+      LogicalKeyboardKey.keyD,
+      LogicalKeyboardKey.keyE,
+      LogicalKeyboardKey.keyF,
+      LogicalKeyboardKey.keyG,
+      LogicalKeyboardKey.keyA,
+      LogicalKeyboardKey.keyB,
+      LogicalKeyboardKey.keyC,
+    ];
+    for (final k in seq) {
+      await tester.sendKeyEvent(k);
+      await tester.pump(const Duration(milliseconds: 40));
+    }
+
+    // Stop the note-preview player before the tree is disposed: audioplayers'
+    // position updater schedules frame callbacks that outlive the widget tree.
+    audio.dispose();
+    await tester.pump();
+
+    final elements = tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .toList();
+    final midis = [
+      for (final e in elements) ...e.pitches.map((p) => p.midiNumber),
+    ];
+
+    expect(
+      elements,
+      hasLength(seq.length),
+      reason: 'every typed letter is its own note',
+    );
+    expect(
+      elements.every((e) => e.pitches.length == 1),
+      isTrue,
+      reason: 'no letter may be stacked into a chord',
+    );
+    expect(
+      midis.reduce(math.max) - midis.reduce(math.min),
+      lessThan(12),
+      reason: 'all 15 notes stay inside one octave',
+    );
+    expect(
+      midis.sublist(7, 14),
+      midis.sublist(0, 7),
+      reason: 'the repeated run is identical, not transposed',
+    );
   });
 }

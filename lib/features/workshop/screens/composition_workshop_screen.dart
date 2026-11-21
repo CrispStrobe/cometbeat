@@ -279,17 +279,6 @@ final _digitBases = <LogicalKeyboardKey, DurationBase>{
 Pitch stepEntryPitch(Step step, int alter, Pitch? reference) =>
     Pitch(step, alter: alter, octave: reference?.octave ?? 4);
 
-/// A chord tone added by Shift+letter: [step] in the first octave above
-/// [top], the chord's highest note.
-@visibleForTesting
-Pitch chordTonePitch(Step step, int alter, Pitch top) {
-  for (var octave = top.octave; octave <= 9; octave++) {
-    final p = Pitch(step, alter: alter, octave: octave);
-    if (p.midiNumber > top.midiNumber) return p;
-  }
-  return Pitch(step, alter: alter, octave: top.octave + 1);
-}
-
 /// [p] moved by [octaves], preserving its spelling (step + accidental) and
 /// clamped to the playable octaves. Backs both typed entry's Option/Alt octave
 /// modifier and the touch 8va control.
@@ -2493,7 +2482,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   }
 
   /// Computer-keyboard entry, MuseScore Studio's way: A–G place notes in the
-  /// octave of the current entry line (Shift adds to the chord), 1–5 pick a
+  /// octave of the current entry line, 1–5 pick a
   /// value, arrows move the caret / pitch (Ctrl/⌘ by an octave), R or 0 a
   /// rest, T or + a tie, `.` a dot, Del/⌫ deletes, Ctrl/⌘ Z·Y·C·X·V for
   /// undo/redo/copy/cut/paste. Option/Alt+letter places that note an octave up
@@ -2575,20 +2564,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         return KeyEventResult.handled;
       }
       final germanFlat = _germanNaming && key == LogicalKeyboardKey.keyB;
-      final alter = germanFlat ? -1 : _entryAlter(step);
-      final selected = _doc.selected;
-      // Shift+letter stacks the note on the selected chord, above its top.
-      if (kb.isShiftPressed && selected != null && !selected.isRest) {
-        final top = selected.pitches.reduce(
-          (a, b) => a.midiNumber >= b.midiNumber ? a : b,
-        );
-        final pitch = chordTonePitch(step, alter, top);
-        _audio.playMidiNote(pitch.midiNumber, ms: 400);
-        _run(() => _doc.addPitchToSelected(pitch));
-        return KeyEventResult.handled;
-      }
       // Same octave as the entry line (plus the persistent/one-shot octave
       // shift): repeating a letter run never climbs.
+      //
+      // Deliberately no Shift+letter chord shortcut: a stuck/held Shift used to
+      // silently stack the next letter onto the previous note. Chord entry is
+      // the explicit chord toggle only.
       _placeTyped(step, alterOverride: germanFlat ? -1 : null);
       return KeyEventResult.handled;
     }
