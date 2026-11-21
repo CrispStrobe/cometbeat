@@ -10,6 +10,7 @@ import 'package:comet_beat/core/audio/loop_engine.dart' show PatternCell;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument;
 import 'package:comet_beat/core/interop/app_mode.dart';
+import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
@@ -1481,6 +1482,36 @@ void main() {
 
     // Clamped to the playable range rather than producing an invalid octave.
     expect(octaveShiftedPitch(const Pitch(Step.c, octave: 0), -4).octave, 0);
+  });
+
+  testWidgets('German naming: H is B natural and B is B♭', (tester) async {
+    await pump(tester);
+    final settings = Provider.of<SettingsService>(
+      tester.element(find.byType(CompositionWorkshopScreen)),
+      listen: false,
+    );
+    await settings.setNoteNaming(NoteNaming.germanH);
+    await tester.pump();
+
+    List<Pitch> placed() => tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .expand((e) => e.pitches)
+        .toList();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyH);
+    await tester.pump();
+    expect(placed().single.step, Step.b, reason: 'H is B natural');
+    expect(placed().single.alter, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyB);
+    await tester.pump();
+    expect(placed(), hasLength(2));
+    expect(placed().last.step, Step.b, reason: 'B is B-flat');
+    expect(placed().last.alter, -1);
   });
 
   testWidgets('part view shows one part alone, and back to the full score',

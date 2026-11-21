@@ -980,6 +980,16 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     }
   }
 
+  /// Whether typed letters follow German note names — H = B natural and B =
+  /// B♭ (MuseScore's convention), rather than both meaning B natural. True for
+  /// the explicit German setting, or `auto` under a German locale.
+  bool get _germanNaming =>
+      switch (context.read<SettingsService>().noteNaming) {
+        NoteNaming.germanH => true,
+        NoteNaming.auto => Localizations.localeOf(context).languageCode == 'de',
+        NoteNaming.english || NoteNaming.solfege => false,
+      };
+
   /// The clef to interpret a staff position under: in grand mode it depends on
   /// which staff was hit (0 = treble, 1 = bass); otherwise the document clef.
   Clef _clefForTarget(StaffTarget t) =>
@@ -1227,13 +1237,14 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       });
 
   /// Place a typed letter. [octaveShift] is the one-shot Alt/Option modifier;
-  /// [_entryOctaveShift] is the persistent 8va setting. Spelling is preserved —
-  /// a shifted C is still C, an octave away — so the accidental stays right.
-  void _placeTyped(Step step, {int octaveShift = 0}) {
+  /// [_entryOctaveShift] is the persistent 8va setting. [alterOverride] lets a
+  /// German B mean B♭ regardless of the accidental strip. Spelling is preserved
+  /// — a shifted C is still C, an octave away — so the accidental stays right.
+  void _placeTyped(Step step, {int octaveShift = 0, int? alterOverride}) {
     final selected = _doc.selected;
     final base = stepEntryPitch(
       step,
-      _alterOf(_accidental),
+      alterOverride ?? _alterOf(_accidental),
       selected?.pitch ?? _doc.clef.pitchAt(4),
     );
     final octaves = octaveShift + _entryOctaveShift;
@@ -2472,16 +2483,29 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         _shiftEntryOctave(-1);
         return KeyEventResult.handled;
       }
-      final physStep = _physicalLetterSteps[event.physicalKey];
+      // Option+letter = an octave up; Option+Shift+letter = an octave down.
+      final oct = kb.isShiftPressed ? -1 : 1;
+      final phys = event.physicalKey;
+      // German: H is B natural, B is B♭.
+      if (_germanNaming && phys == PhysicalKeyboardKey.keyB) {
+        _placeTyped(Step.b, octaveShift: oct, alterOverride: -1);
+        return KeyEventResult.handled;
+      }
+      if (_germanNaming && phys == PhysicalKeyboardKey.keyH) {
+        _placeTyped(Step.b, octaveShift: oct);
+        return KeyEventResult.handled;
+      }
+      final physStep = _physicalLetterSteps[phys];
       if (physStep != null) {
-        // Option+letter = an octave up; Option+Shift+letter = an octave down.
-        _placeTyped(physStep, octaveShift: kb.isShiftPressed ? -1 : 1);
+        _placeTyped(physStep, octaveShift: oct);
         return KeyEventResult.handled;
       }
       return KeyEventResult.ignored;
     }
 
-    final step = _letterSteps[key];
+    // German input spells H as B natural and B as B♭ (see [_germanNaming]).
+    final step = _letterSteps[key] ??
+        (_germanNaming && key == LogicalKeyboardKey.keyH ? Step.b : null);
     if (step != null) {
       // Select mode: typing navigates instead of entering notes — a letter jumps
       // to the next note on that pitch (keyboard-first navigation, Cause 2).
@@ -2492,7 +2516,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         });
         return KeyEventResult.handled;
       }
-      final alter = _alterOf(_accidental);
+      final germanFlat = _germanNaming && key == LogicalKeyboardKey.keyB;
+      final alter = germanFlat ? -1 : _alterOf(_accidental);
       final selected = _doc.selected;
       // Shift+letter stacks the note on the selected chord, above its top.
       if (kb.isShiftPressed && selected != null && !selected.isRest) {
@@ -2507,7 +2532,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       // Nearest the previous note (plus the persistent/one-shot octave shift);
       // the first note, nearest the staff's middle line (B4 in treble, D3 in
       // bass).
-      _placeTyped(step);
+      _placeTyped(step, alterOverride: germanFlat ? -1 : null);
       return KeyEventResult.handled;
     }
     final base = _digitBases[key];
