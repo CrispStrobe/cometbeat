@@ -1364,6 +1364,24 @@ abstract class AppLocalizations {
   /// **'Move pitch an octave up / down'**
   String get workshopShortcutOctave;
 
+  /// No description provided for @workshopOctaveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Place notes an octave higher'**
+  String get workshopOctaveUp;
+
+  /// No description provided for @workshopOctaveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Place notes an octave lower'**
+  String get workshopOctaveDown;
+
+  /// No description provided for @workshopOctaveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note-entry octave (tap to reset)'**
+  String get workshopOctaveLabel;
+
   /// No description provided for @workshopShortcutNoteValue.
   ///
   /// In en, this message translates to:

@@ -728,6 +728,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopShortcutOctave => 'Tonhöhe um eine Oktave hoch / runter';
 
   @override
+  String get workshopOctaveUp => 'Noten eine Oktave höher setzen';
+
+  @override
+  String get workshopOctaveDown => 'Noten eine Oktave tiefer setzen';
+
+  @override
+  String get workshopOctaveLabel => 'Eingabe-Oktave (zum Zurücksetzen tippen)';
+
+  @override
   String get workshopShortcutNoteValue => 'Notenwert (ganze … Sechzehntel)';
 
   @override

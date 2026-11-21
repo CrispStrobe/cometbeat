@@ -242,6 +242,19 @@ final _letterSteps = <LogicalKeyboardKey, Step>{
   LogicalKeyboardKey.keyF: Step.f,
   LogicalKeyboardKey.keyG: Step.g,
 };
+
+// The same letters by PHYSICAL position, for the Option/Alt octave modifier.
+// Option+A on macOS composes "å", so `logicalKey` is not `keyA`; the physical
+// key is what still identifies the letter the player pressed.
+final _physicalLetterSteps = <PhysicalKeyboardKey, Step>{
+  PhysicalKeyboardKey.keyA: Step.a,
+  PhysicalKeyboardKey.keyB: Step.b,
+  PhysicalKeyboardKey.keyC: Step.c,
+  PhysicalKeyboardKey.keyD: Step.d,
+  PhysicalKeyboardKey.keyE: Step.e,
+  PhysicalKeyboardKey.keyF: Step.f,
+  PhysicalKeyboardKey.keyG: Step.g,
+};
 final _digitBases = <LogicalKeyboardKey, DurationBase>{
   LogicalKeyboardKey.digit1: DurationBase.whole,
   LogicalKeyboardKey.digit2: DurationBase.half,
@@ -276,6 +289,18 @@ Pitch chordTonePitch(Step step, int alter, Pitch top) {
   }
   return Pitch(step, alter: alter, octave: top.octave + 1);
 }
+
+/// [p] moved by [octaves], preserving its spelling (step + accidental) and
+/// clamped to the playable octaves. Backs both typed entry's Option/Alt octave
+/// modifier and the touch 8va control.
+@visibleForTesting
+Pitch octaveShiftedPitch(Pitch p, int octaves) => octaves == 0
+    ? p
+    : Pitch(
+        p.step,
+        alter: p.alter,
+        octave: (p.octave + octaves).clamp(0, 9),
+      );
 
 // ---- File I/O (unified, multi-format) ------------------------------------
 
@@ -744,6 +769,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         }
       });
   bool _chordMode = false; // placed pitches stack onto the selected note
+
+  /// Octaves added to letter-key entry (Alt/Option, or the touch 8va control).
+  /// The piano stays absolute — it already spans octaves — so this affects typed
+  /// notes only.
+  int _entryOctaveShift = 0;
+  static const _maxEntryOctaveShift = 4;
   bool _barNumbers = false; // label each wrapped system with its bar number
   bool _noteNames = false; // draw each note's name below the staff
   String _scoreTitle = '';
@@ -1187,6 +1218,27 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   }
 
   void _onPianoKey(int midi) => _placePitch(pitchFromMidi(midi));
+
+  /// Adjust the persistent octave applied to letter-key entry (the touch 8va
+  /// control and Alt/Option+↑/↓). Clamped so a note always stays in MIDI range.
+  void _shiftEntryOctave(int delta) => setState(() {
+        _entryOctaveShift = (_entryOctaveShift + delta)
+            .clamp(-_maxEntryOctaveShift, _maxEntryOctaveShift);
+      });
+
+  /// Place a typed letter. [octaveShift] is the one-shot Alt/Option modifier;
+  /// [_entryOctaveShift] is the persistent 8va setting. Spelling is preserved —
+  /// a shifted C is still C, an octave away — so the accidental stays right.
+  void _placeTyped(Step step, {int octaveShift = 0}) {
+    final selected = _doc.selected;
+    final base = stepEntryPitch(
+      step,
+      _alterOf(_accidental),
+      selected?.pitch ?? _doc.clef.pitchAt(4),
+    );
+    final octaves = octaveShift + _entryOctaveShift;
+    _placePitch(octaveShiftedPitch(base, octaves));
+  }
 
   // ── Shared-tune bridge (MelodyBridge): trade a groove riff both ways ────────
   // PULL: a tune built on the 16-step grid (Loop Mixer / Tracker / Live Looper)
@@ -2375,7 +2427,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// octave nearest the previous one (Shift adds to the chord), 1–5 pick a
   /// value, arrows move the caret / pitch (Ctrl/⌘ by an octave), R or 0 a
   /// rest, T or + a tie, `.` a dot, Del/⌫ deletes, Ctrl/⌘ Z·Y·C·X·V for
-  /// undo/redo/copy/cut/paste.
+  /// undo/redo/copy/cut/paste. Option/Alt+letter places that note an octave up
+  /// (with Shift, an octave down), and Option/Alt+↑/↓ moves the entry octave
+  /// the touch 8va control also sets.
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     // While the inline lyric field is being typed into, let every key reach it
@@ -2406,6 +2460,27 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       return KeyEventResult.handled;
     }
 
+    // Option/Alt: octave placement. Letters go by PHYSICAL key because Option+A
+    // composes "å" on macOS, so `logicalKey` is not `keyA`. ↑/↓ move the
+    // persistent entry octave, mirroring the touch 8va control.
+    if (kb.isAltPressed) {
+      if (key == LogicalKeyboardKey.arrowUp) {
+        _shiftEntryOctave(1);
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowDown) {
+        _shiftEntryOctave(-1);
+        return KeyEventResult.handled;
+      }
+      final physStep = _physicalLetterSteps[event.physicalKey];
+      if (physStep != null) {
+        // Option+letter = an octave up; Option+Shift+letter = an octave down.
+        _placeTyped(physStep, octaveShift: kb.isShiftPressed ? -1 : 1);
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
     final step = _letterSteps[key];
     if (step != null) {
       // Select mode: typing navigates instead of entering notes — a letter jumps
@@ -2429,11 +2504,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         _run(() => _doc.addPitchToSelected(pitch));
         return KeyEventResult.handled;
       }
-      // Nearest the previous note; the first note, nearest the staff's
-      // middle line (B4 in the treble clef, D3 in the bass).
-      _placePitch(
-        stepEntryPitch(step, alter, selected?.pitch ?? _doc.clef.pitchAt(4)),
-      );
+      // Nearest the previous note (plus the persistent/one-shot octave shift);
+      // the first note, nearest the staff's middle line (B4 in treble, D3 in
+      // bass).
+      _placeTyped(step);
       return KeyEventResult.handled;
     }
     final base = _digitBases[key];
@@ -4540,6 +4614,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                 onChord: () => setState(() => _chordMode = !_chordMode),
                 marquee: _marquee,
                 onMarquee: () => setState(() => _marquee = !_marquee),
+                entryOctave: _entryOctaveShift,
+                onOctaveUp: () => _shiftEntryOctave(1),
+                onOctaveDown: () => _shiftEntryOctave(-1),
+                onOctaveReset: () => setState(() => _entryOctaveShift = 0),
                 onSelectPrev: () => _run(_doc.selectPrev),
                 onSelectNext: () => _run(_doc.selectNext),
                 onExtendLeft: () => _run(_doc.extendLeft),
@@ -5006,6 +5084,10 @@ class _InputBar extends StatelessWidget {
     required this.onChord,
     required this.marquee,
     required this.onMarquee,
+    required this.entryOctave,
+    required this.onOctaveUp,
+    required this.onOctaveDown,
+    required this.onOctaveReset,
     required this.onSelectPrev,
     required this.onSelectNext,
     required this.onExtendLeft,
@@ -5033,6 +5115,8 @@ class _InputBar extends StatelessWidget {
   final VoidCallback onToggleDot, onRest, onChord, onMarquee;
   final bool chordMode;
   final bool marquee;
+  final int entryOctave;
+  final VoidCallback onOctaveUp, onOctaveDown, onOctaveReset;
   final ValueChanged<_Accidental> onPickAccidental;
   final VoidCallback onSelectPrev, onSelectNext, onExtendLeft, onExtendRight;
   final VoidCallback onUp, onDown, onMoveLeft, onMoveRight;
@@ -5095,6 +5179,23 @@ class _InputBar extends StatelessWidget {
                 tooltip: l10n.workshopMarquee,
                 child: const Icon(Icons.highlight_alt, size: 22),
               ),
+              const _Sep(),
+              _act(Icons.remove, l10n.workshopOctaveDown, onOctaveDown),
+              _GlyphButton(
+                selected: entryOctave != 0,
+                onTap: onOctaveReset,
+                tooltip: l10n.workshopOctaveLabel,
+                child: Text(
+                  entryOctave == 0
+                      ? '8va'
+                      : '8va${entryOctave > 0 ? '+' : ''}$entryOctave',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              _act(Icons.add, l10n.workshopOctaveUp, onOctaveUp),
               if (hasSelection) ...[
                 const _Sep(),
                 _act(Icons.chevron_left, l10n.workshopSelectPrev, onSelectPrev),

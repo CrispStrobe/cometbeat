@@ -727,6 +727,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopShortcutOctave => 'Move pitch an octave up / down';
 
   @override
+  String get workshopOctaveUp => 'Place notes an octave higher';
+
+  @override
+  String get workshopOctaveDown => 'Place notes an octave lower';
+
+  @override
+  String get workshopOctaveLabel => 'Note-entry octave (tap to reset)';
+
+  @override
   String get workshopShortcutNoteValue => 'Note value (whole … sixteenth)';
 
   @override

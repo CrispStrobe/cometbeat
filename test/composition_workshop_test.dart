@@ -1468,6 +1468,21 @@ void main() {
     );
   });
 
+  test('octaveShiftedPitch preserves spelling and clamps', () {
+    const c4 = Pitch(Step.c);
+    expect(octaveShiftedPitch(c4, 1).midiNumber, 72);
+    expect(octaveShiftedPitch(c4, 1).step, Step.c);
+    expect(octaveShiftedPitch(c4, -1).midiNumber, 48);
+
+    // An accidental stays attached to the same note name.
+    const fs4 = Pitch(Step.f, alter: 1);
+    expect(octaveShiftedPitch(fs4, 1).midiNumber, 78);
+    expect(octaveShiftedPitch(fs4, 1).alter, 1);
+
+    // Clamped to the playable range rather than producing an invalid octave.
+    expect(octaveShiftedPitch(const Pitch(Step.c, octave: 0), -4).octave, 0);
+  });
+
   testWidgets('part view shows one part alone, and back to the full score',
       (tester) async {
     await pump(tester);
