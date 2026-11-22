@@ -43,6 +43,19 @@ editor and project browser — are off the home bar on a new install, so a young
 child gets the learning app only. Turn them on under Settings ▸ Studio tools.
 An install that predates the switch keeps them.
 
+## Help in the app
+
+Every complex surface has an in-app guide behind a **`(?)`** action: Home,
+Score Workshop, Tab Workshop, Transcribe, Practice with your song, Tracker,
+Perform, Chart editor, Sound Lab, Voice Lab, Song Book, Library, Mixer,
+Setlist, Gig mode, Tuner, Sample Extractor and Import. The Audio Editor has its
+own guide sheet, and every minigame has a tutorial behind its `?`. Dismissable
+warnings use **(X)**; an **(i)** explains a single option or status in place.
+
+The editor conventions — fixed entry octave, octave modifiers, the three ways to
+build a chord, key-aware accidentals, and the full shortcut table — are written
+up in **[docs/WORKSHOP_GUIDE.md](docs/WORKSHOP_GUIDE.md)**.
+
 **Learners** (Settings ▸ Learners): several children can share a device, each
 with their own stars, streak, review data, seen-tutorials and imported songs. A learner's
 progress can be backed up to a JSON file and restored; a restore always adds a
@@ -166,6 +179,9 @@ acceptance tests.
   `ScoreDocument` with 2 voices, clef/key/meter/tempo, ties, slurs, dynamics,
   lyrics, transposition); `buildMultiPart()` snapshots it to an immutable
   `MultiPartScore` for rendering + export. Imports/exports the formats above.
+  **New to the editor?** See
+  [docs/WORKSHOP_GUIDE.md](docs/WORKSHOP_GUIDE.md) for note entry, octaves,
+  chords, key-aware accidentals and every shortcut.
 - **Guitar tablature** — a touch-first tab editor (`TabDocument`) with a
   cost-based fret **arranger** (Viterbi over playable positions), plus the
   `tabconv` CLI. Reads GPIF `.gp3`/`.gp4`/`.gp5`/`.gpx`/`.gp` (and any
