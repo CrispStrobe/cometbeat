@@ -1,0 +1,23 @@
+CometBeat — bundled percussion one-shots
+=========================================
+
+These samples are from the Versilian Community Sample Library (VCSL) by
+Versilian Studios / Sam Gossner, released under the Creative Commons Zero
+1.0 Universal (CC0) Public Domain Dedication:
+
+    https://github.com/sgossner/VCSL   (SPDX: CC0-1.0)
+    https://creativecommons.org/publicdomain/zero/1.0/
+
+CC0 places the work in the public domain: you may copy, modify, distribute and
+use it, even commercially, with NO attribution required. This credit is kept
+voluntarily as good practice, not out of obligation.
+
+Files (converted to 16-bit mono 44.1 kHz WAV for the app; the underlying
+recordings are unchanged CC0 content):
+
+  snare.wav   — VCSL Membranophones / Legacy Snares (drum2)
+  rim.wav     — VCSL Membranophones / Legacy Snares (OldSnare rim)
+  shaker.wav  — VCSL Idiophones / Small Shaker
+  clave.wav   — VCSL Idiophones / Claves
+
+No trademarked names or branding are used.
