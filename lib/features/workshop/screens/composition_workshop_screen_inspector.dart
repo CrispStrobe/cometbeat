@@ -254,8 +254,9 @@ extension _WorkshopInspector on _CompositionWorkshopScreenState {
   /// authority on that.
   Widget _playabilityBanner(
     AppLocalizations l10n,
-    List<PlayabilityWarning> warnings,
-  ) {
+    List<PlayabilityWarning> warnings, {
+    required VoidCallback onDismiss,
+  }) {
     final theme = Theme.of(context);
     int count(PlayabilityIssue i) => warnings.where((w) => w.issue == i).length;
     final below = count(PlayabilityIssue.belowRange);
@@ -264,43 +265,65 @@ extension _WorkshopInspector on _CompositionWorkshopScreenState {
     return Container(
       width: double.infinity,
       color: theme.colorScheme.tertiaryContainer,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
+      padding: const EdgeInsets.only(left: 12, right: 4),
+      child: Row(
         children: [
-          Icon(
-            Icons.info_outline,
-            size: 16,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: theme.colorScheme.onTertiaryContainer,
+                  ),
+                  Text(
+                    _mpd.nameOf(_mpd.active),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer),
+                  ),
+                  if (below > 0)
+                    Text(
+                      l10n.workshopPlayBelowRange(below),
+                      key: const ValueKey<String>('workshop-play-below'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer,
+                      ),
+                    ),
+                  if (above > 0)
+                    Text(
+                      l10n.workshopPlayAboveRange(above),
+                      key: const ValueKey<String>('workshop-play-above'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer,
+                      ),
+                    ),
+                  if (reach > 0)
+                    Text(
+                      l10n.workshopPlayOutOfReach(reach),
+                      key: const ValueKey<String>('workshop-play-reach'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            key: const ValueKey<String>('workshop-play-dismiss'),
+            icon: const Icon(Icons.close, size: 18),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             color: theme.colorScheme.onTertiaryContainer,
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+            onPressed: onDismiss,
           ),
-          Text(
-            _mpd.nameOf(_mpd.active),
-            style: theme.textTheme.labelLarge
-                ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
-          ),
-          if (below > 0)
-            Text(
-              l10n.workshopPlayBelowRange(below),
-              key: const ValueKey<String>('workshop-play-below'),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
-            ),
-          if (above > 0)
-            Text(
-              l10n.workshopPlayAboveRange(above),
-              key: const ValueKey<String>('workshop-play-above'),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
-            ),
-          if (reach > 0)
-            Text(
-              l10n.workshopPlayOutOfReach(reach),
-              key: const ValueKey<String>('workshop-play-reach'),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
-            ),
         ],
       ),
     );

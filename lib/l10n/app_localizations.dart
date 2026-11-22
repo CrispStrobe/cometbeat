@@ -1322,17 +1322,23 @@ abstract class AppLocalizations {
   /// **'V1 and V2 are two independent voices on one staff (V1 stems up, V2 down). Pick which voice your input writes to.'**
   String get workshopHelpVoices;
 
+  /// No description provided for @workshopHelpOctave.
+  ///
+  /// In en, this message translates to:
+  /// **'Octave: Option/Alt + letter places that note an octave higher; add Shift for an octave lower. Option/Alt + ↑/↓ moves the entry octave — the 8va −/+ buttons do the same on touch, and tapping their readout resets it. To move an existing note instead, select it and use ↑/↓ (semitone) or Ctrl/⌘+↑/↓ (octave).'**
+  String get workshopHelpOctave;
+
   /// No description provided for @workshopHelpChord.
   ///
   /// In en, this message translates to:
   /// **'Chord: hold Shift and type a letter to add that note above the selected chord (MuseScore/Sibelius), or press Q to keep stacking plain letters at the same position (Dorico). On a touch screen, tap the chord (layers) button. The 8va control sets the added note\'s octave.'**
   String get workshopHelpChord;
 
-  /// No description provided for @workshopChordHelp.
+  /// No description provided for @workshopHelpButton.
   ///
   /// In en, this message translates to:
-  /// **'How chord entry works'**
-  String get workshopChordHelp;
+  /// **'Help: note entry, octaves, chords'**
+  String get workshopHelpButton;
 
   /// No description provided for @workshopChordToggle.
   ///
@@ -1375,6 +1381,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add a note to the chord'**
   String get workshopShortcutAddToChord;
+
+  /// No description provided for @workshopShortcutPlaceOctaveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the note an octave higher'**
+  String get workshopShortcutPlaceOctaveUp;
+
+  /// No description provided for @workshopShortcutPlaceOctaveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the note an octave lower'**
+  String get workshopShortcutPlaceOctaveDown;
+
+  /// No description provided for @workshopShortcutEntryOctave.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the note-entry octave'**
+  String get workshopShortcutEntryOctave;
 
   /// No description provided for @workshopShortcutOctave.
   ///

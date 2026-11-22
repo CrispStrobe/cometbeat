@@ -361,6 +361,7 @@ void main() {
 
     // A "Controls" section with plain-language explanations…
     expect(find.text(l10n.workshopHelpControls), findsOneWidget);
+    expect(find.text(l10n.workshopHelpOctave), findsOneWidget);
     expect(find.text(l10n.workshopHelpChord), findsOneWidget);
     expect(find.text(l10n.workshopHelpMarquee), findsOneWidget);
     expect(find.text(l10n.workshopHelpAnalysis), findsOneWidget);
@@ -368,19 +369,58 @@ void main() {
     expect(find.text(l10n.workshopShortcuts), findsOneWidget);
   });
 
-  testWidgets('the chord (?) button explains how stacking works',
+  testWidgets('the (?) button explains octaves, chords and shortcuts',
       (tester) async {
     await pump(tester);
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
-    await tester.ensureVisible(find.byTooltip(l10n.workshopChordHelp));
-    await tester.tap(find.byTooltip(l10n.workshopChordHelp));
+    await tester.ensureVisible(find.byTooltip(l10n.workshopHelpButton));
+    await tester.tap(find.byTooltip(l10n.workshopHelpButton));
     await tester.pumpAndSettle();
 
+    // The generic help covers octave entry as well as chords…
+    expect(find.text(l10n.workshopHelpOctave), findsOneWidget);
     expect(find.text(l10n.workshopHelpChord), findsOneWidget);
-    // Both notation-app shortcuts are listed.
+    // …and lists the shortcuts for both.
+    expect(find.text(l10n.workshopShortcutPlaceOctaveUp), findsOneWidget);
+    expect(find.text(l10n.workshopShortcutPlaceOctaveDown), findsOneWidget);
     expect(find.text(l10n.workshopShortcutAddToChord), findsOneWidget);
     expect(find.text(l10n.workshopChordToggle), findsOneWidget);
+  });
+
+  testWidgets('a playability warning can be dismissed and returns on change',
+      (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    editor.debugRenamePart(0, 'Cello');
+    await tester.pump();
+
+    // C4 dropped three octaves is C1 — below the cello's low C2.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.pump();
+    for (var i = 0; i < 3; i++) {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+    }
+    expect(
+      find.byKey(const ValueKey('workshop-play-below')),
+      findsOneWidget,
+    );
+
+    // The (X) hides it…
+    await tester.tap(find.byKey(const ValueKey('workshop-play-dismiss')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('workshop-play-below')), findsNothing);
+
+    // …but a NEW out-of-range note changes the warning set, so it returns.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('workshop-play-below')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Analysis tints reach the multi-part full-score canvas',

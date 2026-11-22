@@ -634,6 +634,9 @@ abstract interface class CompositionWorkshopTester {
   /// foregrounded window, so `autofocus` alone is not enough).
   void debugFocusEntry();
 
+  /// Test seam: rename part [i] (playability keys off the instrument name).
+  void debugRenamePart(int i, String name);
+
   /// WS-X2 test seam: land [score]'s parts as new parts, as a drop does.
   void addDroppedParts(MultiPartScore score);
 
@@ -751,6 +754,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   @override
   void debugFocusEntry() => _entryFocus.requestFocus();
 
+  @override
+  void debugRenamePart(int i, String name) =>
+      setState(() => _mpd.setPartName(i, name));
+
   DurationBase _pendingBase = DurationBase.quarter;
   bool _dotted = false;
   _Accidental _accidental = _Accidental.auto;
@@ -799,6 +806,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// because a headless runner cannot foreground the window, so `autofocus`
   /// alone does not make key events land.
   final FocusNode _entryFocus = FocusNode();
+
+  /// The playability warning the user dismissed, by signature. A changed set of
+  /// warnings (another note out of range, a different part) shows it again.
+  String? _dismissedPlayability;
   bool _barNumbers = false; // label each wrapped system with its bar number
   bool _noteNames = false; // draw each note's name below the staff
   String _scoreTitle = '';
@@ -3790,6 +3801,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       ('A – G', l10n.workshopShortcutPlaceNote),
       ('⇧  A – G', l10n.workshopShortcutAddToChord),
       ('Q', l10n.workshopChordToggle),
+      ('⌥  A – G', l10n.workshopShortcutPlaceOctaveUp),
+      ('⌥ ⇧  A – G', l10n.workshopShortcutPlaceOctaveDown),
+      ('⌥  ↑ ↓', l10n.workshopShortcutEntryOctave),
       ('1 – 5', l10n.workshopShortcutNoteValue),
       ('R  0', l10n.workshopRest),
       ('T  +', l10n.workshopTie),
@@ -3807,6 +3821,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final concepts = <String>[
       l10n.workshopHelpModes,
       l10n.workshopHelpVoices,
+      l10n.workshopHelpOctave,
       l10n.workshopHelpChord,
       l10n.workshopHelpMarquee,
       l10n.workshopHelpLoopSel,
@@ -3949,6 +3964,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     // note by its chord's function. Computed from the built score so it sees
     // ties/rests/voices; small scores make this cheap enough per rebuild.
     final ScoreAnalysis? analysis = _showAnalysis ? analyze(score) : null;
+    // Playability warnings for the active part. The signature lets a dismissed
+    // banner stay hidden until the set of problems actually changes.
+    final playability = _playabilityOf(_mpd.active);
+    final playabilityKey = playability.isEmpty
+        ? null
+        : '${_mpd.active}:'
+            '${playability.map((w) => '${w.issue.name}:${w.elementId}').join('|')}';
     // The harmony/voice colour layer, keyed by the active part's element ids.
     // Selection + playback are layered on top of it for the single-part views;
     // the multi-part canvas applies those via highlightedIds instead, so it
@@ -4451,8 +4473,15 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               // Live harmonic analysis banner (Analysis toggle): key + roman
               // progression + cadences, computed from the active part.
               if (analysis != null) _analysisBanner(l10n, analysis),
-              if (_playabilityOf(_mpd.active) case final w when w.isNotEmpty)
-                _playabilityBanner(l10n, w),
+              if (playability.isNotEmpty &&
+                  playabilityKey != _dismissedPlayability)
+                _playabilityBanner(
+                  l10n,
+                  playability,
+                  onDismiss: () => setState(
+                    () => _dismissedPlayability = playabilityKey,
+                  ),
+                ),
               // Row A — compact settings + status.
               // Score canvas — multi-line, vertical scroll. In Studio the
               // inspector docks to its right (Cause 3); off by default.
@@ -5288,8 +5317,8 @@ class _InputBar extends StatelessWidget {
                 tooltip: l10n.workshopChord,
                 child: const Icon(Icons.layers, size: 22),
               ),
-              // In-context help for chord entry (and the rest of the surface).
-              _act(Icons.help_outline, l10n.workshopChordHelp, onHelp),
+              // Generic in-context help: entry, octaves, chords, everything.
+              _act(Icons.help_outline, l10n.workshopHelpButton, onHelp),
               _GlyphButton(
                 selected: marquee,
                 onTap: onMarquee,

@@ -702,11 +702,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'V1 and V2 are two independent voices on one staff (V1 stems up, V2 down). Pick which voice your input writes to.';
 
   @override
+  String get workshopHelpOctave =>
+      'Octave: Option/Alt + letter places that note an octave higher; add Shift for an octave lower. Option/Alt + ↑/↓ moves the entry octave — the 8va −/+ buttons do the same on touch, and tapping their readout resets it. To move an existing note instead, select it and use ↑/↓ (semitone) or Ctrl/⌘+↑/↓ (octave).';
+
+  @override
   String get workshopHelpChord =>
       'Chord: hold Shift and type a letter to add that note above the selected chord (MuseScore/Sibelius), or press Q to keep stacking plain letters at the same position (Dorico). On a touch screen, tap the chord (layers) button. The 8va control sets the added note\'s octave.';
 
   @override
-  String get workshopChordHelp => 'How chord entry works';
+  String get workshopHelpButton => 'Help: note entry, octaves, chords';
 
   @override
   String get workshopChordToggle => 'Chord mode on / off';
@@ -732,6 +736,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workshopShortcutAddToChord => 'Add a note to the chord';
+
+  @override
+  String get workshopShortcutPlaceOctaveUp => 'Place the note an octave higher';
+
+  @override
+  String get workshopShortcutPlaceOctaveDown =>
+      'Place the note an octave lower';
+
+  @override
+  String get workshopShortcutEntryOctave => 'Move the note-entry octave';
 
   @override
   String get workshopShortcutOctave => 'Move pitch an octave up / down';

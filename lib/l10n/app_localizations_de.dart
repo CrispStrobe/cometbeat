@@ -703,11 +703,15 @@ class AppLocalizationsDe extends AppLocalizations {
       'V1 und V2 sind zwei unabhängige Stimmen auf einem System (V1 Hälse nach oben, V2 nach unten). Wähle, in welche Stimme deine Eingabe schreibt.';
 
   @override
+  String get workshopHelpOctave =>
+      'Oktave: Option/Alt + Buchstabe setzt den Ton eine Oktave höher; mit Shift eine Oktave tiefer. Option/Alt + ↑/↓ verschiebt die Eingabe-Oktave — die 8va −/+ Schaltflächen machen das auf dem Touchscreen, Tippen auf die Anzeige setzt sie zurück. Eine vorhandene Note verschiebst du stattdessen mit ↑/↓ (Halbton) oder Ctrl/⌘+↑/↓ (Oktave).';
+
+  @override
   String get workshopHelpChord =>
       'Akkord: Halte Shift und tippe einen Buchstaben, um den Ton über dem ausgewählten Akkord hinzuzufügen (MuseScore/Sibelius). Oder drücke Q, um weitere Buchstaben an derselben Stelle zu stapeln (Dorico). Auf dem Touchscreen: Akkord-Schaltfläche (Ebenen-Symbol). Die 8va-Steuerung wählt die Oktave des hinzugefügten Tons.';
 
   @override
-  String get workshopChordHelp => 'So funktioniert der Akkordmodus';
+  String get workshopHelpButton => 'Hilfe: Eingabe, Oktaven, Akkorde';
 
   @override
   String get workshopChordToggle => 'Akkordmodus ein / aus';
@@ -733,6 +737,16 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get workshopShortcutAddToChord => 'Note zum Akkord hinzufügen';
+
+  @override
+  String get workshopShortcutPlaceOctaveUp => 'Note eine Oktave höher setzen';
+
+  @override
+  String get workshopShortcutPlaceOctaveDown =>
+      'Note eine Oktave tiefer setzen';
+
+  @override
+  String get workshopShortcutEntryOctave => 'Eingabe-Oktave verschieben';
 
   @override
   String get workshopShortcutOctave => 'Tonhöhe um eine Oktave hoch / runter';
