@@ -703,6 +703,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'V1 und V2 sind zwei unabhängige Stimmen auf einem System (V1 Hälse nach oben, V2 nach unten). Wähle, in welche Stimme deine Eingabe schreibt.';
 
   @override
+  String get workshopHelpChord =>
+      'Akkord: Halte Shift und tippe einen Buchstaben, um den Ton über dem ausgewählten Akkord hinzuzufügen (MuseScore/Sibelius). Oder drücke Q, um weitere Buchstaben an derselben Stelle zu stapeln (Dorico). Auf dem Touchscreen: Akkord-Schaltfläche (Ebenen-Symbol). Die 8va-Steuerung wählt die Oktave des hinzugefügten Tons.';
+
+  @override
+  String get workshopChordHelp => 'So funktioniert der Akkordmodus';
+
+  @override
+  String get workshopChordToggle => 'Akkordmodus ein / aus';
+
+  @override
   String get workshopHelpMarquee =>
       'Auswahlrahmen: Ziehe ein Rechteck über das System, um alle Noten darin auszuwählen.';
 

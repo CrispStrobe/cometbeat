@@ -1322,6 +1322,24 @@ abstract class AppLocalizations {
   /// **'V1 and V2 are two independent voices on one staff (V1 stems up, V2 down). Pick which voice your input writes to.'**
   String get workshopHelpVoices;
 
+  /// No description provided for @workshopHelpChord.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord: hold Shift and type a letter to add that note above the selected chord (MuseScore/Sibelius), or press Q to keep stacking plain letters at the same position (Dorico). On a touch screen, tap the chord (layers) button. The 8va control sets the added note\'s octave.'**
+  String get workshopHelpChord;
+
+  /// No description provided for @workshopChordHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'How chord entry works'**
+  String get workshopChordHelp;
+
+  /// No description provided for @workshopChordToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord mode on / off'**
+  String get workshopChordToggle;
+
   /// No description provided for @workshopHelpMarquee.
   ///
   /// In en, this message translates to:

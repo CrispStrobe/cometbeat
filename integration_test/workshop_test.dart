@@ -111,6 +111,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(CompositionWorkshopScreen), findsOneWidget);
 
+    // Focus the real entry surface explicitly: the runner's window is not
+    // foregrounded, so autofocus alone leaves key events undelivered.
+    final editor = tester.state<State<CompositionWorkshopScreen>>(
+      find.byType(CompositionWorkshopScreen),
+    ) as CompositionWorkshopTester;
+    editor.debugFocusEntry();
+    await tester.pump();
+
     final audio = Provider.of<AudioService>(
       tester.element(find.byType(CompositionWorkshopScreen)),
       listen: false,
@@ -148,11 +156,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 40));
     }
 
-    // Stop the note-preview player before the tree is disposed: audioplayers'
-    // position updater schedules frame callbacks that outlive the widget tree.
-    audio.dispose();
-    await tester.pump();
-
     final elements = tester
         .widget<MultiSystemView>(find.byType(MultiSystemView))
         .score
@@ -183,6 +186,39 @@ void main() {
       midis.sublist(7, 14),
       midis.sublist(0, 7),
       reason: 'the repeated run is identical, not transposed',
+    );
+
+    // Shift+E adds E above the selected (last) C: MuseScore/Sibelius style.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump(const Duration(milliseconds: 40));
+
+    // Q turns Dorico-style chord mode on; G joins the same chord; Q off.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyQ);
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyQ);
+    await tester.pump(const Duration(milliseconds: 40));
+
+    // Stop the note-preview player before the tree is disposed: audioplayers'
+    // position updater schedules frame callbacks that outlive the widget tree.
+    audio.dispose();
+    await tester.pump();
+
+    final chorded = tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .toList();
+    expect(chorded, hasLength(15), reason: 'chord tones join, not advance');
+    expect(
+      chorded.last.pitches.length,
+      3,
+      reason: 'C + Shift+E + chord-mode G stacked on one stem',
     );
   });
 }

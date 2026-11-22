@@ -279,6 +279,17 @@ final _digitBases = <LogicalKeyboardKey, DurationBase>{
 Pitch stepEntryPitch(Step step, int alter, Pitch? reference) =>
     Pitch(step, alter: alter, octave: reference?.octave ?? 4);
 
+/// The first [step] above [top] — the MuseScore/Sibelius `Shift+A–G` "add a
+/// note to the chord" behaviour. Spelling is preserved.
+@visibleForTesting
+Pitch chordTonePitch(Step step, int alter, Pitch top) {
+  for (var octave = top.octave; octave <= 9; octave++) {
+    final p = Pitch(step, alter: alter, octave: octave);
+    if (p.midiNumber > top.midiNumber) return p;
+  }
+  return Pitch(step, alter: alter, octave: top.octave + 1);
+}
+
 /// [p] moved by [octaves], preserving its spelling (step + accidental) and
 /// clamped to the playable octaves. Backs both typed entry's Option/Alt octave
 /// modifier and the touch 8va control.
@@ -619,6 +630,10 @@ abstract interface class CompositionWorkshopTester {
   /// Test seam: set the active part's key signature (circle-of-fifths fifths).
   void debugSetKey(int fifths);
 
+  /// Test seam: focus the keyboard entry surface (a live runner has no
+  /// foregrounded window, so `autofocus` alone is not enough).
+  void debugFocusEntry();
+
   /// WS-X2 test seam: land [score]'s parts as new parts, as a drop does.
   void addDroppedParts(MultiPartScore score);
 
@@ -733,6 +748,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   void debugSetKey(int fifths) =>
       setState(() => _doc.setKeySignature(KeySignature(fifths)));
 
+  @override
+  void debugFocusEntry() => _entryFocus.requestFocus();
+
   DurationBase _pendingBase = DurationBase.quarter;
   bool _dotted = false;
   _Accidental _accidental = _Accidental.auto;
@@ -776,6 +794,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// the 8va control transposes the SAME line rather than compounding on each
   /// already-shifted note (which walked an octave per keystroke).
   Pitch? _entryLogicalPitch;
+
+  /// Focus for the keyboard entry surface. Exposed to the live integration test
+  /// because a headless runner cannot foreground the window, so `autofocus`
+  /// alone does not make key events land.
+  final FocusNode _entryFocus = FocusNode();
   bool _barNumbers = false; // label each wrapped system with its bar number
   bool _noteNames = false; // draw each note's name below the staff
   String _scoreTitle = '';
@@ -958,6 +981,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   void dispose() {
     _playTimer?.cancel();
     _pianoScroll.dispose();
+    _entryFocus.dispose();
     _mpd.dispose();
     super.dispose();
   }
@@ -2485,7 +2509,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// octave of the current entry line, 1–5 pick a
   /// value, arrows move the caret / pitch (Ctrl/⌘ by an octave), R or 0 a
   /// rest, T or + a tie, `.` a dot, Del/⌫ deletes, Ctrl/⌘ Z·Y·C·X·V for
-  /// undo/redo/copy/cut/paste. Option/Alt+letter places that note an octave up
+  /// undo/redo/copy/cut/paste. Shift+A–G adds the note above the selected
+  /// chord (MuseScore/Sibelius); Q toggles chord mode (Dorico) so plain letters
+  /// keep stacking. Option/Alt+letter places that note an octave up
   /// (with Shift, an octave down), and Option/Alt+↑/↓ moves the entry octave
   /// the touch 8va control also sets.
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
@@ -2564,12 +2590,28 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         return KeyEventResult.handled;
       }
       final germanFlat = _germanNaming && key == LogicalKeyboardKey.keyB;
+      final alter = germanFlat ? -1 : _entryAlter(step);
+      // Chord building, the notation-app way: Shift+letter adds the note ABOVE
+      // the selected chord (MuseScore/Sibelius). Q toggles sticky chord mode,
+      // where plain letters keep adding to the selection (Dorico); the touch
+      // chord button does the same. Shift only acts when chord mode is off, so
+      // the two modes never fight.
+      final selected = _doc.selected;
+      if (!_chordMode &&
+          kb.isShiftPressed &&
+          selected != null &&
+          !selected.isRest) {
+        final top = selected.pitches.reduce(
+          (a, b) => a.midiNumber >= b.midiNumber ? a : b,
+        );
+        final pitch = chordTonePitch(step, alter, top);
+        _audio.playMidiNote(pitch.midiNumber, ms: 400);
+        _run(() => _doc.addPitchToSelected(pitch));
+        return KeyEventResult.handled;
+      }
       // Same octave as the entry line (plus the persistent/one-shot octave
-      // shift): repeating a letter run never climbs.
-      //
-      // Deliberately no Shift+letter chord shortcut: a stuck/held Shift used to
-      // silently stack the next letter onto the previous note. Chord entry is
-      // the explicit chord toggle only.
+      // shift): repeating a letter run never climbs. In chord mode this stacks
+      // onto the selection instead of advancing.
       _placeTyped(step, alterOverride: germanFlat ? -1 : null);
       return KeyEventResult.handled;
     }
@@ -2599,6 +2641,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         _run(_doc.toggleTieOfSelected);
       case LogicalKeyboardKey.keyS:
         _run(_doc.slurSelected);
+      case LogicalKeyboardKey.keyQ:
+        setState(() => _chordMode = !_chordMode);
       case LogicalKeyboardKey.period:
         _toggleDot();
       default:
@@ -3745,6 +3789,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final rows = <(String, String)>[
       ('A – G', l10n.workshopShortcutPlaceNote),
       ('⇧  A – G', l10n.workshopShortcutAddToChord),
+      ('Q', l10n.workshopChordToggle),
       ('1 – 5', l10n.workshopShortcutNoteValue),
       ('R  0', l10n.workshopRest),
       ('T  +', l10n.workshopTie),
@@ -3762,6 +3807,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final concepts = <String>[
       l10n.workshopHelpModes,
       l10n.workshopHelpVoices,
+      l10n.workshopHelpChord,
       l10n.workshopHelpMarquee,
       l10n.workshopHelpLoopSel,
       l10n.workshopHelpAnalysis,
@@ -3998,6 +4044,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         if (!didPop) _handleExit();
       },
       child: Focus(
+        focusNode: _entryFocus,
         autofocus: true,
         onKeyEvent: _handleKey,
         child: Scaffold(
@@ -4675,6 +4722,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                 onRest: _addRest,
                 chordMode: _chordMode,
                 onChord: () => setState(() => _chordMode = !_chordMode),
+                onHelp: () => _showShortcuts(l10n),
                 marquee: _marquee,
                 onMarquee: () => setState(() => _marquee = !_marquee),
                 entryOctave: _entryOctaveShift,
@@ -5145,6 +5193,7 @@ class _InputBar extends StatelessWidget {
     required this.onRest,
     required this.chordMode,
     required this.onChord,
+    required this.onHelp,
     required this.marquee,
     required this.onMarquee,
     required this.entryOctave,
@@ -5176,6 +5225,7 @@ class _InputBar extends StatelessWidget {
   final bool hasSelection, canTranspose, canPaste;
   final ValueChanged<DurationBase> onPickValue;
   final VoidCallback onToggleDot, onRest, onChord, onMarquee;
+  final VoidCallback onHelp;
   final bool chordMode;
   final bool marquee;
   final int entryOctave;
@@ -5238,6 +5288,8 @@ class _InputBar extends StatelessWidget {
                 tooltip: l10n.workshopChord,
                 child: const Icon(Icons.layers, size: 22),
               ),
+              // In-context help for chord entry (and the rest of the surface).
+              _act(Icons.help_outline, l10n.workshopChordHelp, onHelp),
               _GlyphButton(
                 selected: marquee,
                 onTap: onMarquee,

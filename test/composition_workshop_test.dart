@@ -361,10 +361,26 @@ void main() {
 
     // A "Controls" section with plain-language explanations…
     expect(find.text(l10n.workshopHelpControls), findsOneWidget);
+    expect(find.text(l10n.workshopHelpChord), findsOneWidget);
     expect(find.text(l10n.workshopHelpMarquee), findsOneWidget);
     expect(find.text(l10n.workshopHelpAnalysis), findsOneWidget);
     // …plus the keyboard-shortcut section is still there.
     expect(find.text(l10n.workshopShortcuts), findsOneWidget);
+  });
+
+  testWidgets('the chord (?) button explains how stacking works',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.ensureVisible(find.byTooltip(l10n.workshopChordHelp));
+    await tester.tap(find.byTooltip(l10n.workshopChordHelp));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.workshopHelpChord), findsOneWidget);
+    // Both notation-app shortcuts are listed.
+    expect(find.text(l10n.workshopShortcutAddToChord), findsOneWidget);
+    expect(find.text(l10n.workshopChordToggle), findsOneWidget);
   });
 
   testWidgets('Analysis tints reach the multi-part full-score canvas',
@@ -1699,8 +1715,7 @@ void main() {
     expect(midis.last, midis.first);
   });
 
-  testWidgets('Shift+letter inserts a note, never stacks a chord',
-      (tester) async {
+  testWidgets('Shift+letter adds the note above the chord', (tester) async {
     await pump(tester);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
     await tester.pump();
@@ -1717,12 +1732,51 @@ void main() {
         .whereType<NoteElement>()
         .toList();
 
-    expect(elements, hasLength(2), reason: 'Shift+letter is a new note');
+    expect(elements, hasLength(1), reason: 'one chorded note');
     expect(
-      elements.every((e) => e.pitches.length == 1),
-      isTrue,
-      reason: 'a held or stuck Shift must not turn the note into a chord',
+      elements.single.pitches.map((p) => p.midiNumber),
+      [60, 64],
+      reason: 'C4 with E4 stacked above it',
     );
+  });
+
+  testWidgets('Q toggles chord mode so plain letters keep stacking',
+      (tester) async {
+    await pump(tester);
+    // Chord mode on (Dorico's Q): C then E stack.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyQ);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+    await tester.pump();
+
+    var elements = tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .toList();
+    expect(elements, hasLength(1));
+    expect(elements.single.pitches.map((p) => p.midiNumber), [60, 64]);
+
+    // Chord mode off: the next letter is a new note, not a third chord tone.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyQ);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
+    await tester.pump();
+
+    elements = tester
+        .widget<MultiSystemView>(find.byType(MultiSystemView))
+        .score
+        .measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .toList();
+    expect(elements, hasLength(2));
+    expect(elements.first.pitches.length, 2);
+    expect(elements.last.pitches.length, 1);
   });
 
   testWidgets('part view shows one part alone, and back to the full score',

@@ -702,6 +702,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'V1 and V2 are two independent voices on one staff (V1 stems up, V2 down). Pick which voice your input writes to.';
 
   @override
+  String get workshopHelpChord =>
+      'Chord: hold Shift and type a letter to add that note above the selected chord (MuseScore/Sibelius), or press Q to keep stacking plain letters at the same position (Dorico). On a touch screen, tap the chord (layers) button. The 8va control sets the added note\'s octave.';
+
+  @override
+  String get workshopChordHelp => 'How chord entry works';
+
+  @override
+  String get workshopChordToggle => 'Chord mode on / off';
+
+  @override
   String get workshopHelpMarquee =>
       'Marquee: drag a box across the staff to select every note inside it.';
 
