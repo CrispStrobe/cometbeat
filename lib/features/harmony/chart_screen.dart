@@ -43,6 +43,8 @@ import 'package:comet_beat/features/harmony/setlist_screen.dart';
 import 'package:comet_beat/features/harmony/streamed_band.dart';
 import 'package:comet_beat/features/harmony/transpose_sheet.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:comet_beat/shared/widgets/mixer_strip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1090,6 +1092,7 @@ class _ChartScreenState extends State<ChartScreen> {
       appBar: AppBar(
         title: Text(_chart.title.isEmpty ? l10n.gameChart : _chart.title),
         actions: [
+          TutorialButton(builder: chartGuide, tooltip: l10n.helpTooltip),
           // The style belongs to the chart; the chorus count belongs to this
           // playthrough. Both are disabled while playing, because the audio is
           // already rendered and changing either would desync the highlight.

@@ -28,6 +28,8 @@ import 'package:comet_beat/features/settings/screens/settings_screen.dart';
 import 'package:comet_beat/features/textbook/textbook_screen.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:comet_beat/shared/widgets/project_browser_sheet.dart';
 import 'package:comet_beat/shared/widgets/sound_toggle.dart';
 import 'package:flutter/material.dart';
@@ -107,6 +109,7 @@ class HomeScreen extends StatelessWidget {
         title: const _DebugTapTitle(),
         centerTitle: true,
         actions: [
+          TutorialButton(builder: homeGuide, tooltip: l10n.helpTooltip),
           const SoundToggle(),
           // Studio tools — off by default on a new install (Settings ▸ Studio
           // tools). Home is the learning app first.

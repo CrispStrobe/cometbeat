@@ -2984,6 +2984,128 @@ class AppLocalizationsEn extends AppLocalizations {
       'On a keyboard: Space plays or stops; Delete removes the selected clips.';
 
   @override
+  String get helpTooltip => 'Help for this screen';
+
+  @override
+  String get helpHomeTitle => 'Getting around';
+
+  @override
+  String get helpHomeBody =>
+      '• Learn: each game card teaches one skill.\n• Create: Score Workshop, Tab Workshop, Tracker, Loop Studio and the Audio Editor open from the authoring menu (piano icon).\n• Tools: Transcribe, Tuner, Sound Lab, Library and the Song Book sit alongside them.\n• The ? on any screen explains that screen; this one explains the app.';
+
+  @override
+  String get helpTabTitle => 'Guitar Tab';
+
+  @override
+  String get helpTabBody =>
+      '• Tap a fret cell and type a fret number, or use the on-screen keypad.\n• The duration strip sets the note length; letters add notes at the caret.\n• Patterns and Chords insert ready-made material.\n• Tuning and Capo change what each string sounds.\n• Mic captures a performance onto the grid.\n• Notation shows the staff above the tab; Export saves MusicXML, MIDI or PDF.';
+
+  @override
+  String get helpTranscribeTitle => 'Transcribe';
+
+  @override
+  String get helpTranscribeBody =>
+      '• Import an audio file or record from the microphone.\n• Monophonic suits one line or a voice; Polyphonic suits chords and piano.\n• The engine list is the model: CREPE/RMVPE track pitch, Basic Pitch/MT3/CrispASR find notes.\n• Defaults are a good start; the first use of a model may download it.\n• Open the result in the Score or Tab Workshop to edit.';
+
+  @override
+  String get helpPracticeTitle => 'Practice with your song';
+
+  @override
+  String get helpPracticeBody =>
+      '• Pick a song; the app separates it into stems (vocals, drums, bass, other).\n• Choose a separator: faster, or higher quality.\n• Mute or solo stems, loop a section, and slow it down.\n• Songs longer than 10 minutes are refused on phones to bound memory.';
+
+  @override
+  String get helpTrackerTitle => 'Tracker';
+
+  @override
+  String get helpTrackerBody =>
+      '• Rows are time; the columns are channels.\n• In the note column type A–G then an octave digit.\n• Instrument column: the instrument-pool number. Effect column: command + 2 hex digits.\n• Long-press a cell or a column header for the block and channel menus.\n• Space plays from the cursor; the toolbar sets tempo and edit step.';
+
+  @override
+  String get helpPerformTitle => 'Perform';
+
+  @override
+  String get helpPerformBody =>
+      '• The transport plays, pauses and records.\n• The counter shows bars and beats.\n• Record captures what you play; stop ends the take.\n• Balance parts in the mixer before recording.';
+
+  @override
+  String get helpChartTitle => 'Chart editor';
+
+  @override
+  String get helpChartBody =>
+      '• One bar sits between each |; two chords split a bar.\n• % or an empty bar holds the previous chord.\n• [A] starts a section; [A] x2 repeats it.\n• The key menu sets the key; transpose moves the whole chart.\n• Practice loop plays the chart with the backing band.';
+
+  @override
+  String get helpSoundLabTitle => 'Sound Lab';
+
+  @override
+  String get helpSoundLabBody =>
+      '• Pick a voice or sample, then shape it with the controls.\n• Preview plays the current sound.\n• Save to My Instruments to reuse it in scores and loops.';
+
+  @override
+  String get helpVoiceLabTitle => 'Voice Lab';
+
+  @override
+  String get helpVoiceLabBody =>
+      '• Choose a neural voice; the first use downloads a small model.\n• Enter text and preview it through the selected voice.\n• Speed and pitch change the delivery.\n• Save a voice for lessons and narration.';
+
+  @override
+  String get helpSongBookTitle => 'Song Book';
+
+  @override
+  String get helpSongBookBody =>
+      '• Songs you save are listed here.\n• Open loads a song into an editor.\n• The ⋮ menu renames, duplicates or deletes.\n• Import adds a file; licences are shown before use.';
+
+  @override
+  String get helpLibraryTitle => 'Library';
+
+  @override
+  String get helpLibraryBody =>
+      '• Browse bundled songs, exercises and soundfonts.\n• Filter by source or tag.\n• Tap an item to preview and open it.\n• Licence notes explain what you may share.';
+
+  @override
+  String get helpMixerTitle => 'Mixer';
+
+  @override
+  String get helpMixerBody =>
+      '• Each track has level and pan.\n• Buses group tracks; sends feed effects.\n• Master sets the final level.\n• Solo and mute isolate a part.';
+
+  @override
+  String get helpSetlistTitle => 'Setlist';
+
+  @override
+  String get helpSetlistBody =>
+      '• Add songs in playing order.\n• Drag to reorder.\n• Start begins the set; the next song advances at the end.\n• The set length estimates the timing.';
+
+  @override
+  String get helpGigTitle => 'Gig mode';
+
+  @override
+  String get helpGigBody =>
+      '• Large, legible controls for the stage.\n• Swipe or tap to move between songs.\n• Auto-advance follows the setlist.\n• The screen stays awake while active.';
+
+  @override
+  String get helpTunerTitle => 'Tuner';
+
+  @override
+  String get helpTunerBody =>
+      '• Play a note; the needle shows how far off it is.\n• Set the reference pitch (A4) for the ensemble.\n• Pick an instrument preset for the string names.\n• Green means in tune.';
+
+  @override
+  String get helpSampleTitle => 'Sample Extractor';
+
+  @override
+  String get helpSampleBody =>
+      '• Load a song or a sample.\n• Drag the handles to set start and end.\n• Loop previews the selection.\n• Save writes a new sample or soundfont entry.';
+
+  @override
+  String get helpImportTitle => 'Import';
+
+  @override
+  String get helpImportBody =>
+      '• Pick a file: MusicXML, MIDI, ABC, MuseScore, GP, LilyPond and more.\n• Photos of scores use OMR, which downloads a model on first use.\n• Licensed material is marked; export rules are shown.\n• The result opens in the Score or Tab Workshop.';
+
+  @override
   String get dawClipLinked => 'Linked to editor';
 
   @override

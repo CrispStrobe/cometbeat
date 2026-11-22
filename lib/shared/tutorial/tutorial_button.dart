@@ -10,17 +10,20 @@ import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:flutter/material.dart';
 
 class TutorialButton extends StatelessWidget {
-  const TutorialButton({super.key, required this.builder});
+  const TutorialButton({super.key, required this.builder, this.tooltip});
 
   /// Builds the (localized) tutorial to show when tapped.
   final Tutorial Function(AppLocalizations) builder;
+
+  /// Overrides the default "How to play" tooltip for non-game surfaces.
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return IconButton(
       icon: const Icon(Icons.help_outline_rounded),
-      tooltip: l10n.howToPlayTooltip,
+      tooltip: tooltip ?? l10n.howToPlayTooltip,
       onPressed: () => showTutorial(context, builder(l10n)),
     );
   }

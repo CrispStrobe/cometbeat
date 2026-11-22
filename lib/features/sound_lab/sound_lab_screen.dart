@@ -13,6 +13,8 @@ import 'package:comet_beat/features/sound_lab/sfx_engine.dart';
 import 'package:comet_beat/features/sound_lab/sound_preset_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -288,6 +290,7 @@ class _SoundLabScreenState extends State<SoundLabScreen>
       appBar: AppBar(
         title: Text(l10n.soundLabTitle),
         actions: [
+          TutorialButton(builder: soundLabGuide, tooltip: l10n.helpTooltip),
           if (widget.asPicker)
             IconButton(
               icon: const Icon(Icons.playlist_add),

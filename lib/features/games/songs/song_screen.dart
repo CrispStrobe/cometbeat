@@ -33,6 +33,8 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         ElementRegionController,
@@ -272,6 +274,7 @@ class _SongScreenState extends State<SongScreen> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
+          TutorialButton(builder: songBookGuide, tooltip: l10n.helpTooltip),
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: l10n.inspectMode,
@@ -470,6 +473,7 @@ class SongListScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(l10n.gameSongBook),
         actions: [
+          TutorialButton(builder: songBookGuide, tooltip: l10n.helpTooltip),
           IconButton(
             icon: const Icon(Icons.file_download),
             tooltip: l10n.importTitle,

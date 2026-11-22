@@ -42,6 +42,8 @@ import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:comet_beat/shared/widgets/scrollable_piano.dart';
 import 'package:comet_beat/shared/widgets/step_grid.dart';
 import 'package:flutter/material.dart';
@@ -1555,6 +1557,7 @@ class _PerformScreenState extends State<PerformScreen>
       appBar: AppBar(
         title: Text(l10n.performTitle),
         actions: [
+          TutorialButton(builder: performGuide, tooltip: l10n.helpTooltip),
           PopupMenuButton<LiveVoiceMode>(
             icon: Icon(isRealtimeActive ? Icons.bolt : Icons.bolt_outlined),
             tooltip: l10n.performAudioPath,

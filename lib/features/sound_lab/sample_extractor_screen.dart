@@ -14,6 +14,8 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/deliver_export.dart';
 import 'package:comet_beat/shared/music_io/file_delivery.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:comet_beat/shared/widgets/waveform_thumbnail.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -261,6 +263,10 @@ class _SampleExtractorScreenState extends State<SampleExtractorScreen>
       appBar: AppBar(
         title: Text(l10n.sampleExtractTitle),
         actions: [
+          TutorialButton(
+            builder: sampleExtractorGuide,
+            tooltip: l10n.helpTooltip,
+          ),
           if (_samples.isNotEmpty) ...[
             IconButton(
               icon: const Icon(Icons.drive_folder_upload),

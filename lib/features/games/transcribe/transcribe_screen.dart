@@ -33,6 +33,8 @@ import 'package:comet_beat/features/games/transcribe/transcribe_engines.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart'
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart'
     show MultiPartScore, Score, multiPartToMusicXml;
 import 'package:file_selector/file_selector.dart';
@@ -296,7 +298,15 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.transcribeTitle)),
+      appBar: AppBar(
+        title: Text(l10n.transcribeTitle),
+        actions: [
+          TutorialButton(
+            builder: transcribeGuide,
+            tooltip: l10n.helpTooltip,
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -17,6 +17,8 @@ import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/library/library_browser_screen.dart';
 import 'package:comet_beat/features/library/license_policy.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,
@@ -369,6 +371,7 @@ class _ImportScreenState extends State<ImportScreen> {
       appBar: AppBar(
         title: Text(l10n.importTitle),
         actions: [
+          TutorialButton(builder: importGuide, tooltip: l10n.helpTooltip),
           IconButton(
             icon: const Icon(Icons.public),
             tooltip: l10n.libraryTitle,

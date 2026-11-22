@@ -28,6 +28,7 @@ import 'package:comet_beat/features/games/playalong/play_along_screen.dart';
 import 'package:comet_beat/features/games/practice/stem_player.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -438,7 +439,10 @@ class _PracticeStemsScreenState extends State<PracticeStemsScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: GameAppBar(title: l.gamePracticeStems),
+      appBar: GameAppBar(
+        title: l.gamePracticeStems,
+        tutorial: practiceGuide,
+      ),
       body: SafeArea(
         child: switch (_phase) {
           _Phase.idle => _idle(l),

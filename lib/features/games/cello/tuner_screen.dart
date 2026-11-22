@@ -13,6 +13,7 @@ import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/features/games/note_reading/note_names.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
 import 'package:flutter/material.dart';
 
 /// Instruments with a fixed set of open strings the tuner can guide you
@@ -166,6 +167,7 @@ class _TunerScreenState extends State<TunerScreen> {
     return Scaffold(
       appBar: GameAppBar(
         title: l.gameTuner,
+        tutorial: tunerGuide,
         actions: [
           PopupMenuButton<double>(
             icon: const Icon(Icons.tune),

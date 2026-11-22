@@ -20,6 +20,8 @@ import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_screen.dart';
 import 'package:comet_beat/features/harmony/gig_mode_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -90,7 +92,12 @@ class _SetlistScreenState extends State<SetlistScreen> {
     final l10n = AppLocalizations.of(context)!;
     final charts = _charts;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.setlistTitle)),
+      appBar: AppBar(
+        title: Text(l10n.setlistTitle),
+        actions: [
+          TutorialButton(builder: setlistGuide, tooltip: l10n.helpTooltip),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         key: const ValueKey('setlistNew'),
         onPressed: _create,
@@ -263,6 +270,7 @@ class _SetlistDetailScreenState extends State<SetlistDetailScreen> {
       appBar: AppBar(
         title: Text(setlist.name),
         actions: [
+          TutorialButton(builder: setlistGuide, tooltip: l10n.helpTooltip),
           IconButton(
             key: const ValueKey('setlistAdd'),
             icon: const Icon(Icons.playlist_add),

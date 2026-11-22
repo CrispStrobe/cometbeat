@@ -55,6 +55,8 @@ import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
     show showMelodicSearch;
 import 'package:comet_beat/shared/music_io/deliver_export.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/music_glyph.dart';
@@ -1848,6 +1850,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       appBar: AppBar(
         title: Text(_sourceName ?? l10n.tabWorkshopTitle),
         actions: [
+          TutorialButton(
+            builder: tabWorkshopGuide,
+            tooltip: l10n.helpTooltip,
+          ),
           IconButton(
             icon: const Icon(Icons.undo),
             tooltip: l10n.tabUndo,

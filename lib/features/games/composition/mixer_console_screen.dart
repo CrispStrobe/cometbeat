@@ -45,6 +45,8 @@ import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/mixer_strip.dart';
 import 'package:comet_beat/shared/widgets/transport_bar.dart';
@@ -335,7 +337,10 @@ class _MixerConsoleScreenState extends State<MixerConsoleScreen>
       return Scaffold(
         appBar: AppBar(
           title: Text(l10n.mixerConsoleTitle),
-          actions: [playButton],
+          actions: [
+            TutorialButton(builder: mixerGuide, tooltip: l10n.helpTooltip),
+            playButton,
+          ],
         ),
         body: body,
       );

@@ -284,7 +284,8 @@ extension _WorkshopInspector on _CompositionWorkshopScreenState {
                   Text(
                     _mpd.nameOf(_mpd.active),
                     style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.onTertiaryContainer),
+                      color: theme.colorScheme.onTertiaryContainer,
+                    ),
                   ),
                   if (below > 0)
                     Text(

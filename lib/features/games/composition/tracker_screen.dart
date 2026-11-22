@@ -50,6 +50,7 @@ import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/deliver_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
 import 'package:comet_beat/shared/widgets/fx_preset_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -1713,6 +1714,7 @@ class _TrackerScreenState extends State<TrackerScreen>
     return Scaffold(
       appBar: GameAppBar(
         title: l10n.gameTracker,
+        tutorial: trackerGuide,
         actions: [
           IconButton(
             icon: const Icon(Icons.dashboard_customize_outlined),

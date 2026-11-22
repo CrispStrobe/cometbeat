@@ -12,6 +12,8 @@ import 'package:comet_beat/features/library/license_policy.dart';
 import 'package:comet_beat/features/library/source_registry.dart';
 import 'package:comet_beat/features/library/sources/cometbeat_catalog_source.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -202,6 +204,7 @@ class _LibraryBrowserScreenState extends State<LibraryBrowserScreen> {
       appBar: AppBar(
         title: Text(l10n.libraryTitle),
         actions: [
+          TutorialButton(builder: libraryGuide, tooltip: l10n.helpTooltip),
           IconButton(
             icon: const Icon(Icons.copyright),
             tooltip: l10n.librarySourcesCredits,

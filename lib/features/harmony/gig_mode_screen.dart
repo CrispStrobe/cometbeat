@@ -26,6 +26,8 @@ import 'package:comet_beat/core/services/chart_store.dart';
 import 'package:comet_beat/features/harmony/chart_grid_view.dart';
 import 'package:comet_beat/features/harmony/streamed_band.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/app_guides.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
 import 'package:flutter/material.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -291,6 +293,7 @@ class _GigModeScreenState extends State<GigModeScreen> {
       appBar: AppBar(
         title: Text(entry?.chartName ?? widget.setlist.name),
         actions: [
+          TutorialButton(builder: gigGuide, tooltip: l10n.helpTooltip),
           Center(
             child: Padding(
               padding: const EdgeInsets.only(right: 16),

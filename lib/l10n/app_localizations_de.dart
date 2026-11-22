@@ -2996,6 +2996,128 @@ class AppLocalizationsDe extends AppLocalizations {
       'Mit Tastatur: Leertaste startet/stoppt; Entf löscht die ausgewählten Clips.';
 
   @override
+  String get helpTooltip => 'Hilfe für diesen Bildschirm';
+
+  @override
+  String get helpHomeTitle => 'Überblick';
+
+  @override
+  String get helpHomeBody =>
+      '• Lernen: Jede Spielkarte übt eine Fertigkeit.\n• Erstellen: Partitur-Workshop, Tab-Workshop, Tracker, Loop Studio und Audio-Editor öffnen sich über das Autoren-Menü (Klavier-Symbol).\n• Werkzeuge: Transkription, Stimmer, Sound Lab, Bibliothek und Songbuch findest du daneben.\n• Das ? auf jedem Bildschirm erklärt ihn; dieser erklärt die App.';
+
+  @override
+  String get helpTabTitle => 'Gitarren-Tab';
+
+  @override
+  String get helpTabBody =>
+      '• Tippe eine Bund-Zelle und gib eine Bundnummer ein, oder nutze das Keypad.\n• Die Notenwerte-Leiste setzt die Länge; Buchstaben fügen Noten am Cursor ein.\n• Patterns und Akkorde fügen fertiges Material ein.\n• Stimmung und Kapodaster ändern, wie die Saiten klingen.\n• Das Mikrofon nimmt eine Performance aufs Raster auf.\n• Notation zeigt das System über dem Tab; Export speichert MusicXML, MIDI oder PDF.';
+
+  @override
+  String get helpTranscribeTitle => 'Transkription';
+
+  @override
+  String get helpTranscribeBody =>
+      '• Importiere eine Audiodatei oder nimm über das Mikrofon auf.\n• Monophon passt zu einer Stimme oder Linie; polyphon zu Akkorden und Klavier.\n• Die Engine-Liste ist das Modell: CREPE/RMVPE verfolgen die Tonhöhe, Basic Pitch/MT3/CrispASR finden Noten.\n• Die Voreinstellungen sind ein guter Start; beim ersten Einsatz lädt ein Modell ggf. herunter.\n• Öffne das Ergebnis im Partitur- oder Tab-Workshop zum Bearbeiten.';
+
+  @override
+  String get helpPracticeTitle => 'Mit deinem Song üben';
+
+  @override
+  String get helpPracticeBody =>
+      '• Wähle einen Song; die App trennt ihn in Stimmen (Gesang, Schlagzeug, Bass, Rest).\n• Wähle einen Separator: schneller oder höhere Qualität.\n• Stimmen stummschalten/solo, Abschnitt loopen und verlangsamen.\n• Songs über 10 Minuten werden auf dem Handy abgelehnt, um Speicher zu begrenzen.';
+
+  @override
+  String get helpTrackerTitle => 'Tracker';
+
+  @override
+  String get helpTrackerBody =>
+      '• Zeilen sind Zeit; die Spalten sind Kanäle.\n• In der Notenspalte A–G und dann eine Oktavziffer tippen.\n• Instrument-Spalte: Nummer aus dem Instrumenten-Pool. Effekt-Spalte: Befehl + 2 Hex-Ziffern.\n• Lange auf eine Zelle oder Spaltenüberschrift drücken für Block- und Kanalmenüs.\n• Leertaste spielt ab dem Cursor; die Werkzeugleiste setzt Tempo und Edit-Schritt.';
+
+  @override
+  String get helpPerformTitle => 'Auftritt';
+
+  @override
+  String get helpPerformBody =>
+      '• Die Transportleiste spielt, pausiert und nimmt auf.\n• Der Zähler zeigt Takte und Schläge.\n• Aufnahme erfasst, was du spielst; Stopp beendet den Take.\n• Stimmen vor der Aufnahme im Mixer ausbalancieren.';
+
+  @override
+  String get helpChartTitle => 'Chart-Editor';
+
+  @override
+  String get helpChartBody =>
+      '• Zwischen jedem | steht ein Takt; zwei Akkorde teilen einen Takt.\n• % oder ein leerer Takt hält den vorigen Akkord.\n• [A] beginnt einen Abschnitt; [A] x2 wiederholt ihn.\n• Das Tonart-Menü setzt die Tonart; Transponieren verschiebt das ganze Chart.\n• Übungsloop spielt das Chart mit der Begleitband.';
+
+  @override
+  String get helpSoundLabTitle => 'Sound Lab';
+
+  @override
+  String get helpSoundLabBody =>
+      '• Wähle eine Stimme oder ein Sample und forme sie mit den Reglern.\n• Vorschau spielt den aktuellen Klang.\n• In „Meine Instrumente“ speichern, um sie in Partituren und Loops zu nutzen.';
+
+  @override
+  String get helpVoiceLabTitle => 'Voice Lab';
+
+  @override
+  String get helpVoiceLabBody =>
+      '• Wähle eine neurale Stimme; beim ersten Einsatz lädt ein kleines Modell.\n• Text eingeben und über die gewählte Stimme vorhören.\n• Tempo und Tonhöhe ändern den Vortrag.\n• Stimme für Lektionen und Erzählung speichern.';
+
+  @override
+  String get helpSongBookTitle => 'Songbuch';
+
+  @override
+  String get helpSongBookBody =>
+      '• Gespeicherte Songs stehen hier.\n• Öffnen lädt einen Song in einen Editor.\n• Das ⋮-Menü benennt um, dupliziert oder löscht.\n• Import fügt eine Datei hinzu; Lizenzen werden vorher angezeigt.';
+
+  @override
+  String get helpLibraryTitle => 'Bibliothek';
+
+  @override
+  String get helpLibraryBody =>
+      '• Durchsuche mitgelieferte Songs, Übungen und Soundfonts.\n• Nach Quelle oder Tag filtern.\n• Antippen hört vor und öffnet.\n• Lizenzhinweise erklären, was du teilen darfst.';
+
+  @override
+  String get helpMixerTitle => 'Mixer';
+
+  @override
+  String get helpMixerBody =>
+      '• Jede Spur hat Pegel und Panorama.\n• Buses bündeln Spuren; Sends speisen Effekte.\n• Master setzt den Endpegel.\n• Solo und Mute isolieren eine Stimme.';
+
+  @override
+  String get helpSetlistTitle => 'Setlist';
+
+  @override
+  String get helpSetlistBody =>
+      '• Songs in Spielreihenfolge hinzufügen.\n• Ziehen zum Umsortieren.\n• Start beginnt das Set; am Ende rückt der nächste Song nach.\n• Die Set-Länge schätzt die Zeit.';
+
+  @override
+  String get helpGigTitle => 'Bühnenmodus';
+
+  @override
+  String get helpGigBody =>
+      '• Große, gut lesbare Bedienelemente für die Bühne.\n• Wischen oder tippen, um zwischen Songs zu wechseln.\n• Auto-Weiter folgt der Setlist.\n• Der Bildschirm bleibt aktiv.';
+
+  @override
+  String get helpTunerTitle => 'Stimmer';
+
+  @override
+  String get helpTunerBody =>
+      '• Spiele einen Ton; die Nadel zeigt die Abweichung.\n• Referenzton (A4) für das Ensemble setzen.\n• Ein Instrumenten-Preset zeigt die Saitennamen.\n• Grün bedeutet gestimmt.';
+
+  @override
+  String get helpSampleTitle => 'Sample-Extraktor';
+
+  @override
+  String get helpSampleBody =>
+      '• Lade einen Song oder ein Sample.\n• Ziehe die Griffe für Anfang und Ende.\n• Loop hört die Auswahl vor.\n• Speichern schreibt ein neues Sample oder einen Soundfont-Eintrag.';
+
+  @override
+  String get helpImportTitle => 'Import';
+
+  @override
+  String get helpImportBody =>
+      '• Datei wählen: MusicXML, MIDI, ABC, MuseScore, GP, LilyPond und mehr.\n• Fotos von Noten nutzen OMR; beim ersten Mal lädt ein Modell.\n• Lizenziertes Material ist markiert; Exportregeln werden angezeigt.\n• Das Ergebnis öffnet im Partitur- oder Tab-Workshop.';
+
+  @override
   String get dawClipLinked => 'Mit Editor verknüpft';
 
   @override

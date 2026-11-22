@@ -5516,6 +5516,216 @@ abstract class AppLocalizations {
   /// **'On a keyboard: Space plays or stops; Delete removes the selected clips.'**
   String get dawHelpShortcutsBody;
 
+  /// No description provided for @helpTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Help for this screen'**
+  String get helpTooltip;
+
+  /// No description provided for @helpHomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting around'**
+  String get helpHomeTitle;
+
+  /// No description provided for @helpHomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Learn: each game card teaches one skill.\n• Create: Score Workshop, Tab Workshop, Tracker, Loop Studio and the Audio Editor open from the authoring menu (piano icon).\n• Tools: Transcribe, Tuner, Sound Lab, Library and the Song Book sit alongside them.\n• The ? on any screen explains that screen; this one explains the app.'**
+  String get helpHomeBody;
+
+  /// No description provided for @helpTabTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Guitar Tab'**
+  String get helpTabTitle;
+
+  /// No description provided for @helpTabBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Tap a fret cell and type a fret number, or use the on-screen keypad.\n• The duration strip sets the note length; letters add notes at the caret.\n• Patterns and Chords insert ready-made material.\n• Tuning and Capo change what each string sounds.\n• Mic captures a performance onto the grid.\n• Notation shows the staff above the tab; Export saves MusicXML, MIDI or PDF.'**
+  String get helpTabBody;
+
+  /// No description provided for @helpTranscribeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribe'**
+  String get helpTranscribeTitle;
+
+  /// No description provided for @helpTranscribeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Import an audio file or record from the microphone.\n• Monophonic suits one line or a voice; Polyphonic suits chords and piano.\n• The engine list is the model: CREPE/RMVPE track pitch, Basic Pitch/MT3/CrispASR find notes.\n• Defaults are a good start; the first use of a model may download it.\n• Open the result in the Score or Tab Workshop to edit.'**
+  String get helpTranscribeBody;
+
+  /// No description provided for @helpPracticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice with your song'**
+  String get helpPracticeTitle;
+
+  /// No description provided for @helpPracticeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Pick a song; the app separates it into stems (vocals, drums, bass, other).\n• Choose a separator: faster, or higher quality.\n• Mute or solo stems, loop a section, and slow it down.\n• Songs longer than 10 minutes are refused on phones to bound memory.'**
+  String get helpPracticeBody;
+
+  /// No description provided for @helpTrackerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracker'**
+  String get helpTrackerTitle;
+
+  /// No description provided for @helpTrackerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Rows are time; the columns are channels.\n• In the note column type A–G then an octave digit.\n• Instrument column: the instrument-pool number. Effect column: command + 2 hex digits.\n• Long-press a cell or a column header for the block and channel menus.\n• Space plays from the cursor; the toolbar sets tempo and edit step.'**
+  String get helpTrackerBody;
+
+  /// No description provided for @helpPerformTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Perform'**
+  String get helpPerformTitle;
+
+  /// No description provided for @helpPerformBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• The transport plays, pauses and records.\n• The counter shows bars and beats.\n• Record captures what you play; stop ends the take.\n• Balance parts in the mixer before recording.'**
+  String get helpPerformBody;
+
+  /// No description provided for @helpChartTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chart editor'**
+  String get helpChartTitle;
+
+  /// No description provided for @helpChartBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• One bar sits between each |; two chords split a bar.\n• % or an empty bar holds the previous chord.\n• [A] starts a section; [A] x2 repeats it.\n• The key menu sets the key; transpose moves the whole chart.\n• Practice loop plays the chart with the backing band.'**
+  String get helpChartBody;
+
+  /// No description provided for @helpSoundLabTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound Lab'**
+  String get helpSoundLabTitle;
+
+  /// No description provided for @helpSoundLabBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Pick a voice or sample, then shape it with the controls.\n• Preview plays the current sound.\n• Save to My Instruments to reuse it in scores and loops.'**
+  String get helpSoundLabBody;
+
+  /// No description provided for @helpVoiceLabTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Lab'**
+  String get helpVoiceLabTitle;
+
+  /// No description provided for @helpVoiceLabBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Choose a neural voice; the first use downloads a small model.\n• Enter text and preview it through the selected voice.\n• Speed and pitch change the delivery.\n• Save a voice for lessons and narration.'**
+  String get helpVoiceLabBody;
+
+  /// No description provided for @helpSongBookTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Song Book'**
+  String get helpSongBookTitle;
+
+  /// No description provided for @helpSongBookBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Songs you save are listed here.\n• Open loads a song into an editor.\n• The ⋮ menu renames, duplicates or deletes.\n• Import adds a file; licences are shown before use.'**
+  String get helpSongBookBody;
+
+  /// No description provided for @helpLibraryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Library'**
+  String get helpLibraryTitle;
+
+  /// No description provided for @helpLibraryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Browse bundled songs, exercises and soundfonts.\n• Filter by source or tag.\n• Tap an item to preview and open it.\n• Licence notes explain what you may share.'**
+  String get helpLibraryBody;
+
+  /// No description provided for @helpMixerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixer'**
+  String get helpMixerTitle;
+
+  /// No description provided for @helpMixerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Each track has level and pan.\n• Buses group tracks; sends feed effects.\n• Master sets the final level.\n• Solo and mute isolate a part.'**
+  String get helpMixerBody;
+
+  /// No description provided for @helpSetlistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Setlist'**
+  String get helpSetlistTitle;
+
+  /// No description provided for @helpSetlistBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Add songs in playing order.\n• Drag to reorder.\n• Start begins the set; the next song advances at the end.\n• The set length estimates the timing.'**
+  String get helpSetlistBody;
+
+  /// No description provided for @helpGigTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gig mode'**
+  String get helpGigTitle;
+
+  /// No description provided for @helpGigBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Large, legible controls for the stage.\n• Swipe or tap to move between songs.\n• Auto-advance follows the setlist.\n• The screen stays awake while active.'**
+  String get helpGigBody;
+
+  /// No description provided for @helpTunerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuner'**
+  String get helpTunerTitle;
+
+  /// No description provided for @helpTunerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Play a note; the needle shows how far off it is.\n• Set the reference pitch (A4) for the ensemble.\n• Pick an instrument preset for the string names.\n• Green means in tune.'**
+  String get helpTunerBody;
+
+  /// No description provided for @helpSampleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample Extractor'**
+  String get helpSampleTitle;
+
+  /// No description provided for @helpSampleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Load a song or a sample.\n• Drag the handles to set start and end.\n• Loop previews the selection.\n• Save writes a new sample or soundfont entry.'**
+  String get helpSampleBody;
+
+  /// No description provided for @helpImportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get helpImportTitle;
+
+  /// No description provided for @helpImportBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Pick a file: MusicXML, MIDI, ABC, MuseScore, GP, LilyPond and more.\n• Photos of scores use OMR, which downloads a model on first use.\n• Licensed material is marked; export rules are shown.\n• The result opens in the Score or Tab Workshop.'**
+  String get helpImportBody;
+
   /// No description provided for @dawClipLinked.
   ///
   /// In en, this message translates to:
