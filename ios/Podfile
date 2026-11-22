@@ -32,7 +32,7 @@ target 'Runner' do
 
   # ONNX Runtime: Microsoft's CocoaPods archive host returns 404 for every
   # version, which blocks `pod install` (the `onnxruntime` Flutter plugin pins
-  # onnxruntime-objc 1.15.1). Use the fdddf/onnxruntime-spm mirror instead: the
+  # onnxruntime-objc 1.15.1). Use our CrispStrobe/onnxruntime-spm mirror (a byte-identical copy of fdddf/onnxruntime-spm 1.24.2) instead: the
   # C framework from its GitHub Release, the Objective-C bindings from its repo.
   # The local podspecs are labelled 1.15.1 to satisfy the plugin's pin; ORT
   # keeps the C ABI stable within 1.x.

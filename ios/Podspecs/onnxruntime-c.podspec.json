@@ -10,7 +10,7 @@
   },
   "homepage": "https://github.com/microsoft/onnxruntime",
   "source": {
-    "http": "https://github.com/fdddf/onnxruntime-spm/releases/download/1.24.2/pod-archive-onnxruntime-c-1.24.2.zip"
+    "http": "https://github.com/CrispStrobe/onnxruntime-spm/releases/download/1.24.2/pod-archive-onnxruntime-c-1.24.2.zip"
   },
   "summary": "ONNX Runtime C/C++ Pod",
   "platforms": {
