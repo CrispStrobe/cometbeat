@@ -33,6 +33,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/tts/kokoro_model_store.dart';
+import 'package:comet_beat/core/audio/tts/narration_provenance.dart';
 import 'package:comet_beat/core/audio/tts/neural_voice_catalog.dart';
 import 'package:comet_beat/core/audio/tts/neural_voice_runtime.dart';
 import 'package:crispasr/crispasr.dart';
@@ -225,7 +226,15 @@ class CrispAsrVoiceRuntime implements NeuralVoiceRuntime {
     if (result.pcm.isEmpty) {
       throw const TtsVoiceException(TtsFailure.synthFailed, 'empty audio');
     }
-    await play(wavBytes(result.pcm, sampleRate: result.sampleRate));
+    await play(
+      markSyntheticNarrationWav(
+        wavBytes(result.pcm, sampleRate: result.sampleRate),
+        engine: voice.engine.name,
+        model: voice.model.filename,
+        voice: voice.id,
+        language: voice.lang,
+      ),
+    );
   }
 
   @override

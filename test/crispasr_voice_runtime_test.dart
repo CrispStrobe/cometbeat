@@ -10,6 +10,8 @@ import 'package:comet_beat/core/audio/tts/neural_voice_catalog.dart';
 import 'package:comet_beat/core/audio/tts/neural_voice_runtime.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/wav_chunks.dart';
+
 /// A store whose native lib "loads" — lets speak() reach the synth seam.
 class _LoadableStore extends KokoroModelStore {
   _LoadableStore(String dir)
@@ -213,6 +215,14 @@ void main() {
         ByteData.sublistView(played!).getUint32(24, Endian.little),
         22050,
       );
+      final receipt = narrationReceipt(played!);
+      expect(receipt['content_type'], 'synthetic-speech');
+      expect(receipt['model'], thorsten.model.filename);
+      expect(receipt['voice'], thorsten.id);
+      expect(receipt['language'], 'de');
+      expect(receipt['signature'], 'unsigned');
+      expect(receipt.containsKey('text'), isFalse);
+      expect(wavChunks(played!)['data']!.length, 2205 * 2);
     });
 
     test('speak never downloads: a missing voice throws notDownloaded',

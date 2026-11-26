@@ -13,6 +13,8 @@ import 'package:comet_beat/core/audio/tts/onnx_ort_tts_backend.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_voice_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/wav_chunks.dart';
+
 void main() {
   group('OnnxOrtTtsSynth.buildInputs (pure shaping, no ORT)', () {
     test('shapes input (int64), input_lengths (int64), scales (float32)', () {
@@ -138,7 +140,14 @@ void main() {
       expect(played, isNotNull);
       expect(String.fromCharCodes(played!.sublist(0, 4)), 'RIFF');
       expect(String.fromCharCodes(played!.sublist(8, 12)), 'WAVE');
-      expect(played!.length, 44 + 100 * 2); // PCM16 payload
+      expect(wavChunks(played!)['data']!.length, 100 * 2); // PCM16 payload
+      final receipt = narrationReceipt(played!);
+      expect(receipt['content_type'], 'synthetic-speech');
+      expect(receipt['engine'], 'piper-onnx');
+      expect(receipt['language'], 'de');
+      expect(receipt['signature'], 'unsigned');
+      expect(receipt.containsKey('text'), isFalse);
+      expect(receipt['model'], isNot(contains(tmp.path)));
     });
 
     test('blank text never invokes the synth', () async {
