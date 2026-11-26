@@ -66,6 +66,18 @@ shown once on first entry (and reopenable via **?**): plain-language text, a
 notated + heard example, read-aloud (TTS), and interactive **"try it"** practice
 steps — read/hear then tap the answer, with gentle reveal-on-stuck — so a
 zero-knowledge child can clear it.
+
+Natural voices are identified in the voice picker as computer-generated (AI).
+New neural narration WAVs produced by the local voice runtimes, the
+`bin/tts_render.dart` command and `tool/bake_narration.dart` carry a readable
+description in standard WAV `LIST/INFO` metadata and a versioned JSON receipt
+in a `cbpr` chunk. The receipt records synthetic speech, the local engine,
+model, voice, language and generation time; it does not include the supplied
+text or a user's identity. This is unsigned application metadata, not C2PA
+signing or an audio watermark, and other applications can strip it. It applies
+to newly synthesized narration, not ordinary compositions, recordings, DSP
+renders or historical audio whose origin is not recorded.
+
 Later: more ear training, unlock gating, Kompositionstechnik (see plan).
 Live web builds — two deploy regimes on purpose:
 - **GitHub Pages** (https://crispstrobe.github.io/cometbeat/, via

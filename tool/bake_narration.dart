@@ -24,6 +24,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/tts/narration_key.dart';
+import 'package:comet_beat/core/audio/tts/narration_provenance.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_phonemes.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_synth.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_voice_store.dart';
@@ -102,12 +103,22 @@ Future<int> main(List<String> args) async {
     final rel = 'narration/${lang}_${_fileHash(key)}.wav';
     final file = File('$outRoot/$rel');
     file.parent.createSync(recursive: true);
-    file.writeAsBytesSync(wavBytes(samples, sampleRate: m.sr));
+    final voice = PiperVoiceStore.voices[lang]!;
+    file.writeAsBytesSync(
+      markSyntheticNarrationWav(
+        wavBytes(samples, sampleRate: m.sr),
+        engine: 'piper-dart',
+        model: '${voice.base}.onnx',
+        voice: voice.base,
+        language: lang,
+      ),
+    );
     manifest[key] = rel;
     baked++;
     stdout.writeln(
-        '  baked [$lang] "${text.length > 40 ? "${text.substring(0, 40)}…" : text}" '
-        '→ $rel (${(pcm.length / m.sr).toStringAsFixed(2)} s)');
+      '  baked [$lang] "${text.length > 40 ? "${text.substring(0, 40)}…" : text}" '
+      '→ $rel (${(pcm.length / m.sr).toStringAsFixed(2)} s)',
+    );
   }
 
   final manifestFile = File('$outRoot/narration/manifest.json');

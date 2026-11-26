@@ -19,6 +19,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
+import 'package:comet_beat/core/audio/tts/narration_provenance.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_phonemes.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_synth.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_voice_store.dart';
@@ -70,7 +71,15 @@ Future<int> main(List<String> args) async {
   for (var i = 0; i < pcm.length; i++) {
     samples[i] = (pcm[i].clamp(-1.0, 1.0) * 32767).round();
   }
-  File(out).writeAsBytesSync(wavBytes(samples, sampleRate: sampleRate));
+  File(out).writeAsBytesSync(
+    markSyntheticNarrationWav(
+      wavBytes(samples, sampleRate: sampleRate),
+      engine: 'piper-dart',
+      model: '${voice.base}.onnx',
+      voice: voice.base,
+      language: lang,
+    ),
+  );
 
   var sumSq = 0.0;
   for (final s in pcm) {

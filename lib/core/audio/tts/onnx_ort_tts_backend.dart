@@ -19,6 +19,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/transcription/onnx_ort_session.dart';
+import 'package:comet_beat/core/audio/tts/narration_provenance.dart';
 import 'package:comet_beat/core/audio/tts/onnx_ort_tts.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_phonemes.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_voice_store.dart';
@@ -130,7 +131,16 @@ class OnnxOrtTtsBackend implements TtsBackend {
       ),
     );
     if (result == null || result.pcm.isEmpty) return;
-    await play(wavBytes(_toPcm16(result.pcm), sampleRate: result.sampleRate));
+    final voice = PiperVoiceStore.voices[lang]!;
+    await play(
+      markSyntheticNarrationWav(
+        wavBytes(_toPcm16(result.pcm), sampleRate: result.sampleRate),
+        engine: 'piper-onnx',
+        model: '${voice.base}.onnx',
+        voice: voice.base,
+        language: lang,
+      ),
+    );
   }
 
   /// Explicit opt-in download of the [langCode] voice (a settings action). Returns
